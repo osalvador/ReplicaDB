@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+    <Appenders>
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{DEFAULT} %-5p %c{1}:%L: %m%n"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Logger name="org.apache.log4j.xml" level="info"/>
+        <Root level="info">
+            <AppenderRef ref="console"/>
+        </Root>
+    </Loggers>
+</Configuration>
