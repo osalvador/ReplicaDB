@@ -421,57 +421,6 @@ public abstract class SqlManager extends ConnManager {
             this.lastStatement = null;
         }
     }
-
-
-//    /**
-//     * @return a SQL query to retrieve the current timestamp from the db.
-//     */
-//    protected String getCurTimestampQuery() {
-//        return "SELECT CURRENT_TIMESTAMP()";
-//    }
-//
-//    @Override
-//    /**
-//     * {@inheritDoc}
-//     */
-//    public Timestamp getCurrentDbTimestamp() {
-//        release(); // Release any previous ResultSet.
-//
-//        Statement s = null;
-//        ResultSet rs = null;
-//        try {
-//            Connection c = getConnection();
-//            s = c.createStatement();
-//            rs = s.executeQuery(getCurTimestampQuery());
-//            if (rs == null || !rs.next()) {
-//                return null; // empty ResultSet.
-//            }
-//
-//            return rs.getTimestamp(1);
-//        } catch (SQLException sqlE) {
-//            LoggingUtils.logAll(LOG, "SQL exception accessing current timestamp: "
-//                    + sqlE, sqlE);
-//            return null;
-//        } finally {
-//            try {
-//                if (null != rs) {
-//                    rs.close();
-//                }
-//            } catch (SQLException sqlE) {
-//                LoggingUtils.logAll(LOG, "SQL Exception closing resultset: "
-//                        + sqlE, sqlE);
-//            }
-//
-//            try {
-//                if (null != s) {
-//                    s.close();
-//                }
-//            } catch (SQLException sqlE) {
-//                LoggingUtils.logAll(LOG, "SQL Exception closing statement: "
-//                        + sqlE, sqlE);
-//            }
-//        }
-//    }
-//
+    
 
 }
