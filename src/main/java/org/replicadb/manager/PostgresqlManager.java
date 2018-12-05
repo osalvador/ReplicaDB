@@ -47,6 +47,10 @@ public class PostgresqlManager extends SqlManager {
         String copyCmd = getCopyCommand(tableName, allColumns);
         CopyIn copyIn = copyManager.copyIn(copyCmd);
 
+
+        // Set client encoding to UF-8
+        postgresAlterSession();
+
         LOG.debug("Coping data with this command: " + copyCmd);
 
         try {
@@ -147,7 +151,7 @@ public class PostgresqlManager extends SqlManager {
             if (dsType == DataSourceType.SOURCE) {
                 // TODO
                 if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
-                    throw new IllegalArgumentException("Source query option for PostgresSQL database is not jet supported");
+                    throw new IllegalArgumentException("Source query option for PostgresSQL database is not yet supported");
                 }
                 this.connection = makeSourceConnection();
             } else if (dsType == DataSourceType.SINK) {
@@ -197,4 +201,15 @@ public class PostgresqlManager extends SqlManager {
 
         return super.execute(sqlCmd.toString(), 5000, nThread+1);
     }
+
+
+
+    private void postgresAlterSession() throws SQLException {
+        // Specific Oracle Alter sessions for reading data
+        Statement stmt = this.connection.createStatement();
+        stmt.executeUpdate("SET client_encoding to utf8");
+        stmt.close();
+    }
+
+
 }

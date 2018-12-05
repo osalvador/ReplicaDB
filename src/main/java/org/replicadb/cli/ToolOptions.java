@@ -283,15 +283,13 @@ public class ToolOptions {
                     "\n source-connect=" + this.sourceConnect +
                     "\n sink-connect" + this.sinkConnect +
                     "\n jobs=" + this.jobs);
-
-
         }
 
     }
 
     private void printHelp() {
         String header = "\nArguments: \n";
-        String footer = "\nPlease report issues at http://www.replicadb.org/issues";
+        String footer = "\nPlease report issues at https://github.com/osalvador/ReplicaDB/issues";
 
         // automatically generate the help statement
         HelpFormatter formatter = new HelpFormatter();

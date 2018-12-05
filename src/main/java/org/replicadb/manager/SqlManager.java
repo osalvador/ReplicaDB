@@ -201,7 +201,7 @@ public abstract class SqlManager extends ConnManager {
             sb.append(o.toString())
                     .append(", ");
         }
-        LOG.info(Thread.currentThread().getName()+ ": With args: " + sb.toString());
+        LOG.info(Thread.currentThread().getName() + ": With args: " + sb.toString());
 
         return statement.executeQuery();
     }
@@ -220,7 +220,11 @@ public abstract class SqlManager extends ConnManager {
     public void close() throws SQLException {
         release();
         // Close connection, ignore exceptions
-        try { this.getConnection().close(); } catch (Exception e) { LOG.error(e); }
+        try {
+            this.getConnection().close();
+        } catch (Exception e) {
+            LOG.error(e);
+        }
     }
 
 //    /**
@@ -421,6 +425,5 @@ public abstract class SqlManager extends ConnManager {
             this.lastStatement = null;
         }
     }
-    
 
 }
