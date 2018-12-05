@@ -47,10 +47,6 @@ public class PostgresqlManager extends SqlManager {
         String copyCmd = getCopyCommand(tableName, allColumns);
         CopyIn copyIn = copyManager.copyIn(copyCmd);
 
-
-        // Set client encoding to UF-8
-        postgresAlterSession();
-
         LOG.debug("Coping data with this command: " + copyCmd);
 
         try {
@@ -201,15 +197,5 @@ public class PostgresqlManager extends SqlManager {
 
         return super.execute(sqlCmd.toString(), 5000, nThread+1);
     }
-
-
-
-    private void postgresAlterSession() throws SQLException {
-        // Specific Oracle Alter sessions for reading data
-        Statement stmt = this.connection.createStatement();
-        stmt.executeUpdate("SET client_encoding to utf8");
-        stmt.close();
-    }
-
 
 }
