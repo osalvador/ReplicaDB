@@ -2,7 +2,7 @@
 
 # ReplicaDB  
 
-ReplicaDB is open source tool designed for efficiently transferring bulk data (aka replication) between relational and NoSQL databases.
+ReplicaDB is open source tool for database replication tool designed for efficiently transferring bulk data between relational and NoSQL databases.
 
 ReplicaDB helps offload certain tasks, such as ETL processing, for efficient execution at a much lower cost. Actualy, ReplicaDB only works with Oracle and Postgres.
 
@@ -123,10 +123,10 @@ $ replicadb --source-connect jdbc:postgresql://localhost/osalvador \
 ```
 
 ```
-$ replicadb --options-file /users/osalvador/work/repdb.txt -j 4
+$ replicadb --options-file /users/osalvador/work/import.txt -j 4
 ```
 
-where the options file `/users/osalvador/work/repdb.txt` contains the following:
+where the options file `/users/osalvador/work/import.txt` contains the following:
 
 ```properties
 source.connect=jdbc:postgresql://localhost/osalvador
@@ -138,6 +138,11 @@ sink.table=TEST
 
 mode=complete
 ```
+
+#### Using environment variables in options file
+
+Puedes acceder a las variables del entorno previamente definidas, desde el fichero de opciones indicando ${varName} para que sea sustituida.
+
 
 ## Contributing
   
