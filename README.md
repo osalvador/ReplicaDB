@@ -38,20 +38,33 @@ You can use ReplicaDB with any other JDBC-compliant database. First, download th
 Source and Sink tables must exists. 
 
 ```
-$ replicadb --mode=complete -j=1 --source-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID --source-user=$ORAUSER --source-password=$ORAPASS --source-table=dept --sink-connect=jdbc:postgresql://$PGHOST/osalvador --sink-table=dept
+$ replicadb --mode=complete -j=1 \
+--source-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID \
+--source-user=$ORAUSER \
+--source-password=$ORAPASS \
+--source-table=dept \
+--sink-connect=jdbc:postgresql://$PGHOST/osalvador \
+--sink-table=dept
 2018-12-07 16:01:23,808 INFO  ReplicaTask:36: Starting TaskId-0
 2018-12-07 16:01:24,650 INFO  SqlManager:197: TaskId-0: Executing SQL statement: SELECT /*+ NO_INDEX(dept)*/ * FROM dept where ora_hash(rowid,0) = ?
 2018-12-07 16:01:24,650 INFO  SqlManager:204: TaskId-0: With args: 0,
 2018-12-07 16:01:24,772 INFO  ReplicaDB:89: Total process time: 1302ms
 ```
 
-[![ReplicaDB-Ora2PG.gif](https://media.giphy.com/media/klxNzLiVVu7C1bZo5Q/giphy.gif)](https://media.giphy.com/media/klxNzLiVVu7C1bZo5Q/giphy.gif)
+[![ReplicaDB-Ora2PG.gif](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif)](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif)
 
 ### PostgreSQL to Oracle
 
 
 ```
-$ replicadb --mode=complete -j=1 --sink-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID --sink-user=$ORAUSER --sink-password=$ORAPASS --sink-table=dept --source-connect=jdbc:postgresql://$PGHOST/osalvador --source-table=dept --source-columns=dept.*
+$ replicadb --mode=complete -j=1 \
+--sink-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID \
+--sink-user=$ORAUSER \
+--sink-password=$ORAPASS \
+--sink-table=dept \
+--source-connect=jdbc:postgresql://$PGHOST/osalvador \
+--source-table=dept \
+--source-columns=dept.*
 2018-12-07 16:10:35,334 INFO  ReplicaTask:36: Starting TaskId-0
 2018-12-07 16:10:35,440 INFO  SqlManager:197: TaskId-0: Executing SQL statement:  WITH int_ctid as (SELECT (('x' || SUBSTR(md5(ctid :: text), 1, 8)) :: bit(32) :: int) ictid  from dept), replicadb_table_stats as (select min(ictid) as min_ictid, max(ictid) as max_ictid from int_ctid )SELECT dept.* FROM dept, replicadb_table_stats WHERE  width_bucket((('x' || substr(md5(ctid :: text), 1, 8)) :: bit(32) :: int), replicadb_table_stats.min_ictid, replicadb_table_stats.max_ictid, 1)  >= ?
 2018-12-07 16:10:35,441 INFO  SqlManager:204: TaskId-0: With args: 1,
@@ -95,3 +108,5 @@ Arguments:
 Please report issues at https://github.com/osalvador/ReplicaDB/issues
 
 ```
+
+
