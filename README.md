@@ -1,9 +1,4 @@
-[![Build Status](https://travis-ci.org/osalvador/ReplicaDB.svg?branch=master)](https://travis-ci.org/osalvador/ReplicaDB)
-
-[![GitHub license](https://img.shields.io/github/license/osalvador/ReplicaDB.svg)](https://github.com/osalvador/ReplicaDB/blob/master/LICENSE)
-
-[![Twitter](https://img.shields.io/twitter/url/https/github.com/osalvador/ReplicaDB.svg?style=social)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fosalvador%2FReplicaDB)
-  
+[![Build Status](https://travis-ci.org/osalvador/ReplicaDB.svg?branch=master)](https://travis-ci.org/osalvador/ReplicaDB) [![GitHub license](https://img.shields.io/github/license/osalvador/ReplicaDB.svg)](https://github.com/osalvador/ReplicaDB/blob/master/LICENSE) [![Twitter](https://img.shields.io/twitter/url/https/github.com/osalvador/ReplicaDB.svg?style=social)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fosalvador%2FReplicaDB)
 
 # ReplicaDB  
 
@@ -110,3 +105,36 @@ Please report issues at https://github.com/osalvador/ReplicaDB/issues
 ```
 
 
+### Options File
+
+When using ReplicaDB, the command line options that do not change from invocation to invocation can be put in an options file for convenience. An options file is a Java properties text file where each line identifies an option. Option files allow specifying a single option on multiple lines by using the back-slash character at the end of intermediate lines. Also supported are comments within option files that begin with the hash character. Comments must be specified on a new line and may not be mixed with option text. All comments and empty lines are ignored when option files are expanded. 
+
+Option files can be specified anywhere on the command line. Command line argunents override those in the options file. To specify an options file, simply create an options file in a convenient location and pass it to the command line via `--options-file` argument.
+
+For example, the following ReplicaDB invocation for import can be specified alternatively as shown below:
+
+```
+$ replicadb --source-connect jdbc:postgresql://localhost/osalvador \
+--source-table TEST \
+--sink-connect jdbc:postgresql://remotehost/testdb \
+--sink-user=testusr \
+--sink-table TEST \
+--mode complete
+```
+
+```
+$ replicadb --options-file /users/osalvador/work/import.txt -j 4
+```
+
+where the options file `/users/osalvador/work/import.txt` contains the following:
+
+```properties
+source.connect=jdbc:postgresql://localhost/osalvador
+source.table=TEST
+
+sink.connect=jdbc:postgresql://remotehost/testdb
+sink.user=testusr
+sink.table=TEST
+
+mode=complete
+```
