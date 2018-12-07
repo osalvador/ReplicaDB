@@ -1,9 +1,4 @@
-[![Build Status](https://travis-ci.org/osalvador/ReplicaDB.svg?branch=master)](https://travis-ci.org/osalvador/ReplicaDB)
-
-[![GitHub license](https://img.shields.io/github/license/osalvador/ReplicaDB.svg)](https://github.com/osalvador/ReplicaDB/blob/master/LICENSE)
-
-[![Twitter](https://img.shields.io/twitter/url/https/github.com/osalvador/ReplicaDB.svg?style=social)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fosalvador%2FReplicaDB)
-  
+[![Build Status](https://travis-ci.org/osalvador/ReplicaDB.svg?branch=master)](https://travis-ci.org/osalvador/ReplicaDB) [![GitHub license](https://img.shields.io/github/license/osalvador/ReplicaDB.svg)](https://github.com/osalvador/ReplicaDB/blob/master/LICENSE) [![Twitter](https://img.shields.io/twitter/url/https/github.com/osalvador/ReplicaDB.svg?style=social)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fosalvador%2FReplicaDB)
 
 # ReplicaDB  
 
@@ -38,20 +33,33 @@ You can use ReplicaDB with any other JDBC-compliant database. First, download th
 Source and Sink tables must exists. 
 
 ```
-$ replicadb --mode=complete -j=1 --source-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID --source-user=$ORAUSER --source-password=$ORAPASS --source-table=dept --sink-connect=jdbc:postgresql://$PGHOST/osalvador --sink-table=dept
+$ replicadb --mode=complete -j=1 \
+--source-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID \
+--source-user=$ORAUSER \
+--source-password=$ORAPASS \
+--source-table=dept \
+--sink-connect=jdbc:postgresql://$PGHOST/osalvador \
+--sink-table=dept
 2018-12-07 16:01:23,808 INFO  ReplicaTask:36: Starting TaskId-0
 2018-12-07 16:01:24,650 INFO  SqlManager:197: TaskId-0: Executing SQL statement: SELECT /*+ NO_INDEX(dept)*/ * FROM dept where ora_hash(rowid,0) = ?
 2018-12-07 16:01:24,650 INFO  SqlManager:204: TaskId-0: With args: 0,
 2018-12-07 16:01:24,772 INFO  ReplicaDB:89: Total process time: 1302ms
 ```
 
-[![ReplicaDB-Ora2PG.gif](https://media.giphy.com/media/klxNzLiVVu7C1bZo5Q/giphy.gif)](https://media.giphy.com/media/klxNzLiVVu7C1bZo5Q/giphy.gif)
+[![ReplicaDB-Ora2PG.gif](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif)](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif)
 
 ### PostgreSQL to Oracle
 
 
 ```
-$ replicadb --mode=complete -j=1 --sink-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID --sink-user=$ORAUSER --sink-password=$ORAPASS --sink-table=dept --source-connect=jdbc:postgresql://$PGHOST/osalvador --source-table=dept --source-columns=dept.*
+$ replicadb --mode=complete -j=1 \
+--sink-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID \
+--sink-user=$ORAUSER \
+--sink-password=$ORAPASS \
+--sink-table=dept \
+--source-connect=jdbc:postgresql://$PGHOST/osalvador \
+--source-table=dept \
+--source-columns=dept.*
 2018-12-07 16:10:35,334 INFO  ReplicaTask:36: Starting TaskId-0
 2018-12-07 16:10:35,440 INFO  SqlManager:197: TaskId-0: Executing SQL statement:  WITH int_ctid as (SELECT (('x' || SUBSTR(md5(ctid :: text), 1, 8)) :: bit(32) :: int) ictid  from dept), replicadb_table_stats as (select min(ictid) as min_ictid, max(ictid) as max_ictid from int_ctid )SELECT dept.* FROM dept, replicadb_table_stats WHERE  width_bucket((('x' || substr(md5(ctid :: text), 1, 8)) :: bit(32) :: int), replicadb_table_stats.min_ictid, replicadb_table_stats.max_ictid, 1)  >= ?
 2018-12-07 16:10:35,441 INFO  SqlManager:204: TaskId-0: With args: 1,
@@ -94,4 +102,39 @@ Arguments:
 
 Please report issues at https://github.com/osalvador/ReplicaDB/issues
 
+```
+
+
+### Options File
+
+When using ReplicaDB, the command line options that do not change from invocation to invocation can be put in an options file for convenience. An options file is a Java properties text file where each line identifies an option. Option files allow specifying a single option on multiple lines by using the back-slash character at the end of intermediate lines. Also supported are comments within option files that begin with the hash character. Comments must be specified on a new line and may not be mixed with option text. All comments and empty lines are ignored when option files are expanded. 
+
+Option files can be specified anywhere on the command line. Command line argunents override those in the options file. To specify an options file, simply create an options file in a convenient location and pass it to the command line via `--options-file` argument.
+
+For example, the following ReplicaDB invocation for import can be specified alternatively as shown below:
+
+```
+$ replicadb --source-connect jdbc:postgresql://localhost/osalvador \
+--source-table TEST \
+--sink-connect jdbc:postgresql://remotehost/testdb \
+--sink-user=testusr \
+--sink-table TEST \
+--mode complete
+```
+
+```
+$ replicadb --options-file /users/osalvador/work/repdb.txt -j 4
+```
+
+where the options file `/users/osalvador/work/repdb.txt` contains the following:
+
+```properties
+source.connect=jdbc:postgresql://localhost/osalvador
+source.table=TEST
+
+sink.connect=jdbc:postgresql://remotehost/testdb
+sink.user=testusr
+sink.table=TEST
+
+mode=complete
 ```
