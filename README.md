@@ -123,10 +123,10 @@ $ replicadb --source-connect jdbc:postgresql://localhost/osalvador \
 ```
 
 ```
-$ replicadb --options-file /users/osalvador/work/import.txt -j 4
+$ replicadb --options-file /users/osalvador/work/repdb.txt -j 4
 ```
 
-where the options file `/users/osalvador/work/import.txt` contains the following:
+where the options file `/users/osalvador/work/repdb.txt` contains the following:
 
 ```properties
 source.connect=jdbc:postgresql://localhost/osalvador
