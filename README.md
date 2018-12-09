@@ -2,6 +2,9 @@
 
 # ReplicaDB  
 
+[![replicadb-logo png](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png)](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png)
+
+
 ReplicaDB is open source tool designed for efficiently transferring bulk data (aka replication) between relational and NoSQL databases.
 
 ReplicaDB helps offload certain tasks, such as ETL processing, for efficient execution at a much lower cost. Actualy, ReplicaDB only works with Oracle and Postgres.
