@@ -23,7 +23,76 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
-You can use ReplicaDB with any other JDBC-compliant database. First, download the appropriate JDBC driver for the type of database you want to import, and install the .jar file in the `$REPLICADB_HOME/lib` directory on your client machine. Each driver `.jar` file also has a specific driver class which defines the entry-point to the driver. 
+```
+$ mkdir replicadb; cd replicadb
+replicadb $ wget https://github.com/osalvador/ReplicaDB/releases/download/v0.1.1/ReplicaDB-0.1.1.tar.gz
+--2018-12-10 12:12:36--  https://github.com/osalvador/ReplicaDB/releases/download/v0.1.1/ReplicaDB-0.1.1.tar.gz
+....
+2018-12-10 12:12:45 (341 KB/s) - “ReplicaDB-0.1.1.tar.gz” saved [2750137/2750137]
+
+replicadb osalvador$ tar -xvzf ReplicaDB-0.1.1.tar.gz
+x bin/
+x bin/configure-replicadb
+...
+
+replicadb osalvador$ tree
+.
+├── LICENSE
+├── README.md
+├── ReplicaDB-0.1.1.jar
+├── ReplicaDB-0.1.1.tar.gz
+├── bin
+│   ├── configure-replicadb
+│   ├── configure-replicadb.cmd
+│   ├── replicadb
+│   └── replicadb.cmd
+├── conf
+│   └── replicadb.conf
+└── lib
+    ├── commons-cli-1.4.jar
+    ├── hamcrest-core-1.3.jar
+    ├── junit-4.11.jar
+    ├── log4j-api-2.11.1.jar
+    ├── log4j-core-2.11.1.jar
+    └── postgresql-42.2.1.jar
+
+3 directories, 15 files
+
+replicadb osalvador$ ./bin/replicadb --help
+usage: replicadb [OPTIONS]
+
+Arguments:
+ -h,--help                              Print this help screen
+ -j,--jobs <n>                          Use n jobs to replicate in parallel. Default 4
+    --mode <mode>                       Specifies the replication mode. The allowed values are complete or incremental
+    --options-file <file-path>          Options file path location
+    --sink-analyze                      Analyze sink database table after populate.
+    --sink-columns <col,col,col...>     Sink database table columns to be populated
+    --sink-connect <jdbc-uri>           Sink database JDBC connect string
+    --sink-disable-escape               Escape srings before populating to the table of the sink database.
+    --sink-disable-index                Disable sink database table indexes before populate.
+    --sink-password <password>          Sink database authentication password
+    --sink-table <table-name>           Sink database table to populate
+    --sink-user <username>              Sink database authentication username
+    --source-check-column <column>      Specify the column to be examined when determining which rows to be replicated
+    --source-columns <col,col,col...>   Source database table columns to be extracted
+    --source-connect <jdbc-uri>         Source database JDBC connect string
+    --source-last-value <value>         Specifies the maximum value of the source-check-column from the previous
+                                        replication
+    --source-password <password>        Source databse authentication password
+    --source-query <statement>          SQL statement to be executed in the source database
+    --source-table <table-name>         Source database table to read
+    --source-user <username>            Source database authentication username
+    --source-where <where clause>       Source database WHERE clause to use during extraction
+ -v,--verbose                           Print more information while working
+
+Please report issues at https://github.com/osalvador/ReplicaDB/issues
+
+```
+
+**JDBC Drivers**
+
+You can use ReplicaDB with any JDBC-compliant database. First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory on your client machine. Each driver `.jar` file also has a specific driver class which defines the entry-point to the driver. 
 
 
 ## Usage example
