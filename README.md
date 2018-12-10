@@ -2,7 +2,8 @@
 
 # [![replicadb-logo png](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png)](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png)
 
-ReplicaDB is open source tool for database replication tool designed for efficiently transferring bulk data between relational and NoSQL databases.
+
+ReplicaDB is open source tool for database replication designed for efficiently transferring bulk data between relational and NoSQL databases.
 
 ReplicaDB helps offload certain tasks, such as ETL processing, for efficient execution at a much lower cost. Actualy, ReplicaDB only works with Oracle and Postgres.
 
@@ -29,10 +30,10 @@ replicadb$ tar -xvzf ReplicaDB-0.1.1.tar.gz
 x bin/
 x bin/configure-replicadb
 ...
+
 replicadb$ ./bin/replicadb --help
 usage: replicadb [OPTIONS]
 ...
-
 ```
 
 **JDBC Drivers**
@@ -82,8 +83,8 @@ $ replicadb --mode=complete -j=1 \
 
 ## ReplicaDB User Guide
 
-1. Introduction
-2. Basic Usage
+1. [Introduction](#1.-Introduction)
+2. [Basic Usage](#2.-Basic-Usage)
 3. Command Line Arguments
     1. Using Options Files to Pass Arguments
     2. Connecting to a Database Server
@@ -94,12 +95,16 @@ $ replicadb --mode=complete -j=1 \
     3.9. Incremental Imports
     3.10. File Formats
     3.11. Large Objects
-    3.15. Additional Import Configuration Properties-->
-
+    3.15. Additional Import Configuration Properties
+    6. Example Invocations-->
+4. Compatible Databases
 
 ### 1. Introduction
 
 ### 2. Basic Usage
+
+With ReplicaDB, you can _replicate_ data between relational databases and non replational databases. The input to the replication process is a database table, or custom query. For replational databases, ReplicaDB will read the table row-by-row. The output of this replication process is table in the sink database containing a copy of the source table. The replication process is performed in parallel.
+
 
 ### 3. Command Line Arguments 
 
@@ -192,19 +197,72 @@ Note that if a variable cannot be resolved, e.g. because the name is invalid or 
 
 #### 3.2 Connecting to a Database Server
 
-TODO: 
+ReplicaDB is designed to replicate tables between databases. To do so, you must specify a _connect string_ that describes how to connect to the database. The _connect string_ is similar to a URL, and is communicated to ReplicaDB with the `--source-connect` or `--sink-connect` arguments. This describes the server and database to connect to; it may also specify the port. For example:
 
-#### 3.2 Selecting the Data to Import
+```
+$ replicadb --source-connect jdbc:mysql://database.example.com/employees
+```
 
-TODO: 
+This string will connect to a MySQL database named `employees` on the host `database.example.com`.
 
-#### 3.2 Free-form Query Imports
+You might need to authenticate against the database before you can access it. You can use the `--source-username` or `--sink-username` to supply a username to the database.
 
-TODO: 
+ReplicaDB provides couple of different ways to supply a password, secure and non-secure, to the database which is detailed below.
 
-#### 3.2Controlling Parallelism    
+**Secure way of supplying password to the database**
 
-TODO: 
+Para suministrar una contraseña de forma segura, se debe usar el fichero de opciones usando el argumento `--options-file`. Por ejemplo: 
+
+```
+$ replicadb --source-connect jdbc:mysql://database.example.com/employees \
+--source-username boss --options-file ./conf/empoloyee.conf
+```
+
+where the options file `./conf/empoloyee.conf` contains the following:
+
+```properties
+source-password=myEmployeePassword
+```
+
+**Unsecure way of supplying password to the database**
+
+```
+$ replicadb --source-connect jdbc:mysql://database.example.com/employees \
+--source-username boss --options-file myEmployeePassword
+```
+
+
+#### 3.3 Selecting the Data to Import
+
+ReplicaDB typically imports data in a table-centric fashion. Use the `--source-table` argument to select the table to replicate. For example, `--source-table employees`. This argument can also identify a `VIEW` or other table-like entity in a database.
+
+By default, all columns within a table are selected for replication. You can select a subset of columns and control their ordering by using the `--source-columns` argument. This should include a comma-delimited list of columns to import. For example: `--source-columns "name,employee_id,jobtitle"`.
+
+You can control which rows are imported by adding a SQL `WHERE` clause to the import statement. By default, ReplicaDB generates statements of the form `SELECT <column list> FROM <table name>`. You can append a `WHERE` clause to this with the `--sourece-where` argument. For example: `--source-where "id > 400"`. Only rows where the `id` column has a value greater than 400 will be imported.
+
+#### 3.4 Free-form Query Imports
+
+ReplicaDB can also replicate the result set of an arbitrary SQL query. Instead of using the `--sourece-table`, `--sourece-columns` and `--source-where` arguments, you can specify a SQL statement with the `--sourece-query` argument.
+
+For example:
+
+```
+$ replicadb --source-query 'SELECT a.*, b.* FROM a JOIN b on (a.id == b.id)'
+```
+
+
+#### 3.5 Controlling Parallelism    
+
+ReplicaDB replicate data in parallel from most database sources. You can specify the number of job tasks (parallel processes) to use to perform the replication by using the `-j` or `--jobs` argument. Each of these arguments takes an integer value which corresponds to the degree of parallelism to employ. By default, four tasks are used. Some databases may see improved performance by increasing this value to 8 or 16. Do not increase the degree of parallism higher than that which your database can reasonably support. Connecting 100 concurrent clients to your database may increase the load on the database server to a point where performance suffers as a result.
+
+
+### 4. Compatible Databases
+
+| Database Vendor | Source | Sink | 
+|----------------|------|--------|
+| Oracle           | :white_check_mark: | :white_check_mark: | 
+| PostgreSQL       |:white_check_mark: | :white_check_mark: | 
+
 
 ## Contributing
   
