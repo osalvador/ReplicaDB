@@ -2,7 +2,7 @@
 
 # [![replicadb-logo png](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png)](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png)
 
-ReplicaDB is open source tool designed for efficiently transferring bulk data (aka replication) between relational and NoSQL databases.
+ReplicaDB is open source tool for database replication tool designed for efficiently transferring bulk data between relational and NoSQL databases.
 
 ReplicaDB helps offload certain tasks, such as ETL processing, for efficient execution at a much lower cost. Actualy, ReplicaDB only works with Oracle and Postgres.
 
@@ -23,7 +23,21 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
-You can use ReplicaDB with any other JDBC-compliant database. First, download the appropriate JDBC driver for the type of database you want to import, and install the .jar file in the `$REPLICADB_HOME/lib` directory on your client machine. Each driver `.jar` file also has a specific driver class which defines the entry-point to the driver. 
+```bash
+replicadb$ wget https://github.com/osalvador/ReplicaDB/releases/download/v0.1.1/ReplicaDB-0.1.1.tar.gz
+replicadb$ tar -xvzf ReplicaDB-0.1.1.tar.gz
+x bin/
+x bin/configure-replicadb
+...
+replicadb$ ./bin/replicadb --help
+usage: replicadb [OPTIONS]
+...
+
+```
+
+**JDBC Drivers**
+
+You can use ReplicaDB with any JDBC-compliant database. First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory on your client machine. Each driver `.jar` file also has a specific driver class which defines the entry-point to the driver. 
 
 
 ## Usage example
@@ -123,10 +137,10 @@ $ replicadb --source-connect jdbc:postgresql://localhost/osalvador \
 ```
 
 ```
-$ replicadb --options-file /users/osalvador/work/repdb.txt -j 4
+$ replicadb --options-file /users/osalvador/work/import.txt -j 4
 ```
 
-where the options file `/users/osalvador/work/repdb.txt` contains the following:
+where the options file `/users/osalvador/work/import.txt` contains the following:
 
 ```properties
 source.connect=jdbc:postgresql://localhost/osalvador
@@ -138,6 +152,10 @@ sink.table=TEST
 
 mode=complete
 ```
+
+#### Using environment variables in options file
+
+Puedes acceder a las variables del entorno previamente definidas, desde el fichero de opciones indicando ${varName} para que sea sustituida.
 
 
 ## Contributing
