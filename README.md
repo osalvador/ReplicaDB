@@ -80,8 +80,35 @@ $ replicadb --mode=complete -j=1 \
 2018-12-07 16:10:35,552 INFO  ReplicaDB:89: Total process time: 1007ms
 ```
 
+## ReplicaDB User Guide
 
-### Help
+1. Introduction
+2. Basic Usage
+3. Command Line Arguments `meter el help`
+    3.1. Using Options Files to Pass Arguments
+    3.1. Connecting to a Database Server
+    3.2. Selecting the Data to Import
+    3.3. Free-form Query Imports
+    3.4. Controlling Parallelism
+    3.5. Controlling Distributed Cache
+    3.6. Controlling the Import Process
+    3.7. Controlling transaction isolation
+    3.8. Controlling type mapping
+    3.9. Incremental Imports
+    3.10. File Formats
+    3.11. Large Objects
+    3.12. Importing Data Into Hive
+    3.13. Importing Data Into HBase
+    3.14. Importing Data Into Accumulo
+    3.15. Additional Import Configuration Properties
+
+
+
+### 1. Introduction
+
+### 2. Basic Usage
+
+### 3. Command Line Arguments 
 
 ReplicaDB ships with a help tool. To display a list of all available options, type the following command:
 
@@ -105,8 +132,7 @@ Arguments:
     --source-check-column <column>      Specify the column to be examined when determining which rows to be replicated
     --source-columns <col,col,col...>   Source database table columns to be extracted
     --source-connect <jdbc-uri>         Source database JDBC connect string
-    --source-last-value <value>         Specifies the maximum value of the source-check-column from the previous
-                                        replication
+    --source-last-value <value>         Specifies the maximum value of the source-check-column from the previous replication
     --source-password <password>        Source databse authentication password
     --source-query <statement>          SQL statement to be executed in the source database
     --source-table <table-name>         Source database table to read
@@ -118,8 +144,35 @@ Please report issues at https://github.com/osalvador/ReplicaDB/issues
 
 ```
 
+**Table 1. Common arguments**
 
-### Options File
+| Argument                                 | Description | 
+|------------------------------------------|--------------------------------------------------------------------------------------| 
+|  `-h`,`--help`                           | Print this help screen |
+|  `-j`,`--jobs <n>`                       | Use n jobs to replicate in parallel. |
+|     `--mode <mode>`                      | Specifies the replication mode. The allowed values are complete or incremental |
+|     `--options-file <file-path>`         | Options file path location |
+|     `--sink-analyze`                     | Analyze sink database table after populate. |
+|     `--sink-columns <col,col,col...>`    | Sink database table columns to be populated |
+|     `--sink-connect <jdbc-uri>`          | Sink database JDBC connect string |
+|     `--sink-disable-escape`              | Escape srings before populating to the table of the sink database. |
+|     `--sink-disable-index`               | Disable sink database table indexes before populate. |
+|     `--sink-password <password>`         | Sink database authentication password |
+|     `--sink-table <table-name>`          | Sink database table to populate |
+|     `--sink-user <username>`             | Sink database authentication username |
+|     `--source-check-column <column>`     | Specify the column to be examined when determining which rows to be replicated |
+|     `--source-columns <col,col,col...>`  | Source database table columns to be extracted |
+|     `--source-connect <jdbc-uri>`        | Source database JDBC connect string |
+|     `--source-last-value <value>`        | Specifies the maximum value of the source-check-column from the previous replication |
+|     `--source-password <password>`       | Source databse authentication password |
+|     `--source-query <statement>`         | SQL statement to be executed in the source database |
+|     `--source-table <table-name>`        | Source database table to read |
+|     `--source-user <username>`           | Source database authentication username |
+|     `--source-where <where clause>`      | Source database WHERE clause to use during extraction |
+| `-v`,`--verbose`                         | Print more information while working |
+
+
+#### 3.1. Options File
 
 When using ReplicaDB, the command line options that do not change from invocation to invocation can be put in an options file for convenience. An options file is a Java properties text file where each line identifies an option. Option files allow specifying a single option on multiple lines by using the back-slash character at the end of intermediate lines. Also supported are comments within option files that begin with the hash character. Comments must be specified on a new line and may not be mixed with option text. All comments and empty lines are ignored when option files are expanded. 
 
