@@ -97,7 +97,7 @@ $ replicadb --mode=complete -j=1 \
     3.11. Large Objects
     3.15. Additional Import Configuration Properties
     6. Example Invocations-->
-4. Compatible Databases
+4. [Compatible Databases](#4-compatible-databases)
 
 ### 1. Introduction
 
