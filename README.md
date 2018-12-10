@@ -108,33 +108,7 @@ ReplicaDB ships with a help tool. To display a list of all available options, ty
 ```
 $ replicadb --help
 usage: replicadb [OPTIONS]
-
-Arguments:
- -h,--help                              Print this help screen
- -j,--jobs <n>                          Use n jobs to replicate in parallel.
-    --mode <mode>                       Specifies the replication mode. The allowed values are complete or incremental
-    --options-file <file-path>          Options file path location
-    --sink-analyze                      Analyze sink database table after populate.
-    --sink-columns <col,col,col...>     Sink database table columns to be populated
-    --sink-connect <jdbc-uri>           Sink database JDBC connect string
-    --sink-disable-escape               Escape srings before populating to the table of the sink database.
-    --sink-disable-index                Disable sink database table indexes before populate.
-    --sink-password <password>          Sink database authentication password
-    --sink-table <table-name>           Sink database table to populate
-    --sink-user <username>              Sink database authentication username
-    --source-check-column <column>      Specify the column to be examined when determining which rows to be replicated
-    --source-columns <col,col,col...>   Source database table columns to be extracted
-    --source-connect <jdbc-uri>         Source database JDBC connect string
-    --source-last-value <value>         Specifies the maximum value of the source-check-column from the previous replication
-    --source-password <password>        Source databse authentication password
-    --source-query <statement>          SQL statement to be executed in the source database
-    --source-table <table-name>         Source database table to read
-    --source-user <username>            Source database authentication username
-    --source-where <where clause>       Source database WHERE clause to use during extraction
- -v,--verbose                           Print more information while working
-
-Please report issues at https://github.com/osalvador/ReplicaDB/issues
-
+...
 ```
 
 **Table 1. Common arguments**
