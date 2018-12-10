@@ -83,14 +83,14 @@ $ replicadb --mode=complete -j=1 \
 
 ## ReplicaDB User Guide
 
-1. [Introduction](#1.-Introduction)
-2. [Basic Usage](#2.-Basic-Usage)
-3. Command Line Arguments
-    1. Using Options Files to Pass Arguments
-    2. Connecting to a Database Server
-    3. Selecting the Data to Import
-    4. Free-form Query Imports
-    5. Controlling Parallelism        
+1. [Introduction](#1-Introduction)
+2. [Basic Usage](#2-Basic-Usage)
+3. [Command Line Arguments](#3-Command-Line-Arguments )
+    1. [Using Options Files to Pass Arguments](#31-using-options-files-to-pass-arguments)
+    2. [Connecting to a Database Server](#32-connecting-to-a-database-server)
+    3. [Selecting the Data to Import](#33-selecting-the-data-to-import)
+    4. [Free-form Query Imports](#34-free-form-query-imports)
+    5. [Controlling Parallelism](#35-controlling-parallelism)
     <!--3.7. Controlling transaction isolation
     3.9. Incremental Imports
     3.10. File Formats
