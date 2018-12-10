@@ -84,24 +84,17 @@ $ replicadb --mode=complete -j=1 \
 
 1. Introduction
 2. Basic Usage
-3. Command Line Arguments `meter el help`
-    3.1. Using Options Files to Pass Arguments
-    3.1. Connecting to a Database Server
-    3.2. Selecting the Data to Import
-    3.3. Free-form Query Imports
-    3.4. Controlling Parallelism
-    3.5. Controlling Distributed Cache
-    3.6. Controlling the Import Process
-    3.7. Controlling transaction isolation
-    3.8. Controlling type mapping
+3. Command Line Arguments
+    1. Using Options Files to Pass Arguments
+    2. Connecting to a Database Server
+    3. Selecting the Data to Import
+    4. Free-form Query Imports
+    5. Controlling Parallelism        
+    <!--3.7. Controlling transaction isolation
     3.9. Incremental Imports
     3.10. File Formats
     3.11. Large Objects
-    3.12. Importing Data Into Hive
-    3.13. Importing Data Into HBase
-    3.14. Importing Data Into Accumulo
-    3.15. Additional Import Configuration Properties
-
+    3.15. Additional Import Configuration Properties-->
 
 
 ### 1. Introduction
@@ -172,7 +165,7 @@ Please report issues at https://github.com/osalvador/ReplicaDB/issues
 | `-v`,`--verbose`                         | Print more information while working |
 
 
-#### 3.1. Options File
+#### 3.1 Using Options Files to Pass Arguments
 
 When using ReplicaDB, the command line options that do not change from invocation to invocation can be put in an options file for convenience. An options file is a Java properties text file where each line identifies an option. Option files allow specifying a single option on multiple lines by using the back-slash character at the end of intermediate lines. Also supported are comments within option files that begin with the hash character. Comments must be specified on a new line and may not be mixed with option text. All comments and empty lines are ignored when option files are expanded. 
 
@@ -206,10 +199,38 @@ sink.table=TEST
 mode=complete
 ```
 
-#### Using environment variables in options file
+##### Using environment variables in options file
 
-Puedes acceder a las variables del entorno previamente definidas, desde el fichero de opciones indicando ${varName} para que sea sustituida.
+If you are familiar with Ant or Maven, you have most certainly already encountered the variables (like `${token}`) that are automatically expanded when the configuration file is loaded. ReplicaDB supports this feature as well,  here is an example: 
 
+```properties
+source.connect=jdbc:postgresql://${PGHOST}$/${PGDATABASE}
+source.user=${PGUSER}
+source.password=${PGPASSWORD}
+source.table=TEST
+```
+
+
+Variables are interpolated from system properties. ReplicaDB will search for a system property with the given name and replace the variable by its value. This is a very easy means for accessing the values of system properties in the options configuration file.
+
+Note that if a variable cannot be resolved, e.g. because the name is invalid or an unknown prefix is used, it won't be replaced, but is returned as is including the dollar sign and the curly braces.
+
+
+#### 3.2 Connecting to a Database Server
+
+TODO: 
+
+#### 3.2 Selecting the Data to Import
+
+TODO: 
+
+#### 3.2 Free-form Query Imports
+
+TODO: 
+
+#### 3.2Controlling Parallelism    
+
+TODO: 
 
 ## Contributing
   
