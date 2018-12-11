@@ -29,7 +29,9 @@ public class ToolOptions {
     private String sinkColumns;
     private Boolean sinkDisableEscape = false;
     private Boolean sinkDisableIndex = false;
+    private Boolean sinkDisableTruncate = false;
     private Boolean sinkAnalyze = false;
+
 
     private int jobs;
     private Boolean help = false;
@@ -197,6 +199,14 @@ public class ToolOptions {
 
         options.addOption(
                 Option.builder()
+                        .longOpt("sink-disable-truncate")
+                        .desc("Disable the truncation of the sink database table before populate.")
+                        .build()
+        );
+
+
+        options.addOption(
+                Option.builder()
                         .longOpt("sink-analyze")
                         .desc("Analyze sink database table after populate.")
                         .build()
@@ -256,6 +266,7 @@ public class ToolOptions {
             if (line.hasOption("verbose")) setVerbose(true);
             if (line.hasOption("sink-disable-index")) setSinkDisableIndexNotNull(true);
             if (line.hasOption("sink-disable-escape")) setSinkDisableEscapeNotNull(true);
+            if (line.hasOption("sink-disable-truncate")) setSinkDisableTruncateNotNull(true);
             if (line.hasOption("sink-analyze")) setSinkAnalyzeNotNull(true);
 
             setModeNotNull(line.getOptionValue("mode"));
@@ -286,6 +297,7 @@ public class ToolOptions {
         }
 
     }
+
 
     private void printHelp() {
         String header = "\nArguments: \n";
@@ -331,15 +343,16 @@ public class ToolOptions {
 
         setSinkColumns(prop.getProperty("sink.columns"));
         setSinkConnect(prop.getProperty("sink.connect"));
-        setSinkDisableIndex(Boolean.parseBoolean(prop.getProperty("sink.disable-index")));
-        setSinkDisableEscape(Boolean.parseBoolean(prop.getProperty("sink.disable-escape")));
+        setSinkDisableIndex(Boolean.parseBoolean(prop.getProperty("sink.disable.index")));
+        setSinkDisableEscape(Boolean.parseBoolean(prop.getProperty("sink.disable.escape")));
+        setSinkDisableTruncate(Boolean.parseBoolean(prop.getProperty("sink.disable.truncate")));
         setSinkPassword(prop.getProperty("sink.password"));
         setSinkTable(prop.getProperty("sink.table"));
         setSinkUser(prop.getProperty("sink.user"));
         setSourceCheckColumn(prop.getProperty("source.check-column"));
+        setSourceLastValue(prop.getProperty("source.last-value"));
         setSourceColumns(prop.getProperty("source.columns"));
         setSourceConnect(prop.getProperty("source.connect"));
-        setSourceLastValue(prop.getProperty("source.last-value"));
         setSourcePassword(prop.getProperty("source.password"));
         setSourceQuery(prop.getProperty("source.query"));
         setSourceTable(prop.getProperty("source.table"));
@@ -633,6 +646,21 @@ public class ToolOptions {
         if (sinkDisableEscape != null)
             this.sinkDisableEscape = sinkDisableEscape;
     }
+
+    public Boolean isSinkDisableTruncate() {
+        return sinkDisableTruncate;
+    }
+    public void setSinkDisableTruncate(Boolean sinkDisableTruncate) {
+        this.sinkDisableTruncate = sinkDisableTruncate;
+    }
+    private void setSinkDisableTruncateNotNull(Boolean sinkDisableTruncate) {
+        if (sinkDisableTruncate != null)
+            this.sinkDisableTruncate = sinkDisableTruncate;
+    }
+
+
+
+
 
     public Boolean getSinkAnalyze() {
         return sinkAnalyze;

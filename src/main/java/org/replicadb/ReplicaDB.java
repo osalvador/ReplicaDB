@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.*;
 
@@ -27,11 +28,6 @@ public class ReplicaDB {
 
     public static void main(String[] args) {
 
-        //OptionsFile of = new OptionsFile(args[1]);
-        //of.printProperties();
-        //System.exit(0);
-
-
         long start = System.nanoTime();
         try {
 
@@ -51,28 +47,25 @@ public class ReplicaDB {
                 // Obtener una instancia del DriverManager del Sink
                 // Mover datos de Source a Sink.
                 ManagerFactory managerF = new ManagerFactory();
-//                ConnManager sourceDs= managerF.accept(options, DataSourceType.SOURCE);
                 ConnManager sinkDs = managerF.accept(options, DataSourceType.SINK);
-//
-                //                sourceDs.getConnection();
-                //sinkDs.getConnection();
 
                 // TODO: delegar el truncate de la tabla al manger del SINK.
                 // Truncate Sink table
-                Connection con = sinkDs.getConnection();
-                Statement stmt = con.createStatement();
-                stmt.executeUpdate( "TRUNCATE TABLE " + options.getSinkTable() );
-                stmt.close();
-                con.commit();
-                con.close();
-
+                if (!options.isSinkDisableTruncate() && (options.getMode().equals(ReplicationMode.COMPLETE))) {
+                    Connection con = sinkDs.getConnection();
+                    Statement stmt = con.createStatement();
+                    stmt.executeUpdate("TRUNCATE TABLE " + options.getSinkTable());
+                    stmt.close();
+                    con.commit();
+                    con.close();
+                }
 
                 // Prepare Threads for Job processing
                 ExecutorService service = Executors.newFixedThreadPool(options.getJobs());
                 List<ReplicaTask> replicaTasks = new ArrayList<>();
 
-                for (int i = 0; i< options.getJobs(); i++){
-                    replicaTasks.add(new ReplicaTask(i,options));
+                for (int i = 0; i < options.getJobs(); i++) {
+                    replicaTasks.add(new ReplicaTask(i, options));
                 }
 
                 // Run all Replicate Tasks
@@ -81,9 +74,6 @@ public class ReplicaDB {
                     // catch tasks exceptions
                     future.get();
                 }
-
-                //ResultSet rs = sourceDs.readTable(null, null);
-                //sinkDs.insertDataToTable(rs,null,null);
 
                 long elapsed = (System.nanoTime() - start) / 1000000;
                 LOG.info("Total process time: " + elapsed + "ms");
@@ -102,7 +92,7 @@ public class ReplicaDB {
     }
 
 
-    private static void setLogToDebugMode(){
+    private static void setLogToDebugMode() {
 
         LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         Configuration config = ctx.getConfiguration();
