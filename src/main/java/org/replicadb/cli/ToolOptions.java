@@ -11,6 +11,8 @@ public class ToolOptions {
 
 
     private static final Logger LOG = LogManager.getLogger(ToolOptions.class.getName());
+    private static final int DEFAULT_JOBS = 4;
+    private static final String DEFAULT_MODE = ReplicationMode.COMPLETE.getModeText();
 
     private String sourceConnect;
     private String sourceUser;
@@ -33,12 +35,12 @@ public class ToolOptions {
     private Boolean sinkAnalyze = false;
 
 
-    private int jobs;
+    private int jobs =DEFAULT_JOBS;
     private Boolean help = false;
     private Boolean verbose = false;
     private String optionsFile;
 
-    private String mode; // complete or incremental
+    private String mode = DEFAULT_MODE;
 
     private Options options;
 
@@ -73,7 +75,7 @@ public class ToolOptions {
         options.addOption(
                 Option.builder()
                         .longOpt("source-password")
-                        .desc("Source databse authentication password")
+                        .desc("Source database authentication password")
                         .hasArg()
                         .argName("password")
                         .build()
@@ -185,7 +187,7 @@ public class ToolOptions {
         options.addOption(
                 Option.builder()
                         .longOpt("sink-disable-escape")
-                        .desc("Escape srings before populating to the table of the sink database.")
+                        .desc("Escape strings before populating to the table of the sink database.")
                         .build()
         );
 
@@ -290,10 +292,7 @@ public class ToolOptions {
 
             //Check for required values
             if (!checkRequiredValues()) throw new IllegalArgumentException("Missing any of the required parameters:" +
-                    "\n mode=" + this.mode +
-                    "\n source-connect=" + this.sourceConnect +
-                    "\n sink-connect" + this.sinkConnect +
-                    "\n jobs=" + this.jobs);
+                    " source-connect=" + this.sourceConnect + " OR sink-connect=" + this.sinkConnect);
         }
 
     }
@@ -323,7 +322,6 @@ public class ToolOptions {
 
 
         if (this.mode == null) return false;
-        if (this.jobs == 0) return false;
         if (this.sourceConnect == null) return false;
         if (this.sinkConnect == null) return false;
 
