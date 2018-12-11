@@ -38,8 +38,11 @@ public class PostgresqlManager extends SqlManager {
 
         // If table name is null get it from options
         tableName = tableName == null ? this.options.getSinkTable() : tableName;
+        // Still null, get the same as source
+        tableName = tableName == null ? this.options.getSourceTable() : tableName;
 
-        String allColumns = this.options.getSinkColumns();
+        String allColumns = getAllColumns(columns);
+
 
         // Get Postgres COPY meta-command manager
         PgConnection copyOperationConnection = this.connection.unwrap(PgConnection.class);
@@ -47,7 +50,6 @@ public class PostgresqlManager extends SqlManager {
         String copyCmd = getCopyCommand(tableName, allColumns);
         CopyIn copyIn = copyManager.copyIn(copyCmd);
 
-        LOG.debug("Coping data with this command: " + copyCmd);
 
         try {
             ResultSetMetaData rsmd = resultSet.getMetaData();
@@ -105,6 +107,21 @@ public class PostgresqlManager extends SqlManager {
         return 0;
     }
 
+    private String getAllColumns(String[] columns) {
+
+        if (columns != null && columns.length > 0){
+            return String.join(",", columns);
+        } else if (this.options.getSourceColumns() != null && !this.options.getSourceColumns().isEmpty() ){
+            return this.options.getSourceColumns();
+        } else if (this.options.getSinkColumns() != null && !this.options.getSinkColumns().isEmpty() ){
+            return this.options.getSinkColumns();
+        } else {
+            LOG.warn("Options source-columns and sink-columns are null");
+            return null;
+        }
+
+    }
+
 
     private String getCopyCommand(String tableName, String allColumns) {
 
@@ -120,6 +137,8 @@ public class PostgresqlManager extends SqlManager {
         }
 
         copyCmd.append(" FROM STDIN WITH DELIMITER e'\\x1f'  NULL '' ENCODING 'UTF-8' ");
+
+        LOG.debug("Coping data with this command: " + copyCmd.toString());
 
         return copyCmd.toString();
     }
