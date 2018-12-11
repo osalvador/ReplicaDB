@@ -211,7 +211,7 @@ ReplicaDB provides couple of different ways to supply a password, secure and non
 
 **Secure way of supplying password to the database**
 
-Para suministrar una contraseña de forma segura, se debe usar el fichero de opciones usando el argumento `--options-file`. Por ejemplo: 
+To supply a password securely, the options file must be used using the `--options-file` argument. For example:
 
 ```
 $ replicadb --source-connect jdbc:mysql://database.example.com/employees \
