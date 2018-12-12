@@ -187,16 +187,15 @@ public class PostgresqlManager extends SqlManager {
         tableName = tableName == null ? this.options.getSourceTable() : tableName;
 
         // If columns parameter is null, get it from options
-        String allColumns = this.options.getSourceColumns() == null ? "*" : this.options.getSourceColumns();
+        String allColumns = this.options.getSourceColumns() == null ? "ts.*" : this.options.getSourceColumns();
 
         StringBuilder sqlCmd = new StringBuilder();
 
         // Full table read. Get table data in buckets
-        sqlCmd.append(" WITH int_ctid as (" +
-                "SELECT (('x' || SUBSTR(md5(ctid :: text), 1, 8)) :: bit(32) :: int) ictid  from ");
+        sqlCmd.append(" WITH int_ctid as (SELECT (('x' || SUBSTR(md5(ctid :: text), 1, 8)) :: bit(32) :: int) ictid  from ");
         sqlCmd.append(escapeTableName(tableName));
         sqlCmd.append("), replicadb_table_stats as (select min(ictid) as min_ictid, max(ictid) as max_ictid from int_ctid )");
-        sqlCmd.append("SELECT ").append(allColumns).append(" FROM ").append(escapeTableName(tableName)).append(", replicadb_table_stats");
+        sqlCmd.append("SELECT ").append(allColumns).append(" FROM ").append(escapeTableName(tableName)).append(" as ts, replicadb_table_stats");
         sqlCmd.append(" WHERE ");
 
         // TODO: source.query with buckets.
@@ -213,6 +212,10 @@ public class PostgresqlManager extends SqlManager {
             sqlCmd.append(" >= ?");
         else
             sqlCmd.append(" = ?");
+
+//        sqlCmd.append(" SELECT ").append(allColumns).append(" FROM ");
+//        sqlCmd.append(escapeTableName(tableName)).append(" ts WHERE -1 <> ?");
+
 
         return super.execute(sqlCmd.toString(), 5000, nThread+1);
     }

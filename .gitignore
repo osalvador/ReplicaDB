@@ -9,3 +9,4 @@ lib/postgresql-42.2.1.jar
 ReplicaDB-0.1.1.tar.gz
 ReplicaDB-0.1.1.zip
 test/replicadb-ora2pg.conf
+test/replicadb-pg2ora.conf
