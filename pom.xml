@@ -6,7 +6,7 @@
 
     <groupId>org.replicadb</groupId>
     <artifactId>ReplicaDB</artifactId>
-    <version>0.1.1</version>
+    <version>0.1.2</version>
 
     <name>ReplicaDB</name>
     <url>http://www.replicadb.org</url>
@@ -51,16 +51,16 @@
         </dependency>
 
         <!-- Oracle -->
-        <dependency>
-            <groupId>com.oracle.jdbc</groupId>
-            <artifactId>ojdbc8</artifactId>
-            <version>12.2.0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.oracle.jdbc</groupId>
-            <artifactId>orai18n</artifactId>
-            <version>12.2.0.1</version>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>com.oracle.jdbc</groupId>-->
+            <!--<artifactId>ojdbc8</artifactId>-->
+            <!--<version>12.2.0.1</version>-->
+        <!--</dependency>-->
+        <!--<dependency>-->
+            <!--<groupId>com.oracle.jdbc</groupId>-->
+            <!--<artifactId>orai18n</artifactId>-->
+            <!--<version>12.2.0.1</version>-->
+        <!--</dependency>-->
 
     </dependencies>
 
