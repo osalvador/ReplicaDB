@@ -129,6 +129,7 @@ usage: replicadb [OPTIONS]
 |     `--sink-connect <jdbc-uri>`          | Sink database JDBC connect string |
 |     `--sink-disable-escape`              | Escape srings before populating to the table of the sink database. |
 |     `--sink-disable-index`               | Disable sink database table indexes before populate. |
+|     `--sink-disable-truncate`            | Disable the truncation of the sink database table before populate. |
 |     `--sink-password <password>`         | Sink database authentication password |
 |     `--sink-table <table-name>`          | Sink database table to populate |
 |     `--sink-user <username>`             | Sink database authentication username |
@@ -142,6 +143,7 @@ usage: replicadb [OPTIONS]
 |     `--source-user <username>`           | Source database authentication username |
 |     `--source-where <where clause>`      | Source database WHERE clause to use during extraction |
 | `-v`,`--verbose`                         | Print more information while working |
+|     `--version`                          | Show implementation version and exit |
 
 
 #### 3.1 Using Options Files to Pass Arguments
