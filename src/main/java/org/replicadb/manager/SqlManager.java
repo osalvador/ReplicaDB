@@ -7,6 +7,7 @@ import org.replicadb.cli.ToolOptions;
 
 import java.io.PrintWriter;
 import java.sql.*;
+import java.util.Properties;
 
 
 /**
@@ -176,19 +177,32 @@ public abstract class SqlManager extends ConnManager {
 //            }
 //
 //            if (password != null) {
-//                props.put("password", password);
+//                props.put("", password);
 //            }
 //
 //            props.putAll(connectionParams);
 //            connection = DriverManager.getConnection(connectString, props);
 //        } else {
+
+        // TODO: Especific connection params for Database Vendor
+
+        Properties props = new Properties();
+        // Enabling Network Compression in Java
+        props.setProperty("oracle.net.networkCompression", "on");
+        // Optional configuration for setting the client compression threshold.
+        props.setProperty("oracle.net.networkCompressionThreshold", "1024");
+        props.put("user", username);
+        props.put("password", password);
+        connection = DriverManager.getConnection(connectString, props);
+
+        /*
         LOG.debug(Thread.currentThread().getName() + ": No connection parameters specified. "
                 + "Using regular API for making connection.");
         if (username == null) {
-            connection = DriverManager.getConnection(connectString);
+            connection = DriverManager.getConnection(connectString, props);
         } else {
             connection = DriverManager.getConnection(connectString, username, password);
-        }
+        }*/
 //        }
 
         // We only use this for metadata queries. Loosest semantics are okay.
