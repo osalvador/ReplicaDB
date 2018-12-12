@@ -35,8 +35,9 @@ public class ToolOptions {
     private Boolean sinkAnalyze = false;
 
 
-    private int jobs =DEFAULT_JOBS;
+    private int jobs = DEFAULT_JOBS;
     private Boolean help = false;
+    private Boolean version = false;
     private Boolean verbose = false;
     private String optionsFile;
 
@@ -235,6 +236,13 @@ public class ToolOptions {
                         .build()
         );
 
+        options.addOption(
+                Option.builder()
+                        .longOpt("version")
+                        .desc("Show implementation version and exit.")
+                        .build()
+        );
+
 
         Option helpOpt = new Option("h", "help", false, "Print this help screen");
         options.addOption(helpOpt);
@@ -254,6 +262,8 @@ public class ToolOptions {
         if (existsHelpArgument(args)) {
             printHelp();
             this.setHelp(true);
+        } else if (existsVersionArgument(args)) {
+            this.setVersion(true);
         } else {
             // parse the command line arguments
             CommandLine line = parser.parse(options, args);
@@ -316,6 +326,28 @@ public class ToolOptions {
             }
         }
         return false;
+    }
+
+    private Boolean existsVersionArgument(String args[]) {
+        //help argument is -h or --help
+        for (int i = 0; i <= args.length - 1; i++) {
+            if (args[i].equals("--version")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public String getVersion() {
+        return ToolOptions.class.getPackage().getImplementationVersion();
+    }
+
+    public void setVersion(Boolean version) {
+        this.version = version;
+    }
+
+    public Boolean isVersion() {
+        return version;
     }
 
     public Boolean checkRequiredValues() {
@@ -648,16 +680,15 @@ public class ToolOptions {
     public Boolean isSinkDisableTruncate() {
         return sinkDisableTruncate;
     }
+
     public void setSinkDisableTruncate(Boolean sinkDisableTruncate) {
         this.sinkDisableTruncate = sinkDisableTruncate;
     }
+
     private void setSinkDisableTruncateNotNull(Boolean sinkDisableTruncate) {
         if (sinkDisableTruncate != null)
             this.sinkDisableTruncate = sinkDisableTruncate;
     }
-
-
-
 
 
     public Boolean getSinkAnalyze() {
@@ -676,28 +707,30 @@ public class ToolOptions {
     @Override
     public String toString() {
         return "ToolOptions{" +
-                " \n\tsourceConnect='" + sourceConnect + '\'' +
-                ",\n\tsourceUser='" + sourceUser + '\'' +
-                ",\n\tsourcePassword='" + sourcePassword + '\'' +
-                ",\n\tsourceTable='" + sourceTable + '\'' +
-                ",\n\tsourceColumns='" + sourceColumns + '\'' +
-                ",\n\tsourceWhere='" + sourceWhere + '\'' +
-                ",\n\tsourceQuery='" + sourceQuery + '\'' +
-                ",\n\tsourceCheckColumn='" + sourceCheckColumn + '\'' +
-                ",\n\tsourceLastValue='" + sourceLastValue + '\'' +
-                ",\n\tsinkConnect='" + sinkConnect + '\'' +
-                ",\n\tsinkUser='" + sinkUser + '\'' +
-                ",\n\tsinkPassword='" + sinkPassword + '\'' +
-                ",\n\tsinkTable='" + sinkTable + '\'' +
-                ",\n\tsinkColumns='" + sinkColumns + '\'' +
-                ",\n\tsinkDisableEscape=" + sinkDisableEscape +
-                ",\n\tsinkDisableIndex=" + sinkDisableIndex +
-                ",\n\tsinkAnalyze=" + sinkAnalyze +
-                ",\n\tjobs=" + jobs +
-                ",\n\thelp=" + help +
-                ",\n\tverbose=" + verbose +
-                ",\n\toptionsFile='" + optionsFile + '\'' +
-                ",\n\tmode='" + mode + '\'' +
+                " \n\t sourceConnect='" + sourceConnect + '\'' +
+                ",\n\t sourceUser='" + sourceUser + '\'' +
+                ",\n\t sourcePassword='" + sourcePassword + '\'' +
+                ",\n\t sourceTable='" + sourceTable + '\'' +
+                ",\n\t sourceColumns='" + sourceColumns + '\'' +
+                ",\n\t sourceWhere='" + sourceWhere + '\'' +
+                ",\n\t sourceQuery='" + sourceQuery + '\'' +
+                ",\n\t sourceCheckColumn='" + sourceCheckColumn + '\'' +
+                ",\n\t sourceLastValue='" + sourceLastValue + '\'' +
+                ",\n\t sinkConnect='" + sinkConnect + '\'' +
+                ",\n\t sinkUser='" + sinkUser + '\'' +
+                ",\n\t sinkPassword='" + sinkPassword + '\'' +
+                ",\n\t sinkTable='" + sinkTable + '\'' +
+                ",\n\t sinkColumns='" + sinkColumns + '\'' +
+                ",\n\t sinkDisableEscape=" + sinkDisableEscape +
+                ",\n\t sinkDisableIndex=" + sinkDisableIndex +
+                ",\n\t sinkDisableTruncate=" + sinkDisableTruncate +
+                ",\n\t sinkAnalyze=" + sinkAnalyze +
+                ",\n\t jobs=" + jobs +
+                ",\n\t help=" + help +
+                ",\n\t version=" + version +
+                ",\n\t verbose=" + verbose +
+                ",\n\t optionsFile='" + optionsFile + '\'' +
+                ",\n\t mode='" + mode + '\'' +
                 '}';
     }
 }
