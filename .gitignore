@@ -9,3 +9,4 @@ lib/log4j-api-2.11.1.jar
 lib/junit-4.11.jar
 lib/hamcrest-core-1.3.jar
 lib/commons-cli-1.4.jar
+test/replicadb-pg2ora.conf
