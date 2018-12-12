@@ -2,7 +2,7 @@
 <Configuration>
     <Appenders>
         <Console name="console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{DEFAULT} %-5p %c{1}:%L: %m%n"/>
+            <PatternLayout pattern="%d{DEFAULT} %-5p %c{1}:%L %m%n"/>
         </Console>
     </Appenders>
     <Loggers>

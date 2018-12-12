@@ -2,6 +2,7 @@ package org.replicadb.manager;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 
 import java.io.PrintWriter;
@@ -86,90 +87,6 @@ public abstract class SqlManager extends ConnManager {
     public abstract Connection getConnection() throws SQLException;
 
     /**
-     * Offers the ConnManager an opportunity to validate that the
-     * options specified in the ImportJobContext are valid.
-     * @throws ImportException if the import is misconfigured.
-     */
-   /* protected void checkTableImportOptions(
-            org.apache.sqoop.manager.ImportJobContext context)
-            throws IOException, ImportException {
-        String tableName = context.getTableName();
-        SqoopOptions opts = context.getOptions();
-
-        // Default implementation: check that the split column is set
-        // correctly.
-        String splitCol = getSplitColumn(opts, tableName);
-        if (null == splitCol && opts.getNumMappers() > 1) {
-            if (!opts.getAutoResetToOneMapper()) {
-                // Can't infer a primary key.
-                throw new ImportException("No primary key could be found for table "
-                        + tableName + ". Please specify one with --split-by or perform "
-                        + "a sequential import with '-m 1'.");
-            } else {
-                LOG.warn("Split by column not provided or can't be inferred.  Resetting to one mapper");
-                opts.setNumMappers(1);
-            }
-        }
-    }*/
-
-
-    /**
-     * Default implementation of importQuery() is to launch a MapReduce job
-     * via DataDrivenImportJob to read the table with DataDrivenDBInputFormat,
-     * using its free-form query importer.
-     */
-//    public void importQuery(org.apache.sqoop.manager.ImportJobContext context)
-//            throws IOException, ImportException {
-//        String jarFile = context.getJarFile();
-//        SqoopOptions opts = context.getOptions();
-//
-//        context.setConnManager(this);
-//
-//        ImportJobBase importer;
-//        if (opts.getHBaseTable() != null) {
-//            // Import to HBase.
-//            if (!HBaseUtil.isHBaseJarPresent()) {
-//                throw new ImportException("HBase jars are not present in classpath,"
-//                        + " cannot import to HBase!");
-//            }
-//            if (!opts.isBulkLoadEnabled()){
-//                importer = new HBaseImportJob(opts, context);
-//            } else {
-//                importer = new HBaseBulkImportJob(opts, context);
-//            }
-//        } else if (opts.getAccumuloTable() != null) {
-//            // Import to Accumulo.
-//            if (!AccumuloUtil.isAccumuloJarPresent()) {
-//                throw new ImportException("Accumulo jars are not present in classpath,"
-//                        + " cannot import to Accumulo!");
-//            }
-//            importer = new AccumuloImportJob(opts, context);
-//        } else {
-//            // Import to HDFS.
-//            importer = new DataDrivenImportJob(opts, context.getInputFormat(),
-//                    context, getParquetJobConfigurator().createParquetImportJobConfigurator());
-//        }
-//
-//        String splitCol = getSplitColumn(opts, null);
-//        if (splitCol == null) {
-//            String boundaryQuery = opts.getBoundaryQuery();
-//            if (opts.getNumMappers() > 1) {
-//                // Can't infer a primary key.
-//                throw new ImportException("A split-by column must be specified for "
-//                        + "parallel free-form query imports. Please specify one with "
-//                        + "--split-by or perform a sequential import with '-m 1'.");
-//            } else if (boundaryQuery != null && !boundaryQuery.isEmpty()) {
-//                // Query import with boundary query and no split column specified
-//                throw new ImportException("Using a boundary query for a query based "
-//                        + "import requires specifying the split by column as well. Please "
-//                        + "specify a column name using --split-by and try again.");
-//            }
-//        }
-//
-//        importer.runImport(null, jarFile, splitCol, opts.getConf());
-//    }
-
-    /**
      * Executes an arbitrary SQL statement.
      *
      * @param stmt      The SQL statement to execute
@@ -226,77 +143,6 @@ public abstract class SqlManager extends ConnManager {
             LOG.error(e);
         }
     }
-
-//    /**
-//     * Prints the contents of a ResultSet to the specified PrintWriter.
-//     * The ResultSet is closed at the end of this method.
-//     *
-//     * @param results the ResultSet to print.
-//     * @param pw      the location to print the data to.
-//     */
-//    protected void formatAndPrintResultSet(ResultSet results, PrintWriter pw) {
-//        try {
-//            try {
-//                int cols = results.getMetaData().getColumnCount();
-//                pw.println("Got " + cols + " columns back");
-//                if (cols > 0) {
-//                    ResultSetMetaData rsmd = results.getMetaData();
-//                    String schema = rsmd.getSchemaName(1);
-//                    String table = rsmd.getTableName(1);
-//                    if (null != schema) {
-//                        pw.println("Schema: " + schema);
-//                    }
-//
-//                    if (null != table) {
-//                        pw.println("Table: " + table);
-//                    }
-//                }
-//            } catch (SQLException sqlE) {
-//                LOG.error( "SQLException reading result metadata: ", sqlE);
-//            }
-//
-//            try {
-//                new ResultSetPrinter().printResultSet(pw, results);
-//            } catch (IOException ioe) {
-//                LOG.error("IOException writing results: " + ioe.toString());
-//                return;
-//            }
-//        } finally {
-//            try {
-//                results.close();
-//                getConnection().commit();
-//            } catch (SQLException sqlE) {
-//                LoggingUtils.logAll(LOG, "SQLException closing ResultSet: "
-//                        + sqlE.toString(), sqlE);
-//            }
-//
-//            release();
-//        }
-//    }
-
-//    /**
-//     * Poor man's SQL query interface; used for debugging.
-//     *
-//     * @param s the SQL statement to execute.
-//     */
-//    public void execAndPrint(String s) {
-//        ResultSet results = null;
-//        try {
-//            results = execute(s);
-//        } catch (SQLException sqlE) {
-//            LoggingUtils.logAll(LOG, "Error executing statement: ", sqlE);
-//            release();
-//            return;
-//        }
-//
-//        PrintWriter pw = new PrintWriter(System.out, true);
-//        try {
-//            formatAndPrintResultSet(results, pw);
-//        } finally {
-//            pw.close();
-//        }
-//    }
-
 
     /**
      * Create a connection to the database; usually used only from within
@@ -426,4 +272,15 @@ public abstract class SqlManager extends ConnManager {
         }
     }
 
+    @Override
+    public void truncateTable() throws SQLException {
+        // Truncate Sink table
+        Statement statement = this.getConnection().createStatement();
+        statement.executeUpdate("TRUNCATE TABLE " + options.getSinkTable());
+        statement.close();
+        this.getConnection().commit();
+        this.getConnection().close();
+
+
+    }
 }

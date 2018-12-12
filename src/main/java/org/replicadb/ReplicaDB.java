@@ -8,7 +8,9 @@ import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
-import org.replicadb.manager.*;
+import org.replicadb.manager.ConnManager;
+import org.replicadb.manager.DataSourceType;
+import org.replicadb.manager.ManagerFactory;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -28,11 +30,14 @@ public class ReplicaDB {
 
     public static void main(String[] args) {
 
+
         long start = System.nanoTime();
         try {
 
             // Parse Option Arguments
             ToolOptions options = new ToolOptions(args);
+
+            LOG.info("Running ReplicaDB version: "+options.getVersion());
 
             if (options.isVerbose()) {
                 setLogToDebugMode();
@@ -40,24 +45,14 @@ public class ReplicaDB {
                 LOG.debug(options.toString());
             }
 
-            if (!options.isHelp()) {
+            if (!options.isHelp() && !options.isVersion()) {
 
                 // Do stuff...
-                // Obtener una instancia del DriverManager del Source
-                // Obtener una instancia del DriverManager del Sink
-                // Mover datos de Source a Sink.
-                ManagerFactory managerF = new ManagerFactory();
-                ConnManager sinkDs = managerF.accept(options, DataSourceType.SINK);
-
-                // TODO: delegar el truncate de la tabla al manger del SINK.
-                // Truncate Sink table
-                if (!options.isSinkDisableTruncate() && (options.getMode().equals(ReplicationMode.COMPLETE))) {
-                    Connection con = sinkDs.getConnection();
-                    Statement stmt = con.createStatement();
-                    stmt.executeUpdate("TRUNCATE TABLE " + options.getSinkTable());
-                    stmt.close();
-                    con.commit();
-                    con.close();
+                // Truncate sink table if MODE is COMPLETE and truncate is enabled
+                if (!options.isSinkDisableTruncate() && (options.getMode().equals(ReplicationMode.COMPLETE.getModeText()))) {
+                    ConnManager sinkDs = new ManagerFactory().accept(options, DataSourceType.SINK);
+                    sinkDs.truncateTable();
+                    sinkDs = null;
                 }
 
                 // Prepare Threads for Job processing
@@ -79,8 +74,6 @@ public class ReplicaDB {
                 LOG.info("Total process time: " + elapsed + "ms");
             }
 
-            System.exit(SUCCESS);
-
         } catch (Exception e) {
 
             LOG.error("Got exception running ReplicaDB:", e);
@@ -89,6 +82,9 @@ public class ReplicaDB {
             System.exit(ERROR);
 
         }
+
+        System.exit(SUCCESS);
+
     }
 
 
