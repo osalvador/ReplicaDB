@@ -80,7 +80,7 @@ public class PostgresqlManager extends SqlManager {
                 if (this.options.isSinkDisableEscape())
                     row.append(cols.toString());
                 else
-                    row.append(cols.toString().replace("\\", "\\\\").replace("\n", "\\n"));
+                    row.append(cols.toString().replace("\\", "\\\\").replace("\n", "\\n").replace("\r","\\r"));
 
                 // Row ends with \n
                 row.append("\n");
@@ -111,10 +111,10 @@ public class PostgresqlManager extends SqlManager {
 
         if (columns != null && columns.length > 0){
             return String.join(",", columns);
-        } else if (this.options.getSourceColumns() != null && !this.options.getSourceColumns().isEmpty() ){
-            return this.options.getSourceColumns();
         } else if (this.options.getSinkColumns() != null && !this.options.getSinkColumns().isEmpty() ){
             return this.options.getSinkColumns();
+        } else if (this.options.getSourceColumns() != null && !this.options.getSourceColumns().isEmpty() ){
+            return this.options.getSourceColumns();
         } else {
             LOG.warn("Options source-columns and sink-columns are null");
             return null;
