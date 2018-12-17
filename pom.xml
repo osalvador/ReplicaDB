@@ -50,12 +50,12 @@
             <version>42.2.1</version>
         </dependency>
 
-        <!-- Oracle -->
-        <!--<dependency>-->
-            <!--<groupId>com.oracle.jdbc</groupId>-->
-            <!--<artifactId>ojdbc8</artifactId>-->
-            <!--<version>12.2.0.1</version>-->
-        <!--</dependency>-->
+         <!-- Oracle -->
+        <dependency>
+            <groupId>com.oracle.jdbc</groupId>
+            <artifactId>ojdbc8</artifactId>
+            <version>12.2.0.1</version>
+        </dependency>
         <!--<dependency>-->
             <!--<groupId>com.oracle.jdbc</groupId>-->
             <!--<artifactId>orai18n</artifactId>-->
@@ -158,7 +158,6 @@
                         <!-- Build an executable JAR -->
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-jar-plugin</artifactId>
-                        <version>3.1.0</version>
                         <configuration>
                             <archive>
                                 <manifest>

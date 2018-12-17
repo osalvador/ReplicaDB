@@ -1,12 +1,7 @@
 .idea/*
-lib/commons-cli-1.4.jar
-lib/hamcrest-core-1.3.jar
-lib/junit-4.11.jar
-lib/log4j-api-2.11.1.jar
-lib/log4j-core-2.11.1.jar
-lib/ojdbc8.jar
-lib/postgresql-42.2.1.jar
-ReplicaDB-0.1.1.tar.gz
-ReplicaDB-0.1.1.zip
+lib/*
 test/replicadb-ora2pg.conf
 test/replicadb-pg2ora.conf
+ReplicaDB-*.jar
+ReplicaDB-*.zip
+ReplicaDB-*.gz
