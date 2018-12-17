@@ -1,5 +1,7 @@
 package org.replicadb.manager;
 
+import com.oracle.tools.packager.Log;
+import oracle.jdbc.OracleConnection;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
@@ -166,44 +168,29 @@ public abstract class SqlManager extends ConnManager {
         String password = options.getSourcePassword();
         String connectString = options.getSourceConnect();
 
-//        Properties connectionParams = options.getConnectionParams();
-//        if (connectionParams != null && connectionParams.size() > 0) {
-//            LOG.debug("User specified connection params. "
-//                    + "Using properties specific API for making connection.");
-//
-//            Properties props = new Properties();
-//            if (username != null) {
-//                props.put("user", username);
-//            }
-//
-//            if (password != null) {
-//                props.put("", password);
-//            }
-//
-//            props.putAll(connectionParams);
-//            connection = DriverManager.getConnection(connectString, props);
-//        } else {
+        Properties connectionParams = options.getSourceConnectionParams();
+        if (connectionParams != null && connectionParams.size() > 0) {
+            LOG.debug("User specified connection params. Using properties specific API for making connection.");
 
-        // TODO: Especific connection params for Database Vendor
+            Properties props = new Properties();
+            if (username != null) {
+                props.put("user", username);
+            }
 
-        Properties props = new Properties();
-        // Enabling Network Compression in Java
-        props.setProperty("oracle.net.networkCompression", "on");
-        // Optional configuration for setting the client compression threshold.
-        props.setProperty("oracle.net.networkCompressionThreshold", "1024");
-        props.put("user", username);
-        props.put("password", password);
-        connection = DriverManager.getConnection(connectString, props);
+            if (password != null) {
+                props.put("password", password);
+            }
 
-        /*
-        LOG.debug(Thread.currentThread().getName() + ": No connection parameters specified. "
-                + "Using regular API for making connection.");
-        if (username == null) {
+            props.putAll(connectionParams);
             connection = DriverManager.getConnection(connectString, props);
         } else {
-            connection = DriverManager.getConnection(connectString, username, password);
-        }*/
-//        }
+            LOG.debug("No connection parameters specified. Using regular API for making connection.");
+            if (username == null) {
+                connection = DriverManager.getConnection(connectString);
+            } else {
+                connection = DriverManager.getConnection(connectString, username, password);
+            }
+        }
 
         // We only use this for metadata queries. Loosest semantics are okay.
         //connection.setTransactionIsolation(getMetadataIsolationLevel());
@@ -238,31 +225,29 @@ public abstract class SqlManager extends ConnManager {
         String password = options.getSinkPassword();
         String connectString = options.getSinkConnect();
 
-//        Properties connectionParams = options.getConnectionParams();
-//        if (connectionParams != null && connectionParams.size() > 0) {
-//            LOG.debug("User specified connection params. "
-//                    + "Using properties specific API for making connection.");
-//
-//            Properties props = new Properties();
-//            if (username != null) {
-//                props.put("user", username);
-//            }
-//
-//            if (password != null) {
-//                props.put("password", password);
-//            }
-//
-//            props.putAll(connectionParams);
-//            connection = DriverManager.getConnection(connectString, props);
-//        } else {
-        LOG.debug("No connection parameters specified. "
-                + "Using regular API for making connection.");
-        if (username == null) {
-            connection = DriverManager.getConnection(connectString);
+        Properties connectionParams = options.getSinkConnectionParams();
+        if (connectionParams != null && connectionParams.size() > 0) {
+            LOG.debug("User specified connection params. Using properties specific API for making connection.");
+
+            Properties props = new Properties();
+            if (username != null) {
+                props.put("user", username);
+            }
+
+            if (password != null) {
+                props.put("password", password);
+            }
+
+            props.putAll(connectionParams);
+            connection = DriverManager.getConnection(connectString, props);
         } else {
-            connection = DriverManager.getConnection(connectString, username, password);
+            LOG.debug("No connection parameters specified. Using regular API for making connection.");
+            if (username == null) {
+                connection = DriverManager.getConnection(connectString);
+            } else {
+                connection = DriverManager.getConnection(connectString, username, password);
+            }
         }
-//        }
 
         // We only use this for metadata queries. Loosest semantics are okay.
         //connection.setTransactionIsolation(getMetadataIsolationLevel());

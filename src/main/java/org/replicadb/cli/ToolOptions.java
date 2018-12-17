@@ -43,6 +43,9 @@ public class ToolOptions {
 
     private String mode = DEFAULT_MODE;
 
+    private Properties sourceConnectionParams;
+    private Properties sinkConnectionParams;
+
     private Options options;
 
     public ToolOptions(String[] args) throws ParseException, IOException {
@@ -390,6 +393,10 @@ public class ToolOptions {
         setSourceWhere(prop.getProperty("source.where"));
         setJobs(prop.getProperty("jobs"));
 
+        // Connection params
+        setSinkConnectionParams(of.getSinkConnectionParams());
+        setSourceConnectionParams(of.getSourceConnectionParams());
+
     }
 
 
@@ -704,33 +711,51 @@ public class ToolOptions {
             this.sinkAnalyze = sinkAnalyze;
     }
 
+    public Properties getSourceConnectionParams() {
+        return sourceConnectionParams;
+    }
+
+    public void setSourceConnectionParams(Properties sourceConnectionParams) {
+        this.sourceConnectionParams = sourceConnectionParams;
+    }
+
+    public Properties getSinkConnectionParams() {
+        return sinkConnectionParams;
+    }
+
+    public void setSinkConnectionParams(Properties sinkConnectionParams) {
+        this.sinkConnectionParams = sinkConnectionParams;
+    }
+
     @Override
     public String toString() {
         return "ToolOptions{" +
-                " \n\t sourceConnect='" + sourceConnect + '\'' +
-                ",\n\t sourceUser='" + sourceUser + '\'' +
-                ",\n\t sourcePassword='" + sourcePassword + '\'' +
-                ",\n\t sourceTable='" + sourceTable + '\'' +
-                ",\n\t sourceColumns='" + sourceColumns + '\'' +
-                ",\n\t sourceWhere='" + sourceWhere + '\'' +
-                ",\n\t sourceQuery='" + sourceQuery + '\'' +
-                ",\n\t sourceCheckColumn='" + sourceCheckColumn + '\'' +
-                ",\n\t sourceLastValue='" + sourceLastValue + '\'' +
-                ",\n\t sinkConnect='" + sinkConnect + '\'' +
-                ",\n\t sinkUser='" + sinkUser + '\'' +
-                ",\n\t sinkPassword='" + sinkPassword + '\'' +
-                ",\n\t sinkTable='" + sinkTable + '\'' +
-                ",\n\t sinkColumns='" + sinkColumns + '\'' +
-                ",\n\t sinkDisableEscape=" + sinkDisableEscape +
-                ",\n\t sinkDisableIndex=" + sinkDisableIndex +
-                ",\n\t sinkDisableTruncate=" + sinkDisableTruncate +
-                ",\n\t sinkAnalyze=" + sinkAnalyze +
-                ",\n\t jobs=" + jobs +
-                ",\n\t help=" + help +
-                ",\n\t version=" + version +
-                ",\n\t verbose=" + verbose +
-                ",\n\t optionsFile='" + optionsFile + '\'' +
-                ",\n\t mode='" + mode + '\'' +
+                " \n\tsourceConnect='" + sourceConnect + '\'' +
+                ",\n\tsourceUser='" + sourceUser + '\'' +
+                ",\n\tsourcePassword='" + sourcePassword + '\'' +
+                ",\n\tsourceTable='" + sourceTable + '\'' +
+                ",\n\tsourceColumns='" + sourceColumns + '\'' +
+                ",\n\tsourceWhere='" + sourceWhere + '\'' +
+                ",\n\tsourceQuery='" + sourceQuery + '\'' +
+                ",\n\tsourceCheckColumn='" + sourceCheckColumn + '\'' +
+                ",\n\tsourceLastValue='" + sourceLastValue + '\'' +
+                ",\n\tsinkConnect='" + sinkConnect + '\'' +
+                ",\n\tsinkUser='" + sinkUser + '\'' +
+                ",\n\tsinkPassword='" + sinkPassword + '\'' +
+                ",\n\tsinkTable='" + sinkTable + '\'' +
+                ",\n\tsinkColumns='" + sinkColumns + '\'' +
+                ",\n\tsinkDisableEscape=" + sinkDisableEscape +
+                ",\n\tsinkDisableIndex=" + sinkDisableIndex +
+                ",\n\tsinkDisableTruncate=" + sinkDisableTruncate +
+                ",\n\tsinkAnalyze=" + sinkAnalyze +
+                ",\n\tjobs=" + jobs +
+                ",\n\thelp=" + help +
+                ",\n\tversion=" + version +
+                ",\n\tverbose=" + verbose +
+                ",\n\toptionsFile='" + optionsFile + '\'' +
+                ",\n\tmode='" + mode + '\'' +
+                ",\n\tsourceConnectionParams=" + sourceConnectionParams +
+                ",\n\tsinkConnectionParams=" + sinkConnectionParams +
                 '}';
     }
 }
