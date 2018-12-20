@@ -119,6 +119,7 @@ usage: replicadb [OPTIONS]
 **Table 1. Common arguments**
 
 {:.table}
+
 | Argument                                 | Description | 
 |------------------------------------------|--------------------------------------------------------------------------------------| 
 |  `-h`,`--help`                           | Print this help screen |
@@ -260,6 +261,8 @@ ReplicaDB replicate data in parallel from most database sources. You can specify
 
 
 ### 4. Compatible Databases
+
+{:.table}
 
 | Database Vendor | Source | Sink | 
 |----------------|------|--------|
