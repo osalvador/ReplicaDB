@@ -6,10 +6,10 @@
 
     <groupId>org.replicadb</groupId>
     <artifactId>ReplicaDB</artifactId>
-    <version>0.1.2</version>
+    <version>0.2.0</version>
 
     <name>ReplicaDB</name>
-    <url>http://www.replicadb.org</url>
+    <url>https://github.com/osalvador/ReplicaDB</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

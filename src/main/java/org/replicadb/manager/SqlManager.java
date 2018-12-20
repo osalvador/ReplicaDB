@@ -1,14 +1,12 @@
 package org.replicadb.manager;
 
-import com.oracle.tools.packager.Log;
-import oracle.jdbc.OracleConnection;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 
-import java.io.PrintWriter;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Properties;
 
 
@@ -22,6 +20,9 @@ public abstract class SqlManager extends ConnManager {
     private static final Logger LOG = LogManager.getLogger(SqlManager.class.getName());
 
     protected static final int DEFAULT_FETCH_SIZE = 5000;
+
+    protected Connection connection;
+    protected DataSourceType dsType;
 
     private Statement lastStatement;
 
@@ -87,7 +88,20 @@ public abstract class SqlManager extends ConnManager {
     /**
      * Retrieve the actual connection from the outer ConnManager.
      */
-    public abstract Connection getConnection() throws SQLException;
+    public Connection getConnection() throws SQLException {
+        if (null == this.connection) {
+
+            if (dsType == DataSourceType.SOURCE) {
+                this.connection = makeSourceConnection();
+            } else if (dsType == DataSourceType.SINK) {
+                this.connection = makeSinkConnection();
+            } else {
+                LOG.error("DataSourceType must be Source or Sink");
+            }
+        }
+
+        return this.connection;
+    };
 
     /**
      * Executes an arbitrary SQL statement.
@@ -140,10 +154,12 @@ public abstract class SqlManager extends ConnManager {
     public void close() throws SQLException {
         release();
         // Close connection, ignore exceptions
-        try {
-            this.getConnection().close();
-        } catch (Exception e) {
-            LOG.error(e);
+        if (this.connection != null) {
+            try {
+                this.getConnection().close();
+            } catch (Exception e) {
+                LOG.error(e);
+            }
         }
     }
 
@@ -271,15 +287,138 @@ public abstract class SqlManager extends ConnManager {
         }
     }
 
+
     @Override
-    public void truncateTable() throws SQLException {
+    public String[] getSinkPrimaryKeys(String tableName) {
+        try {
+            DatabaseMetaData metaData = this.getConnection().getMetaData();
+            ResultSet results = metaData.getPrimaryKeys(null
+                    , getSchemaFromQualifiedTableName(tableName)
+                    , getTableNameFromQualifiedTableName(tableName)
+            );
+            if (null == results) {
+                return null;
+            }
+
+            try {
+                ArrayList<String> pks = new ArrayList<>();
+                while (results.next()) {
+                    String pkName = results.getString("COLUMN_NAME");
+                    pks.add(pkName);
+                }
+
+                if (pks.isEmpty())
+                    return null;
+                else
+                    return pks.toArray(new String[0]);
+
+            } finally {
+                results.close();
+                getConnection().commit();
+            }
+        } catch (SQLException sqlException) {
+            LOG.error("Error reading primary key metadata: " + sqlException.toString(), sqlException);
+            return null;
+        }
+    }
+
+
+    /**
+     * Truncate sink table
+     *
+     * @throws SQLException
+     */
+    protected void truncateTable() throws SQLException {
         // Truncate Sink table
+        String tableName;
+        // Get table name and columns
+        if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
+            tableName = getQualifiedStagingTableName();
+        } else {
+            tableName = getSinkTableName();
+        }
+        String sql = "TRUNCATE TABLE " + tableName;
+        LOG.debug("Truncating sink table with this command: " + sql);
         Statement statement = this.getConnection().createStatement();
-        statement.executeUpdate("TRUNCATE TABLE " + options.getSinkTable());
+        statement.executeUpdate(sql);
         statement.close();
         this.getConnection().commit();
-        this.getConnection().close();
+    };
 
+
+    /**
+     * Create staging table on sink database.
+     * When the mode is incremental, some DBMS need to create a staging table in order to populate it
+     * before merge data between the final table and the staging table.
+     *
+     * @throws SQLException
+     */
+    protected abstract void createStagingTable() throws SQLException;
+
+
+    /**
+     * Merge staging table and sink table.
+     *
+     * @throws SQLException
+     */
+    protected abstract void mergeStagingTable() throws SQLException;
+
+    /**
+     * Drop staging table.
+     *
+     * @throws SQLException
+     */
+    protected void dropStagingTable() throws SQLException {
+        Statement statement = this.getConnection().createStatement();
+        String sql = "DROP TABLE " + getQualifiedStagingTableName();
+        LOG.debug("Dropping staging table with this command: " + sql);
+
+        statement.executeUpdate(sql);
+        statement.close();
+        this.getConnection().commit();
+    };
+
+    @Override
+    public void preSinkTasks() throws SQLException {
+
+        // On INCREMENTAL mode
+        if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
+
+            // Only create staging table if it is not defined by the user
+            if (options.getSinkStagingTable() == null || options.getSinkStagingTable().isEmpty()) {
+
+                // If the staging parameters have not been defined then the table is created in the public schema
+                if (options.getSinkStagingSchema() == null || options.getSinkStagingSchema().isEmpty()) {
+                    // TODO: Esto sólo es válido para PostgreSQL
+                    LOG.warn("No staging schema is defined, setting it as PUBLIC");
+                    options.setSinkStagingSchema("public");
+                }
+                this.createStagingTable();
+            }
+        }
+
+        // Truncate sink table if it is enabled
+        if (!options.isSinkDisableTruncate()) {
+            this.truncateTable();
+        }
 
     }
+
+    @Override
+    public void postSinkTasks() throws SQLException {
+        // On INCREMENTAL mode
+        if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
+
+            // Merge Data
+            this.mergeStagingTable();
+
+            // Only drop staging table if it was created automatically
+            if (options.getSinkStagingTable() == null || options.getSinkStagingTable().isEmpty()) {
+                // Drop staging table
+                this.dropStagingTable();
+            }
+
+        }
+    }
+
 }

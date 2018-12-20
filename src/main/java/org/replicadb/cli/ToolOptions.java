@@ -21,13 +21,13 @@ public class ToolOptions {
     private String sourceColumns;
     private String sourceWhere;
     private String sourceQuery;
-    private String sourceCheckColumn; // for incremental mode
-    private String sourceLastValue; // for incremental mode
 
     private String sinkConnect;
     private String sinkUser;
     private String sinkPassword;
     private String sinkTable;
+    private String sinkStagingTable;
+    private String sinkStagingSchema;
     private String sinkColumns;
     private Boolean sinkDisableEscape = false;
     private Boolean sinkDisableIndex = false;
@@ -121,26 +121,6 @@ public class ToolOptions {
                         .build()
         );
 
-
-        options.addOption(
-                Option.builder()
-                        .longOpt("source-check-column")
-                        .desc("Specify the column to be examined when determining which rows to be replicated")
-                        .hasArg()
-                        .argName("column")
-                        .build()
-        );
-
-        options.addOption(
-                Option.builder()
-                        .longOpt("source-last-value")
-                        .desc("Specifies the maximum value of the source-check-column from the previous replication")
-                        .hasArg()
-                        .argName("value")
-                        .build()
-        );
-
-
         // Sink Options
         options.addOption(
                 Option.builder()
@@ -218,6 +198,20 @@ public class ToolOptions {
                         .build()
         );
 
+        options.addOption(
+                Option.builder()
+                        .longOpt("sink-staging-table")
+                        .desc("Qualified name of the sink staging table. The table must exist in the sink database.")
+                        .build()
+        );
+
+        options.addOption(
+                Option.builder()
+                        .longOpt("sink-staging-schema")
+                        .desc("Scheme name on the sink database, with right permissions for creating staging tables.")
+                        .build()
+        );
+
 
         // Other Options
         options.addOption(
@@ -291,17 +285,16 @@ public class ToolOptions {
             setSinkPasswordNotNull(line.getOptionValue("sink-password"));
             setSinkTableNotNull(line.getOptionValue("sink-table"));
             setSinkUserNotNull(line.getOptionValue("sink-user"));
-            setSourceCheckColumnNotNull(line.getOptionValue("source-check-column"));
             setSourceColumnsNotNull(line.getOptionValue("source-columns"));
             setSourceConnectNotNull(line.getOptionValue("source-connect"));
-            setSourceLastValueNotNull(line.getOptionValue("source-last-value"));
             setSourcePasswordNotNull(line.getOptionValue("source-password"));
             setSourceQueryNotNull(line.getOptionValue("source-query"));
             setSourceTableNotNull(line.getOptionValue("source-table"));
             setSourceUserNotNull(line.getOptionValue("source-user"));
             setSourceWhereNotNull(line.getOptionValue("source-where"));
             setJobsNotNull(line.getOptionValue("jobs"));
-
+            setSinkStagingSchemaNotNull(line.getOptionValue("sink-staging-schema"));
+            setSinkStagingTableNotNull(line.getOptionValue("sink-staging-table"));
 
             //Check for required values
             if (!checkRequiredValues()) throw new IllegalArgumentException("Missing any of the required parameters:" +
@@ -317,7 +310,7 @@ public class ToolOptions {
 
         // automatically generate the help statement
         HelpFormatter formatter = new HelpFormatter();
-        formatter.setWidth(120);
+        formatter.setWidth(140);
         formatter.printHelp("replicadb [OPTIONS]", header, this.options, footer, false);
     }
 
@@ -379,11 +372,11 @@ public class ToolOptions {
         setSinkDisableIndex(Boolean.parseBoolean(prop.getProperty("sink.disable.index")));
         setSinkDisableEscape(Boolean.parseBoolean(prop.getProperty("sink.disable.escape")));
         setSinkDisableTruncate(Boolean.parseBoolean(prop.getProperty("sink.disable.truncate")));
+        setSinkUser(prop.getProperty("sink.user"));
         setSinkPassword(prop.getProperty("sink.password"));
         setSinkTable(prop.getProperty("sink.table"));
-        setSinkUser(prop.getProperty("sink.user"));
-        setSourceCheckColumn(prop.getProperty("source.check-column"));
-        setSourceLastValue(prop.getProperty("source.last-value"));
+        setSinkStagingTable(prop.getProperty("sink.staging.table"));
+        setSinkStagingSchema(prop.getProperty("sink.staging.schema"));
         setSourceColumns(prop.getProperty("source.columns"));
         setSourceConnect(prop.getProperty("source.connect"));
         setSourcePassword(prop.getProperty("source.password"));
@@ -392,6 +385,7 @@ public class ToolOptions {
         setSourceUser(prop.getProperty("source.user"));
         setSourceWhere(prop.getProperty("source.where"));
         setJobs(prop.getProperty("jobs"));
+
 
         // Connection params
         setSinkConnectionParams(of.getSinkConnectionParams());
@@ -492,32 +486,6 @@ public class ToolOptions {
     public void setSourceQueryNotNull(String sourceQuery) {
         if (sourceQuery != null && !sourceQuery.isEmpty())
             this.sourceQuery = sourceQuery;
-    }
-
-    public String getSourceCheckColumn() {
-        return sourceCheckColumn;
-    }
-
-    public void setSourceCheckColumn(String sourceCheckColumn) {
-        this.sourceCheckColumn = sourceCheckColumn;
-    }
-
-    public void setSourceCheckColumnNotNull(String sourceCheckColumn) {
-        if (sourceCheckColumn != null && !sourceCheckColumn.isEmpty())
-            this.sourceCheckColumn = sourceCheckColumn;
-    }
-
-    public String getSourceLastValue() {
-        return sourceLastValue;
-    }
-
-    public void setSourceLastValue(String sourceLastValue) {
-        this.sourceLastValue = sourceLastValue;
-    }
-
-    public void setSourceLastValueNotNull(String sourceLastValue) {
-        if (sourceLastValue != null && !sourceLastValue.isEmpty())
-            this.sourceLastValue = sourceLastValue;
     }
 
     public String getSinkConnect() {
@@ -727,6 +695,33 @@ public class ToolOptions {
         this.sinkConnectionParams = sinkConnectionParams;
     }
 
+
+    public String getSinkStagingTable() {
+        return sinkStagingTable;
+    }
+
+    public void setSinkStagingTable(String sinkStagingTable) {
+        this.sinkStagingTable = sinkStagingTable;
+    }
+
+    public void setSinkStagingTableNotNull(String sinkStagingTable) {
+        if (sinkStagingTable != null)
+            this.sinkStagingTable = sinkStagingTable;
+    }
+
+    public String getSinkStagingSchema() {
+        return sinkStagingSchema;
+    }
+
+    public void setSinkStagingSchema(String sinkStagingSchema) {
+        this.sinkStagingSchema = sinkStagingSchema;
+    }
+
+    public void setSinkStagingSchemaNotNull(String sinkStagingSchema) {
+        if (sinkStagingSchema != null)
+            this.sinkStagingSchema = sinkStagingSchema;
+    }
+
     @Override
     public String toString() {
         return "ToolOptions{" +
@@ -737,12 +732,12 @@ public class ToolOptions {
                 ",\n\tsourceColumns='" + sourceColumns + '\'' +
                 ",\n\tsourceWhere='" + sourceWhere + '\'' +
                 ",\n\tsourceQuery='" + sourceQuery + '\'' +
-                ",\n\tsourceCheckColumn='" + sourceCheckColumn + '\'' +
-                ",\n\tsourceLastValue='" + sourceLastValue + '\'' +
                 ",\n\tsinkConnect='" + sinkConnect + '\'' +
                 ",\n\tsinkUser='" + sinkUser + '\'' +
                 ",\n\tsinkPassword='" + sinkPassword + '\'' +
                 ",\n\tsinkTable='" + sinkTable + '\'' +
+                ",\n\tsinkStagingTable='" + sinkStagingTable + '\'' +
+                ",\n\tsinkStagingSchema='" + sinkStagingSchema + '\'' +
                 ",\n\tsinkColumns='" + sinkColumns + '\'' +
                 ",\n\tsinkDisableEscape=" + sinkDisableEscape +
                 ",\n\tsinkDisableIndex=" + sinkDisableIndex +
