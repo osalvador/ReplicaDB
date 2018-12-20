@@ -91,12 +91,12 @@ $ replicadb --mode=complete -j=1 \
     3. [Selecting the Data to Import](#33-selecting-the-data-to-import)
     4. [Free-form Query Imports](#34-free-form-query-imports)
     5. [Controlling Parallelism](#35-controlling-parallelism)
-    <!--3.7. Controlling transaction isolation
+    <!-- 3.7. Controlling transaction isolation
     3.9. Incremental Imports
     3.10. File Formats
     3.11. Large Objects
     3.15. Additional Import Configuration Properties
-    6. Example Invocations-->
+    6. Example Invocations -->
 4. [Compatible Databases](#4-compatible-databases)
 
 ### 1. Introduction
@@ -118,6 +118,7 @@ usage: replicadb [OPTIONS]
 
 **Table 1. Common arguments**
 
+{:.table}
 | Argument                                 | Description | 
 |------------------------------------------|--------------------------------------------------------------------------------------| 
 |  `-h`,`--help`                           | Print this help screen |
