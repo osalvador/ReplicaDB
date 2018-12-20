@@ -6,13 +6,14 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
-import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.ConnManager;
 import org.replicadb.manager.DataSourceType;
 import org.replicadb.manager.ManagerFactory;
 
-import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -37,7 +38,7 @@ public class ReplicaDB {
             // Parse Option Arguments
             ToolOptions options = new ToolOptions(args);
 
-            LOG.info("Running ReplicaDB version: "+options.getVersion());
+            LOG.info("Running ReplicaDB version: " + options.getVersion());
 
             if (options.isVerbose()) {
                 setLogToDebugMode();
@@ -47,13 +48,14 @@ public class ReplicaDB {
 
             if (!options.isHelp() && !options.isVersion()) {
 
-                // Do stuff...
-                // Truncate sink table if MODE is COMPLETE and truncate is enabled
-                if (!options.isSinkDisableTruncate() && (options.getMode().equals(ReplicationMode.COMPLETE.getModeText()))) {
-                    ConnManager sinkDs = new ManagerFactory().accept(options, DataSourceType.SINK);
-                    sinkDs.truncateTable();
-                    sinkDs = null;
-                }
+                // Create Connection Managers
+                ManagerFactory managerF = new ManagerFactory();
+                ConnManager sourceDs = managerF.accept(options, DataSourceType.SOURCE);
+                ConnManager sinkDs = managerF.accept(options, DataSourceType.SINK);
+
+                // Pre tasks
+                sourceDs.preSourceTasks();
+                sinkDs.preSinkTasks();
 
                 // Prepare Threads for Job processing
                 ExecutorService service = Executors.newFixedThreadPool(options.getJobs());
@@ -69,6 +71,15 @@ public class ReplicaDB {
                     // catch tasks exceptions
                     future.get();
                 }
+
+                // Post Tasks
+                sourceDs.postSourceTasks();
+                sinkDs.postSinkTasks();
+
+                //Close connections
+                sourceDs.close();
+                sinkDs.close();
+
 
                 long elapsed = (System.nanoTime() - start) / 1000000;
                 LOG.info("Total process time: " + elapsed + "ms");

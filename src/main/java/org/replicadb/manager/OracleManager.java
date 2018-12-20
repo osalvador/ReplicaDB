@@ -10,10 +10,6 @@ public class OracleManager extends SqlManager {
 
     private static final Logger LOG = LogManager.getLogger(OracleManager.class.getName());
 
-    private Connection connection;
-    private DataSourceType dsType;
-
-
     public OracleManager(ToolOptions opts, DataSourceType dsType) {
         super(opts);
         this.dsType = dsType;
@@ -22,22 +18,6 @@ public class OracleManager extends SqlManager {
     @Override
     public String getDriverClass() {
         return JdbcDrivers.ORACLE.getDriverClass();
-    }
-
-    @Override
-    public Connection getConnection() throws SQLException {
-        if (null == this.connection) {
-
-            if (dsType == DataSourceType.SOURCE) {
-                this.connection = makeSourceConnection();
-            } else if (dsType == DataSourceType.SINK) {
-                this.connection = makeSinkConnection();
-            } else {
-                LOG.error("DataSourceType must be Source or Sink");
-            }
-        }
-
-        return this.connection;
     }
 
 
@@ -93,16 +73,14 @@ public class OracleManager extends SqlManager {
 
 
     @Override
-    public int insertDataToTable(ResultSet resultSet, String tableName, String[] columns) throws SQLException {
+    public int insertDataToTable(ResultSet resultSet) throws SQLException {
 
-
-        // If table nambe is null get it from options
-        tableName = tableName == null ? this.options.getSinkTable() : tableName;
-
-        String allColumns = this.options.getSinkColumns();
-
-        // Get resultset metadata
         ResultSetMetaData rsmd = resultSet.getMetaData();
+
+        // Get table name and columns
+        String tableName = getSinkTableName();
+        String allColumns = getAllSinkColumns(rsmd);
+
         int columnsNumber = rsmd.getColumnCount();
 
         String sqlCdm = getInsertSQLCommand(tableName, allColumns, columnsNumber);
@@ -165,5 +143,24 @@ public class OracleManager extends SqlManager {
         return sqlCmd.toString();
     }
 
+    @Override
+    protected void createStagingTable() throws SQLException {
 
+    }
+
+    @Override
+    protected void mergeStagingTable() throws SQLException {
+
+    }
+
+
+    @Override
+    public void preSourceTasks() throws SQLException {
+
+    }
+
+    @Override
+    public void postSourceTasks() throws SQLException {
+
+    }
 }

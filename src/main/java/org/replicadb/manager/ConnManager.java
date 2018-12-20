@@ -4,11 +4,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
 
-import javax.xml.transform.Result;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.sql.*;
+import java.util.Random;
 
 /**
  * Abstract interface that manages connections to a database.
@@ -26,8 +23,9 @@ public abstract class ConnManager {
      */
     public static final String SUBSTITUTE_TOKEN = "$CONDITIONS";
 
-
     protected ToolOptions options;
+
+    private static String randomSinkStagingTableName;
 
     /**
      * Execute a SQL statement to read the named set of columns from a table.
@@ -44,14 +42,8 @@ public abstract class ConnManager {
     /**
      * Execute a SQL statement to insert the resultset to the table.
      */
-    public abstract int insertDataToTable(ResultSet resultSet, String tableName, String[] columns)
+    public abstract int insertDataToTable(ResultSet resultSet)
             throws SQLException;
-
-
-    /**
-     *  Execute a SQL `TRUNCATE TABLE` statement for the sink table
-     */
-    public abstract void truncateTable() throws SQLException;
 
 
     /**
@@ -113,6 +105,87 @@ public abstract class ConnManager {
         return tableName;
     }
 
+    public String getSchemaFromQualifiedTableName(String tableName) {
+
+        if (tableName.split("\\.").length - 1 > 0) {
+            String s = tableName.substring(0, tableName.lastIndexOf("."));
+            return s.substring(s.lastIndexOf(".") + 1);
+        }
+        // No schema defined in the tableName
+        return null;
+    }
+
+    public String getTableNameFromQualifiedTableName(String tableName) {
+        return tableName.substring(tableName.lastIndexOf(".") + 1);
+    }
+
+
+    public String getSinkTableName() {
+
+        if (this.options.getSinkTable() != null && !this.options.getSinkTable().isEmpty()) {
+            return this.options.getSinkTable();
+        } else if (this.options.getSourceTable() != null && !this.options.getSourceTable().isEmpty()) {
+            return this.options.getSourceTable();
+        } else {
+            throw new IllegalArgumentException("Options source-table and sink-table are null, can't determine the sink table name");
+        }
+
+    }
+
+    public String getSinkStagingTableName() {
+
+        if (options.getSinkStagingTable() != null && !options.getSinkStagingTable().isEmpty()) {
+            return this.options.getSinkStagingTable();
+        } else if (randomSinkStagingTableName != null && !randomSinkStagingTableName.isEmpty()) {
+            return randomSinkStagingTableName;
+        } else {
+            // Create new randomSinkStagingTableName
+            Random random = new Random();
+            String randomName = "repdb" + random.nextInt(90) + 10;
+            randomSinkStagingTableName = getTableNameFromQualifiedTableName(getSinkTableName()) + randomName;
+
+            return randomSinkStagingTableName;
+        }
+    }
+
+    public String getQualifiedStagingTableName() {
+        if (options.getSinkStagingTable() != null && !options.getSinkStagingTable().isEmpty()) {
+            return this.options.getSinkStagingTable();
+        } else if (options.getSinkStagingSchema() != null && !options.getSinkStagingSchema().isEmpty()) {
+            return options.getSinkStagingSchema() + "." + getTableNameFromQualifiedTableName(getSinkStagingTableName());
+        } else {
+            return getSinkStagingTableName();
+        }
+    }
+
+
+    public String getAllSinkColumns(ResultSetMetaData rsmd) throws SQLException {
+
+        if (this.options.getSinkColumns() != null && !this.options.getSinkColumns().isEmpty()) {
+            return this.options.getSinkColumns();
+        } else if (this.options.getSourceColumns() != null && !this.options.getSourceColumns().isEmpty()) {
+            return this.options.getSourceColumns();
+        } else {
+            this.options.setSinkColumns(getColumnsFromResultSetMetaData(rsmd));
+            LOG.warn("Options source-columns and sink-columns are null, getting from Source ResultSetMetaData: " + this.options.getSinkColumns());
+            return this.options.getSinkColumns();
+        }
+    }
+
+
+    private String getColumnsFromResultSetMetaData(ResultSetMetaData rsmd) throws SQLException {
+
+        StringBuilder columnNames = new StringBuilder();
+
+        int columnsNumber = rsmd.getColumnCount();
+
+        for (int i = 1; i <= columnsNumber; i++) {
+            if (i > 1) columnNames.append(", ");
+            columnNames.append(rsmd.getColumnName(i));
+        }
+        return columnNames.toString();
+    }
+
 
     /**
      * Perform any shutdown operations on the connection.
@@ -139,6 +212,30 @@ public abstract class ConnManager {
         LOG.warn("getCurrentDbTimestamp(): Using local system timestamp.");
         return new Timestamp(System.currentTimeMillis());
     }
+
+
+    /**
+     * Sometimes it is necessary to perform some preliminary tasks before populating the data with multi-threaded jobs.
+     */
+    public abstract void preSourceTasks() throws SQLException;
+
+    public abstract void preSinkTasks() throws SQLException;
+
+    /**
+     * Sometimes it is necessary to perform some tasks after populating the data with multithreading jobs.
+     */
+    public abstract void postSourceTasks() throws SQLException;
+
+    public abstract void postSinkTasks() throws SQLException;
+
+
+    /**
+     * Return the name of the primary keys for a table, or null if there is none.
+     *
+     * @param tableName
+     * @return
+     */
+    public abstract String[] getSinkPrimaryKeys(String tableName);
 
 }
 

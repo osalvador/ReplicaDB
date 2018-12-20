@@ -67,7 +67,7 @@ final public class ReplicaTask implements Callable<Integer> {
         }
 
         try {
-            sinkDs.insertDataToTable(rs, null, null);
+            sinkDs.insertDataToTable(rs);
         } catch (Exception e) {
             LOG.error("ERROR in " + this.taskName + " inserting data to sink table: " + e.getMessage());
             throw e;

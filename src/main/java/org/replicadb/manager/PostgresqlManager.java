@@ -2,6 +2,7 @@ package org.replicadb.manager;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 
 import org.postgresql.copy.CopyIn;
@@ -14,7 +15,6 @@ public class PostgresqlManager extends SqlManager {
 
     private static final Logger LOG = LogManager.getLogger(PostgresqlManager.class.getName());
 
-    private Connection connection;
     private DataSourceType dsType;
 
 
@@ -34,25 +34,31 @@ public class PostgresqlManager extends SqlManager {
     }
 
     @Override
-    public int insertDataToTable(ResultSet resultSet, String tableName, String[] columns) throws SQLException {
+    public int insertDataToTable(ResultSet resultSet) throws SQLException {
 
-        // If table name is null get it from options
-        tableName = tableName == null ? this.options.getSinkTable() : tableName;
-        // Still null, get the same as source
-        tableName = tableName == null ? this.options.getSourceTable() : tableName;
-
-        String allColumns = getAllColumns(columns);
-
-
-        // Get Postgres COPY meta-command manager
-        PgConnection copyOperationConnection = this.connection.unwrap(PgConnection.class);
-        CopyManager copyManager = new CopyManager(copyOperationConnection);
-        String copyCmd = getCopyCommand(tableName, allColumns);
-        CopyIn copyIn = copyManager.copyIn(copyCmd);
-
+        CopyIn copyIn = null;
 
         try {
+
             ResultSetMetaData rsmd = resultSet.getMetaData();
+            String tableName;
+
+            // Get table name and columns
+            if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
+                tableName = getQualifiedStagingTableName();
+            } else {
+                tableName = getSinkTableName();
+            }
+
+            String allColumns = getAllSinkColumns(rsmd);
+
+            // Get Postgres COPY meta-command manager
+            PgConnection copyOperationConnection = this.connection.unwrap(PgConnection.class);
+            CopyManager copyManager = new CopyManager(copyOperationConnection);
+            String copyCmd = getCopyCommand(tableName, allColumns);
+            copyIn = copyManager.copyIn(copyCmd);
+
+
             char unitSeparator = 0x1F;
             int columnsNumber = rsmd.getColumnCount();
 
@@ -80,7 +86,7 @@ public class PostgresqlManager extends SqlManager {
                 if (this.options.isSinkDisableEscape())
                     row.append(cols.toString());
                 else
-                    row.append(cols.toString().replace("\\", "\\\\").replace("\n", "\\n").replace("\r","\\r"));
+                    row.append(cols.toString().replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r"));
 
                 // Row ends with \n
                 row.append("\n");
@@ -107,22 +113,6 @@ public class PostgresqlManager extends SqlManager {
         return 0;
     }
 
-    private String getAllColumns(String[] columns) {
-
-        if (columns != null && columns.length > 0){
-            return String.join(",", columns);
-        } else if (this.options.getSinkColumns() != null && !this.options.getSinkColumns().isEmpty() ){
-            return this.options.getSinkColumns();
-        } else if (this.options.getSourceColumns() != null && !this.options.getSourceColumns().isEmpty() ){
-            return this.options.getSourceColumns();
-        } else {
-            LOG.warn("Options source-columns and sink-columns are null");
-            return null;
-        }
-
-    }
-
-
     private String getCopyCommand(String tableName, String allColumns) {
 
         StringBuilder copyCmd = new StringBuilder();
@@ -138,25 +128,9 @@ public class PostgresqlManager extends SqlManager {
 
         copyCmd.append(" FROM STDIN WITH DELIMITER e'\\x1f'  NULL '' ENCODING 'UTF-8' ");
 
-        LOG.debug("Coping data with this command: " + copyCmd.toString());
+        LOG.debug("Copying data with this command: " + copyCmd.toString());
 
         return copyCmd.toString();
-    }
-
-    private String getColumnsFromResultSet(ResultSet resultSet) throws SQLException {
-
-        StringBuilder columnNames = new StringBuilder();
-
-        ResultSetMetaData rsmd = resultSet.getMetaData();
-        int columnsNumber = rsmd.getColumnCount();
-
-        for (int i = 1; i <= columnsNumber; i++) {
-            if (i > 1) columnNames.append(", ");
-            columnNames.append(rsmd.getColumnName(i));
-        }
-        LOG.debug("ColumnNames: " + columnNames);
-
-        return columnNames.toString();
     }
 
     @Override
@@ -178,7 +152,6 @@ public class PostgresqlManager extends SqlManager {
 
         return this.connection;
     }
-
 
     @Override
     public ResultSet readTable(String tableName, String[] columns, int nThread) throws SQLException {
@@ -203,12 +176,12 @@ public class PostgresqlManager extends SqlManager {
         // Read table with source-where option specified
         if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
             sqlCmd.append(options.getSourceWhere());
-            sqlCmd.append(" AND " );
+            sqlCmd.append(" AND ");
         }
         sqlCmd.append(" width_bucket((('x' || substr(md5(ctid :: text), 1, 8)) :: bit(32) :: int), replicadb_table_stats.min_ictid, replicadb_table_stats.max_ictid, ").append(options.getJobs()).append(") ");
 
 
-        if ((nThread +1) == options.getJobs())
+        if ((nThread + 1) == options.getJobs())
             sqlCmd.append(" >= ?");
         else
             sqlCmd.append(" = ?");
@@ -217,7 +190,64 @@ public class PostgresqlManager extends SqlManager {
 //        sqlCmd.append(escapeTableName(tableName)).append(" ts WHERE -1 <> ?");
 
 
-        return super.execute(sqlCmd.toString(), 5000, nThread+1);
+        return super.execute(sqlCmd.toString(), 5000, nThread + 1);
     }
 
+    @Override
+    protected void createStagingTable() throws SQLException {
+        Statement statement = this.getConnection().createStatement();
+
+        String sinkStagingTable = getQualifiedStagingTableName();
+
+        String sql = "CREATE UNLOGGED TABLE IF NOT EXISTS " + sinkStagingTable + " ( LIKE " + this.getSinkTableName() + " )";
+
+        LOG.debug("Creating staging table with this command: " + sql);
+
+        statement.executeUpdate(sql);
+        statement.close();
+        this.getConnection().commit();
+    }
+
+    @Override
+    protected void mergeStagingTable() throws SQLException {
+        Statement statement = this.getConnection().createStatement();
+
+        String[] pks = this.getSinkPrimaryKeys(this.getSinkTableName());
+        // Primary key is required
+        if (pks == null || pks.length == 0) {
+            throw new IllegalArgumentException("Sink table must have at least one primary key column for incremental mode.");
+        }
+
+        // options.sinkColumns was set during the insertDataToTable
+        String allColls = getAllSinkColumns(null);
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("INSERT INTO ")
+                .append(this.getSinkTableName())
+                .append(" SELECT ")
+                .append(allColls)
+                .append(" FROM ")
+                .append(this.getSinkStagingTableName())
+                .append(" ON CONFLICT ")
+                .append(" (").append(String.join(",", pks)).append(" )")
+                .append(" DO UPDATE SET ");
+
+        // Set all columns for DO UPDATE SET statement
+        for (String colName : allColls.split(",")) {
+            sql.append(" ").append(colName).append(" = excluded.").append(colName).append(" ,");
+        }
+        // Delete the last comma
+        sql.setLength(sql.length() - 1);
+
+        LOG.debug("Merging staging table and sink table with this command: " + sql);
+        statement.executeUpdate(sql.toString());
+        statement.close();
+        this.getConnection().commit();
+    }
+
+    @Override
+    public void preSourceTasks() {/*Not implemented*/}
+
+    @Override
+    public void postSourceTasks() {/*Not implemented*/}
 }
