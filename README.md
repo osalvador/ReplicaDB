@@ -13,14 +13,14 @@ ReplicaDB is **Cross Platform**; you can replicate data across different platfor
 
 ## Installation
 
-**System Requirements**
+### System Requirements
 
 ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Standard Edition (SE) or Java Development Kit (JDK) Standard Edition (SE) version 8.0 or above. The minimum operating system requirements are:
 
 *   Java SE Runtime Environment 8 or above    
 *   Memory - 64 (MB) available
 
-**Install**
+### Install
 
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
@@ -36,7 +36,7 @@ usage: replicadb [OPTIONS]
 ...
 ```
 
-**JDBC Drivers**
+### JDBC Drivers
 
 You can use ReplicaDB with any JDBC-compliant database. First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory on your client machine. Each driver `.jar` file also has a specific driver class which defines the entry-point to the driver. 
 
