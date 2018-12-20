@@ -5,3 +5,4 @@ test/replicadb-pg2ora.conf
 ReplicaDB-*.jar
 ReplicaDB-*.zip
 ReplicaDB-*.gz
+package-release.sh
