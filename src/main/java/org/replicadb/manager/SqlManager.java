@@ -368,7 +368,7 @@ public abstract class SqlManager extends ConnManager {
      *
      * @throws SQLException
      */
-    protected void dropStagingTable() throws SQLException {
+    public void dropStagingTable() throws SQLException {
         Statement statement = this.getConnection().createStatement();
         String sql = "DROP TABLE " + getQualifiedStagingTableName();
         LOG.debug("Dropping staging table with this command: " + sql);

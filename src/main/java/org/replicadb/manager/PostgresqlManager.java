@@ -58,7 +58,6 @@ public class PostgresqlManager extends SqlManager {
             String copyCmd = getCopyCommand(tableName, allColumns);
             copyIn = copyManager.copyIn(copyCmd);
 
-
             char unitSeparator = 0x1F;
             int columnsNumber = rsmd.getColumnCount();
 
@@ -75,11 +74,12 @@ public class PostgresqlManager extends SqlManager {
 
                 // Get Columns values
                 // First column
-                cols.append(resultSet.getString(1));
+                colValue = resultSet.getString(1);
+                if (!resultSet.wasNull() || colValue != null) cols.append(colValue);
                 for (int i = 2; i <= columnsNumber; i++) {
                     cols.append(unitSeparator);
                     colValue = resultSet.getString(i);
-                    if (colValue != null) cols.append(colValue);
+                    if (!resultSet.wasNull() || colValue != null) cols.append(colValue);
                 }
 
                 //Escape special chars
@@ -99,13 +99,15 @@ public class PostgresqlManager extends SqlManager {
 
             copyIn.endCopy();
         } catch (Exception e) {
+            if (copyIn != null && copyIn.isActive()) {
+                copyIn.cancelCopy();
+            }
             this.connection.rollback();
             throw e;
         } finally {
             if (copyIn != null && copyIn.isActive()) {
                 copyIn.cancelCopy();
             }
-
         }
 
         this.connection.commit();
@@ -195,14 +197,13 @@ public class PostgresqlManager extends SqlManager {
 
     @Override
     protected void createStagingTable() throws SQLException {
-        Statement statement = this.getConnection().createStatement();
 
+        Statement statement = this.getConnection().createStatement();
         String sinkStagingTable = getQualifiedStagingTableName();
 
-        String sql = "CREATE UNLOGGED TABLE IF NOT EXISTS " + sinkStagingTable + " ( LIKE " + this.getSinkTableName() + " )";
+        String sql = "CREATE UNLOGGED TABLE IF NOT EXISTS " + sinkStagingTable + " ( LIKE " + this.getSinkTableName() + " INCLUDING DEFAULTS INCLUDING CONSTRAINTS )";
 
         LOG.debug("Creating staging table with this command: " + sql);
-
         statement.executeUpdate(sql);
         statement.close();
         this.getConnection().commit();
