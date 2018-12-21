@@ -1,7 +1,6 @@
 .idea/*
 lib/*
-test/replicadb-ora2pg.conf
-test/replicadb-pg2ora.conf
+test/*
 ReplicaDB-*.jar
 ReplicaDB-*.zip
 ReplicaDB-*.gz
