@@ -1,5 +1,7 @@
 ---
 layout: default
+title: Pagina con el template Default
+description: Esta es la descripcion
 ---
 
 # Default
