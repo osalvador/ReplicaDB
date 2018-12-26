@@ -45,9 +45,9 @@ usage: replicadb [OPTIONS]
 You can use ReplicaDB with any JDBC-compliant database. First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory on your client machine. Each driver `.jar` file also has a specific driver class which defines the entry-point to the driver. 
 
 
-## Usage example
+# Usage example
 
-### Oracle to PostgreSQL
+## Oracle to PostgreSQL
 
 Source and Sink tables must exists. 
 
@@ -67,7 +67,7 @@ $ replicadb --mode=complete -j=1 \
 
 [![ReplicaDB-Ora2PG.gif](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif)](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif)
 
-### PostgreSQL to Oracle
+## PostgreSQL to Oracle
 
 
 ```
@@ -85,7 +85,9 @@ $ replicadb --mode=complete -j=1 \
 2018-12-07 16:10:35,552 INFO  ReplicaDB:89: Total process time: 1007ms
 ```
 
-## ReplicaDB User Guide
+-----
+
+# ReplicaDB User Guide
 
 1. [Introduction](#1-Introduction)
 2. [Basic Usage](#2-Basic-Usage)
