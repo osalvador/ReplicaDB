@@ -11,9 +11,12 @@ layout: page
     - 3.2. [Connecting to a Database Server](#32-connecting-to-a-database-server)
     - 3.3. [Selecting the Data to Import](#33-selecting-the-data-to-import)
     - 3.4. [Free-form Query Imports](#34-free-form-query-imports)
-    - 3.5. [Controlling Parallelism](#35-controlling-parallelism)
+    - 3.5. [Controlling Parallelism](#35-controlling-parallelism)    
 
 {::comment}
+
+- 3.6. Incremental Imports
+
     3.7. Controlling transaction isolation
     3.9. Incremental Imports
     3.10. File Formats
