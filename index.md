@@ -66,6 +66,7 @@ $ replicadb --mode=complete -j=1 \
 ```
 
 [![ReplicaDB-Ora2PG.gif](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif)](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif)
+{: .img-responsive }
 
 ## PostgreSQL to Oracle
 
