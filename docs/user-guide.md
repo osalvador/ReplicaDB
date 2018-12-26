@@ -12,6 +12,7 @@ layout: page
     3. [Selecting the Data to Import](#33-selecting-the-data-to-import)
     4. [Free-form Query Imports](#34-free-form-query-imports)
     5. [Controlling Parallelism](#35-controlling-parallelism)
+4. [Compatible Databases](#4-compatible-databases)
 
 {::comment}
     3.7. Controlling transaction isolation
@@ -21,8 +22,6 @@ layout: page
     3.15. Additional Import Configuration Properties
     6. Example Invocations
 {:/comment}
-
-4. [Compatible Databases](#4-compatible-databases)
 
 ### 1. Introduction
 
