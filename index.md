@@ -87,10 +87,10 @@ $ replicadb --mode=complete -j=1 \
 
 {:.table}
 
-| Database Vendor | Source | Sink | 
-|----------------|------|--------|
-| Oracle           | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
-| PostgreSQL       | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
+| Database Vendor | Source | Sink Complete | Sink Incremental |
+|-----------------|---------|---------------|------------------|
+| Oracle           | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-times-circle text-danger"></i> |
+| PostgreSQL       | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
 
 
 # Contributing
