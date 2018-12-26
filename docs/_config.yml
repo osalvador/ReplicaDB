@@ -47,6 +47,7 @@ analytics:
 
 # Build settings
 markdown: kramdown
+theme: jekyll-docs-theme
 exclude:
     - Gemfile
     - Gemfile.lock
