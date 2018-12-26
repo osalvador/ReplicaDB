@@ -2,7 +2,7 @@
 layout: page
 ---
 
-# ReplicaDB User Guide
+# User Guide
 
 1. [Introduction](#1-Introduction)
 2. [Basic Usage](#2-Basic-Usage)
@@ -12,14 +12,16 @@ layout: page
     3. [Selecting the Data to Import](#33-selecting-the-data-to-import)
     4. [Free-form Query Imports](#34-free-form-query-imports)
     5. [Controlling Parallelism](#35-controlling-parallelism)
-    {::comment}
+
+{::comment}
     3.7. Controlling transaction isolation
     3.9. Incremental Imports
     3.10. File Formats
     3.11. Large Objects
     3.15. Additional Import Configuration Properties
     6. Example Invocations
-    {:/comment}
+{:/comment}
+
 4. [Compatible Databases](#4-compatible-databases)
 
 ### 1. Introduction
