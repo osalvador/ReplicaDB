@@ -1,10 +1,7 @@
 {% if page.homepage %}
     <div class="bs-docs-masthead" id="jumbotron-header">
         <div class="container">
-            <!-- <h1 class="home-title">{{ site.name }}</h1> -->
-            <h1> 
-                <img src="https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png" alt="replicadb-logo" class="img-responsive center-block">
-            </h1>
+            <h1 class="home-title">{{ site.name }}</h1>
             <p class="lead">{{ page.description }}</p>
             <p class="lead">
                 <a href="{{ site.project.download_url }}" class="btn btn-outline-inverse btn-lg">Download</a>
@@ -13,7 +10,7 @@
         </div>
     </div>
 {% else %}
-    <div class="bs-docs-header" id="jumbotron-header">
+    <div class="bs-docs-masthead" id="jumbotron-header">
         <div class="container">
             <h1>{{ page.title }}</h1>
             <p>{{ page.description }}</p>
