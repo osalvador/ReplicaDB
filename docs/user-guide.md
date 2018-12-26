@@ -22,14 +22,14 @@ layout: page
     6. Example Invocations
 {:/comment}
 
-### 1. Introduction
+## 1. Introduction
 
-### 2. Basic Usage
+## 2. Basic Usage
 
 With ReplicaDB, you can _replicate_ data between relational databases and non replational databases. The input to the replication process is a database table, or custom query. For replational databases, ReplicaDB will read the table row-by-row. The output of this replication process is table in the sink database containing a copy of the source table. The replication process is performed in parallel.
 
 
-### 3. Command Line Arguments 
+## 3. Command Line Arguments 
 
 ReplicaDB ships with a help tool. To display a list of all available options, type the following command:
 
@@ -71,7 +71,7 @@ usage: replicadb [OPTIONS]
 |     `--version`                          | Show implementation version and exit |
 
 
-#### 3.1 Using Options Files to Pass Arguments
+### 3.1 Using Options Files to Pass Arguments
 
 When using ReplicaDB, the command line options that do not change from invocation to invocation can be put in an options file for convenience. An options file is a Java properties text file where each line identifies an option. Option files allow specifying a single option on multiple lines by using the back-slash character at the end of intermediate lines. Also supported are comments within option files that begin with the hash character. Comments must be specified on a new line and may not be mixed with option text. All comments and empty lines are ignored when option files are expanded. 
 
@@ -105,7 +105,7 @@ sink.table=TEST
 mode=complete
 ```
 
-##### Using environment variables in options file
+**Using environment variables in options file**
 
 If you are familiar with Ant or Maven, you have most certainly already encountered the variables (like `${token}`) that are automatically expanded when the configuration file is loaded. ReplicaDB supports this feature as well,  here is an example: 
 
@@ -122,7 +122,7 @@ Variables are interpolated from system properties. ReplicaDB will search for a s
 Note that if a variable cannot be resolved, e.g. because the name is invalid or an unknown prefix is used, it won't be replaced, but is returned as is including the dollar sign and the curly braces.
 
 
-#### 3.2 Connecting to a Database Server
+### 3.2 Connecting to a Database Server
 
 ReplicaDB is designed to replicate tables between databases. To do so, you must specify a _connect string_ that describes how to connect to the database. The _connect string_ is similar to a URL, and is communicated to ReplicaDB with the `--source-connect` or `--sink-connect` arguments. This describes the server and database to connect to; it may also specify the port. For example:
 
@@ -159,7 +159,7 @@ $ replicadb --source-connect jdbc:mysql://database.example.com/employees \
 ```
 
 
-#### 3.3 Selecting the Data to Import
+### 3.3 Selecting the Data to Import
 
 ReplicaDB typically imports data in a table-centric fashion. Use the `--source-table` argument to select the table to replicate. For example, `--source-table employees`. This argument can also identify a `VIEW` or other table-like entity in a database.
 
@@ -167,7 +167,7 @@ By default, all columns within a table are selected for replication. You can sel
 
 You can control which rows are imported by adding a SQL `WHERE` clause to the import statement. By default, ReplicaDB generates statements of the form `SELECT <column list> FROM <table name>`. You can append a `WHERE` clause to this with the `--sourece-where` argument. For example: `--source-where "id > 400"`. Only rows where the `id` column has a value greater than 400 will be imported.
 
-#### 3.4 Free-form Query Imports
+### 3.4 Free-form Query Imports
 
 ReplicaDB can also replicate the result set of an arbitrary SQL query. Instead of using the `--sourece-table`, `--sourece-columns` and `--source-where` arguments, you can specify a SQL statement with the `--sourece-query` argument.
 
@@ -178,6 +178,6 @@ $ replicadb --source-query 'SELECT a.*, b.* FROM a JOIN b on (a.id == b.id)'
 ```
 
 
-#### 3.5 Controlling Parallelism    
+### 3.5 Controlling Parallelism    
 
 ReplicaDB replicate data in parallel from most database sources. You can specify the number of job tasks (parallel processes) to use to perform the replication by using the `-j` or `--jobs` argument. Each of these arguments takes an integer value which corresponds to the degree of parallelism to employ. By default, four tasks are used. Some databases may see improved performance by increasing this value to 8 or 16. Do not increase the degree of parallism higher than that which your database can reasonably support. Connecting 100 concurrent clients to your database may increase the load on the database server to a point where performance suffers as a result.
