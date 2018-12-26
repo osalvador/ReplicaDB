@@ -7,11 +7,11 @@ layout: page
 1. [Introduction](#1-Introduction)
 2. [Basic Usage](#2-Basic-Usage)
 3. [Command Line Arguments](#3-Command-Line-Arguments )
-    1. [Using Options Files to Pass Arguments](#31-using-options-files-to-pass-arguments)
-    2. [Connecting to a Database Server](#32-connecting-to-a-database-server)
-    3. [Selecting the Data to Import](#33-selecting-the-data-to-import)
-    4. [Free-form Query Imports](#34-free-form-query-imports)
-    5. [Controlling Parallelism](#35-controlling-parallelism)
+    3.1. [Using Options Files to Pass Arguments](#31-using-options-files-to-pass-arguments)
+    3.2. [Connecting to a Database Server](#32-connecting-to-a-database-server)
+    3.3. [Selecting the Data to Import](#33-selecting-the-data-to-import)
+    3.4. [Free-form Query Imports](#34-free-form-query-imports)
+    3.5. [Controlling Parallelism](#35-controlling-parallelism)
 
 {::comment}
     3.7. Controlling transaction isolation
@@ -159,7 +159,7 @@ $ replicadb --source-connect jdbc:mysql://database.example.com/employees \
 --source-username boss --options-file myEmployeePassword
 ```
 
-<br><br>
+<br>
 ### 3.3 Selecting the Data to Import
 
 ReplicaDB typically imports data in a table-centric fashion. Use the `--source-table` argument to select the table to replicate. For example, `--source-table employees`. This argument can also identify a `VIEW` or other table-like entity in a database.
