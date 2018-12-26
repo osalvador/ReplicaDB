@@ -70,7 +70,6 @@ $ replicadb --mode=complete -j=1 \
 
 ## PostgreSQL to Oracle
 
-
 ```
 $ replicadb --mode=complete -j=1 \
 --sink-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID \
