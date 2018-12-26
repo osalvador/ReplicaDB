@@ -9,8 +9,8 @@ layout: page
 3. [Command Line Arguments](#3-Command-Line-Arguments)
     - 3.1. [Using Options Files to Pass Arguments](#31-using-options-files-to-pass-arguments)
     - 3.2. [Connecting to a Database Server](#32-connecting-to-a-database-server)
-    - 3.3. [Selecting the Data to Import](#33-selecting-the-data-to-import)
-    - 3.4. [Free-form Query Imports](#34-free-form-query-imports)
+    - 3.3. [Selecting the Data to Replicate](#33-selecting-the-data-to-replicate)
+    - 3.4. [Free-form Query Replications](#34-free-form-query-replications)
     - 3.5. [Controlling Parallelism](#35-controlling-parallelism)    
 
 {::comment}
@@ -80,7 +80,7 @@ When using ReplicaDB, the command line options that do not change from invocatio
 
 Option files can be specified anywhere on the command line. Command line argunents override those in the options file. To specify an options file, simply create an options file in a convenient location and pass it to the command line via `--options-file` argument.
 
-For example, the following ReplicaDB invocation for import can be specified alternatively as shown below:
+For example, the following ReplicaDB invocation for replicate a full table into PostgreSQL can be specified alternatively as shown below:
 
 ```bash
 $ replicadb --source-connect jdbc:postgresql://localhost/osalvador \
@@ -163,16 +163,16 @@ $ replicadb --source-connect jdbc:mysql://database.example.com/employees \
 ```
 
 <br>
-### 3.3 Selecting the Data to Import
+### 3.3 Selecting the Data to Replicate
 
-ReplicaDB typically imports data in a table-centric fashion. Use the `--source-table` argument to select the table to replicate. For example, `--source-table employees`. This argument can also identify a `VIEW` or other table-like entity in a database.
+ReplicaDB typically replciate data in a table-centric fashion. Use the `--source-table` argument to select the table to replicate. For example, `--source-table employees`. This argument can also identify a `VIEW` or other table-like entity in a database.
 
-By default, all columns within a table are selected for replication. You can select a subset of columns and control their ordering by using the `--source-columns` argument. This should include a comma-delimited list of columns to import. For example: `--source-columns "name,employee_id,jobtitle"`.
+By default, all columns within a table are selected for replication. You can select a subset of columns and control their ordering by using the `--source-columns` argument. This should include a comma-delimited list of columns to replicate. For example: `--source-columns "name,employee_id,jobtitle"`.
 
-You can control which rows are imported by adding a SQL `WHERE` clause to the import statement. By default, ReplicaDB generates statements of the form `SELECT <column list> FROM <table name>`. You can append a `WHERE` clause to this with the `--sourece-where` argument. For example: `--source-where "id > 400"`. Only rows where the `id` column has a value greater than 400 will be imported.
+You can control which rows are replicated by adding a SQL `WHERE` clause to the statement. By default, ReplicaDB generates statements of the form `SELECT <column list> FROM <table name>`. You can append a `WHERE` clause to this with the `--sourece-where` argument. For example: `--source-where "id > 400"`. Only rows where the `id` column has a value greater than 400 will be replicated.
 
 <br>
-### 3.4 Free-form Query Imports
+### 3.4 Free-form Query Replications
 
 ReplicaDB can also replicate the result set of an arbitrary SQL query. Instead of using the `--sourece-table`, `--sourece-columns` and `--source-where` arguments, you can specify a SQL statement with the `--sourece-query` argument.
 
