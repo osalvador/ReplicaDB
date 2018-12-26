@@ -272,8 +272,8 @@ ReplicaDB replicate data in parallel from most database sources. You can specify
 
 | Database Vendor | Source | Sink | 
 |----------------|------|--------|
-| Oracle           | <i class="far fa-check-circle"></i> | <i class="far fa-check-circle"></i> | 
-| PostgreSQL       | <i class="far fa-check-circle"></i> | <i class="far fa-check-circle"></i> | 
+| Oracle           | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
+| PostgreSQL       | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
 
 
 ## Contributing
