@@ -12,7 +12,6 @@ layout: page
     3. [Selecting the Data to Import](#33-selecting-the-data-to-import)
     4. [Free-form Query Imports](#34-free-form-query-imports)
     5. [Controlling Parallelism](#35-controlling-parallelism)
-4. [Compatible Databases](#4-compatible-databases)
 
 {::comment}
     3.7. Controlling transaction isolation
@@ -34,7 +33,7 @@ With ReplicaDB, you can _replicate_ data between relational databases and non re
 
 ReplicaDB ships with a help tool. To display a list of all available options, type the following command:
 
-```
+```bash
 $ replicadb --help
 usage: replicadb [OPTIONS]
 ...
@@ -80,7 +79,7 @@ Option files can be specified anywhere on the command line. Command line argunen
 
 For example, the following ReplicaDB invocation for import can be specified alternatively as shown below:
 
-```
+```bash
 $ replicadb --source-connect jdbc:postgresql://localhost/osalvador \
 --source-table TEST \
 --sink-connect jdbc:postgresql://remotehost/testdb \
@@ -89,7 +88,7 @@ $ replicadb --source-connect jdbc:postgresql://localhost/osalvador \
 --mode complete
 ```
 
-```
+```bash
 $ replicadb --options-file /users/osalvador/work/import.txt -j 4
 ```
 
@@ -127,7 +126,7 @@ Note that if a variable cannot be resolved, e.g. because the name is invalid or 
 
 ReplicaDB is designed to replicate tables between databases. To do so, you must specify a _connect string_ that describes how to connect to the database. The _connect string_ is similar to a URL, and is communicated to ReplicaDB with the `--source-connect` or `--sink-connect` arguments. This describes the server and database to connect to; it may also specify the port. For example:
 
-```
+```bash
 $ replicadb --source-connect jdbc:mysql://database.example.com/employees
 ```
 
@@ -141,7 +140,7 @@ ReplicaDB provides couple of different ways to supply a password, secure and non
 
 To supply a password securely, the options file must be used using the `--options-file` argument. For example:
 
-```
+```bash
 $ replicadb --source-connect jdbc:mysql://database.example.com/employees \
 --source-username boss --options-file ./conf/empoloyee.conf
 ```
@@ -154,7 +153,7 @@ source-password=myEmployeePassword
 
 **Unsecure way of supplying password to the database**
 
-```
+```bash
 $ replicadb --source-connect jdbc:mysql://database.example.com/employees \
 --source-username boss --options-file myEmployeePassword
 ```
@@ -182,174 +181,3 @@ $ replicadb --source-query 'SELECT a.*, b.* FROM a JOIN b on (a.id == b.id)'
 #### 3.5 Controlling Parallelism    
 
 ReplicaDB replicate data in parallel from most database sources. You can specify the number of job tasks (parallel processes) to use to perform the replication by using the `-j` or `--jobs` argument. Each of these arguments takes an integer value which corresponds to the degree of parallelism to employ. By default, four tasks are used. Some databases may see improved performance by increasing this value to 8 or 16. Do not increase the degree of parallism higher than that which your database can reasonably support. Connecting 100 concurrent clients to your database may increase the load on the database server to a point where performance suffers as a result.
-
-
-### 4. Compatible Databases
-
-{:.table}
-
-| Database Vendor | Source | Sink | 
-|----------------|------|--------|
-| Oracle           | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
-| PostgreSQL       | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
-
-
-## Contributing
-  
-1. Fork it (https://github.com/osalvador/ReplicaDB)
-2. Create your feature branch (`git checkout -b feature/fooBar`)
-3. Commit your changes (`git commit -am 'Add some fooBar'`)
-4. Push to the branch (`git push origin feature/fooBar`)
-5. Create a new Pull Request
-
-
-
-# Overview
-
-> This is a [Jekyll theme](https://github.com/allejo/jekyll-docs-theme) based on [mistic100's modification](https://github.com/mistic100/jekyll-bootstrap-doc) of the official Bootstrap documentation from a few years back.
-
-Jekyll Docs Theme is provided as a theme for writing documentation for your projects instead of having a single large README file or several markdown files stored in a not so user-friendly manner.
-
-This theme is still in development but is kept fairly stable; just note, there are a lot things yet to come.
-
-# Installation
-
-Add this line to your Jekyll site's Gemfile:
-
-```ruby
-gem "jekyll-docs-theme"
-```
-
-And add this line to your Jekyll site's _config.yml:
-
-```yaml
-theme: jekyll-docs-theme
-```
-
-And then execute:
-
-```
-$ bundle
-```
-
-Or install it yourself as:
-
-```
-$ gem install jekyll-bootstrap-doc
-```
-
-<div class="alert alert-warning" markdown="1">
-**Warning:** Custom [themes are not supported on GitHub Pages](https://pages.github.com/themes/) at the time of writing this, so you may either build your site on another platform or simply fork this repo and build upon it as you would any other theme.
-</div>
-
-# Configuration Options
-
-A sample [`_config.yml`](https://github.com/allejo/jekyll-docs-theme/blob/master/docs/_config.yml) file is available with all of the available fields; documentation and more information for each of those fields is available below.
-
-## Project
-
-The project object can be specified with information related to the software this; this information will appear on the homepage's jumbotron area.
-
-```yaml
-project:
-  version: 1.0.0
-  download_url: https://github.com/USER/PROJECT/releases
-```
-
-{:.table}
-| field | description |
-| ----- | ----------- |
-| `version` | The current version of the software |
-| `download_url` | The URL to the current download |
-
-## Licenses
-
-The license object accepts four fields regarding information about the licensing of your software and documentation.
-
-```yaml
-license:
-  software: MIT License
-  software_url: http://opensource.org/licenses/MIT
-
-  docs: CC BY 3.0
-  docs_url: http://creativecommons.org/licenses/by/3.0/
-```
-
-{:.table}
-| field | description |
-| ----- | ----------- |
-| `software` | The license the software is distributed under |
-| `software_url` | A URL to the license text for the license specified in `software` |
-| `docs` | The license this documentation is distributed under |
-| `docs_url` | A URL to the license text for the license specified in `docs` |
-
-## Links
-
-The links object has two subobjects, `header` and `footer`; both of these objects accept an array of elements with a `title` and `url`. The links defined in the `header` object will appear in the navigation of the website and the links in the `footer` will appear at the bottom of the website.
-
-```yaml
-links:
-  header:
-    - title: GitHub
-      url: https://github.com/allejo/jekyll-docs-theme
-  footer:
-    - title: GitHub
-      url: https://github.com/allejo/jekyll-docs-theme
-    - title: Issues
-      url: https://github.com/allejo/jekyll-docs-theme/issues?state=open
-```
-
-{:.table}
-| field | description |
-| ----- | ----------- |
-| `title` | The textual representation of the URL |
-| `url` | The URL of the link |
-
-## UI
-
-The ui object will contain all the settings in regards to the aesthetics of the website
-
-```yaml
-ui:
-  header:
-    color1: "#080331"
-    color2: "#673051"
-    trianglify: true
-```
-
-{:.table}
-| field | description |
-| ----- | ----------- |
-| `color1` & `color2` | The two colors that will create the gradient of the page header |
-| `trianglify` | When set to true, the page header will be a generated triangular pattern |
-
-## Analytics
-
-```yaml
-analytics:
-    google: UA-123456-1
-```
-
-{:.table}
-| field | description |
-| ----- | ----------- |
-| `google` | The unique identifier for Google Analytics; typically looks like `U-123456-1`
-
-## Social
-
-Options for configuring buttons to "like", "tweet" or "star" this site with the respective social media websites.
-
-```yaml
-social:
-  github:
-    user: allejo
-    repo: jekyll-docs-theme
-  twitter:
-    enabled: false
-    via:
-    hash:
-    account:
-  facebook:
-    enabled: false
-    profileUrl:
-```
