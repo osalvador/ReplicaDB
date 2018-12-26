@@ -16,12 +16,11 @@ layout: page
 {::comment}
 
 - 3.6. Incremental Imports
-
+- Connection parameters solo en el fichero de options files
+    
     3.7. Controlling transaction isolation
-    3.9. Incremental Imports
-    3.10. File Formats
     3.11. Large Objects
-    3.15. Additional Import Configuration Properties
+    Performance considerations
     6. Example Invocations
 {:/comment}
 
@@ -59,12 +58,12 @@ usage: replicadb [OPTIONS]
 |     `--sink-disable-index`               | Disable sink database table indexes before populate. |
 |     `--sink-disable-truncate`            | Disable the truncation of the sink database table before populate. |
 |     `--sink-password <password>`         | Sink database authentication password |
+|    `--sink-staging-schema`               | Scheme name on the sink database, with right permissions for creating staging tables. |
+|    `--sink-staging-table`                | Qualified name of the sink staging table. The table must exist in the sink database. | 
 |     `--sink-table <table-name>`          | Sink database table to populate |
 |     `--sink-user <username>`             | Sink database authentication username |
-|     `--source-check-column <column>`     | Specify the column to be examined when determining which rows to be replicated |
 |     `--source-columns <col,col,col...>`  | Source database table columns to be extracted |
 |     `--source-connect <jdbc-uri>`        | Source database JDBC connect string |
-|     `--source-last-value <value>`        | Specifies the maximum value of the source-check-column from the previous replication |
 |     `--source-password <password>`       | Source databse authentication password |
 |     `--source-query <statement>`         | SQL statement to be executed in the source database |
 |     `--source-table <table-name>`        | Source database table to read |
@@ -74,6 +73,7 @@ usage: replicadb [OPTIONS]
 |     `--version`                          | Show implementation version and exit |
 
 
+<br>
 ### 3.1 Using Options Files to Pass Arguments
 
 When using ReplicaDB, the command line options that do not change from invocation to invocation can be put in an options file for convenience. An options file is a Java properties text file where each line identifies an option. Option files allow specifying a single option on multiple lines by using the back-slash character at the end of intermediate lines. Also supported are comments within option files that begin with the hash character. Comments must be specified on a new line and may not be mixed with option text. All comments and empty lines are ignored when option files are expanded. 
