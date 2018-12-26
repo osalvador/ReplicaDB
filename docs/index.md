@@ -5,27 +5,25 @@ homepage: true
 
 [![Build Status](https://travis-ci.org/osalvador/ReplicaDB.svg?branch=master)](https://travis-ci.org/osalvador/ReplicaDB) [![GitHub license](https://img.shields.io/github/license/osalvador/ReplicaDB.svg)](https://github.com/osalvador/ReplicaDB/blob/master/LICENSE) [![Twitter](https://img.shields.io/twitter/url/https/github.com/osalvador/ReplicaDB.svg?style=social)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fosalvador%2FReplicaDB)
 
-# [![replicadb-logo png](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png)](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png)
-
+![replicadb-logo](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png){:class="img-responsive center-block"}
 
 ReplicaDB is open source tool for database replication designed for efficiently transferring bulk data between relational and NoSQL databases.
 
 ReplicaDB helps offload certain tasks, such as ETL processing, for efficient execution at a much lower cost. Actualy, ReplicaDB only works with Oracle and Postgres.
-
   
 ReplicaDB is **Cross Platform**; you can replicate data across different platforms, with compatibility for many databases. You can use **Parallel data transfer** for faster performance and optimal system utilization.
 
 
-## Installation
+# Installation
 
-### System Requirements
+## System Requirements
 
 ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Standard Edition (SE) or Java Development Kit (JDK) Standard Edition (SE) version 8.0 or above. The minimum operating system requirements are:
 
 *   Java SE Runtime Environment 8 or above    
 *   Memory - 64 (MB) available
 
-### Install
+## Install
 
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
@@ -41,18 +39,18 @@ usage: replicadb [OPTIONS]
 ...
 ```
 
-### JDBC Drivers
+## JDBC Drivers
 
 You can use ReplicaDB with any JDBC-compliant database. First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory on your client machine. Each driver `.jar` file also has a specific driver class which defines the entry-point to the driver. 
 
 
-## Usage example
+# Usage example
 
-### Oracle to PostgreSQL
+## Oracle to PostgreSQL
 
 Source and Sink tables must exists. 
 
-```
+```bash
 $ replicadb --mode=complete -j=1 \
 --source-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID \
 --source-user=$ORAUSER \
@@ -66,12 +64,11 @@ $ replicadb --mode=complete -j=1 \
 2018-12-07 16:01:24,772 INFO  ReplicaDB:89: Total process time: 1302ms
 ```
 
-[![ReplicaDB-Ora2PG.gif](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif)](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif)
+![ReplicaDB-Ora2PG.gif](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif){:class="img-responsive"}
 
-### PostgreSQL to Oracle
+## PostgreSQL to Oracle
 
-
-```
+```bash
 $ replicadb --mode=complete -j=1 \
 --sink-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID \
 --sink-user=$ORAUSER \
@@ -86,7 +83,9 @@ $ replicadb --mode=complete -j=1 \
 2018-12-07 16:10:35,552 INFO  ReplicaDB:89: Total process time: 1007ms
 ```
 
-## ReplicaDB User Guide
+-----
+
+# ReplicaDB User Guide
 
 1. [Introduction](#1-Introduction)
 2. [Basic Usage](#2-Basic-Usage)
@@ -96,12 +95,14 @@ $ replicadb --mode=complete -j=1 \
     3. [Selecting the Data to Import](#33-selecting-the-data-to-import)
     4. [Free-form Query Imports](#34-free-form-query-imports)
     5. [Controlling Parallelism](#35-controlling-parallelism)
-    <!-- 3.7. Controlling transaction isolation
+    {::comment}
+    3.7. Controlling transaction isolation
     3.9. Incremental Imports
     3.10. File Formats
     3.11. Large Objects
     3.15. Additional Import Configuration Properties
-    6. Example Invocations -->
+    6. Example Invocations
+    {:/comment}
 4. [Compatible Databases](#4-compatible-databases)
 
 ### 1. Introduction
@@ -271,8 +272,8 @@ ReplicaDB replicate data in parallel from most database sources. You can specify
 
 | Database Vendor | Source | Sink | 
 |----------------|------|--------|
-| Oracle           | :white_check_mark: | :white_check_mark: | 
-| PostgreSQL       |:white_check_mark: | :white_check_mark: | 
+| Oracle           | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
+| PostgreSQL       | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
 
 
 ## Contributing
