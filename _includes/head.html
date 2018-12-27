@@ -2,7 +2,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>{% if page.title %}{{ page.title | escape }}{% else %}{{ site.name | escape }} {{ site.project.version | escape }}{% endif %}</title>
+<title>{% if page.title %}{{ page.title | escape }} - {% endif %} ReplicaDB - Open Source Database Replication Software</title>
 <meta name="description"
       content="{{ page.excerpt | default: site.description | strip_html | normalize_whitespace | truncate: 160 | escape }}">
 
