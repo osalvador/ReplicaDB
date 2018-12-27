@@ -101,7 +101,9 @@ public abstract class SqlManager extends ConnManager {
         }
 
         return this.connection;
-    };
+    }
+
+    ;
 
     /**
      * Executes an arbitrary SQL statement.
@@ -290,12 +292,48 @@ public abstract class SqlManager extends ConnManager {
 
     @Override
     public String[] getSinkPrimaryKeys(String tableName) {
+
+        String[] pks;
+        String table = getTableNameFromQualifiedTableName(tableName);
+        String schema = getSchemaFromQualifiedTableName(tableName);
+
+        pks = getPrimaryKeys(table, schema);
+
+        if (null == pks) {
+            LOG.debug("Getting PKs for schema: " + schema + " and table: " + table + ". Not found.");
+
+            // Trying with uppercase
+            table = getTableNameFromQualifiedTableName(tableName).toUpperCase();
+            schema = getSchemaFromQualifiedTableName(tableName).toUpperCase();
+
+            pks = getPrimaryKeys(table, schema);
+
+            if (null == pks) {
+                LOG.debug("Getting PKs for schema: " + schema + " and table: " + table + ". Not found.");
+
+                // Trying with lowercase
+                table = getTableNameFromQualifiedTableName(tableName).toLowerCase();
+                schema = getSchemaFromQualifiedTableName(tableName).toLowerCase();
+
+                pks = getPrimaryKeys(table, schema);
+                if (null == pks) {
+                    LOG.debug("Getting PKs for schema: " + schema + " and table: " + table + ". Not found.");
+                    return null;
+                }
+            }
+        }
+
+        LOG.debug("Getting PKs for schema: " + schema + " and table: " + table + ". Found.");
+
+        return pks;
+    }
+
+    public String[] getPrimaryKeys(String table, String schema) {
         try {
             DatabaseMetaData metaData = this.getConnection().getMetaData();
-            ResultSet results = metaData.getPrimaryKeys(null
-                    , getSchemaFromQualifiedTableName(tableName)
-                    , getTableNameFromQualifiedTableName(tableName)
-            );
+
+            ResultSet results = metaData.getPrimaryKeys(null, schema, table);
+
             if (null == results) {
                 return null;
             }
@@ -322,7 +360,6 @@ public abstract class SqlManager extends ConnManager {
         }
     }
 
-
     /**
      * Truncate sink table
      *
@@ -343,7 +380,9 @@ public abstract class SqlManager extends ConnManager {
         statement.executeUpdate(sql);
         statement.close();
         this.getConnection().commit();
-    };
+    }
+
+    ;
 
 
     /**
@@ -376,7 +415,9 @@ public abstract class SqlManager extends ConnManager {
         statement.executeUpdate(sql);
         statement.close();
         this.getConnection().commit();
-    };
+    }
+
+    ;
 
     @Override
     public void preSinkTasks() throws SQLException {

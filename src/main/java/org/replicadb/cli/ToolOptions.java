@@ -727,14 +727,14 @@ public class ToolOptions {
         return "ToolOptions{" +
                 " \n\tsourceConnect='" + sourceConnect + '\'' +
                 ",\n\tsourceUser='" + sourceUser + '\'' +
-                ",\n\tsourcePassword='" + sourcePassword + '\'' +
+                ",\n\tsourcePassword='" + (sourcePassword != null ? "****" : "null" ) + '\'' +
                 ",\n\tsourceTable='" + sourceTable + '\'' +
                 ",\n\tsourceColumns='" + sourceColumns + '\'' +
                 ",\n\tsourceWhere='" + sourceWhere + '\'' +
                 ",\n\tsourceQuery='" + sourceQuery + '\'' +
                 ",\n\tsinkConnect='" + sinkConnect + '\'' +
                 ",\n\tsinkUser='" + sinkUser + '\'' +
-                ",\n\tsinkPassword='" + sinkPassword + '\'' +
+                ",\n\tsinkPassword='" + (sinkPassword != null ? "****" : "null" ) + '\'' +
                 ",\n\tsinkTable='" + sinkTable + '\'' +
                 ",\n\tsinkStagingTable='" + sinkStagingTable + '\'' +
                 ",\n\tsinkStagingSchema='" + sinkStagingSchema + '\'' +
