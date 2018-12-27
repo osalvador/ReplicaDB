@@ -1,4 +1,3 @@
-
 # name of the software
 name: ReplicaDB
 
@@ -47,7 +46,6 @@ analytics:
 
 # Build settings
 markdown: kramdown
-theme: jekyll-docs-theme
 exclude:
     - Gemfile
     - Gemfile.lock
