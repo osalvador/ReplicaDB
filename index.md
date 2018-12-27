@@ -14,6 +14,14 @@ ReplicaDB helps offload certain tasks, such as ETL processing, for efficient exe
 ReplicaDB is **Cross Platform**; you can replicate data across different platforms, with compatibility for many databases. You can use **Parallel data transfer** for faster performance and optimal system utilization.
 
 
+{::comment}
+TODO:
+- Benchmark con symetricDS, kettel y talend
+- ETL vs ELT
+
+{:/comment}
+
+
 # Installation
 
 ## System Requirements
