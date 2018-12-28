@@ -44,6 +44,11 @@ social:
 analytics:
     google: UA-131235447-1
 
+
+url: "https://osalvador.github.io/ReplicaDB"
+plugins:
+  - jekyll-sitemap
+
 # Build settings
 markdown: kramdown
 exclude:
