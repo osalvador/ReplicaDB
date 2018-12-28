@@ -16,11 +16,15 @@ layout: page
 {::comment}
 
 - 3.6. Incremental Imports
+    staging table
+    staging schema
 - Connection parameters solo en el fichero de options files
     
     3.7. Controlling transaction isolation
     3.11. Large Objects
-    Performance considerations
+    ?Performance considerations
+    Sink analyze
+    
     6. Example Invocations
 {:/comment}
 
