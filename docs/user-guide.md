@@ -62,14 +62,15 @@ ReplicaDB implements two replication modes: `complete` and` incremental`. The ma
     - Truncate the sink table with the `TRUNCATE TABLE` statement
     - Copy the data in parallel from the source table to the sink table.
 
+
 - The `incremental` mode performs an incremental replication of the data from the source table to the sink table. In the `incremental` mode, the` INSERT or UPDATE` or `UPSERT` technique is used in the sink table. To do this and to allow the copy of the data in parallel, it is necessary to create a staging table in the sink database. ReplicaDB will perform the following actions in an `incremental` replication:
 
-- Automatically create the staging table in the sink database.
-     - Truncate the staging table.
-     - Copy the data in parallel from the source table to the sink staging table.
-     - Gets the primary keys of the sink table
-     - Execute the `UPSERT` sentence between the sink staging table and the sink table. This statement will depend on the Database Vendor, it can be for example `INSERT ... ON CONFLICT ... DO UPDATE` in PostgreSQL or` MERGE INTO ... `in Oracle.
-     - Drop the sink staging table.
+    - Automatically create the staging table in the sink database.
+    - Truncate the staging table.
+    - Copy the data in parallel from the source table to the sink staging table.
+    - Gets the primary keys of the sink table
+    - Execute the `UPSERT` sentence between the sink staging table and the sink table. This statement will depend on the Database Vendor, it can be for example `INSERT ... ON CONFLICT ... DO UPDATE` in PostgreSQL or` MERGE INTO ... `in Oracle.
+    - Drop the sink staging table.
 
 <br>
 ## 2.2 Controlling Parallelism    
