@@ -9,7 +9,7 @@ homepage: true
 
 ReplicaDB is open source tool for database replication designed for efficiently transferring bulk data between relational and NoSQL databases.
 
-ReplicaDB helps offload certain tasks, such as ETL processing, for efficient execution at a much lower cost. Actualy, ReplicaDB only works with Oracle and Postgres.
+ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. Actualy, ReplicaDB only works with Oracle and Postgres.
   
 ReplicaDB is **Cross Platform**; you can replicate data across different platforms, with compatibility for many databases. You can use **Parallel data transfer** for faster performance and optimal system utilization.
 
@@ -21,6 +21,24 @@ TODO:
 - Porque otra herramienta de replicacion
 
 {:/comment}
+
+
+# Why another databse replication software
+
+Simplemente porque no he encontrado ninguna herramienta que cubra mis necesidades: 
+
+- Open Source.
+- Java based cross-platform solution.
+- Any database engine SQL, NoSQL or other persistent stores like CSV or Kafka. 
+- Simple architecture, just a command line tool that can run on any server (including my laptop), without any remote agents in the databases.
+- Good performance for a large amount of data. 
+- I do not need streaming replication, or a pure change data capture (CDC) system that requires installation in the source database.
+
+I have reviewed and tested other open source tools and none of them meets all the above requirements:
+
+- **SymetricDS**: It was the best option of all, but I was looking for a smaller solution, mainly focused on performance. SymmetricDS is intrusive since installs database triggers that capture data changes in a data capture table. This table requires maintenance. SymmetricDS is more like a CDC system based on triggers.  
+- **Sqoop**: Sqoop is what I was looking for, but oh! it is only valid for Hadoop.
+- **Kettel** and **Talend**: Both are very complete ETL tools, but for each of the different source and destination tables that I have to replicate, I should do a custom development
 
 
 # Installation
@@ -37,8 +55,8 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
 ```bash
-replicadb$ wget https://github.com/osalvador/ReplicaDB/releases/download/v0.1.2/ReplicaDB-0.1.2.tar.gz
-replicadb$ tar -xvzf ReplicaDB-0.1.2.tar.gz
+replicadb$ wget https://github.com/osalvador/ReplicaDB/releases/download/v0.1.2/ReplicaDB-0.2.0.tar.gz
+replicadb$ tar -xvzf ReplicaDB-0.2.0.tar.gz
 x bin/
 x bin/configure-replicadb
 ...
