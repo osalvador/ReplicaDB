@@ -6,19 +6,31 @@ layout: page
 
 1. [Introduction](#1-Introduction)
 2. [Basic Usage](#2-Basic-Usage)
+    - 2.1 [Replication Mode](#21-Replication-Mode)
+    - 2.2 [Controlling Parallelism](#22-controlling-parallelism)    
 3. [Command Line Arguments](#3-Command-Line-Arguments)
-    - 3.1. [Using Options Files to Pass Arguments](#31-using-options-files-to-pass-arguments)
-    - 3.2. [Connecting to a Database Server](#32-connecting-to-a-database-server)
-    - 3.3. [Selecting the Data to Replicate](#33-selecting-the-data-to-replicate)
-    - 3.4. [Free-form Query Replications](#34-free-form-query-replications)
-    - 3.5. [Controlling Parallelism](#35-controlling-parallelism)    
+    - 3.1 [Using Options Files to Pass Arguments](#31-using-options-files-to-pass-arguments)
+    - 3.2 [Connecting to a Database Server](#32-connecting-to-a-database-server)
+    - 3.3 [Selecting the Data to Replicate](#33-selecting-the-data-to-replicate)
+    - 3.4 [Free-form Query Replications](#34-free-form-query-replications)    
 
 {::comment}
+
+- Basic parameters
+    + replication mode
+        - Complete
+        - Incremental
+    + control del paralelismo
+- Connecting to a Database Server
+    + Source Database Server parameters
+    + Sink Database server parameters
+    + Connection parameters solo en el fichero de options files
+
 
 - 3.6. Incremental Imports
     staging table
     staging schema
-- Connection parameters solo en el fichero de options files
+
     
     3.7. Controlling transaction isolation
     3.11. Large Objects
@@ -30,9 +42,35 @@ layout: page
 
 # 1. Introduction
 
+ReplicaDB es principalmente una herramienta de linea de comandos, portable y nultiplataforma para la replicacion de datos entre un origen (source) y un destino (sink). Su principal objetivo es el rendimiento, implementando todas las técnias especificas de motor de BD para lograr el mayor rendimiento para cada una de ellas, ya sea como Source o como Sink. 
+
+ReplicaDB sigue un modelo de convención sobre configuración, por lo que se solicitará al usuario los mínimos parametros necesarios para su funcionamiento, el resto se tomarán por defecto. 
+
 # 2. Basic Usage
 
-With ReplicaDB, you can _replicate_ data between relational databases and non replational databases. The input to the replication process is a database table, or custom query. For replational databases, ReplicaDB will read the table row-by-row. The output of this replication process is table in the sink database containing a copy of the source table. The replication process is performed in parallel.
+With ReplicaDB, you can _replicate_ data between relational databases and non replational databases. The input to the replication process is a database table, or custom query. ReplicaDB will read the source table row-by-row and the output of this replication process is table in the sink database containing a copy of the source table. The replication process is performed in parallel.
+
+Por defecto, ReplicaDB truncará la sink table antes de poblarla de datos, a no ser que se indique el parámetro `--sink-disable-truncate=false`. 
+
+<br>
+## 2.1 Replication Mode
+
+ReplicaDB implementa dos modos de replicación: `complete` y `incremental`. La principal diferencia entre ambos es: 
+    - El modo `complete` tiene como objetivo realizar una replica de la source table completa, de todos sus datos, desde Source hasta Sink. En el modo `complete` solo se realiza `INSERT` en la sink table sin preocuparse de las claves primarias. ReplicaDB realizará las siguientes acciones en una replicación `complete`: 
+        - Truncará la sink tabla con la sentencia `TRUNCATE TABLE` 
+        - Copiará los datos en paralelo de la source table a la sink table.
+    - En cambio el modo `incremental` tiene como objetivo realizar una replica incremental de los datos de la tabla Source a la tabla Sink. En el modo `ìncremental` se utiliza la técnica `INSERT or UPDATE` aka `UPSERT` en la sink table. Para ello y además permitir la copia de los datos en paralelo, es necesario crear una staging table in the sink database. ReplicaDB realizará las siguientes acciones en una replicación `incremental`: 
+        - Creará automáticamente la tabla de staging in the sink database.
+        - Truncará la tabla de staging. 
+        - Copiará los datos en paralelo de la source table a la sink staging table.
+        - Recuperará las claves primarias de la sink table
+        - Ejecutará la sentencia `UPSERT` entre la sink staging table y la sink table. Esta sentencia dependerá del Database Vendor, puede ser por ejemplo `INSERT ... ON CONFLICT ... DO UPDATE` en PostgreSQL o `MERGE INTO ...` en Oracle. 
+        - Borrará la tabla de staging. 
+
+<br>
+## 2.2 Controlling Parallelism    
+
+ReplicaDB replicate data in parallel from most database sources. You can specify the number of job tasks (parallel processes) to use to perform the replication by using the `-j` or `--jobs` argument. Each of these arguments takes an integer value which corresponds to the degree of parallelism to employ. By default, four tasks are used. Some databases may see improved performance by increasing this value to 8 or 16. Do not increase the degree of parallism higher than that which your database can reasonably support. Connecting 100 concurrent clients to your database may increase the load on the database server to a point where performance suffers as a result.
 
 
 # 3. Command Line Arguments 
@@ -49,32 +87,32 @@ usage: replicadb [OPTIONS]
 
 {:.table}
 
-| Argument                                 | Description | 
-|------------------------------------------|--------------------------------------------------------------------------------------| 
-|  `-h`,`--help`                           | Print this help screen |
-|  `-j`,`--jobs <n>`                       | Use n jobs to replicate in parallel. |
-|     `--mode <mode>`                      | Specifies the replication mode. The allowed values are complete or incremental |
-|     `--options-file <file-path>`         | Options file path location |
-|     `--sink-analyze`                     | Analyze sink database table after populate. |
-|     `--sink-columns <col,col,col...>`    | Sink database table columns to be populated |
-|     `--sink-connect <jdbc-uri>`          | Sink database JDBC connect string |
-|     `--sink-disable-escape`              | Escape srings before populating to the table of the sink database. |
-|     `--sink-disable-index`               | Disable sink database table indexes before populate. |
-|     `--sink-disable-truncate`            | Disable the truncation of the sink database table before populate. |
-|     `--sink-password <password>`         | Sink database authentication password |
-|    `--sink-staging-schema`               | Scheme name on the sink database, with right permissions for creating staging tables. |
-|    `--sink-staging-table`                | Qualified name of the sink staging table. The table must exist in the sink database. | 
-|     `--sink-table <table-name>`          | Sink database table to populate |
-|     `--sink-user <username>`             | Sink database authentication username |
-|     `--source-columns <col,col,col...>`  | Source database table columns to be extracted |
-|     `--source-connect <jdbc-uri>`        | Source database JDBC connect string |
-|     `--source-password <password>`       | Source databse authentication password |
-|     `--source-query <statement>`         | SQL statement to be executed in the source database |
-|     `--source-table <table-name>`        | Source database table to read |
-|     `--source-user <username>`           | Source database authentication username |
-|     `--source-where <where clause>`      | Source database WHERE clause to use during extraction |
-| `-v`,`--verbose`                         | Print more information while working |
-|     `--version`                          | Show implementation version and exit |
+| Argument                                 | Description                                                                       | Default | 
+|------------------------------------------|-----------------------------------------------------------------------------------|---------| 
+|  `-h`,`--help`                           | Print this help screen | |
+|  `-j`,`--jobs <n>`                       | Use n jobs to replicate in parallel. | `4`| 
+|     `--mode <mode>`                      | Specifies the replication mode. The allowed values are complete or incremental | `complete` | 
+|     `--options-file <file-path>`         | Options file path location | | 
+|     `--sink-analyze`                     | Analyze sink database table after populate. | `true` | 
+|     `--sink-columns <col,col,col...>`    | Sink database table columns to be populated | `--source-columns` |
+|     `--sink-connect <jdbc-uri>`          | Sink database JDBC connect string | required | 
+|     `--sink-disable-escape`              | Escape srings before populating to the table of the sink database. | `false` | 
+|     `--sink-disable-index`               | Disable sink database table indexes before populate. | `false` | 
+|     `--sink-disable-truncate`            | Disable the truncation of the sink database table before populate. | `false` | 
+|     `--sink-password <password>`         | Sink database authentication password | | 
+|    `--sink-staging-schema`               | Scheme name on the sink database, with right permissions for creating staging tables. | _specific `public` Database Vendor schema_ |
+|    `--sink-staging-table`                | Qualified name of the sink staging table. The table must exist in the sink database. | |
+|     `--sink-table <table-name>`          | Sink database table to populate | `--source-table` |
+|     `--sink-user <username>`             | Sink database authentication username | | 
+|     `--source-columns <col,col,col...>`  | Source database table columns to be extracted | `*` |
+|     `--source-connect <jdbc-uri>`        | Source database JDBC connect string | required | 
+|     `--source-password <password>`       | Source databse authentication password | | 
+|     `--source-query <statement>`         | SQL statement to be executed in the source database | |
+|     `--source-table <table-name>`        | Source database table to read | |
+|     `--source-user <username>`           | Source database authentication username | |
+|     `--source-where <where clause>`      | Source database WHERE clause to use during extraction | | 
+| `-v`,`--verbose`                         | Print more information while working | |
+|     `--version`                          | Show implementation version and exit | |
 
 
 <br>
@@ -185,8 +223,3 @@ For example:
 ```bash
 $ replicadb --source-query 'SELECT a.*, b.* FROM a JOIN b on (a.id == b.id)'
 ```
-
-<br>
-## 3.5 Controlling Parallelism    
-
-ReplicaDB replicate data in parallel from most database sources. You can specify the number of job tasks (parallel processes) to use to perform the replication by using the `-j` or `--jobs` argument. Each of these arguments takes an integer value which corresponds to the degree of parallelism to employ. By default, four tasks are used. Some databases may see improved performance by increasing this value to 8 or 16. Do not increase the degree of parallism higher than that which your database can reasonably support. Connecting 100 concurrent clients to your database may increase the load on the database server to a point where performance suffers as a result.
