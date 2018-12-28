@@ -15,12 +15,7 @@ layout: page
     - 3.4 [Free-form Query Replications](#34-free-form-query-replications)    
 
 {::comment}
-
-- 3.6. Incremental Imports
-    staging table
-    staging schema
-
-    
+   
     3.7. Controlling transaction isolation
     3.11. Large Objects
     ?Performance considerations
