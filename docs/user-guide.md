@@ -177,6 +177,7 @@ ReplicaDB provides couple of different ways to supply a password, secure and non
 
 <br>
 **Specifying extra JDBC parameters**
+
 When connecting to a database using JDBC, you can optionally specify extra JDBC parameters **only** via options file. The contents of this properties are parsed as standard Java properties and passed into the driver while creating a connection.
 
 You can specify these parameters for both the source and sink databases. ReplicaDB will retrieve all the parameters that start with `source.connect.parameter.` or` sink.connect.parameter.` followed by the name of the specific parameter of the database engine.
