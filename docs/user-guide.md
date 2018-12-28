@@ -4,11 +4,11 @@ layout: page
 
 # User Guide
 
-1. [Introduction](#1-Introduction)
-2. [Basic Usage](#2-Basic-Usage)
-    - 2.1 [Replication Mode](#21-Replication-Mode)
+1. [Introduction](#1-introduction)
+2. [Basic Usage](#2-basic-usage)
+    - 2.1 [Replication Mode](#21-replication-mode)
     - 2.2 [Controlling Parallelism](#22-controlling-parallelism)    
-3. [Command Line Arguments](#3-Command-Line-Arguments)
+3. [Command Line Arguments](#3-command-line-arguments)
     - 3.1 [Using Options Files to Pass Arguments](#31-using-options-files-to-pass-arguments)
     - 3.2 [Connecting to a Database Server](#32-connecting-to-a-database-server)
     - 3.3 [Selecting the Data to Replicate](#33-selecting-the-data-to-replicate)
@@ -42,24 +42,28 @@ layout: page
 
 # 1. Introduction
 
-ReplicaDB es principalmente una herramienta de linea de comandos, portable y nultiplataforma para la replicacion de datos entre un origen (source) y un destino (sink). Su principal objetivo es el rendimiento, implementando todas las técnias especificas de motor de BD para lograr el mayor rendimiento para cada una de ellas, ya sea como Source o como Sink. 
+ReplicaDB is primarily a command line, portable and cross-platform tool for data replication between a source and a sink databases. Its main objective is performance, implementing all the specific DataBase engine techniques to achieve the best performance for each of them, either as source or as sink.
 
-ReplicaDB sigue un modelo de convención sobre configuración, por lo que se solicitará al usuario los mínimos parametros necesarios para su funcionamiento, el resto se tomarán por defecto. 
+ReplicaDB follows the Convention over configuration design, so the user will introduce the minimum parameters necessary for the replication process, the rest will be default.
 
 # 2. Basic Usage
 
 With ReplicaDB, you can _replicate_ data between relational databases and non replational databases. The input to the replication process is a database table, or custom query. ReplicaDB will read the source table row-by-row and the output of this replication process is table in the sink database containing a copy of the source table. The replication process is performed in parallel.
 
-Por defecto, ReplicaDB truncará la sink table antes de poblarla de datos, a no ser que se indique el parámetro `--sink-disable-truncate=false`. 
+By default, ReplicaDB will truncate the sink table before populating it with data, unless `--sink-disable-truncate false` is indicated.
 
 <br>
 ## 2.1 Replication Mode
 
 ReplicaDB implementa dos modos de replicación: `complete` y `incremental`. La principal diferencia entre ambos es: 
+
     - El modo `complete` tiene como objetivo realizar una replica de la source table completa, de todos sus datos, desde Source hasta Sink. En el modo `complete` solo se realiza `INSERT` en la sink table sin preocuparse de las claves primarias. ReplicaDB realizará las siguientes acciones en una replicación `complete`: 
+
         - Truncará la sink tabla con la sentencia `TRUNCATE TABLE` 
         - Copiará los datos en paralelo de la source table a la sink table.
+
     - En cambio el modo `incremental` tiene como objetivo realizar una replica incremental de los datos de la tabla Source a la tabla Sink. En el modo `ìncremental` se utiliza la técnica `INSERT or UPDATE` aka `UPSERT` en la sink table. Para ello y además permitir la copia de los datos en paralelo, es necesario crear una staging table in the sink database. ReplicaDB realizará las siguientes acciones en una replicación `incremental`: 
+    
         - Creará automáticamente la tabla de staging in the sink database.
         - Truncará la tabla de staging. 
         - Copiará los datos en paralelo de la source table a la sink staging table.
