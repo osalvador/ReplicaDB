@@ -1,8 +1,3 @@
----
-layout: page
-homepage: true
----
-
 [![Build Status](https://travis-ci.org/osalvador/ReplicaDB.svg?branch=master)](https://travis-ci.org/osalvador/ReplicaDB) [![GitHub license](https://img.shields.io/github/license/osalvador/ReplicaDB.svg)](https://github.com/osalvador/ReplicaDB/blob/master/LICENSE) [![Twitter](https://img.shields.io/twitter/url/https/github.com/osalvador/ReplicaDB.svg?style=social)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fosalvador%2FReplicaDB)
 
 ![replicadb-logo](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png){:class="img-responsive center-block"}
@@ -12,15 +7,6 @@ ReplicaDB is open source tool for database replication designed for efficiently 
 ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. Actualy, ReplicaDB only works with Oracle and Postgres.
   
 ReplicaDB is **Cross Platform**; you can replicate data across different platforms, with compatibility for many databases. You can use **Parallel data transfer** for faster performance and optimal system utilization.
-
-
-{::comment}
-TODO:
-- Benchmark con symetricDS, kettel y talend
-- ETL vs ELT
-- Porque otra herramienta de replicacion
-
-{:/comment}
 
 
 # Why another databse replication software
@@ -111,8 +97,6 @@ $ replicadb --mode=complete -j=1 \
 ```
 
 # Compatible Databases
-
-{:.table}
 
 | Database Vendor | Source | Sink Complete | Sink Incremental |
 |-----------------|---------|---------------|------------------|
