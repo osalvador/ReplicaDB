@@ -24,7 +24,7 @@ I have reviewed and tested other open source tools and none of them meets all th
 
 - **SymetricDS**: It was the best option of all, but I was looking for a smaller solution, mainly focused on performance. SymmetricDS is intrusive since installs database triggers that capture data changes in a data capture table. This table requires maintenance. SymmetricDS is more like a CDC system based on triggers.  
 - **Sqoop**: Sqoop is what I was looking for, but oh! it is only valid for Hadoop.
-- **Kettel** and **Talend**: Both are very complete ETL tools, but for each of the different source and destination tables that I have to replicate, I should do a custom development
+- **Kettel** and **Talend**: Both are very complete ETL tools, but for each of the different source and sink tables that I have to replicate, I should do a custom development
 
 
 # Installation
