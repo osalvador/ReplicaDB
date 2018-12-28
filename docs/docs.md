@@ -2,7 +2,7 @@
 layout: page
 ---
 
-# Documentation
+# Docs
 
 1. [Introduction](#1-introduction)
 2. [Basic Usage](#2-basic-usage)
