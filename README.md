@@ -1,6 +1,6 @@
 [![Build Status](https://travis-ci.org/osalvador/ReplicaDB.svg?branch=master)](https://travis-ci.org/osalvador/ReplicaDB) [![GitHub license](https://img.shields.io/github/license/osalvador/ReplicaDB.svg)](https://github.com/osalvador/ReplicaDB/blob/master/LICENSE) [![Twitter](https://img.shields.io/twitter/url/https/github.com/osalvador/ReplicaDB.svg?style=social)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fosalvador%2FReplicaDB)
 
-![replicadb-logo](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png){:class="img-responsive center-block"}
+![replicadb-logo](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png)
 
 ReplicaDB is open source tool for database replication designed for efficiently transferring bulk data between relational and NoSQL databases.
 
@@ -77,7 +77,7 @@ $ replicadb --mode=complete -j=1 \
 2018-12-07 16:01:24,772 INFO  ReplicaDB:89: Total process time: 1302ms
 ```
 
-![ReplicaDB-Ora2PG.gif](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif){:class="img-responsive"}
+![ReplicaDB-Ora2PG.gif](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif)
 
 ## PostgreSQL to Oracle
 
@@ -100,8 +100,8 @@ $ replicadb --mode=complete -j=1 \
 
 | Database Vendor | Source | Sink Complete | Sink Incremental |
 |-----------------|---------|---------------|------------------|
-| Oracle           | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-times-circle text-danger"></i> |
-| PostgreSQL       | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
+| Oracle           | :heavy_check_mark: | :heavy_check_mark: | :heavy_multiplication_x:|
+| PostgreSQL       |:heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:| 
 
 
 # Contributing
