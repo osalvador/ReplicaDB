@@ -16,17 +16,6 @@ layout: page
 
 {::comment}
 
-- Basic parameters
-    + replication mode
-        - Complete
-        - Incremental
-    + control del paralelismo
-- Connecting to a Database Server
-    + Source Database Server parameters
-    + Sink Database server parameters
-    + Connection parameters solo en el fichero de options files
-
-
 - 3.6. Incremental Imports
     staging table
     staging schema
@@ -62,7 +51,7 @@ ReplicaDB implements two replication modes: `complete` and` incremental`. The ma
     - Truncate the sink table with the `TRUNCATE TABLE` statement
     - Copy the data in parallel from the source table to the sink table.
 
-
+<br>
 - The `incremental` mode performs an incremental replication of the data from the source table to the sink table. In the `incremental` mode, the` INSERT or UPDATE` or `UPSERT` technique is used in the sink table. To do this and to allow the copy of the data in parallel, it is necessary to create a staging table in the sink database. ReplicaDB will perform the following actions in an `incremental` replication:
 
     - Automatically create the staging table in the sink database.
@@ -185,6 +174,32 @@ This string will connect to a MySQL database named `employees` on the host `data
 You might need to authenticate against the database before you can access it. You can use the `--source-username` or `--sink-username` to supply a username to the database.
 
 ReplicaDB provides couple of different ways to supply a password, secure and non-secure, to the database which is detailed below.
+
+<br>
+**Specifying extra JDBC parameters**
+When connecting to a database using JDBC, you can optionally specify extra JDBC parameters **only** via options file. The contents of this properties are parsed as standard Java properties and passed into the driver while creating a connection.
+
+You can specify these parameters for both the source and sink databases. ReplicaDB will retrieve all the parameters that start with `source.connect.parameter.` or` sink.connect.parameter.` followed by the name of the specific parameter of the database engine.
+
+Examples:
+
+```properties
+# Source JDBC connection parameters
+# source.connect.parameter.[prameter_name]=parameter_value
+# Example for Oralce
+source.connect.parameter.oracle.net.tns_admin=${TNS_ADMIN}
+source.connect.parameter.oracle.net.networkCompression=on
+source.connect.parameter.defaultRowPrefetch=5000
+```
+
+```properties
+# Sink JDBC connection parameters
+# sink.connect.parameter.[prameter_name]=parameter_value
+# Example for PostgreSQL
+sink.connect.parameter.ApplicationName=ReplicaDB
+sink.connect.parameter.reWriteBatchedInserts=true
+```
+
 
 <br>
 **Secure way of supplying password to the database**
