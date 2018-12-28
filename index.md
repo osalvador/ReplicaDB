@@ -18,6 +18,7 @@ ReplicaDB is **Cross Platform**; you can replicate data across different platfor
 TODO:
 - Benchmark con symetricDS, kettel y talend
 - ETL vs ELT
+- Porque otra herramienta de replicacion
 
 {:/comment}
 
