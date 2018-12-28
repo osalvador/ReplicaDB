@@ -11,7 +11,7 @@ ReplicaDB is **Cross Platform**; you can replicate data across different platfor
 
 # Why another databse replication software
 
-Simplemente porque no he encontrado ninguna herramienta que cubra mis necesidades: 
+Simply because I have not found any tool that covers my needs:
 
 - Open Source.
 - Java based cross-platform solution.
