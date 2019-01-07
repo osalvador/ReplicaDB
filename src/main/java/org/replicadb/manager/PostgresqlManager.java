@@ -15,8 +15,7 @@ public class PostgresqlManager extends SqlManager {
 
     private static final Logger LOG = LogManager.getLogger(PostgresqlManager.class.getName());
 
-    private DataSourceType dsType;
-
+    private static Long chunkSize;
 
     /**
      * Constructs the SqlManager.
@@ -135,25 +134,6 @@ public class PostgresqlManager extends SqlManager {
         return copyCmd.toString();
     }
 
-    @Override
-    public Connection getConnection() throws SQLException {
-        if (null == this.connection) {
-
-            if (dsType == DataSourceType.SOURCE) {
-                // TODO
-                if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
-                    throw new IllegalArgumentException("Source query option for PostgresSQL database is not yet supported");
-                }
-                this.connection = makeSourceConnection();
-            } else if (dsType == DataSourceType.SINK) {
-                this.connection = makeSinkConnection();
-            } else {
-                LOG.error("DataSourceType must be Source or Sink");
-            }
-        }
-
-        return this.connection;
-    }
 
     @Override
     public ResultSet readTable(String tableName, String[] columns, int nThread) throws SQLException {
@@ -162,37 +142,40 @@ public class PostgresqlManager extends SqlManager {
         tableName = tableName == null ? this.options.getSourceTable() : tableName;
 
         // If columns parameter is null, get it from options
-        String allColumns = this.options.getSourceColumns() == null ? "ts.*" : this.options.getSourceColumns();
+        String allColumns = this.options.getSourceColumns() == null ? "*" : this.options.getSourceColumns();
 
-        StringBuilder sqlCmd = new StringBuilder();
+        long offset = nThread * chunkSize;
+        String sqlCmd;
 
-        // Full table read. Get table data in buckets
-        sqlCmd.append(" WITH int_ctid as (SELECT (('x' || SUBSTR(md5(ctid :: text), 1, 8)) :: bit(32) :: int) ictid  from ");
-        sqlCmd.append(escapeTableName(tableName));
-        sqlCmd.append("), replicadb_table_stats as (select min(ictid) as min_ictid, max(ictid) as max_ictid from int_ctid )");
-        sqlCmd.append("SELECT ").append(allColumns).append(" FROM ").append(escapeTableName(tableName)).append(" as ts, replicadb_table_stats");
-        sqlCmd.append(" WHERE ");
+        // Read table with source-query option specified
+        if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
+            sqlCmd = "SELECT  * FROM (" +
+                    options.getSourceQuery() + ") OFFSET ? ";
+        } else {
 
-        // TODO: source.query with buckets.
+            sqlCmd = "SELECT " +
+                    allColumns +
+                    " FROM " +
+                    escapeTableName(tableName);
 
-        // Read table with source-where option specified
-        if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
-            sqlCmd.append(options.getSourceWhere());
-            sqlCmd.append(" AND ");
+            // Source Where
+            if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
+                sqlCmd = sqlCmd + " WHERE " + options.getSourceWhere();
+            }
+
+            sqlCmd = sqlCmd + " OFFSET ? ";
+
         }
-        sqlCmd.append(" width_bucket((('x' || substr(md5(ctid :: text), 1, 8)) :: bit(32) :: int), replicadb_table_stats.min_ictid, replicadb_table_stats.max_ictid, ").append(options.getJobs()).append(") ");
 
+        String limit = " LIMIT ?";
 
-        if ((nThread + 1) == options.getJobs())
-            sqlCmd.append(" >= ?");
-        else
-            sqlCmd.append(" = ?");
+        if (this.options.getJobs() == nThread + 1) {
+            return super.execute(sqlCmd, 5000, offset);
+        } else {
+            sqlCmd = sqlCmd + limit;
+            return super.execute(sqlCmd, 5000, offset, chunkSize);
+        }
 
-//        sqlCmd.append(" SELECT ").append(allColumns).append(" FROM ");
-//        sqlCmd.append(escapeTableName(tableName)).append(" ts WHERE -1 <> ?");
-
-
-        return super.execute(sqlCmd.toString(), 5000, nThread + 1);
     }
 
     @Override
@@ -247,7 +230,41 @@ public class PostgresqlManager extends SqlManager {
     }
 
     @Override
-    public void preSourceTasks() {/*Not implemented*/}
+    public void preSourceTasks() throws SQLException {
+
+        Statement statement = this.getConnection().createStatement();
+        String sql = "SELECT " +
+                " abs(count(*) / " + options.getJobs() + ") chunk_size" +
+                ", count(*) total_rows" +
+                " FROM ";
+
+        // Source Query
+        if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
+            sql = sql + "( " + this.options.getSourceQuery() + " )";
+
+        } else {
+
+            sql = sql + this.options.getSourceTable();
+            // Source Where
+            if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
+                sql = sql + " WHERE " + options.getSourceWhere();
+            }
+        }
+
+        LOG.debug("calculating the chunks size with this sql: " + sql);
+        ResultSet rs = statement.executeQuery(sql);
+
+        rs.next();
+        chunkSize = rs.getLong(1);
+        long totalNumberRows = rs.getLong(2);
+        LOG.debug("chunkSize: " + chunkSize + " totalNumberRows: " + totalNumberRows);
+
+
+        statement.close();
+        this.getConnection().commit();
+
+
+    }
 
     @Override
     public void postSourceTasks() {/*Not implemented*/}
