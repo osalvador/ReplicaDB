@@ -61,7 +61,7 @@ public class OracleManager extends SqlManager {
 
     private void oracleAlterSession(Boolean directRead) throws SQLException {
         // Specific Oracle Alter sessions for reading data
-        Statement stmt = this.connection.createStatement();
+        Statement stmt = this.getConnection().createStatement();
         stmt.executeUpdate("ALTER SESSION SET NLS_NUMERIC_CHARACTERS = '.,'");
         stmt.executeUpdate("ALTER SESSION SET NLS_DATE_FORMAT='YYYY-MM-DD HH24:MI:SS' ");
         stmt.executeUpdate("ALTER SESSION SET NLS_TIMESTAMP_FORMAT='YYYY-MM-DD HH24:MI:SS.FF' ");
@@ -84,7 +84,7 @@ public class OracleManager extends SqlManager {
         int columnsNumber = rsmd.getColumnCount();
 
         String sqlCdm = getInsertSQLCommand(tableName, allColumns, columnsNumber);
-        PreparedStatement ps = this.connection.prepareStatement(sqlCdm);
+        PreparedStatement ps = this.getConnection().prepareStatement(sqlCdm);
 
         final int batchSize = 5000;
         int count = 0;
@@ -97,24 +97,22 @@ public class OracleManager extends SqlManager {
 
             // Get Columns values
             for (int i = 1; i <= columnsNumber; i++) {
-                ps.setString(i,resultSet.getString(i));
+                ps.setString(i, resultSet.getString(i));
             }
 
             ps.addBatch();
 
-            if(++count % batchSize == 0) {
-                //LOG.debug(Thread.currentThread().getName() + " commit");
+            if (++count % batchSize == 0) {
                 ps.executeBatch();
-                //this.connection.commit();
+                this.getConnection().commit();
             }
+
         }
 
         ps.executeBatch(); // insert remaining records
         ps.close();
 
-        this.connection.commit();
-
-        this.connection.close();
+        this.getConnection().commit();
 
         return 0;
     }
@@ -134,7 +132,7 @@ public class OracleManager extends SqlManager {
         }
 
         sqlCmd.append(" VALUES ( ");
-        for (int i = 0; i <= columnsNumber -1; i++){
+        for (int i = 0; i <= columnsNumber - 1; i++) {
             if (i > 0) sqlCmd.append(",");
             sqlCmd.append("?");
         }
@@ -145,6 +143,9 @@ public class OracleManager extends SqlManager {
 
     @Override
     protected void createStagingTable() throws SQLException {
+
+
+
 
     }
 
