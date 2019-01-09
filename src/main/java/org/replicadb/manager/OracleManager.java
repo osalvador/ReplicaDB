@@ -2,9 +2,11 @@ package org.replicadb.manager;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 
 import java.sql.*;
+import java.util.Arrays;
 
 public class OracleManager extends SqlManager {
 
@@ -65,6 +67,7 @@ public class OracleManager extends SqlManager {
         stmt.executeUpdate("ALTER SESSION SET NLS_NUMERIC_CHARACTERS = '.,'");
         stmt.executeUpdate("ALTER SESSION SET NLS_DATE_FORMAT='YYYY-MM-DD HH24:MI:SS' ");
         stmt.executeUpdate("ALTER SESSION SET NLS_TIMESTAMP_FORMAT='YYYY-MM-DD HH24:MI:SS.FF' ");
+        stmt.executeUpdate("ALTER SESSION SET recyclebin = OFF");
 
         if (directRead) stmt.executeUpdate("ALTER SESSION SET \"_serial_direct_read\"=true ");
 
@@ -76,11 +79,16 @@ public class OracleManager extends SqlManager {
     public int insertDataToTable(ResultSet resultSet) throws SQLException {
 
         ResultSetMetaData rsmd = resultSet.getMetaData();
+        String tableName;
 
         // Get table name and columns
-        String tableName = getSinkTableName();
-        String allColumns = getAllSinkColumns(rsmd);
+        if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
+            tableName = getQualifiedStagingTableName();
+        } else {
+            tableName = getSinkTableName();
+        }
 
+        String allColumns = getAllSinkColumns(rsmd);
         int columnsNumber = rsmd.getColumnCount();
 
         String sqlCdm = getInsertSQLCommand(tableName, allColumns, columnsNumber);
@@ -89,7 +97,7 @@ public class OracleManager extends SqlManager {
         final int batchSize = 5000;
         int count = 0;
 
-        LOG.debug("Inserting data with this command: " + sqlCdm);
+        LOG.info("Inserting data with this command: " + sqlCdm);
 
         oracleAlterSession(true);
 
@@ -144,13 +152,78 @@ public class OracleManager extends SqlManager {
     @Override
     protected void createStagingTable() throws SQLException {
 
+        Statement statement = this.getConnection().createStatement();
+        String sinkStagingTable = getQualifiedStagingTableName();
 
+        String sql = " CREATE TABLE " + sinkStagingTable + " NOLOGGING AS (SELECT * FROM " + this.getSinkTableName() + " WHERE rownum = -1 ) ";
 
+        LOG.info("Creating staging table with this command: " + sql);
+        statement.executeUpdate(sql);
+        statement.close();
+        this.getConnection().commit();
 
     }
 
     @Override
     protected void mergeStagingTable() throws SQLException {
+
+        Statement statement = this.getConnection().createStatement();
+
+        String[] pks = this.getSinkPrimaryKeys(this.getSinkTableName());
+        // Primary key is required
+        if (pks == null || pks.length == 0) {
+            throw new IllegalArgumentException("Sink table must have at least one primary key column for incremental mode.");
+        }
+
+        // options.sinkColumns was set during the insertDataToTable
+        String allColls = getAllSinkColumns(null);
+        // Oracle use columns uppercase
+        allColls = allColls.toUpperCase();
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("MERGE INTO ")
+                .append(this.getSinkTableName())
+                .append(" trg USING (SELECT ")
+                .append(allColls)
+                .append(" FROM ")
+                .append(this.getSinkStagingTableName())
+                .append(" ) src ON ")
+                .append(" (");
+
+        for (int i = 0; i <= pks.length - 1; i++) {
+            if (i >= 1) sql.append(" AND ");
+            sql.append("src.").append(pks[i]).append("= trg.").append(pks[i]);
+        }
+
+        sql.append(" ) WHEN MATCHED THEN UPDATE SET ");
+
+        // Set all columns for UPDATE SET statement
+        for (String colName : allColls.split("\\s*,\\s*")) {
+
+            boolean contains = Arrays.asList(pks).contains(colName);
+            if (!contains)
+                sql.append(" trg.").append(colName).append(" = src.").append(colName).append(" ,");
+        }
+        // Delete the last comma
+        sql.setLength(sql.length() - 1);
+
+
+        sql.append(" WHEN NOT MATCHED THEN INSERT ( ").append(allColls).
+                append(" ) VALUES (");
+
+        // all columns for INSERT VALUES statement
+        for (String colName : allColls.split("\\s*,\\s*")) {
+            sql.append(" src.").append(colName).append(" ,");
+        }
+        // Delete the last comma
+        sql.setLength(sql.length() - 1);
+
+        sql.append(" ) ");
+
+        LOG.info("Merging staging table and sink table with this command: " + sql);
+        statement.executeUpdate(sql.toString());
+        statement.close();
+        this.getConnection().commit();
 
     }
 
@@ -163,5 +236,12 @@ public class OracleManager extends SqlManager {
     @Override
     public void postSourceTasks() throws SQLException {
 
+    }
+
+    @Override
+    public void dropStagingTable() throws SQLException {
+        // Disable Oracle RECYCLEBIN
+        oracleAlterSession(false);
+        super.dropStagingTable();
     }
 }

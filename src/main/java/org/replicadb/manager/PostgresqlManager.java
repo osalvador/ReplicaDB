@@ -128,7 +128,7 @@ public class PostgresqlManager extends SqlManager {
 
         copyCmd.append(" FROM STDIN WITH DELIMITER e'\\x1f'  NULL '' ENCODING 'UTF-8' ");
 
-        LOG.debug("Copying data with this command: " + copyCmd.toString());
+        LOG.info("Copying data with this command: " + copyCmd.toString());
 
         return copyCmd.toString();
     }
@@ -185,7 +185,7 @@ public class PostgresqlManager extends SqlManager {
 
         String sql = "CREATE UNLOGGED TABLE IF NOT EXISTS " + sinkStagingTable + " ( LIKE " + this.getSinkTableName() + " INCLUDING DEFAULTS INCLUDING CONSTRAINTS )";
 
-        LOG.debug("Creating staging table with this command: " + sql);
+        LOG.info("Creating staging table with this command: " + sql);
         statement.executeUpdate(sql);
         statement.close();
         this.getConnection().commit();
@@ -222,7 +222,7 @@ public class PostgresqlManager extends SqlManager {
         // Delete the last comma
         sql.setLength(sql.length() - 1);
 
-        LOG.debug("Merging staging table and sink table with this command: " + sql);
+        LOG.info("Merging staging table and sink table with this command: " + sql);
         statement.executeUpdate(sql.toString());
         statement.close();
         this.getConnection().commit();
@@ -230,6 +230,10 @@ public class PostgresqlManager extends SqlManager {
 
     @Override
     public void preSourceTasks() throws SQLException {
+
+        /**
+         * Calculating the chunk size for parallel job processing
+         */
 
         Statement statement = this.getConnection().createStatement();
         String sql = "SELECT " +
@@ -250,9 +254,8 @@ public class PostgresqlManager extends SqlManager {
             }
         }
 
-        LOG.debug("calculating the chunks size with this sql: " + sql);
+        LOG.debug("Calculating the chunks size with this sql: " + sql);
         ResultSet rs = statement.executeQuery(sql);
-
         rs.next();
         chunkSize = rs.getLong(1);
         long totalNumberRows = rs.getLong(2);

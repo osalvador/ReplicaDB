@@ -410,7 +410,7 @@ public abstract class SqlManager extends ConnManager {
     public void dropStagingTable() throws SQLException {
         Statement statement = this.getConnection().createStatement();
         String sql = "DROP TABLE " + getQualifiedStagingTableName();
-        LOG.debug("Dropping staging table with this command: " + sql);
+        LOG.info("Dropping staging table with this command: " + sql);
 
         statement.executeUpdate(sql);
         statement.close();
@@ -430,7 +430,7 @@ public abstract class SqlManager extends ConnManager {
 
                 // If the staging parameters have not been defined then the table is created in the public schema
                 if (options.getSinkStagingSchema() == null || options.getSinkStagingSchema().isEmpty()) {
-                    // TODO: Esto sólo es válido para PostgreSQL
+                    // TODO?: This is only valid for PostgreSQL
                     LOG.warn("No staging schema is defined, setting it as PUBLIC");
                     options.setSinkStagingSchema("public");
                 }
