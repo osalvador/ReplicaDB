@@ -93,7 +93,6 @@ public class PostgresqlManager extends SqlManager {
                 // Copy data to postgres
                 bytes = row.toString().getBytes();
                 copyIn.writeToCopy(bytes, 0, bytes.length);
-
             }
 
             copyIn.endCopy();
@@ -109,7 +108,7 @@ public class PostgresqlManager extends SqlManager {
             }
         }
 
-        this.connection.commit();
+        this.getConnection().commit();
 
         return 0;
     }
