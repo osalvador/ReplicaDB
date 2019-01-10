@@ -65,6 +65,10 @@ public abstract class ConnManager {
      */
     public abstract String getDriverClass();
 
+    /**
+     * @return default autoCommit connection property
+     */
+    public boolean getAutoCommit() {return false;}
 
     /**
      * When using a column name in a generated SQL query, how (if at all)
