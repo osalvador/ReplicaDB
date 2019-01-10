@@ -19,8 +19,6 @@ public abstract class SqlManager extends ConnManager {
 
     private static final Logger LOG = LogManager.getLogger(SqlManager.class.getName());
 
-    protected static final int DEFAULT_FETCH_SIZE = 5000;
-
     protected Connection connection;
     protected DataSourceType dsType;
 
@@ -149,8 +147,7 @@ public abstract class SqlManager extends ConnManager {
      * @return A ResultSet encapsulating the results or null on error
      */
     protected ResultSet execute(String stmt, Object... args) throws SQLException {
-        return execute(stmt, /*options.getFetchSize()*/DEFAULT_FETCH_SIZE, args);
-        // TODO: FetchSize
+        return execute(stmt, options.getFetchSize(), args);
     }
 
     public void close() throws SQLException {
