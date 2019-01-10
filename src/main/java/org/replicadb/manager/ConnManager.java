@@ -189,9 +189,16 @@ public abstract class ConnManager {
 
     /**
      * Perform any shutdown operations on the connection.
+     * @throws SQLException
      */
     public abstract void close() throws SQLException;
 
+
+    /**
+     * Clean Up the environment. Drop staging table and any other temporal data.
+     * @throws SQLException
+     */
+    public abstract void cleanUp() throws SQLException;
 
     /**
      * If a method of this ConnManager has returned a ResultSet to you,

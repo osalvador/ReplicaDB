@@ -280,8 +280,6 @@ public abstract class SqlManager extends ConnManager {
             try {
                 this.lastStatement.close();
             } catch (SQLException e) {
-                /*LoggingUtils.logAll(LOG, "Exception closing executed Statement: "
-                        + e, e);*/
                 LOG.error("Exception closing executed Statement: " + e, e);
             }
 
@@ -366,9 +364,8 @@ public abstract class SqlManager extends ConnManager {
      * @throws SQLException
      */
     protected void truncateTable() throws SQLException {
-        // Truncate Sink table
         String tableName;
-        // Get table name and columns
+        // Get table name
         if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
             tableName = getQualifiedStagingTableName();
         } else {
@@ -381,9 +378,6 @@ public abstract class SqlManager extends ConnManager {
         statement.close();
         this.getConnection().commit();
     }
-
-    ;
-
 
     /**
      * Create staging table on sink database.
@@ -449,17 +443,18 @@ public abstract class SqlManager extends ConnManager {
     public void postSinkTasks() throws SQLException {
         // On INCREMENTAL mode
         if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
-
             // Merge Data
             this.mergeStagingTable();
-
-            // Only drop staging table if it was created automatically
-            if (options.getSinkStagingTable() == null || options.getSinkStagingTable().isEmpty()) {
-                // Drop staging table
-                this.dropStagingTable();
-            }
-
         }
     }
 
+    @Override
+    public void cleanUp() throws SQLException {
+        // Only drop staging table if it was created automatically
+        if (options.getSinkStagingTable() == null || options.getSinkStagingTable().isEmpty()) {
+            // Drop staging table
+            this.dropStagingTable();
+        }
+
+    }
 }

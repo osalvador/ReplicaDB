@@ -31,8 +31,10 @@ public class ReplicaDB {
 
     public static void main(String[] args) {
 
-
+        boolean exitWithError = false;
         long start = System.nanoTime();
+        ConnManager sourceDs = null, sinkDs = null;
+
         try {
 
             // Parse Option Arguments
@@ -50,8 +52,8 @@ public class ReplicaDB {
 
                 // Create Connection Managers
                 ManagerFactory managerF = new ManagerFactory();
-                ConnManager sourceDs = managerF.accept(options, DataSourceType.SOURCE);
-                ConnManager sinkDs = managerF.accept(options, DataSourceType.SINK);
+                sourceDs = managerF.accept(options, DataSourceType.SOURCE);
+                sinkDs = managerF.accept(options, DataSourceType.SINK);
 
                 // Pre tasks
                 sourceDs.preSourceTasks();
@@ -75,26 +77,34 @@ public class ReplicaDB {
                 // Post Tasks
                 sourceDs.postSourceTasks();
                 sinkDs.postSinkTasks();
-
-                //Close connections
-                sourceDs.close();
-                sinkDs.close();
-
-
-                long elapsed = (System.nanoTime() - start) / 1000000;
-                LOG.info("Total process time: " + elapsed + "ms");
             }
 
         } catch (Exception e) {
-
             LOG.error("Got exception running ReplicaDB:", e);
-            long elapsed = (System.nanoTime() - start) / 1000000;
-            LOG.info("Total process time: " + elapsed + "ms");
-            System.exit(ERROR);
-
+            exitWithError = true;
+        } finally {
+            //Clean Up environment and close connections
+            try {
+                if (null != sinkDs) {
+                    //aka drop staging table)
+                    sinkDs.cleanUp();
+                    sinkDs.close();
+                }
+                if (null != sourceDs) {
+                    sourceDs.close();
+                }
+            } catch (SQLException e) {
+                LOG.error(e);
+            }
         }
 
-        System.exit(SUCCESS);
+        long elapsed = (System.nanoTime() - start) / 1000000;
+        LOG.info("Total process time: " + elapsed + "ms");
+
+        if (exitWithError)
+            System.exit(ERROR);
+        else
+            System.exit(SUCCESS);
 
     }
 
