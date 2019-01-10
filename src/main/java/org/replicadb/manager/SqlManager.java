@@ -447,10 +447,15 @@ public abstract class SqlManager extends ConnManager {
 
     @Override
     public void cleanUp() throws SQLException {
-        // Only drop staging table if it was created automatically
-        if (options.getSinkStagingTable() == null || options.getSinkStagingTable().isEmpty()) {
-            // Drop staging table
-            this.dropStagingTable();
+
+        // On INCREMENTAL mode
+        if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
+
+            // Only drop staging table if it was created automatically
+            if (options.getSinkStagingTable() == null || options.getSinkStagingTable().isEmpty()) {
+                // Drop staging table
+                this.dropStagingTable();
+            }
         }
 
     }
