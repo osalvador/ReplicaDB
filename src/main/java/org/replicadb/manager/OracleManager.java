@@ -56,9 +56,7 @@ public class OracleManager extends SqlManager {
                     escapeTableName(tableName) + " where ora_hash(rowid," + (options.getJobs() - 1) + ") = ?";
         }
 
-
-        LOG.debug("Reading table with command: " + sqlCmd);
-        return super.execute(sqlCmd, nThread);
+        return super.execute(sqlCmd, (Object) nThread);
     }
 
     private void oracleAlterSession(Boolean directRead) throws SQLException {

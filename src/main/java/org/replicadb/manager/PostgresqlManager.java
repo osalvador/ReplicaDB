@@ -183,7 +183,7 @@ public class PostgresqlManager extends SqlManager {
         Statement statement = this.getConnection().createStatement();
         String sinkStagingTable = getQualifiedStagingTableName();
 
-        String sql = "CREATE UNLOGGED TABLE IF NOT EXISTS " + sinkStagingTable + " ( LIKE " + this.getSinkTableName() + " INCLUDING DEFAULTS INCLUDING CONSTRAINTS )";
+        String sql = "CREATE UNLOGGED TABLE IF NOT EXISTS " + sinkStagingTable + " ( LIKE " + this.getSinkTableName() + " INCLUDING DEFAULTS INCLUDING CONSTRAINTS ) WITH (autovacuum_enabled=false)";
 
         LOG.info("Creating staging table with this command: " + sql);
         statement.executeUpdate(sql);
