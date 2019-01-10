@@ -21,9 +21,9 @@ TODO:
 {:/comment}
 
 
-# Why another databse replication software
+# Why another database replication software
 
-Simply because I have not found any tool that covers my needs:
+Because I have not found any tool that covers my needs:
 
 - Open Source.
 - Java based cross-platform solution.
