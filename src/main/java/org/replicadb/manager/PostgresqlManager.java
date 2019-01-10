@@ -169,10 +169,10 @@ public class PostgresqlManager extends SqlManager {
         String limit = " LIMIT ?";
 
         if (this.options.getJobs() == nThread + 1) {
-            return super.execute(sqlCmd, 5000, offset);
+            return super.execute(sqlCmd, offset);
         } else {
             sqlCmd = sqlCmd + limit;
-            return super.execute(sqlCmd, 5000, offset, chunkSize);
+            return super.execute(sqlCmd, offset, chunkSize);
         }
 
     }

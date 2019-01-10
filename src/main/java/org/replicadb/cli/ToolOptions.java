@@ -12,6 +12,7 @@ public class ToolOptions {
 
     private static final Logger LOG = LogManager.getLogger(ToolOptions.class.getName());
     private static final int DEFAULT_JOBS = 4;
+    private static final int DEFAULT_FETCH_SIZE = 5000;
     private static final String DEFAULT_MODE = ReplicationMode.COMPLETE.getModeText();
 
     private String sourceConnect;
@@ -36,6 +37,7 @@ public class ToolOptions {
 
 
     private int jobs = DEFAULT_JOBS;
+    private int fetchSize = DEFAULT_FETCH_SIZE;
     private Boolean help = false;
     private Boolean version = false;
     private Boolean verbose = false;
@@ -226,10 +228,20 @@ public class ToolOptions {
         options.addOption(
                 Option.builder()
                         .longOpt("mode")
-                        .desc("Specifies the replication mode. The allowed values are complete or incremental")
+                        .desc("Specifies the replication mode. The allowed values are complete or incremental.")
                         //.required()
                         .hasArg()
                         .argName("mode")
+                        .build()
+        );
+
+
+        options.addOption(
+                Option.builder()
+                        .longOpt("fetch-size")
+                        .desc(" Number of entries to read from database at once.")
+                        .hasArg()
+                        .argName("fetch-size")
                         .build()
         );
 
@@ -293,6 +305,7 @@ public class ToolOptions {
             setSourceUserNotNull(line.getOptionValue("source-user"));
             setSourceWhereNotNull(line.getOptionValue("source-where"));
             setJobsNotNull(line.getOptionValue("jobs"));
+            setFetchSizeNotNull(line.getOptionValue("fetch-size"));
             setSinkStagingSchemaNotNull(line.getOptionValue("sink-staging-schema"));
             setSinkStagingTableNotNull(line.getOptionValue("sink-staging-table"));
 
@@ -385,6 +398,7 @@ public class ToolOptions {
         setSourceUser(prop.getProperty("source.user"));
         setSourceWhere(prop.getProperty("source.where"));
         setJobs(prop.getProperty("jobs"));
+        setFetchSize(prop.getProperty("fetch.size"));
 
 
         // Connection params
@@ -722,19 +736,41 @@ public class ToolOptions {
             this.sinkStagingSchema = sinkStagingSchema;
     }
 
+    public int getFetchSize() {
+        return fetchSize;
+    }
+
+    public void setFetchSizeNotNull(String fetchSize) {
+        if (fetchSize != null && !fetchSize.isEmpty())
+            setFetchSize(fetchSize);
+    }
+
+    public void setFetchSize(String fetchSize) {
+        try {
+            if (fetchSize != null && !fetchSize.isEmpty()) {
+                this.fetchSize = Integer.parseInt(fetchSize);
+                if (this.fetchSize <= 0) throw new NumberFormatException();
+            }
+        } catch (NumberFormatException | NullPointerException e) {
+            LOG.error("Option --fetch-size must be a positive integer grater than 0.");
+            throw e;
+        }
+
+    }
+
     @Override
     public String toString() {
         return "ToolOptions{" +
                 " \n\tsourceConnect='" + sourceConnect + '\'' +
                 ",\n\tsourceUser='" + sourceUser + '\'' +
-                ",\n\tsourcePassword='" + (sourcePassword != null ? "****" : "null" ) + '\'' +
+                ",\n\tsourcePassword='" + (sourcePassword != null ? "****" : "null") + '\'' +
                 ",\n\tsourceTable='" + sourceTable + '\'' +
                 ",\n\tsourceColumns='" + sourceColumns + '\'' +
                 ",\n\tsourceWhere='" + sourceWhere + '\'' +
                 ",\n\tsourceQuery='" + sourceQuery + '\'' +
                 ",\n\tsinkConnect='" + sinkConnect + '\'' +
                 ",\n\tsinkUser='" + sinkUser + '\'' +
-                ",\n\tsinkPassword='" + (sinkPassword != null ? "****" : "null" ) + '\'' +
+                ",\n\tsinkPassword='" + (sinkPassword != null ? "****" : "null") + '\'' +
                 ",\n\tsinkTable='" + sinkTable + '\'' +
                 ",\n\tsinkStagingTable='" + sinkStagingTable + '\'' +
                 ",\n\tsinkStagingSchema='" + sinkStagingSchema + '\'' +
@@ -744,6 +780,7 @@ public class ToolOptions {
                 ",\n\tsinkDisableTruncate=" + sinkDisableTruncate +
                 ",\n\tsinkAnalyze=" + sinkAnalyze +
                 ",\n\tjobs=" + jobs +
+                ",\n\tfetchSize=" + fetchSize +
                 ",\n\thelp=" + help +
                 ",\n\tversion=" + version +
                 ",\n\tverbose=" + verbose +

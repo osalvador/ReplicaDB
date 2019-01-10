@@ -58,7 +58,7 @@ public class OracleManager extends SqlManager {
 
 
         LOG.debug("Reading table with command: " + sqlCmd);
-        return super.execute(sqlCmd, 5000, nThread);
+        return super.execute(sqlCmd, nThread);
     }
 
     private void oracleAlterSession(Boolean directRead) throws SQLException {
@@ -94,7 +94,7 @@ public class OracleManager extends SqlManager {
         String sqlCdm = getInsertSQLCommand(tableName, allColumns, columnsNumber);
         PreparedStatement ps = this.getConnection().prepareStatement(sqlCdm);
 
-        final int batchSize = 5000;
+        final int batchSize = options.getFetchSize();
         int count = 0;
 
         LOG.info("Inserting data with this command: " + sqlCdm);
