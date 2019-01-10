@@ -104,6 +104,15 @@ $ replicadb --mode=complete -j=1 \
 | PostgreSQL       |:heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:| 
 
 
+# Roadmap
+
+1. CSV file as sink. 
+2. Denodo as source.
+3. MySQL; source and sink.
+5. SQL Server; source and sink.
+6. MongoDB as sink.
+
+
 # Contributing
   
 1. Fork it (https://github.com/osalvador/ReplicaDB)
