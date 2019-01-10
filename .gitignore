@@ -1,7 +1,11 @@
 .idea/*
+.settings/*
 lib/*
 test/*
 ReplicaDB-*.jar
 ReplicaDB-*.zip
 ReplicaDB-*.gz
 package-release.sh
+.project
+.classpath
+.factorypath
