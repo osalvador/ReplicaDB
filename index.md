@@ -53,8 +53,8 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
 ```bash
-replicadb$ wget https://github.com/osalvador/ReplicaDB/releases/download/v0.1.2/ReplicaDB-0.2.0.tar.gz
-replicadb$ tar -xvzf ReplicaDB-0.2.0.tar.gz
+replicadb$ wget https://github.com/osalvador/ReplicaDB/releases/download/v0.3.0/ReplicaDB-0.3.0.tar.gz
+replicadb$ tar -xvzf ReplicaDB-0.3.0.tar.gz
 x bin/
 x bin/configure-replicadb
 ...
@@ -114,7 +114,7 @@ $ replicadb --mode=complete -j=1 \
 
 | Database Vendor | Source | Sink Complete | Sink Incremental |
 |-----------------|---------|---------------|------------------|
-| Oracle           | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-times-circle text-danger"></i> |
+| Oracle           | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
 | PostgreSQL       | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
 
 
