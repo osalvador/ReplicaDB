@@ -78,18 +78,17 @@ usage: replicadb [OPTIONS]
 
 | Argument                                 | Description                                                                       | Default | 
 |------------------------------------------|-----------------------------------------------------------------------------------|---------| 
+|  `--fetch-size <fetch-size>`             | Number of entries to read from database at once. | `5000` |
 |  `-h`,`--help`                           | Print this help screen | |
 |  `-j`,`--jobs <n>`                       | Use n jobs to replicate in parallel. | `4`| 
 |     `--mode <mode>`                      | Specifies the replication mode. The allowed values are complete or incremental | `complete` | 
 |     `--options-file <file-path>`         | Options file path location | | 
-|     `--sink-analyze`                     | Analyze sink database table after populate. | `true` | 
 |     `--sink-columns <col,col,col...>`    | Sink database table columns to be populated | `--source-columns` |
 |     `--sink-connect <jdbc-uri>`          | Sink database JDBC connect string | required | 
 |     `--sink-disable-escape`              | Escape srings before populating to the table of the sink database. | `false` | 
-|     `--sink-disable-index`               | Disable sink database table indexes before populate. | `false` | 
 |     `--sink-disable-truncate`            | Disable the truncation of the sink database table before populate. | `false` | 
 |     `--sink-password <password>`         | Sink database authentication password | | 
-|    `--sink-staging-schema`               | Scheme name on the sink database, with right permissions for creating staging tables. | _specific `public` Database Vendor schema_ |
+|    `--sink-staging-schema`               | Scheme name on the sink database, with right permissions for creating staging tables. |  `PUBLIC` |
 |    `--sink-staging-table`                | Qualified name of the sink staging table. The table must exist in the sink database. | |
 |     `--sink-table <table-name>`          | Sink database table to populate | `--source-table` |
 |     `--sink-user <username>`             | Sink database authentication username | | 
@@ -182,7 +181,7 @@ Examples:
 ```properties
 # Source JDBC connection parameters
 # source.connect.parameter.[prameter_name]=parameter_value
-# Example for Oralce
+# Example for Oracle
 source.connect.parameter.oracle.net.tns_admin=${TNS_ADMIN}
 source.connect.parameter.oracle.net.networkCompression=on
 source.connect.parameter.defaultRowPrefetch=5000
