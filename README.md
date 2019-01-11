@@ -108,10 +108,9 @@ $ replicadb --mode=complete -j=1 \
 # Roadmap
 
 1. CSV file as sink. 
-2. Denodo as source.
-3. MySQL; source and sink.
-5. SQL Server; source and sink.
-6. MongoDB as sink.
+2. MySQL; source and sink.
+3. SQL Server; source and sink.
+4. MongoDB as sink.
 
 
 # Contributing
