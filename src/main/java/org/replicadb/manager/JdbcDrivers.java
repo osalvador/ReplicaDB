@@ -6,7 +6,7 @@ public enum JdbcDrivers {
     SQLSERVER("com.microsoft.sqlserver.jdbc.SQLServerDriver", "jdbc:sqlserver:"),
     JTDS_SQLSERVER("net.sourceforge.jtds.jdbc.Driver", "jdbc:jtds:sqlserver:"),
     DB2("com.ibm.db2.jcc.DB2Driver", "jdbc:db2:"), NETEZZA("org.netezza.Driver", "jdbc:netezza:"),
-    CUBRID("cubrid.jdbc.driver.CUBRIDDriver", "jdbc:cubrid:");
+    CUBRID("cubrid.jdbc.driver.CUBRIDDriver", "jdbc:cubrid:"), DENODO("com.denodo.vdp.jdbc.Driver", "jdbc:vdb:");
 
     private final String driverClass;
     private final String schemePrefix;

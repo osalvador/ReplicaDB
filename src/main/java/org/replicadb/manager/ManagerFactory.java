@@ -44,6 +44,8 @@ public class ManagerFactory {
             return new PostgresqlManager(options, dsType);
         } else if (ORACLE.isTheManagerTypeOf(options, dsType)) {
             return new OracleManager(options, dsType);
+        } else if (DENODO.isTheManagerTypeOf(options, dsType)) {
+            return new DenodoManager(options, dsType);
         } else {
             return null;
         }

@@ -6,7 +6,7 @@
 
     <groupId>org.replicadb</groupId>
     <artifactId>ReplicaDB</artifactId>
-    <version>0.3.0</version>
+    <version>0.4.0</version>
 
     <name>ReplicaDB</name>
     <url>https://github.com/osalvador/ReplicaDB</url>
@@ -60,6 +60,12 @@
             <!--<groupId>com.oracle.jdbc</groupId>-->
             <!--<artifactId>orai18n</artifactId>-->
             <!--<version>12.2.0.1</version>-->
+        <!--</dependency>-->
+        <!-- Dependencia con el driver de Denodo-->
+        <!--<dependency>-->
+            <!--<groupId>com.denodo</groupId>-->
+            <!--<artifactId>denodo</artifactId>-->
+            <!--<version>6.0</version>-->
         <!--</dependency>-->
 
     </dependencies>
