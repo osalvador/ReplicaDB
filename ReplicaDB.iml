@@ -17,6 +17,6 @@
     <orderEntry type="library" name="Maven: org.apache.logging.log4j:log4j-core:2.11.1" level="project" />
     <orderEntry type="library" name="Maven: commons-cli:commons-cli:1.4" level="project" />
     <orderEntry type="library" name="Maven: org.postgresql:postgresql:42.2.1" level="project" />
-    <orderEntry type="library" name="Maven: com.oracle.jdbc:ojdbc8:12.2.0.1" level="project" />
+    <orderEntry type="library" name="Maven: com.denodo:denodo:6.0" level="project" />
   </component>
 </module>

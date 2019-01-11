@@ -9,7 +9,7 @@ public enum SupportedManagers {
     HSQLDB(JdbcDrivers.HSQLDB.getSchemePrefix()), ORACLE(JdbcDrivers.ORACLE.getSchemePrefix()),
     SQLSERVER(JdbcDrivers.SQLSERVER.getSchemePrefix()), CUBRID(JdbcDrivers.CUBRID.getSchemePrefix()),
     JTDS_SQLSERVER(JdbcDrivers.JTDS_SQLSERVER.getSchemePrefix()), DB2(JdbcDrivers.DB2.getSchemePrefix()),
-    NETEZZA(JdbcDrivers.NETEZZA.getSchemePrefix());
+    NETEZZA(JdbcDrivers.NETEZZA.getSchemePrefix()), DENODO(JdbcDrivers.DENODO.getSchemePrefix());
 
     private final String schemePrefix;
 
@@ -18,16 +18,12 @@ public enum SupportedManagers {
 
     SupportedManagers(String schemePrefix) {
         this.schemePrefix = schemePrefix;
-        //this.hasDirectConnector = hasDirectConnector;
     }
 
     public String getSchemePrefix() {
         return schemePrefix;
     }
 
-    /*public boolean hasDirectConnector() {
-        return hasDirectConnector;
-    }*/
 
     public boolean isTheManagerTypeOf(ToolOptions options, DataSourceType dsType) {
         return (extractScheme(options, dsType)).startsWith(getSchemePrefix());
