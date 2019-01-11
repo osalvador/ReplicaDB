@@ -101,7 +101,8 @@ $ replicadb --mode=complete -j=1 \
 | Database Vendor | Source | Sink Complete | Sink Incremental |
 |-----------------|:---------:|:---------------:|:------------------:|
 | Oracle           | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:|
-| PostgreSQL       |:heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:| 
+| PostgreSQL       |:heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:|
+| Denodo       |:heavy_check_mark: | N/A | N/A |  
 
 
 # Roadmap
