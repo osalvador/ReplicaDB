@@ -113,9 +113,10 @@ $ replicadb --mode=complete -j=1 \
 {:.table}
 
 | Database Vendor | Source | Sink Complete | Sink Incremental |
-|-----------------|---------|---------------|------------------|
+|-----------------|:---------:|:---------------:|:------------------:|
 | Oracle           | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
 | PostgreSQL       | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
+| Denodo       | <i class="far fa-check-circle text-success"></i> | N/A | N/A | 
 
 
 # Contributing
