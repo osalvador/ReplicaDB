@@ -26,7 +26,7 @@ final public class ReplicaTask implements Callable<Integer> {
     }
 
     @Override
-    public Integer call() throws SQLException {
+    public Integer call() throws Exception {
 
         //System.out.println("Task ID :" + this.taskId + " performed by " + Thread.currentThread().getName());
         this.taskName = "TaskId-"+this.taskId;
@@ -67,7 +67,7 @@ final public class ReplicaTask implements Callable<Integer> {
         }
 
         try {
-            sinkDs.insertDataToTable(rs);
+            sinkDs.insertDataToTable(rs, taskId);
         } catch (Exception e) {
             LOG.error("ERROR in " + this.taskName + " inserting data to sink table: " + e.getMessage());
             throw e;

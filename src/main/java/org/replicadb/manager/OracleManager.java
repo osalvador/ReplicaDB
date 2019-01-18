@@ -74,7 +74,7 @@ public class OracleManager extends SqlManager {
 
 
     @Override
-    public int insertDataToTable(ResultSet resultSet) throws SQLException {
+    public int insertDataToTable(ResultSet resultSet, int taskId) throws SQLException {
 
         ResultSetMetaData rsmd = resultSet.getMetaData();
         String tableName;

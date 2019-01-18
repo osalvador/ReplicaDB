@@ -36,20 +36,20 @@ public abstract class ConnManager {
      * internal state.
      */
     public abstract ResultSet readTable(String tableName, String[] columns, int nThread)
-            throws SQLException;
+            throws Exception;
 
 
     /**
      * Execute a SQL statement to insert the resultset to the table.
      */
-    public abstract int insertDataToTable(ResultSet resultSet)
-            throws SQLException;
+    public abstract int insertDataToTable(ResultSet resultSet, int taskId)
+            throws Exception;
 
 
     /**
      * @return the actual database connection.
      */
-    public abstract Connection getConnection() throws SQLException;
+    public abstract Connection getConnection() throws Exception;
 
     /**
      * discard the database connection.
@@ -68,7 +68,9 @@ public abstract class ConnManager {
     /**
      * @return default autoCommit connection property
      */
-    public boolean getAutoCommit() {return false;}
+    public boolean getAutoCommit() {
+        return false;
+    }
 
     /**
      * When using a column name in a generated SQL query, how (if at all)
@@ -193,6 +195,7 @@ public abstract class ConnManager {
 
     /**
      * Perform any shutdown operations on the connection.
+     *
      * @throws SQLException
      */
     public abstract void close() throws SQLException;
@@ -200,6 +203,7 @@ public abstract class ConnManager {
 
     /**
      * Clean Up the environment. Drop staging table and any other temporal data.
+     *
      * @throws SQLException
      */
     public abstract void cleanUp() throws SQLException;
@@ -228,16 +232,16 @@ public abstract class ConnManager {
     /**
      * Sometimes it is necessary to perform some preliminary tasks before populating the data with multi-threaded jobs.
      */
-    public abstract void preSourceTasks() throws SQLException;
+    public abstract void preSourceTasks() throws Exception;
 
-    public abstract void preSinkTasks() throws SQLException;
+    public abstract void preSinkTasks() throws Exception;
 
     /**
      * Sometimes it is necessary to perform some tasks after populating the data with multithreading jobs.
      */
-    public abstract void postSourceTasks() throws SQLException;
+    public abstract void postSourceTasks() throws Exception;
 
-    public abstract void postSinkTasks() throws SQLException;
+    public abstract void postSinkTasks() throws Exception;
 
 
     /**
