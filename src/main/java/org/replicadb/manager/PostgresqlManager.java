@@ -33,7 +33,7 @@ public class PostgresqlManager extends SqlManager {
     }
 
     @Override
-    public int insertDataToTable(ResultSet resultSet) throws SQLException {
+    public int insertDataToTable(ResultSet resultSet, int taskId) throws SQLException {
 
         CopyIn copyIn = null;
 

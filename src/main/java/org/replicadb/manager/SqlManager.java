@@ -383,7 +383,7 @@ public abstract class SqlManager extends ConnManager {
      *
      * @throws SQLException
      */
-    protected abstract void createStagingTable() throws SQLException;
+    protected abstract void createStagingTable() throws Exception;
 
 
     /**
@@ -391,7 +391,7 @@ public abstract class SqlManager extends ConnManager {
      *
      * @throws SQLException
      */
-    protected abstract void mergeStagingTable() throws SQLException;
+    protected abstract void mergeStagingTable() throws Exception;
 
     /**
      * Drop staging table.
@@ -411,7 +411,7 @@ public abstract class SqlManager extends ConnManager {
     ;
 
     @Override
-    public void preSinkTasks() throws SQLException {
+    public void preSinkTasks() throws Exception {
 
         // On INCREMENTAL mode
         if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
@@ -437,7 +437,7 @@ public abstract class SqlManager extends ConnManager {
     }
 
     @Override
-    public void postSinkTasks() throws SQLException {
+    public void postSinkTasks() throws Exception {
         // On INCREMENTAL mode
         if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
             // Merge Data

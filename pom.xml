@@ -43,25 +43,30 @@
             <version>1.4</version>
         </dependency>
 
-        <!-- PostgreSQL-->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>42.2.1</version>
         </dependency>
 
+        <dependency>
+            <groupId>de.siegmar</groupId>
+            <artifactId>fastcsv</artifactId>
+            <version>1.0.3</version>
+        </dependency>
+
          <!-- Oracle -->
-        <!--<dependency>-->
-            <!--<groupId>com.oracle.jdbc</groupId>-->
-            <!--<artifactId>ojdbc8</artifactId>-->
-            <!--<version>12.2.0.1</version>-->
-        <!--</dependency>-->
+        <dependency>
+            <groupId>com.oracle.jdbc</groupId>
+            <artifactId>ojdbc8</artifactId>
+            <version>12.2.0.1</version>
+        </dependency>
         <!--<dependency>-->
             <!--<groupId>com.oracle.jdbc</groupId>-->
             <!--<artifactId>orai18n</artifactId>-->
             <!--<version>12.2.0.1</version>-->
         <!--</dependency>-->
-        <!-- Dependencia con el driver de Denodo-->
+         <!--Dependencia con el driver de Denodo-->
         <!--<dependency>-->
             <!--<groupId>com.denodo</groupId>-->
             <!--<artifactId>denodo</artifactId>-->

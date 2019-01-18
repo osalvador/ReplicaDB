@@ -2,14 +2,9 @@ package org.replicadb.manager;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.postgresql.copy.CopyIn;
-import org.postgresql.copy.CopyManager;
-import org.postgresql.jdbc.PgConnection;
-import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -35,7 +30,7 @@ public class DenodoManager extends SqlManager {
     }
 
     @Override
-    public int insertDataToTable(ResultSet resultSet) throws SQLException {
+    public int insertDataToTable(ResultSet resultSet, int taskId) throws SQLException {
         throw new UnsupportedOperationException("Denodo is not supported for data insertion");
     }
 
@@ -135,10 +130,8 @@ public class DenodoManager extends SqlManager {
         long totalNumberRows = rs.getLong(2);
         LOG.debug("chunkSize: " + chunkSize + " totalNumberRows: " + totalNumberRows);
 
-
         statement.close();
         this.getConnection().commit();
-
 
     }
 

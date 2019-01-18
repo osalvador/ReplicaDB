@@ -46,6 +46,8 @@ public class ManagerFactory {
             return new OracleManager(options, dsType);
         } else if (DENODO.isTheManagerTypeOf(options, dsType)) {
             return new DenodoManager(options, dsType);
+        } else if (CSV.isTheManagerTypeOf(options, dsType)) {
+            return new CsvManager(options, dsType);
         } else {
             return null;
         }
