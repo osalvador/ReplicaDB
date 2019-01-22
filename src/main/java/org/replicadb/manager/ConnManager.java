@@ -206,7 +206,7 @@ public abstract class ConnManager {
      *
      * @throws SQLException
      */
-    public abstract void cleanUp() throws SQLException;
+    public abstract void cleanUp() throws Exception;
 
     /**
      * If a method of this ConnManager has returned a ResultSet to you,

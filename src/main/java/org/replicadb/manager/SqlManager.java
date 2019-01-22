@@ -446,7 +446,7 @@ public abstract class SqlManager extends ConnManager {
     }
 
     @Override
-    public void cleanUp() throws SQLException {
+    public void cleanUp() throws Exception {
 
         // On INCREMENTAL mode
         if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
