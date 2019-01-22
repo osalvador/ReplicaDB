@@ -7,7 +7,7 @@ public enum JdbcDrivers {
     JTDS_SQLSERVER("net.sourceforge.jtds.jdbc.Driver", "jdbc:jtds:sqlserver:"),
     DB2("com.ibm.db2.jcc.DB2Driver", "jdbc:db2:"), NETEZZA("org.netezza.Driver", "jdbc:netezza:"),
     CUBRID("cubrid.jdbc.driver.CUBRIDDriver", "jdbc:cubrid:"), DENODO("com.denodo.vdp.jdbc.Driver", "jdbc:vdb:"),
-    CSV("", "file:");
+    CSV(null, "file:");
 
     private final String driverClass;
     private final String schemePrefix;
