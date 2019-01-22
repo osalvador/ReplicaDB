@@ -6,10 +6,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.channels.FileChannel;
@@ -31,8 +30,6 @@ public class CsvManager extends SqlManager {
     private static final Logger LOG = LogManager.getLogger(CsvManager.class.getName());
 
     private static String[] tempFilesPath;
-    private static ResultSetMetaData sourceResultSetMetaData;
-
 
     /**
      * Constructs the SqlManager.
@@ -71,12 +68,10 @@ public class CsvManager extends SqlManager {
             int columnsNumber = rsmd.getColumnCount();
 
             String randomFileUrl = options.getSinkConnect() + ".repdb." + (new Random().nextInt(1000) + 9000);
+            LOG.debug("CSV path: " + randomFileUrl);
+            tempFilesPath[taskId] = randomFileUrl;
 
-            URL fileUrl = new URL(randomFileUrl);
-            LOG.debug("CSV path: " + fileUrl.getPath());
-
-            tempFilesPath[taskId] = fileUrl.getPath();
-            File file = new File(fileUrl.toURI());
+            File file = getFileFromPathString(randomFileUrl);
 
             CsvWriter csvWriter = new CsvWriter();
             setCsvWriterOptions(csvWriter);
@@ -84,7 +79,7 @@ public class CsvManager extends SqlManager {
             try (CsvAppender csvAppender = csvWriter.append(file, StandardCharsets.UTF_8)) {
 
                 // headers, only in the first temporal file.
-                if (taskId == 0 && Boolean.valueOf(options.getSinkConnectionParams().getProperty("Header"))){
+                if (taskId == 0 && Boolean.valueOf(options.getSinkConnectionParams().getProperty("Header"))) {
                     for (int i = 1; i <= columnsNumber; i++) {
                         csvAppender.appendField(rsmd.getColumnName(i));
                     }
@@ -157,22 +152,43 @@ public class CsvManager extends SqlManager {
     }
 
     @Override
-    protected void mergeStagingTable() throws IOException {
+    protected void mergeStagingTable() {
 
-        URL finalFile = new URL(options.getSinkConnect());
-        LOG.debug("Final File: " + finalFile.getPath());
+        try {
 
-        Path firstTemporalFile = Paths.get(tempFilesPath[0]);
-        // Rename first temporal file to the final file
-        Files.move(firstTemporalFile, firstTemporalFile.resolveSibling(finalFile.getPath()), StandardCopyOption.REPLACE_EXISTING);
+//
+//        URL finalFile = new URL(options.getSinkConnect());
+//        LOG.debug("Final File PATH: " + finalFile.getPath());
+//        LOG.debug("Final File FILE: " + finalFile.getFile());
+//
+//
+//
+//        LOG.debug("Final File URI: " + finalFile.toURI());
 
-        // Channel for append to the final file
-        FileChannel finalFileChannel = new FileOutputStream(finalFile.getPath(), true).getChannel();
 
-        for (int i = 1; i <= tempFilesPath.length - 1; i++) {
-            FileChannel tempFileChannel = new FileInputStream(tempFilesPath[i]).getChannel();
-            finalFileChannel.transferFrom(tempFileChannel, finalFileChannel.size(), tempFileChannel.size());
-            boolean isDeleted = new File(tempFilesPath[i]).delete();
+            File finalFile = getFileFromPathString(options.getSinkConnect());
+            File firstTemporalFile = getFileFromPathString(tempFilesPath[0]);
+            Path firstTemporalFilePath = Paths.get(firstTemporalFile.getPath());
+
+            // Rename first temporal file to the final file
+            Files.move(firstTemporalFilePath, firstTemporalFilePath.resolveSibling(finalFile.getPath()), StandardCopyOption.REPLACE_EXISTING);
+
+
+            // Channel for append to the final file
+            FileChannel finalFileChannel = new FileOutputStream(finalFile, true).getChannel();
+
+            for (int i = 1; i <= tempFilesPath.length - 1; i++) {
+                FileChannel tempFileChannel = new FileInputStream(getFileFromPathString(tempFilesPath[i])).getChannel();
+                finalFileChannel.transferFrom(tempFileChannel, finalFileChannel.size(), tempFileChannel.size());
+                tempFileChannel.close();
+                boolean isDeleted = getFileFromPathString(tempFilesPath[i]).delete();
+                LOG.debug("isDeleted:"+isDeleted);
+            }
+
+            finalFileChannel.close();
+
+        } catch (IOException | URISyntaxException e) {
+            e.printStackTrace();
         }
 
     }
@@ -192,8 +208,30 @@ public class CsvManager extends SqlManager {
     }
 
     @Override
-    public void cleanUp() {
+    public void cleanUp() throws Exception {
         // Ensure drop temporal file
-        for (int i = 0; i <= tempFilesPath.length - 1; i++) new File(tempFilesPath[i]).delete();
+        for (int i = 0; i <= tempFilesPath.length - 1; i++){
+            boolean isDeleted = getFileFromPathString(tempFilesPath[i]).delete();
+            LOG.debug("isDeleted:"+isDeleted);
+        }
     }
+
+
+    private File getFileFromPathString(String urlString) throws MalformedURLException, URISyntaxException {
+
+        URL url = new URL(urlString);
+
+        URI uri = url.toURI();
+
+        if (uri.getAuthority() != null && uri.getAuthority().length() > 0) {
+            // Hack for UNC Path
+            uri = (new URL("file://" + urlString.substring("file:".length()))).toURI();
+        }
+
+        File file = new File(uri);
+        LOG.debug("File is: " + file.toString());
+
+        return file;
+    }
+
 }

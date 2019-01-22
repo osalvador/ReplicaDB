@@ -93,7 +93,7 @@ public class ReplicaDB {
                 if (null != sourceDs) {
                     sourceDs.close();
                 }
-            } catch (SQLException e) {
+            } catch (Exception e) {
                 LOG.error(e);
             }
         }
