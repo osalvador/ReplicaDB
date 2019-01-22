@@ -181,51 +181,71 @@ public class PostgresqlManager extends SqlManager {
     protected void createStagingTable() throws SQLException {
 
         Statement statement = this.getConnection().createStatement();
-        String sinkStagingTable = getQualifiedStagingTableName();
+        try {
 
-        String sql = "CREATE UNLOGGED TABLE IF NOT EXISTS " + sinkStagingTable + " ( LIKE " + this.getSinkTableName() + " INCLUDING DEFAULTS INCLUDING CONSTRAINTS ) WITH (autovacuum_enabled=false)";
+            String sinkStagingTable = getQualifiedStagingTableName();
 
-        LOG.info("Creating staging table with this command: " + sql);
-        statement.executeUpdate(sql);
-        statement.close();
-        this.getConnection().commit();
+            String sql = "CREATE UNLOGGED TABLE IF NOT EXISTS " + sinkStagingTable + " ( LIKE " + this.getSinkTableName() + " INCLUDING DEFAULTS INCLUDING CONSTRAINTS ) WITH (autovacuum_enabled=false)";
+
+            LOG.info("Creating staging table with this command: " + sql);
+            statement.executeUpdate(sql);
+            statement.close();
+            this.getConnection().commit();
+
+        } catch (Exception e) {
+            statement.close();
+            this.connection.rollback();
+            throw e;
+        }
+
     }
 
     @Override
     protected void mergeStagingTable() throws SQLException {
+
         Statement statement = this.getConnection().createStatement();
 
-        String[] pks = this.getSinkPrimaryKeys(this.getSinkTableName());
-        // Primary key is required
-        if (pks == null || pks.length == 0) {
-            throw new IllegalArgumentException("Sink table must have at least one primary key column for incremental mode.");
+        try {
+            String[] pks = this.getSinkPrimaryKeys(this.getSinkTableName());
+            // Primary key is required
+            if (pks == null || pks.length == 0) {
+                throw new IllegalArgumentException("Sink table must have at least one primary key column for incremental mode.");
+            }
+
+            // options.sinkColumns was set during the insertDataToTable
+            String allColls = getAllSinkColumns(null);
+
+            StringBuilder sql = new StringBuilder();
+            sql.append("INSERT INTO ")
+                    .append(this.getSinkTableName())
+                    .append(" (")
+                    .append(allColls)
+                    .append(" ) ")
+                    .append(" SELECT ")
+                    .append(allColls)
+                    .append(" FROM ")
+                    .append(this.getSinkStagingTableName())
+                    .append(" ON CONFLICT ")
+                    .append(" (").append(String.join(",", pks)).append(" )")
+                    .append(" DO UPDATE SET ");
+
+            // Set all columns for DO UPDATE SET statement
+            for (String colName : allColls.split(",")) {
+                sql.append(" ").append(colName).append(" = excluded.").append(colName).append(" ,");
+            }
+            // Delete the last comma
+            sql.setLength(sql.length() - 1);
+
+            LOG.info("Merging staging table and sink table with this command: " + sql);
+            statement.executeUpdate(sql.toString());
+            statement.close();
+            this.getConnection().commit();
+
+        } catch (Exception e) {
+            statement.close();
+            this.connection.rollback();
+            throw e;
         }
-
-        // options.sinkColumns was set during the insertDataToTable
-        String allColls = getAllSinkColumns(null);
-
-        StringBuilder sql = new StringBuilder();
-        sql.append("INSERT INTO ")
-                .append(this.getSinkTableName())
-                .append(" SELECT ")
-                .append(allColls)
-                .append(" FROM ")
-                .append(this.getSinkStagingTableName())
-                .append(" ON CONFLICT ")
-                .append(" (").append(String.join(",", pks)).append(" )")
-                .append(" DO UPDATE SET ");
-
-        // Set all columns for DO UPDATE SET statement
-        for (String colName : allColls.split(",")) {
-            sql.append(" ").append(colName).append(" = excluded.").append(colName).append(" ,");
-        }
-        // Delete the last comma
-        sql.setLength(sql.length() - 1);
-
-        LOG.info("Merging staging table and sink table with this command: " + sql);
-        statement.executeUpdate(sql.toString());
-        statement.close();
-        this.getConnection().commit();
     }
 
     @Override
@@ -234,37 +254,41 @@ public class PostgresqlManager extends SqlManager {
         /**
          * Calculating the chunk size for parallel job processing
          */
-
         Statement statement = this.getConnection().createStatement();
-        String sql = "SELECT " +
-                " abs(count(*) / " + options.getJobs() + ") chunk_size" +
-                ", count(*) total_rows" +
-                " FROM ";
 
-        // Source Query
-        if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
-            sql = sql + "( " + this.options.getSourceQuery() + " )";
+        try {
+            String sql = "SELECT " +
+                    " abs(count(*) / " + options.getJobs() + ") chunk_size" +
+                    ", count(*) total_rows" +
+                    " FROM ";
 
-        } else {
+            // Source Query
+            if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
+                sql = sql + "( " + this.options.getSourceQuery() + " )";
 
-            sql = sql + this.options.getSourceTable();
-            // Source Where
-            if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
-                sql = sql + " WHERE " + options.getSourceWhere();
+            } else {
+
+                sql = sql + this.options.getSourceTable();
+                // Source Where
+                if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
+                    sql = sql + " WHERE " + options.getSourceWhere();
+                }
             }
+
+            LOG.debug("Calculating the chunks size with this sql: " + sql);
+            ResultSet rs = statement.executeQuery(sql);
+            rs.next();
+            chunkSize = rs.getLong(1);
+            long totalNumberRows = rs.getLong(2);
+            LOG.debug("chunkSize: " + chunkSize + " totalNumberRows: " + totalNumberRows);
+
+            statement.close();
+            this.getConnection().commit();
+        } catch (Exception e) {
+            statement.close();
+            this.connection.rollback();
+            throw e;
         }
-
-        LOG.debug("Calculating the chunks size with this sql: " + sql);
-        ResultSet rs = statement.executeQuery(sql);
-        rs.next();
-        chunkSize = rs.getLong(1);
-        long totalNumberRows = rs.getLong(2);
-        LOG.debug("chunkSize: " + chunkSize + " totalNumberRows: " + totalNumberRows);
-
-
-        statement.close();
-        this.getConnection().commit();
-
 
     }
 
