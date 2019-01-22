@@ -12,10 +12,14 @@ layout: page
     - 3.1 [Using Options Files to Pass Arguments](#31-using-options-files-to-pass-arguments)
     - 3.2 [Connecting to a Database Server](#32-connecting-to-a-database-server)
     - 3.3 [Selecting the Data to Replicate](#33-selecting-the-data-to-replicate)
-    - 3.4 [Free-form Query Replications](#34-free-form-query-replications)    
+    - 3.4 [Free-form Query Replications](#34-free-form-query-replications)
+4. [Notes for specific connectors](#4-notes-for-specific-connectors)
+    - 4.1 [CSV files Connector](#41-csv-files-connector)
+    - 4.2 [Oracle Connector](#42-oracle-connector)
+    - 4.3 [PostgreSQL Connector](#43-postgresql-connector)
+    - 4.4 [Denodo Connector](#44-denodo-connector)
 
 {::comment}
-   
     3.7. Controlling transaction isolation
     3.11. Large Objects
     ?Performance considerations
@@ -238,3 +242,24 @@ For example:
 ```bash
 $ replicadb --source-query 'SELECT a.*, b.* FROM a JOIN b on (a.id == b.id)'
 ```
+
+
+# 4. Notes for specific connectors
+
+- 4.1 [CSV files Connector](#41-csv-files-connector)
+- 4.2 [Oracle Connector](#42-oracle-connector)
+- 4.3 [PostgreSQL Connector](#43-postgresql-connector)
+- 4.4 [Denodo Connector](#44-denodo-connector)
+
+<br>
+## 4.1 CSV files Connector
+
+<br>
+## 4.2 Oracle Connector
+
+<br>
+## 4.3 PostgreSQL Connector
+
+<br>
+## 4.4 Denodo Connector
+
