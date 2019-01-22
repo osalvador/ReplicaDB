@@ -41,8 +41,8 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
 ```bash
-replicadb$ wget https://github.com/osalvador/ReplicaDB/releases/download/v0.3.0/ReplicaDB-0.3.0.tar.gz
-replicadb$ tar -xvzf ReplicaDB-0.3.0.tar.gz
+replicadb$ wget https://github.com/osalvador/ReplicaDB/releases/download/v0.4.0/ReplicaDB-0.4.0.tar.gz
+replicadb$ tar -xvzf ReplicaDB-0.4.0.tar.gz
 x bin/
 x bin/configure-replicadb
 ...
@@ -91,8 +91,9 @@ $ replicadb --mode=complete -j=1 \
 --source-table=dept \
 --source-columns=dept.*
 2018-12-07 16:10:35,334 INFO  ReplicaTask:36: Starting TaskId-0
-2018-12-07 16:10:35,440 INFO  SqlManager:197: TaskId-0: Executing SQL statement:  WITH int_ctid as (SELECT (('x' || SUBSTR(md5(ctid :: text), 1, 8)) :: bit(32) :: int) ictid  from dept), replicadb_table_stats as (select min(ictid) as min_ictid, max(ictid) as max_ictid from int_ctid )SELECT dept.* FROM dept, replicadb_table_stats WHERE  width_bucket((('x' || substr(md5(ctid :: text), 1, 8)) :: bit(32) :: int), replicadb_table_stats.min_ictid, replicadb_table_stats.max_ictid, 1)  >= ?
-2018-12-07 16:10:35,441 INFO  SqlManager:204: TaskId-0: With args: 1,
+2018-12-07 16:10:35,440 INFO  SqlManager:131 TaskId-0: Executing SQL statement: SELECT  * FROM dept OFFSET ?
+2018-12-07 16:10:35,441 INFO  SqlManager:204: TaskId-0: With args: 0,
+2018-12-07 16:10:35,550 INFO  OracleManager:98 Inserting data with this command: INSERT INTO /*+APPEND_VALUES*/ ....
 2018-12-07 16:10:35,552 INFO  ReplicaDB:89: Total process time: 1007ms
 ```
 
@@ -100,17 +101,18 @@ $ replicadb --mode=complete -j=1 \
 
 | Database Vendor | Source | Sink Complete | Sink Incremental |
 |-----------------|:---------:|:---------------:|:------------------:|
-| Oracle           | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:|
-| PostgreSQL       |:heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:|
-| Denodo       |:heavy_check_mark: | N/A | N/A |  
+| Oracle          | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:|
+| PostgreSQL      | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:|
+| Denodo          | :heavy_check_mark: | N/A | N/A |  
+| CSV             | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_check_mark: |  
 
 
 # Roadmap
 
-1. CSV file as sink. 
+1. MongoDB as sink.
 2. MySQL; source and sink.
 3. SQL Server; source and sink.
-4. MongoDB as sink.
+4. CSV file as source. 
 
 
 # Contributing
