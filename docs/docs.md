@@ -279,6 +279,8 @@ sink.disable.escape=true
 
 The CSV connector supports the following extra parameters that can only be defined as extra connection parameters in the `options-file`:
 
+{:.table}
+
 | Argument            | Description                                                                                | Default |
 | ------------------- | ------------------------------------------------------------------------------------------ | ------- |
 | `FieldSeparator`    | Sets the field separator character                                                         | `,`     |
@@ -290,7 +292,7 @@ The CSV connector supports the following extra parameters that can only be defin
 
 **Extra parameters with default values**
 
-```properties
+```
 sink.connect.parameter.FieldSeparator=,
 sink.connect.parameter.TextDelimiter="
 sink.connect.parameter.LineDelimiter=\n
@@ -305,7 +307,7 @@ Unlike in a database, the replication mode for a CSV file as sink has a slight d
 - **complete**: Create a new file. If the file exists it is overwritten with the new data.
 - **incremental**: Add the new data to the existing file. If the file does not exist, it creates it.
 
-!> The `Header` parameter is not supported on `incremental` mode.
+> The `Header` parameter is not supported on `incremental` mode.
 
 **Example**
 
@@ -326,7 +328,9 @@ sink.disable.escape=true
 
 ```properties
 sink.connect=jdbc:oracle:thin:@MY_DATABASE_SID
+## or
 sink.connect=jdbc:oracle:thin:@host:port:sid
+
 sink.user=orauser
 sink.password=orapassword
 sink.table=schema.table_name
