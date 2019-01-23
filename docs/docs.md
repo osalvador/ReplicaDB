@@ -4,20 +4,22 @@ layout: page
 
 # Docs
 
-1. [Introduction](#1-introduction)
-2. [Basic Usage](#2-basic-usage)
-    - 2.1 [Replication Mode](#21-replication-mode)
-    - 2.2 [Controlling Parallelism](#22-controlling-parallelism)    
-3. [Command Line Arguments](#3-command-line-arguments)
-    - 3.1 [Using Options Files to Pass Arguments](#31-using-options-files-to-pass-arguments)
-    - 3.2 [Connecting to a Database Server](#32-connecting-to-a-database-server)
-    - 3.3 [Selecting the Data to Replicate](#33-selecting-the-data-to-replicate)
-    - 3.4 [Free-form Query Replications](#34-free-form-query-replications)
-4. [Notes for specific connectors](#4-notes-for-specific-connectors)
-    - 4.1 [CSV files Connector](#41-csv-files-connector)
-    - 4.2 [Oracle Connector](#42-oracle-connector)
-    - 4.3 [PostgreSQL Connector](#43-postgresql-connector)
-    - 4.4 [Denodo Connector](#44-denodo-connector)
+- [Docs](#docs)
+- [1. Introduction](#1-introduction)
+- [2. Basic Usage](#2-basic-usage)
+  - [2.1 Replication Mode](#21-replication-mode)
+  - [2.2 Controlling Parallelism](#22-controlling-parallelism)
+- [3. Command Line Arguments](#3-command-line-arguments)
+  - [3.1 Using Options Files to Pass Arguments](#31-using-options-files-to-pass-arguments)
+  - [3.2 Connecting to a Database Server](#32-connecting-to-a-database-server)
+  - [3.3 Selecting the Data to Replicate](#33-selecting-the-data-to-replicate)
+  - [3.4 Free-form Query Replications](#34-free-form-query-replications)
+- [4. Notes for specific connectors](#4-notes-for-specific-connectors)
+  - [4.1 CSV files Connector](#41-csv-files-connector)
+    - [4.1.2 Extra parameters](#412-extra-parameters)
+  - [4.2 Oracle Connector](#42-oracle-connector)
+  - [4.3 PostgreSQL Connector](#43-postgresql-connector)
+  - [4.4 Denodo Connector](#44-denodo-connector)
 
 {::comment}
     3.7. Controlling transaction isolation
@@ -80,31 +82,31 @@ usage: replicadb [OPTIONS]
 
 {:.table}
 
-| Argument                                 | Description                                                                       | Default | 
-|------------------------------------------|-----------------------------------------------------------------------------------|---------| 
-|  `--fetch-size <fetch-size>`             | Number of entries to read from database at once. | `5000` |
-|  `-h`,`--help`                           | Print this help screen | |
-|  `-j`,`--jobs <n>`                       | Use n jobs to replicate in parallel. | `4`| 
-|     `--mode <mode>`                      | Specifies the replication mode. The allowed values are complete or incremental | `complete` | 
-|     `--options-file <file-path>`         | Options file path location | | 
-|     `--sink-columns <col,col,col...>`    | Sink database table columns to be populated | `--source-columns` |
-|     `--sink-connect <jdbc-uri>`          | Sink database JDBC connect string | required | 
-|     `--sink-disable-escape`              | Escape srings before populating to the table of the sink database. | `false` | 
-|     `--sink-disable-truncate`            | Disable the truncation of the sink database table before populate. | `false` | 
-|     `--sink-password <password>`         | Sink database authentication password | | 
-|    `--sink-staging-schema`               | Scheme name on the sink database, with right permissions for creating staging tables. |  `PUBLIC` |
-|    `--sink-staging-table`                | Qualified name of the sink staging table. The table must exist in the sink database. | |
-|     `--sink-table <table-name>`          | Sink database table to populate | `--source-table` |
-|     `--sink-user <username>`             | Sink database authentication username | | 
-|     `--source-columns <col,col,col...>`  | Source database table columns to be extracted | `*` |
-|     `--source-connect <jdbc-uri>`        | Source database JDBC connect string | required | 
-|     `--source-password <password>`       | Source databse authentication password | | 
-|     `--source-query <statement>`         | SQL statement to be executed in the source database | |
-|     `--source-table <table-name>`        | Source database table to read | |
-|     `--source-user <username>`           | Source database authentication username | |
-|     `--source-where <where clause>`      | Source database WHERE clause to use during extraction | | 
-| `-v`,`--verbose`                         | Print more information while working | |
-|     `--version`                          | Show implementation version and exit | |
+| Argument                            | Description                                                                           | Default            |
+| ----------------------------------- | ------------------------------------------------------------------------------------- | ------------------ |
+| `--fetch-size <fetch-size>`         | Number of entries to read from database at once.                                      | `5000`             |
+| `-h`,`--help`                       | Print this help screen                                                                |                    |
+| `-j`,`--jobs <n>`                   | Use n jobs to replicate in parallel.                                                  | `4`                |
+| `--mode <mode>`                     | Specifies the replication mode. The allowed values are complete or incremental        | `complete`         |
+| `--options-file <file-path>`        | Options file path location                                                            |                    |
+| `--sink-columns <col,col,col...>`   | Sink database table columns to be populated                                           | `--source-columns` |
+| `--sink-connect <jdbc-uri>`         | Sink database JDBC connect string                                                     | required           |
+| `--sink-disable-escape`             | Escape srings before populating to the table of the sink database.                    | `false`            |
+| `--sink-disable-truncate`           | Disable the truncation of the sink database table before populate.                    | `false`            |
+| `--sink-password <password>`        | Sink database authentication password                                                 |                    |
+| `--sink-staging-schema`             | Scheme name on the sink database, with right permissions for creating staging tables. | `PUBLIC`           |
+| `--sink-staging-table`              | Qualified name of the sink staging table. The table must exist in the sink database.  |                    |
+| `--sink-table <table-name>`         | Sink database table to populate                                                       | `--source-table`   |
+| `--sink-user <username>`            | Sink database authentication username                                                 |                    |
+| `--source-columns <col,col,col...>` | Source database table columns to be extracted                                         | `*`                |
+| `--source-connect <jdbc-uri>`       | Source database JDBC connect string                                                   | required           |
+| `--source-password <password>`      | Source databse authentication password                                                |                    |
+| `--source-query <statement>`        | SQL statement to be executed in the source database                                   |                    |
+| `--source-table <table-name>`       | Source database table to read                                                         |                    |
+| `--source-user <username>`          | Source database authentication username                                               |                    |
+| `--source-where <where clause>`     | Source database WHERE clause to use during extraction                                 |                    |
+| `-v`,`--verbose`                    | Print more information while working                                                  |                    |
+| `--version`                         | Show implementation version and exit                                                  |                    |
 
 
 <br>
@@ -254,6 +256,57 @@ $ replicadb --source-query 'SELECT a.*, b.* FROM a JOIN b on (a.id == b.id)'
 <br>
 ## 4.1 CSV files Connector
 
+To define a CSV file as a sink, set the `sink-connect` parameter to `file:/...`.
+
+```properties
+# Windows Paths
+sink.connect=file:/C:/Users/osalvador/Downloads/file.csv
+## or
+sink.connect=file://C:\\Users\\osalvador\\Downloads\\file.csv
+
+# Unix Paths
+sink.connect=file:///Users/osalvador/Downloads/file.csv
+```
+
+
+### 4.1.2 Extra parameters
+
+El conector CSV admite los siguientes parametros extra que solo se pueden definir como parametros extra de conexión: 
+The CSV connector supports the following extra parameters that can only be defined as extra connection parameters:
+
+| Argument            | Description                                                                                | Default |
+| ------------------- | ------------------------------------------------------------------------------------------ | ------- |
+| `FieldSeparator`    | Sets the field separator character                                                         | `,`     |
+| `TextDelimiter`     | Sets a field enclosing character                                                           | `"`     |
+| `LineDelimiter`     | Sets the end-of-line character                                                             | `\n`    |
+| `AlwaysDelimitText` | Sets whether the text should always be delimited                                           | `false` |
+| `Header`            | Sets whether the first line of the file should be the header, with the names of the fields | `false` |
+
+
+**Extra parameters with default values**
+
+```properties
+sink.connect.parameter.FieldSeparator=,
+sink.connect.parameter.TextDelimiter="
+sink.connect.parameter.LineDelimiter=\n
+sink.connect.parameter.AlwaysDelimitText=false
+sink.connect.parameter.Header=false
+```
+
+
+
+A la hora de generar un fichero CSV debemos tener en cuenta los siguientes puntos: 
+
+**Replication Mode**
+
+El modo de replicacion en un fichero CSV como sumidero actua un poco diferente respecto a una base de datos: 
+
+- **Complete**: Crea un nuevo fichero. Si el fichero ya existe lo sobreescribe con los nuevos datos. 
+- **Incremental**: Añade al fichero existente los nuevos datos. Si el fichero no existe lo crea. 
+
+
+
+**Example**
 
 ```properties
 sink.connect=file:/C:/Users/Oscar/Downloads/articulos.csv
