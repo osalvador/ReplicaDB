@@ -17,6 +17,7 @@ layout: page
 - [4. Notes for specific connectors](#4-notes-for-specific-connectors)
   - [4.1 CSV files Connector](#41-csv-files-connector)
     - [4.1.2 Extra parameters](#412-extra-parameters)
+    - [4.1.3 Replication Mode](#413-replication-mode)
   - [4.2 Oracle Connector](#42-oracle-connector)
   - [4.3 PostgreSQL Connector](#43-postgresql-connector)
   - [4.4 Denodo Connector](#44-denodo-connector)
@@ -268,11 +269,15 @@ sink.connect=file://C:\\Users\\osalvador\\Downloads\\file.csv
 sink.connect=file:///Users/osalvador/Downloads/file.csv
 ```
 
+The CSV file connector is [RFC 4180](http://tools.ietf.org/html/rfc4180) compliant whenever you disable the default escape with `--sink-disable-scape` as argument or on the `options-file`:
+
+```properties
+sink.disable.escape=true
+```
 
 ### 4.1.2 Extra parameters
 
-El conector CSV admite los siguientes parametros extra que solo se pueden definir como parametros extra de conexión: 
-The CSV connector supports the following extra parameters that can only be defined as extra connection parameters:
+The CSV connector supports the following extra parameters that can only be defined as extra connection parameters in the `options-file`:
 
 | Argument            | Description                                                                                | Default |
 | ------------------- | ------------------------------------------------------------------------------------------ | ------- |
@@ -293,24 +298,19 @@ sink.connect.parameter.AlwaysDelimitText=false
 sink.connect.parameter.Header=false
 ```
 
+### 4.1.3 Replication Mode
 
+Unlike in a database, the replication mode for a CSV file as sink has a slight difference:
 
-A la hora de generar un fichero CSV debemos tener en cuenta los siguientes puntos: 
+- **complete**: Create a new file. If the file exists it is overwritten with the new data.
+- **incremental**: Add the new data to the existing file. If the file does not exist, it creates it.
 
-**Replication Mode**
-
-El modo de replicacion en un fichero CSV como sumidero actua un poco diferente respecto a una base de datos: 
-
-- **Complete**: Crea un nuevo fichero. Si el fichero ya existe lo sobreescribe con los nuevos datos. 
-- **Incremental**: Añade al fichero existente los nuevos datos. Si el fichero no existe lo crea. 
-
-
+!> The `Header` parameter is not supported on `incremental` mode.
 
 **Example**
 
 ```properties
 sink.connect=file:/C:/Users/Oscar/Downloads/articulos.csv
-sink.connect=file:///Users/osalvador/Downloads/gama_centro.csv
 
 sink.connect.parameter.FieldSeparator=
 sink.connect.parameter.TextDelimiter=
@@ -321,19 +321,15 @@ sink.connect.parameter.Header=
 sink.disable.escape=true
 ```
 
-Incremental y complete
-Header no compatible con incremental
-RFC4180 compilant
-
-
 <br>
 ## 4.2 Oracle Connector
 
 ```properties
-sink.connect=jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS_LIST=(FAILOVER=ON)(LOAD_BALANCE=OFF)(ADDRESS=(PROTOCOL=TCP)(HOST=pdber04b_svc)(PORT=1524))(ADDRESS=(PROTOCOL=TCP)(HOST=pdber04a_svc)(PORT=1524)))(CONNECT_DATA=(SERVICE_NAME=PSIA_USERS)))
-sink.user=itfcoladm
-sink.password=itfcoladm
-sink.table=ITFCOLADM.gama_centro_oscar
+sink.connect=jdbc:oracle:thin:@MY_DATABASE_SID
+sink.connect=jdbc:oracle:thin:@host:port:sid
+sink.user=orauser
+sink.password=orapassword
+sink.table=schema.table_name
 
 source.connect.parameter.oracle.net.tns_admin=${TNS_ADMIN}
 sink.connect.parameter.oracle.net.networkCompression=off
@@ -353,10 +349,10 @@ sink.connect.parameter.ApplicationName=ReplicaDB
 El rendimiento aumenta si se corre replicadb en la maquina donde está postgresql
 
 ```properties
-source.connect=jdbc:postgresql://ldabd_svc.eroski.es/lda
-source.user=ldausr
-source.password=QGh1p5SL
-source.table=maestros_lda.gama_centro
+source.connect=jdbc:postgresql://host:port/db
+source.user=pguser
+source.password=pgpassword
+source.table=schema.table_name
 ```
 
 <br>
@@ -365,8 +361,8 @@ source.table=maestros_lda.gama_centro
 Only source. Autocmmit is true. 
 
 ```properties
-source.connect=jdbc:vdb://slx00010792:9999/gervdpint
-source.user=oracle
-source.password=oracle
-source.table=gervdpint.dv_usuarios_siec
+source.connect=jdbc:vdb://host:port/db
+source.user=vdbuser
+source.password=vdbpassword
+source.table=schema.table_name
 ```
