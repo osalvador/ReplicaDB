@@ -281,6 +281,7 @@ sink.disable.escape=true
 
 The CSV connector supports the following extra parameters that can only be defined as extra connection parameters in the `options-file`:
 
+{:.table}
 
 | Argument            | Description                                                                                | Default |
 | ------------------- | ------------------------------------------------------------------------------------------ | ------- |
