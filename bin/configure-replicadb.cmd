@@ -31,7 +31,7 @@ if not defined REPLICADB_CONF_DIR (
 :: Add replicadb dependencies to classpath
 set REPLICADB_CLASSPATH=
 
-:: Where to find the main Sqoop jar
+:: Where to find the main ReplicaDB jar
 set REPLICADB_JAR_DIR=%REPLICADB_HOME%
 call :add_dir_to_classpath %REPLICADB_JAR_DIR%
 
