@@ -254,12 +254,66 @@ $ replicadb --source-query 'SELECT a.*, b.* FROM a JOIN b on (a.id == b.id)'
 <br>
 ## 4.1 CSV files Connector
 
+
+```properties
+sink.connect=file:/C:/Users/Oscar/Downloads/articulos.csv
+sink.connect=file:///Users/osalvador/Downloads/gama_centro.csv
+
+sink.connect.parameter.FieldSeparator=
+sink.connect.parameter.TextDelimiter=
+sink.connect.parameter.LineDelimiter=
+sink.connect.parameter.AlwaysDelimitText=
+sink.connect.parameter.Header=
+
+sink.disable.escape=true
+```
+
+Incremental y complete
+Header no compatible con incremental
+RFC4180 compilant
+
+
 <br>
 ## 4.2 Oracle Connector
+
+```properties
+sink.connect=jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS_LIST=(FAILOVER=ON)(LOAD_BALANCE=OFF)(ADDRESS=(PROTOCOL=TCP)(HOST=pdber04b_svc)(PORT=1524))(ADDRESS=(PROTOCOL=TCP)(HOST=pdber04a_svc)(PORT=1524)))(CONNECT_DATA=(SERVICE_NAME=PSIA_USERS)))
+sink.user=itfcoladm
+sink.password=itfcoladm
+sink.table=ITFCOLADM.gama_centro_oscar
+
+source.connect.parameter.oracle.net.tns_admin=${TNS_ADMIN}
+sink.connect.parameter.oracle.net.networkCompression=off
+```
+
+XMLType as CSV
+```
+#,    a.contenido.getclobval() contenido \
+```
+
 
 <br>
 ## 4.3 PostgreSQL Connector
 
+sink.connect.parameter.ApplicationName=ReplicaDB
+
+El rendimiento aumenta si se corre replicadb en la maquina donde está postgresql
+
+```properties
+source.connect=jdbc:postgresql://ldabd_svc.eroski.es/lda
+source.user=ldausr
+source.password=QGh1p5SL
+source.table=maestros_lda.gama_centro
+```
+
 <br>
 ## 4.4 Denodo Connector
 
+Only source. Autocmmit is true. 
+
+```properties
+source.connect=jdbc:vdb://slx00010792:9999/gervdpint
+source.user=oracle
+source.password=oracle
+source.table=gervdpint.dv_usuarios_siec
+```
