@@ -275,6 +275,7 @@ The CSV file connector is [RFC 4180](http://tools.ietf.org/html/rfc4180) complia
 sink.disable.escape=true
 ```
 
+<br>
 ### 4.1.2 Extra parameters
 
 The CSV connector supports the following extra parameters that can only be defined as extra connection parameters in the `options-file`:
@@ -300,6 +301,7 @@ sink.connect.parameter.AlwaysDelimitText=false
 sink.connect.parameter.Header=false
 ```
 
+<br>
 ### 4.1.3 Replication Mode
 
 Unlike in a database, the replication mode for a CSV file as sink has a slight difference:
