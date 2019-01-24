@@ -19,6 +19,7 @@ layout: page
     - [4.1.2 Extra parameters](#412-extra-parameters)
     - [4.1.3 Replication Mode](#413-replication-mode)
   - [4.2 Oracle Connector](#42-oracle-connector)
+    - [4.2.1 Oracle BLOB, CLOB and XMLType columns](#421-oracle-blob-clob-and-xmltype-columns)
   - [4.3 PostgreSQL Connector](#43-postgresql-connector)
   - [4.4 Denodo Connector](#44-denodo-connector)
 
@@ -314,61 +315,122 @@ Unlike in a database, the replication mode for a CSV file as sink has a slight d
 **Example**
 
 ```properties
-sink.connect=file:/C:/Users/Oscar/Downloads/articulos.csv
+############################# ReplicadB Basics #############################
+mode=complete
+jobs=4
 
-sink.connect.parameter.FieldSeparator=
+############################# Soruce Options #############################
+sink.connect=jdbc:oracle:thin:@host:port:sid
+sink.user=orauser
+sink.password=orapassword
+sink.table=schema.table_name
+
+############################# Sink Options #############################
+## Tab delimiter and windwos CRLF
+sink.connect=file:/C:/Users/Oscar/Downloads/file.csv
+sink.connect.parameter.FieldSeparator=\t
 sink.connect.parameter.TextDelimiter=
-sink.connect.parameter.LineDelimiter=
-sink.connect.parameter.AlwaysDelimitText=
-sink.connect.parameter.Header=
-
+sink.connect.parameter.LineDelimiter=\r\n
+sink.connect.parameter.AlwaysDelimitText=flase
+sink.connect.parameter.Header=true
 sink.disable.escape=true
+
 ```
 
 <br>
 ## 4.2 Oracle Connector
 
-```properties
-sink.connect=jdbc:oracle:thin:@MY_DATABASE_SID
-## or
-sink.connect=jdbc:oracle:thin:@host:port:sid
+To connect to an Oracle database, either as a source or sink, we must specify a Database URL string. In the Oracle documentation you can review all available options:[Oracle Database URLs and Database Specifiers](https://docs.oracle.com/cd/B28359_01/java.111/b31224/urls.htm#BEIJFHHB)
 
-sink.user=orauser
-sink.password=orapassword
-sink.table=schema.table_name
+Remember that in order to specify a connection using a TNSNames alias, you must set the `oracle.net.tns_admin` property as indicated in the Oracle documentation.
+
+**Example**
+
+```properties
+############################# ReplicadB Basics #############################
+mode=complete
+jobs=4
+
+############################# Soruce Options #############################
+source.connect=jdbc:oracle:thin:@MY_DATABASE_SID
+source.user=orauser
+source.password=orapassword
+source.table=schema.table_name
 
 source.connect.parameter.oracle.net.tns_admin=${TNS_ADMIN}
-sink.connect.parameter.oracle.net.networkCompression=off
+source.connect.parameter.oracle.net.networkCompression=on
+
+############################# Sink Options #############################
+...
+
 ```
 
-XMLType as CSV
-```
-#,    a.contenido.getclobval() contenido \
-```
+### 4.2.1 Oracle BLOB, CLOB and XMLType columns
 
+ReplicaDB interprets all the columns as Stirng, in this way it simplifies the transformations between different systems, on the other hand it can sometimes suppose a problem (Encodings, date formats...).
+
+So you can replicate any column regardless of its type, as long as it can be interpreted as Stirng. For example, CLOB columns are compatible because the Oracle driver performs the transformation to String. In the case of the XMLType columns, we must perform the conversion in the sql statement, in the `source.query` parameter; for example with `t.xmldoc.getclobval () xmldoc`. For more information: [Oracle XMLType](https://docs.oracle.com/database/121/ARPLS/t_xml.htm#ARPLS71964)
+
+{::comment}
+El caso de las columnas BLOB tengo que probar.
+{:/comment}
+
+**Example**
+
+```properties
+############################# ReplicadB Basics #############################
+mode=complete
+jobs=4
+
+############################# Soruce Options #############################
+source.connect=jdbc:oracle:thin:@MY_DATABASE_SID
+source.user=orauser
+source.password=orapassword
+source.query=SELECT clob_column, T0.xml_column.getclobval() as xml_column FROM table as T0
+
+source.connect.parameter.oracle.net.tns_admin=${TNS_ADMIN}
+
+############################# Sink Options #############################
+...
+```
 
 <br>
 ## 4.3 PostgreSQL Connector
 
-sink.connect.parameter.ApplicationName=ReplicaDB
+The PostgreSQL connector uses the SQL COPY command and its implementation in JDBC [PostgreSQL COPY bulk data transfer](https://jdbc.postgresql.org/documentation/publicapi/org/postgresql/copy/CopyManager.html) what offers a great performance.
 
-El rendimiento aumenta si se corre replicadb en la maquina donde está postgresql
+
+> The PostgreSQL JDBC driver has much better performance if the network is not included in the data transfer. Therefore, it is recommended that ReplicaDB be executed on the same machine where the PostgreSQL database resides.
+
+In terms of monitoring and control, it is interesting to identify the connection to PostgreSQL setting the property `ApplicationName`.
+
+**Example**
 
 ```properties
 source.connect=jdbc:postgresql://host:port/db
 source.user=pguser
 source.password=pgpassword
 source.table=schema.table_name
+
+source.connect.parameter.ApplicationName=ReplicaDB
 ```
 
 <br>
 ## 4.4 Denodo Connector
 
-Only source. Autocmmit is true. 
+The Denodo connector only applies as a source, since being a data virtualization, it is normally only used as a source.
+
+To connect to Denodo, you can review the documentation for more information: [Access Through JDBC](https://community.denodo.com/docs/html/browse/6.0/vdp/developer/access_through_jdbc/access_through_jdbc)
+
+In terms of monitoring and control, it is interesting to identify the connection to PostgreSQL setting the property `userAgent`. 
+
+**Example**
 
 ```properties
 source.connect=jdbc:vdb://host:port/db
 source.user=vdbuser
 source.password=vdbpassword
 source.table=schema.table_name
+
+source.connect.parameter.userAgent=ReplicaDB
 ```
