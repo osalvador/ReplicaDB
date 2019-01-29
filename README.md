@@ -8,6 +8,10 @@ ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for effici
   
 ReplicaDB is **Cross Platform**; you can replicate data across different platforms, with compatibility for many databases. You can use **Parallel data transfer** for faster performance and optimal system utilization.
 
+<br>
+
+![ReplicaDB-Conceptual](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Conceptual.png)
+
 
 # Why another database replication software
 
