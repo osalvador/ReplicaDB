@@ -10,7 +10,7 @@ public enum SupportedManagers {
     SQLSERVER(JdbcDrivers.SQLSERVER.getSchemePrefix()), CUBRID(JdbcDrivers.CUBRID.getSchemePrefix()),
     JTDS_SQLSERVER(JdbcDrivers.JTDS_SQLSERVER.getSchemePrefix()), DB2(JdbcDrivers.DB2.getSchemePrefix()),
     NETEZZA(JdbcDrivers.NETEZZA.getSchemePrefix()), DENODO(JdbcDrivers.DENODO.getSchemePrefix()),
-    CSV(JdbcDrivers.CSV.getSchemePrefix());
+    CSV(JdbcDrivers.CSV.getSchemePrefix()),KAFKA(JdbcDrivers.KAFKA.getSchemePrefix() );
 
     private final String schemePrefix;
 
