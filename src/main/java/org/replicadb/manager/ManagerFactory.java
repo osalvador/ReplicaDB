@@ -50,6 +50,8 @@ public class ManagerFactory {
             return new CsvManager(options, dsType);
         } else if (KAFKA.isTheManagerTypeOf(options, dsType)) {
             return new KafkaManager(options, dsType);
+        } else if (SQLSERVER.isTheManagerTypeOf(options, dsType)) {
+            return new SQLServerManager(options, dsType);
         } else {
             return null;
         }
