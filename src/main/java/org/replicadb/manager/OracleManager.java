@@ -7,6 +7,7 @@ import org.replicadb.cli.ToolOptions;
 
 import java.sql.*;
 import java.util.Arrays;
+import java.util.Calendar;
 
 public class OracleManager extends SqlManager {
 
@@ -37,8 +38,12 @@ public class OracleManager extends SqlManager {
         // Read table with source-query option specified
         if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
             oracleAlterSession(false);
-            sqlCmd = "SELECT  * FROM (" +
-                    options.getSourceQuery() + ") where ora_hash(rowid," + (options.getJobs() - 1) + ") = ?";
+            if (options.getJobs() == 1)
+                sqlCmd = "SELECT  * FROM (" +
+                        options.getSourceQuery() + ") where 0 = ?";
+            else
+                sqlCmd = "SELECT  * FROM (" +
+                        options.getSourceQuery() + ") where ora_hash(rowid," + (options.getJobs() - 1) + ") = ?";
         }
         // Read table with source-where option specified
         else if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
@@ -65,6 +70,7 @@ public class OracleManager extends SqlManager {
         stmt.executeUpdate("ALTER SESSION SET NLS_NUMERIC_CHARACTERS = '.,'");
         stmt.executeUpdate("ALTER SESSION SET NLS_DATE_FORMAT='YYYY-MM-DD HH24:MI:SS' ");
         stmt.executeUpdate("ALTER SESSION SET NLS_TIMESTAMP_FORMAT='YYYY-MM-DD HH24:MI:SS.FF' ");
+        stmt.executeUpdate("ALTER SESSION SET NLS_TIMESTAMP_TZ_FORMAT='YYYY-MM-DD HH24:MI:SS.FF TZH:TZM' ");
         stmt.executeUpdate("ALTER SESSION SET recyclebin = OFF");
 
         if (directRead) stmt.executeUpdate("ALTER SESSION SET \"_serial_direct_read\"=true ");
@@ -103,7 +109,68 @@ public class OracleManager extends SqlManager {
 
             // Get Columns values
             for (int i = 1; i <= columnsNumber; i++) {
-                ps.setString(i, resultSet.getString(i));
+                
+                switch (rsmd.getColumnType(i)) {
+                    case Types.VARCHAR:
+                    case Types.CHAR:
+                    case Types.LONGVARCHAR:
+                        ps.setString(i, resultSet.getString(i));
+                        break;
+                    case Types.BIGINT:
+                    case Types.INTEGER:
+                    case Types.TINYINT:
+                    case Types.SMALLINT:
+                        ps.setInt(i, resultSet.getInt(i));
+                        break;
+                    case Types.NUMERIC:
+                    case Types.DECIMAL:
+                        ps.setBigDecimal(i, resultSet.getBigDecimal(i));
+                        break;
+                    case Types.DOUBLE:
+                        ps.setDouble(i, resultSet.getDouble(i));
+                        break;
+                    case Types.FLOAT:
+                        ps.setFloat(i, resultSet.getFloat(i));
+                        break;
+                    case Types.DATE:
+                        ps.setDate(i, resultSet.getDate(i));
+                        break;
+                    case Types.TIMESTAMP:
+                    case Types.TIMESTAMP_WITH_TIMEZONE:
+                    case -101:
+                    case -102:
+                        ps.setTimestamp(i, resultSet.getTimestamp(i));
+                        break;
+                    case Types.BINARY:
+                        ps.setBinaryStream(i, resultSet.getBinaryStream(i));
+                        break;
+                    case Types.BLOB:
+                        ps.setBlob(i, resultSet.getBlob(i));
+                        break;
+                    case Types.CLOB:
+                        ps.setClob(i, resultSet.getClob(i));
+                        break;
+                    case Types.BOOLEAN:
+                        ps.setBoolean(i, resultSet.getBoolean(i));
+                        break;
+                    case Types.NVARCHAR:
+                        ps.setNString(i, resultSet.getNString(i));
+                        break;
+                    case Types.SQLXML:
+                        ps.setSQLXML(i, resultSet.getSQLXML(i));
+                        break;
+                    case Types.ROWID:
+                        ps.setRowId(i, resultSet.getRowId(i));
+                        break;
+                    case Types.ARRAY:
+                        ps.setArray(i, resultSet.getArray(i));
+                        break;
+                    default:
+                        ps.setString(i, resultSet.getString(i));
+                        break;
+                }
+
+
             }
 
             ps.addBatch();
