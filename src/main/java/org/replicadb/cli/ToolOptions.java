@@ -28,6 +28,7 @@ public class ToolOptions {
     private String sinkPassword;
     private String sinkTable;
     private String sinkStagingTable;
+    private String sinkStagingTableAlias;
     private String sinkStagingSchema;
     private String sinkColumns;
     private Boolean sinkDisableEscape = false;
@@ -204,6 +205,17 @@ public class ToolOptions {
                 Option.builder()
                         .longOpt("sink-staging-table")
                         .desc("Qualified name of the sink staging table. The table must exist in the sink database.")
+                        .hasArg()
+                        .argName("staging-table-name")
+                        .build()
+        );
+
+        options.addOption(
+                Option.builder()
+                        .longOpt("sink-staging-table-alias")
+                        .desc("Alias name for the sink staging table. The table must exist in the sink database.")
+                        .hasArg()
+                        .argName("staging-table-name-alias")
                         .build()
         );
 
@@ -211,6 +223,8 @@ public class ToolOptions {
                 Option.builder()
                         .longOpt("sink-staging-schema")
                         .desc("Scheme name on the sink database, with right permissions for creating staging tables.")
+                        .hasArg()
+                        .argName("staging-schema")
                         .build()
         );
 
@@ -308,6 +322,7 @@ public class ToolOptions {
             setFetchSizeNotNull(line.getOptionValue("fetch-size"));
             setSinkStagingSchemaNotNull(line.getOptionValue("sink-staging-schema"));
             setSinkStagingTableNotNull(line.getOptionValue("sink-staging-table"));
+            setSinkStagingTableAliasNotNull(line.getOptionValue("sink-staging-table-alias"));
 
             //Check for required values
             if (!checkRequiredValues()) throw new IllegalArgumentException("Missing any of the required parameters:" +
@@ -389,6 +404,7 @@ public class ToolOptions {
         setSinkPassword(prop.getProperty("sink.password"));
         setSinkTable(prop.getProperty("sink.table"));
         setSinkStagingTable(prop.getProperty("sink.staging.table"));
+        setSinkStagingTableAlias(prop.getProperty("sink.staging.table.alias"));
         setSinkStagingSchema(prop.getProperty("sink.staging.schema"));
         setSourceColumns(prop.getProperty("source.columns"));
         setSourceConnect(prop.getProperty("source.connect"));
@@ -723,6 +739,20 @@ public class ToolOptions {
             this.sinkStagingTable = sinkStagingTable;
     }
 
+
+    public String getSinkStagingTableAlias() {
+        return sinkStagingTableAlias;
+    }
+
+    public void setSinkStagingTableAlias(String sinkStagingTableAlias) {
+        this.sinkStagingTableAlias = sinkStagingTableAlias;
+    }
+
+    public void setSinkStagingTableAliasNotNull(String sinkStagingTableAlias) {
+        if (sinkStagingTableAlias != null)
+            this.sinkStagingTableAlias = sinkStagingTableAlias;
+    }
+
     public String getSinkStagingSchema() {
         return sinkStagingSchema;
     }
@@ -771,6 +801,7 @@ public class ToolOptions {
                 ",\n\tsinkConnect='" + sinkConnect + '\'' +
                 ",\n\tsinkUser='" + sinkUser + '\'' +
                 ",\n\tsinkPassword='" + (sinkPassword != null ? "****" : "null") + '\'' +
+                ",\n\tsinkTable='" + sinkTable + '\'' +
                 ",\n\tsinkTable='" + sinkTable + '\'' +
                 ",\n\tsinkStagingTable='" + sinkStagingTable + '\'' +
                 ",\n\tsinkStagingSchema='" + sinkStagingSchema + '\'' +
