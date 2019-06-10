@@ -73,6 +73,20 @@
             <artifactId>orai18n</artifactId>
             <version>12.2.0.1</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.oracle.jdbc</groupId>
+            <artifactId>xdb6</artifactId>
+            <version>12.2.0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>oracle.xml</groupId>
+            <artifactId>xmlparserv2</artifactId>
+            <version>1.2.10</version>
+        </dependency>
+
+
         <!--Dependencia con el driver de Denodo-->
         <!--<dependency>-->
         <!--<groupId>com.denodo</groupId>-->
@@ -88,12 +102,13 @@
             <version>1.7.25</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/org.json/json -->
+        <!-- https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-databind -->
         <dependency>
-            <groupId>org.json</groupId>
-            <artifactId>json</artifactId>
-            <version>20180813</version>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.9.9</version>
         </dependency>
+
 
         <!-- https://mvnrepository.com/artifact/com.microsoft.sqlserver/mssql-jdbc -->
         <dependency>
