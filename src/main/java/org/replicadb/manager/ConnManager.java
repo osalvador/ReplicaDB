@@ -148,7 +148,16 @@ public abstract class ConnManager {
             // Create new randomSinkStagingTableName
             Random random = new Random();
             String randomName = "repdb" + random.nextInt(90) + 10;
-            randomSinkStagingTableName = getTableNameFromQualifiedTableName(getSinkTableName()) + randomName;
+
+            String tableName = getSinkTableName();
+
+            // Staging table Alias name.
+            // Sometimes the size of the table along with the random name exceeds the maximum size of an object name in some databases
+            if (options.getSinkStagingTableAlias() != null && !options.getSinkStagingTableAlias().isEmpty()) {
+                tableName = options.getSinkStagingTableAlias();
+            }
+
+            randomSinkStagingTableName = getTableNameFromQualifiedTableName(tableName) + randomName;
 
             return randomSinkStagingTableName;
         }
