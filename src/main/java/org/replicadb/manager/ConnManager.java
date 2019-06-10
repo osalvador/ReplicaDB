@@ -195,7 +195,7 @@ public abstract class ConnManager {
         int columnsNumber = rsmd.getColumnCount();
 
         for (int i = 1; i <= columnsNumber; i++) {
-            if (i > 1) columnNames.append(", ");
+            if (i > 1) columnNames.append(",");
             columnNames.append(rsmd.getColumnName(i));
         }
         return columnNames.toString();

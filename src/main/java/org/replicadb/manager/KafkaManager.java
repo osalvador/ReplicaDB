@@ -1,16 +1,21 @@
 package org.replicadb.manager;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.util.TokenBuffer;
 import org.apache.kafka.clients.producer.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.json.JSONObject;
 import org.replicadb.cli.ToolOptions;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.Types;
+import java.io.InputStream;
+import java.io.Reader;
+import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Properties;
+import java.util.TimeZone;
 
 public class KafkaManager extends SqlManager {
 
@@ -48,14 +53,19 @@ public class KafkaManager extends SqlManager {
         ResultSetMetaData rsmd = resultSet.getMetaData();
         int columnsNumber = rsmd.getColumnCount();
 
-        String topic = options.getSinkTable();
+        Properties kafkaProps = options.getSinkConnectionParams();
+        String topic = kafkaProps.getProperty("topic");
+        Integer partition = kafkaProps.getProperty("partition") != null ? Integer.parseInt(kafkaProps.getProperty("partition")) : null;
+        String key = kafkaProps.getProperty("key");
 
         final Properties props = options.getSinkConnectionParams();
-        // Add additional properties.
+        // Default Kafka properties.
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, options.getSinkConnect().substring("kafka://".length()));
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.StringSerializer");
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, options.getSinkConnect().substring("kafka://".length()));
-        props.put("topic", topic);
+        // User Custom kafka properties
+        props.putAll(kafkaProps);
+
 
         LOG.debug("kafka properties: " + props);
 
@@ -65,33 +75,48 @@ public class KafkaManager extends SqlManager {
         // Create array form sink column names
         String[] sinkColumns = getAllSinkColumns(rsmd).split(",");
 
+        // Date Conversion
+        SimpleDateFormat dateFormat;
+        dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+
+        SimpleDateFormat timestampFormat;
+        timestampFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+        timestampFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        // JSON objects
+        ObjectMapper mapper = new ObjectMapper();
+        ObjectNode obj;
+
+
         while (resultSet.next()) {
-            JSONObject obj;
 
             // Just one sink column and is a JSON.
             // Create a JSON object form content.
-            if (sinkColumns[0].equals("json")) {
-                obj = new JSONObject(resultSet.getString(1));
+            if (sinkColumns[0].toLowerCase().equals("json")) {
+                obj = (ObjectNode) mapper.readTree(resultSet.getString(1));
             } else {
 
-                obj = new JSONObject();
+                obj = mapper.createObjectNode();
 
                 for (int i = 1; i < columnsNumber + 1; i++) {
 
                     String columnName = sinkColumns[i - 1];
 
                     switch (rsmd.getColumnType(i)) {
-                        case Types.ARRAY:
-                            obj.put(columnName, resultSet.getArray(i));
+                        case Types.VARCHAR:
+                        case Types.CHAR:
+                        case Types.LONGVARCHAR:
+                            obj.put(columnName, resultSet.getString(i));
                             break;
                         case Types.BIGINT:
+                        case Types.INTEGER:
+                        case Types.TINYINT:
+                        case Types.SMALLINT:
                             obj.put(columnName, resultSet.getInt(i));
                             break;
-                        case Types.BOOLEAN:
-                            obj.put(columnName, resultSet.getBoolean(i));
-                            break;
-                        case Types.BLOB:
-                            obj.put(columnName, resultSet.getBlob(i));
+                        case Types.NUMERIC:
+                        case Types.DECIMAL:
+                            obj.put(columnName, resultSet.getBigDecimal(i));
                             break;
                         case Types.DOUBLE:
                             obj.put(columnName, resultSet.getDouble(i));
@@ -99,27 +124,45 @@ public class KafkaManager extends SqlManager {
                         case Types.FLOAT:
                             obj.put(columnName, resultSet.getFloat(i));
                             break;
-                        case Types.INTEGER:
-                            obj.put(columnName, resultSet.getInt(i));
+                        case Types.DATE:
+                            obj.put(columnName, dateFormat.format(resultSet.getDate(i).getTime()));
+                            break;
+                        case Types.TIMESTAMP:
+                        case Types.TIMESTAMP_WITH_TIMEZONE:
+                        case -101:
+                        case -102:
+                            //obj.put(columnName, resultSet.getTimestamp(i));
+                            obj.put(columnName, timestampFormat.format(resultSet.getTimestamp(i).getTime()));
+                            break;
+                        case Types.BINARY:
+                        case Types.BLOB:
+                            // Binary data encode to Base64
+                            Blob data = resultSet.getBlob(i);
+                            obj.put(columnName, data.getBytes(1, (int) data.length()));
+                            break;
+                        case Types.CLOB:
+                            //obj.put(columnName, resultSet.getClob(i));
+                            obj.put(columnName, resultSet.getString(i));
+                            //InputStream CLOBdata = resultSet.getClob(i).getAsciiStream();
+                            //obj.set(columnName, mapper.readTree(CLOBdata));
+                            break;
+                        case Types.BOOLEAN:
+                            obj.put(columnName, resultSet.getBoolean(i));
                             break;
                         case Types.NVARCHAR:
                             obj.put(columnName, resultSet.getNString(i));
                             break;
-                        case Types.VARCHAR:
+                        case Types.SQLXML:
+                            //Reader SQLXMLdata = resultSet.getSQLXML(i).getCharacterStream();
+                            //obj.put(columnName, mapper.readTree(SQLXMLdata));
                             obj.put(columnName, resultSet.getString(i));
                             break;
-                        case Types.TINYINT:
-                            obj.put(columnName, resultSet.getInt(i));
+                        /*case Types.ROWID:
+                            obj.put(columnName, resultSet.getRowId(i));
                             break;
-                        case Types.SMALLINT:
-                            obj.put(columnName, resultSet.getInt(i));
-                            break;
-                        case Types.DATE:
-                            obj.put(columnName, resultSet.getDate(i));
-                            break;
-                        case Types.TIMESTAMP:
-                            obj.put(columnName, resultSet.getTimestamp(i));
-                            break;
+                        case Types.ARRAY:
+                            obj.put(columnName, resultSet.getArray(i));
+                            break;*/
                         default:
                             obj.put(columnName, resultSet.getString(i));
                             break;
@@ -128,10 +171,8 @@ public class KafkaManager extends SqlManager {
                 }
             }
 
-            String key = props.getProperty("key");
-            String record = obj.toString();
-
-            producer.send(new ProducerRecord<>(topic, key, record), (m, e) -> {
+            // Send to kafka
+            producer.send(new ProducerRecord<>(topic, partition, key, mapper.writeValueAsString(obj)), (m, e) -> {
                 if (e != null) {
                     LOG.error(e);
                 }/*else {
