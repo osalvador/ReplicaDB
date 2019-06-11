@@ -42,8 +42,7 @@ public class OracleManager extends SqlManager {
                 sqlCmd = "SELECT  * FROM (" +
                         options.getSourceQuery() + ") where 0 = ?";
             else
-                sqlCmd = "SELECT  * FROM (" +
-                        options.getSourceQuery() + ") where ora_hash(rowid," + (options.getJobs() - 1) + ") = ?";
+                throw new UnsupportedOperationException("ReplicaDB on Oracle still not support custom query parallel process. Use properties instead: source.table, source.columns and source.where ");
         }
         // Read table with source-where option specified
         else if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
