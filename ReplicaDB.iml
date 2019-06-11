@@ -23,8 +23,15 @@
     <orderEntry type="library" name="Maven: org.xerial.snappy:snappy-java:1.1.7.1" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.25" level="project" />
     <orderEntry type="library" name="Maven: com.oracle.jdbc:ojdbc8:12.2.0.1" level="project" />
+    <orderEntry type="library" name="Maven: com.oracle.jdbc:orai18n:12.2.0.1" level="project" />
+    <orderEntry type="library" name="Maven: com.oracle.jdbc:xdb6:12.2.0.1" level="project" />
+    <orderEntry type="library" name="Maven: oracle.xml:xmlparserv2:1.2.10" level="project" />
+    <orderEntry type="library" name="Maven: javax.xml:jsr173:1.0" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-log4j12:1.7.25" level="project" />
     <orderEntry type="library" name="Maven: log4j:log4j:1.2.17" level="project" />
-    <orderEntry type="library" name="Maven: org.json:json:20180813" level="project" />
+    <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-databind:2.9.9" level="project" />
+    <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-annotations:2.9.0" level="project" />
+    <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-core:2.9.9" level="project" />
+    <orderEntry type="library" name="Maven: com.microsoft.sqlserver:mssql-jdbc:7.2.2.jre8" level="project" />
   </component>
 </module>
