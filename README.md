@@ -102,15 +102,18 @@ $ replicadb --mode=complete -j=1 \
 | Oracle          | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:|
 | PostgreSQL      | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:|
 | Denodo          | :heavy_check_mark: | N/A | N/A |  
-| CSV             | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_check_mark: |  
+| CSV             | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_check_mark: | 
+| SQL Server      | :heavy_check_mark: | :heavy_multiplication_x: | :heavy_multiplication_x: |
+| Kafka           | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_check_mark: |  
 
 
 # Roadmap
 
-1. MongoDB as sink.
+1. MongoDB as source.
 2. MySQL; source and sink.
 3. SQL Server; source and sink.
 4. CSV file as source. 
+5. Kafka as source.
 
 
 # Contributing
