@@ -9,7 +9,6 @@ import java.util.Properties;
 
 public class ToolOptions {
 
-
     private static final Logger LOG = LogManager.getLogger(ToolOptions.class.getName());
     private static final int DEFAULT_JOBS = 4;
     private static final int DEFAULT_FETCH_SIZE = 5000;
@@ -802,9 +801,9 @@ public class ToolOptions {
                 ",\n\tsinkUser='" + sinkUser + '\'' +
                 ",\n\tsinkPassword='" + (sinkPassword != null ? "****" : "null") + '\'' +
                 ",\n\tsinkTable='" + sinkTable + '\'' +
-                ",\n\tsinkTable='" + sinkTable + '\'' +
                 ",\n\tsinkStagingTable='" + sinkStagingTable + '\'' +
                 ",\n\tsinkStagingSchema='" + sinkStagingSchema + '\'' +
+                ",\n\tsinkStagingTableAlias='" + sinkStagingTableAlias + '\'' +
                 ",\n\tsinkColumns='" + sinkColumns + '\'' +
                 ",\n\tsinkDisableEscape=" + sinkDisableEscape +
                 ",\n\tsinkDisableIndex=" + sinkDisableIndex +
@@ -821,4 +820,8 @@ public class ToolOptions {
                 ",\n\tsinkConnectionParams=" + sinkConnectionParams +
                 '}';
     }
+
+
+
+
 }
