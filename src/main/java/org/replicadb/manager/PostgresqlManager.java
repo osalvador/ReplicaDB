@@ -1,5 +1,6 @@
 package org.replicadb.manager;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
@@ -9,11 +10,15 @@ import org.postgresql.copy.CopyIn;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.jdbc.PgConnection;
 
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
 
 public class PostgresqlManager extends SqlManager {
 
     private static final Logger LOG = LogManager.getLogger(PostgresqlManager.class.getName());
+
+    private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
 
     private static Long chunkSize;
 
@@ -33,7 +38,7 @@ public class PostgresqlManager extends SqlManager {
     }
 
     @Override
-    public int insertDataToTable(ResultSet resultSet, int taskId) throws SQLException {
+    public int insertDataToTable(ResultSet resultSet, int taskId) throws SQLException, IOException {
 
         CopyIn copyIn = null;
 
@@ -65,19 +70,27 @@ public class PostgresqlManager extends SqlManager {
 
             byte[] bytes;
             String colValue;
+
             while (resultSet.next()) {
 
-                //Clear el StringBuilders
-                row.setLength(0);
-                cols.setLength(0);
-
                 // Get Columns values
-                // First column
-                colValue = resultSet.getString(1);
-                if (!resultSet.wasNull() || colValue != null) cols.append(colValue);
-                for (int i = 2; i <= columnsNumber; i++) {
-                    cols.append(unitSeparator);
-                    colValue = resultSet.getString(i);
+                for (int i = 1; i <= columnsNumber; i++) {
+                    if (i > 1) cols.append(unitSeparator);
+
+                    switch (rsmd.getColumnType(i)) {
+
+                        case Types.CLOB:
+                            colValue = clobToString(resultSet.getClob(i));
+                            break;
+                        case Types.BINARY:
+                        case Types.BLOB:
+                            colValue = blobToPostgresHex(resultSet.getBlob(i));
+                            break;
+                        default:
+                            colValue = resultSet.getString(i);
+                            break;
+                    }
+
                     if (!resultSet.wasNull() || colValue != null) cols.append(colValue);
                 }
 
@@ -91,11 +104,18 @@ public class PostgresqlManager extends SqlManager {
                 row.append("\n");
 
                 // Copy data to postgres
-                bytes = row.toString().getBytes();
+                bytes = row.toString().getBytes(StandardCharsets.UTF_8);
                 copyIn.writeToCopy(bytes, 0, bytes.length);
+
+                //Clear el StringBuilders
+                row.setLength(0); // set length of buffer to 0
+                row.trimToSize();
+                cols.setLength(0); // set length of buffer to 0
+                cols.trimToSize();
             }
 
             copyIn.endCopy();
+
         } catch (Exception e) {
             if (copyIn != null && copyIn.isActive()) {
                 copyIn.cancelCopy();
@@ -294,4 +314,36 @@ public class PostgresqlManager extends SqlManager {
 
     @Override
     public void postSourceTasks() {/*Not implemented*/}
+
+
+    /*********************************************************************************************
+     * From BLOB to Hexadecimal String for Postgres Copy
+     * @return string representation of blob
+     *********************************************************************************************/
+    private String blobToPostgresHex(Blob blobData) throws SQLException {
+
+        String returnData = "";
+
+        if (blobData != null) {
+            try {
+                byte[] bytes = blobData.getBytes(1, (int) blobData.length());
+
+                char[] hexChars = new char[bytes.length * 2];
+                for (int j = 0; j < bytes.length; j++) {
+                    int v = bytes[j] & 0xFF;
+                    hexChars[j * 2] = hexArray[v >>> 4];
+                    hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+                }
+                returnData = "\\\\x" + new String(hexChars);
+            } finally {
+                // The most important thing here is free the BLOB to avoid memory Leaks
+                blobData.free();
+            }
+        }
+
+        return returnData;
+
+    }
+
+
 }
