@@ -104,7 +104,7 @@ $ replicadb --mode=complete -j=1 \
 | Denodo          | :heavy_check_mark: | N/A | N/A |  
 | CSV             | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_check_mark: | 
 | SQL Server      | :heavy_check_mark: | :heavy_multiplication_x: | :heavy_multiplication_x: |
-| Kafka           | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_check_mark: |  
+| Kafka           | :heavy_multiplication_x: | N/A | :heavy_check_mark: |  
 
 
 # Roadmap
