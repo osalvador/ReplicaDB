@@ -16,6 +16,7 @@
     <orderEntry type="library" name="Maven: org.apache.logging.log4j:log4j-api:2.11.1" level="project" />
     <orderEntry type="library" name="Maven: org.apache.logging.log4j:log4j-core:2.11.1" level="project" />
     <orderEntry type="library" name="Maven: commons-cli:commons-cli:1.4" level="project" />
+    <orderEntry type="library" name="Maven: commons-io:commons-io:2.6" level="project" />
     <orderEntry type="library" name="Maven: org.postgresql:postgresql:42.2.1" level="project" />
     <orderEntry type="library" name="Maven: de.siegmar:fastcsv:1.0.3" level="project" />
     <orderEntry type="library" name="Maven: org.apache.kafka:kafka-clients:1.1.1" level="project" />
