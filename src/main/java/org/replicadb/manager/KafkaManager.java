@@ -1,19 +1,17 @@
 package org.replicadb.manager;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.util.TokenBuffer;
-import org.apache.kafka.clients.producer.*;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
 
-import java.io.InputStream;
-import java.io.Reader;
 import java.sql.*;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Properties;
 import java.util.TimeZone;
 
@@ -174,9 +172,7 @@ public class KafkaManager extends SqlManager {
                     System.out.printf("Produced record to topic %s partition [%d] @ offset %d%n", m.topic(), m.partition(), m.offset());
                 }*/
             });
-
         }
-
 
         producer.flush();
         producer.close();
@@ -200,14 +196,10 @@ public class KafkaManager extends SqlManager {
 
 
     @Override
-    public void postSinkTasks() throws Exception {
-        /*Not implemented*/
-    }
+    public void postSinkTasks() {/*Not implemented*/}
 
     @Override
-    public void cleanUp() throws Exception {
-        /*Not implemented*/
-    }
+    public void cleanUp() {/*Not implemented*/}
 
 
 }
