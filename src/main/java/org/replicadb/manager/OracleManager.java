@@ -7,7 +7,6 @@ import org.replicadb.cli.ToolOptions;
 
 import java.sql.*;
 import java.util.Arrays;
-import java.util.Calendar;
 
 public class OracleManager extends SqlManager {
 
@@ -293,12 +292,12 @@ public class OracleManager extends SqlManager {
 
 
     @Override
-    public void preSourceTasks() throws SQLException {
+    public void preSourceTasks()  {
 
     }
 
     @Override
-    public void postSourceTasks() throws SQLException {
+    public void postSourceTasks()  {
 
     }
 
