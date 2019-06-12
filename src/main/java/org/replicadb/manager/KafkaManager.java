@@ -131,7 +131,6 @@ public class KafkaManager extends SqlManager {
                         case Types.TIMESTAMP_WITH_TIMEZONE:
                         case -101:
                         case -102:
-                            //obj.put(columnName, resultSet.getTimestamp(i));
                             obj.put(columnName, timestampFormat.format(resultSet.getTimestamp(i).getTime()));
                             break;
                         case Types.BINARY:
@@ -139,12 +138,10 @@ public class KafkaManager extends SqlManager {
                             // Binary data encode to Base64
                             Blob data = resultSet.getBlob(i);
                             obj.put(columnName, data.getBytes(1, (int) data.length()));
+                            data.free();
                             break;
                         case Types.CLOB:
-                            //obj.put(columnName, resultSet.getClob(i));
-                            obj.put(columnName, resultSet.getString(i));
-                            //InputStream CLOBdata = resultSet.getClob(i).getAsciiStream();
-                            //obj.set(columnName, mapper.readTree(CLOBdata));
+                            obj.put(columnName, clobToString(resultSet.getClob(i)));
                             break;
                         case Types.BOOLEAN:
                             obj.put(columnName, resultSet.getBoolean(i));
@@ -153,9 +150,7 @@ public class KafkaManager extends SqlManager {
                             obj.put(columnName, resultSet.getNString(i));
                             break;
                         case Types.SQLXML:
-                            //Reader SQLXMLdata = resultSet.getSQLXML(i).getCharacterStream();
-                            //obj.put(columnName, mapper.readTree(SQLXMLdata));
-                            obj.put(columnName, resultSet.getString(i));
+                            obj.put(columnName, sqlxmlToString(resultSet.getSQLXML(i)));
                             break;
                         /*case Types.ROWID:
                             obj.put(columnName, resultSet.getRowId(i));
