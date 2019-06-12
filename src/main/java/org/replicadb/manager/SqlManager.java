@@ -1,10 +1,12 @@
 package org.replicadb.manager;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 
+import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -457,6 +459,50 @@ public abstract class SqlManager extends ConnManager {
                 this.dropStagingTable();
             }
         }
-
     }
+
+
+    /**
+     * From java.sql.CLOB to String
+     *
+     * @return string representation of clob
+     * @throws SQLException IOException
+     */
+    protected String clobToString(Clob clobData) throws SQLException, IOException {
+
+        String returnData = "";
+
+        if (clobData != null) {
+            try {
+                returnData = IOUtils.toString(clobData.getCharacterStream());
+            } finally {
+                // The most important thing here is free the CLOB to avoid memory Leaks
+                clobData.free();
+            }
+        }
+        return returnData;
+    }
+
+    /**
+     * From java.sql.SQLXML to String
+     *
+     * @return string representation of SQLXML
+     * @throws SQLException IOException
+     */
+    protected String sqlxmlToString(SQLXML xmlData) throws SQLException, IOException {
+
+        String returnData = "";
+
+        if (xmlData != null) {
+            try {
+                returnData = IOUtils.toString(xmlData.getCharacterStream());
+            } finally {
+                // The most important thing here is free the CLOB to avoid memory Leaks
+                xmlData.free();
+            }
+        }
+        return returnData;
+    }
+
+
 }
