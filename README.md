@@ -4,7 +4,7 @@
 
 ReplicaDB is open source tool for database replication designed for efficiently transferring bulk data between relational and NoSQL databases.
 
-ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. Actualy, ReplicaDB only works with Oracle and Postgres.
+ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. Actualy, ReplicaDB  works with Oracle, Postgres, SQL Server, Denodo, CSV and Kafka. 
   
 ReplicaDB is **Cross Platform**; you can replicate data across different platforms, with compatibility for many databases. You can use **Parallel data transfer** for faster performance and optimal system utilization.
 
@@ -38,7 +38,7 @@ I have reviewed and tested other open source tools and none of them meets all th
 ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Standard Edition (SE) or Java Development Kit (JDK) Standard Edition (SE) version 8.0 or above. The minimum operating system requirements are:
 
 *   Java SE Runtime Environment 8 or above    
-*   Memory - 64 (MB) available
+*   Memory - 128 (MB) available
 
 ## Install
 
