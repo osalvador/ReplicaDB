@@ -9,7 +9,7 @@ homepage: true
 
 ReplicaDB is open source tool for database replication designed for efficiently transferring bulk data between relational and NoSQL databases.
 
-ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. Actualy, ReplicaDB only works with Oracle and Postgres.
+ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. Actualy, ReplicaDB works with Oracle, Postgres, SQL Server, Denodo, CSV and Kafka.
   
 ReplicaDB is **Cross Platform**; you can replicate data across different platforms, with compatibility for many databases. You can use **Parallel data transfer** for faster performance and optimal system utilization.
 
@@ -19,7 +19,7 @@ ReplicaDB is **Cross Platform**; you can replicate data across different platfor
 
 {::comment}
 TODO:
-- Benchmark con symetricDS, kettel y talend
+- Benchmark con symetricDS, kettel y talend, embulk
 
 {:/comment}
 
@@ -49,15 +49,15 @@ I have reviewed and tested other open source tools and none of them meets all th
 ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Standard Edition (SE) or Java Development Kit (JDK) Standard Edition (SE) version 8.0 or above. The minimum operating system requirements are:
 
 *   Java SE Runtime Environment 8 or above    
-*   Memory - 64 (MB) available
+*   Memory - 128 (MB) available
 
 ## Install
 
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
 ```bash
-$ curl -o ReplicaDB-0.4.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.4.0/ReplicaDB-0.4.0.tar.gz"
-$ tar -xvzf ReplicaDB-0.4.0.tar.gz
+$ curl -o ReplicaDB-0.5.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.5.0/ReplicaDB-0.5.0.tar.gz"
+$ tar -xvzf ReplicaDB-0.5.0.tar.gz
 $ ./bin/replicadb --help
 ```
 
@@ -115,7 +115,9 @@ $ replicadb --mode=complete -j=1 \
 | Oracle           | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
 | PostgreSQL       | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
 | Denodo       | <i class="far fa-check-circle text-success"></i> | N/A | N/A | 
-| CSV             | <i class="far fa-times-circle"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |  
+| CSV             | <i class="far fa-times-circle"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
+| SQL Server             | <i class="far fa-check-circle text-success"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> |  
+| Kafka             | <i class="far fa-times-circle"></i> | N/A | <i class="far fa-check-circle text-success"></i> |  
 
 
 # Contributing
