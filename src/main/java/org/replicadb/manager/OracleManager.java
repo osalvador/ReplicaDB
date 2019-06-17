@@ -107,19 +107,19 @@ public class OracleManager extends SqlManager {
 
             // Get Columns values
             for (int i = 1; i <= columnsNumber; i++) {
-                
+
                 switch (rsmd.getColumnType(i)) {
                     case Types.VARCHAR:
                     case Types.CHAR:
                     case Types.LONGVARCHAR:
                         ps.setString(i, resultSet.getString(i));
                         break;
-                    case Types.BIGINT:
                     case Types.INTEGER:
                     case Types.TINYINT:
                     case Types.SMALLINT:
                         ps.setInt(i, resultSet.getInt(i));
                         break;
+                    case Types.BIGINT:
                     case Types.NUMERIC:
                     case Types.DECIMAL:
                         ps.setBigDecimal(i, resultSet.getBigDecimal(i));
@@ -143,10 +143,14 @@ public class OracleManager extends SqlManager {
                         ps.setBinaryStream(i, resultSet.getBinaryStream(i));
                         break;
                     case Types.BLOB:
-                        ps.setBlob(i, resultSet.getBlob(i));
+                        Blob blobData = resultSet.getBlob(i);
+                        ps.setBlob(i, blobData);
+                        blobData.free();
                         break;
                     case Types.CLOB:
-                        ps.setClob(i, resultSet.getClob(i));
+                        Clob clobData = resultSet.getClob(i);
+                        ps.setClob(i, clobData);
+                        clobData.free();
                         break;
                     case Types.BOOLEAN:
                         ps.setBoolean(i, resultSet.getBoolean(i));
@@ -155,13 +159,17 @@ public class OracleManager extends SqlManager {
                         ps.setNString(i, resultSet.getNString(i));
                         break;
                     case Types.SQLXML:
-                        ps.setSQLXML(i, resultSet.getSQLXML(i));
+                        SQLXML sqlxmlData = resultSet.getSQLXML(i);
+                        ps.setSQLXML(i, sqlxmlData);
+                        sqlxmlData.free();
                         break;
                     case Types.ROWID:
                         ps.setRowId(i, resultSet.getRowId(i));
                         break;
                     case Types.ARRAY:
-                        ps.setArray(i, resultSet.getArray(i));
+                        Array arrayData = resultSet.getArray(i);
+                        ps.setArray(i, arrayData);
+                        arrayData.free();
                         break;
                     default:
                         ps.setString(i, resultSet.getString(i));
@@ -292,12 +300,12 @@ public class OracleManager extends SqlManager {
 
 
     @Override
-    public void preSourceTasks()  {
+    public void preSourceTasks() {
 
     }
 
     @Override
-    public void postSourceTasks()  {
+    public void postSourceTasks() {
 
     }
 
