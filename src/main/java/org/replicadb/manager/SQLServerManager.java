@@ -70,7 +70,7 @@ public class SQLServerManager extends SqlManager {
             sqlCmd = "SELECT  " +
                     allColumns +
                     " FROM " +
-                    escapeTableName(tableName) + " WITH (INDEX(0)) where " + options.getSourceWhere() + " AND ABS(CHECKSUM(%% physloc %%)) % "+(options.getJobs())+" = ?";
+                    escapeTableName(tableName) + " where " + options.getSourceWhere() + " AND ABS(CHECKSUM(%% physloc %%)) % "+(options.getJobs())+" = ?";
         } else {
             // Full table read. NO_IDEX and Oracle direct Read
             sqlCmd = "SELECT  " +
