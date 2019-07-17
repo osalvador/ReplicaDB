@@ -226,7 +226,17 @@ public class OracleManager extends SqlManager {
         Statement statement = this.getConnection().createStatement();
         String sinkStagingTable = getQualifiedStagingTableName();
 
-        String sql = " CREATE TABLE " + sinkStagingTable + " NOLOGGING AS (SELECT * FROM " + this.getSinkTableName() + " WHERE rownum = -1 ) ";
+        // Get sink columns.
+        String allSinkColumns = null;
+        if (this.options.getSinkColumns() != null && !this.options.getSinkColumns().isEmpty()) {
+            allSinkColumns = this.options.getSinkColumns();
+        } else if (this.options.getSourceColumns() != null && !this.options.getSourceColumns().isEmpty()) {
+            allSinkColumns = this.options.getSourceColumns();
+        } else {
+            allSinkColumns = "*";
+        }
+
+        String sql = " CREATE TABLE " + sinkStagingTable + " NOLOGGING AS (SELECT "+allSinkColumns+" FROM " + this.getSinkTableName() + " WHERE rownum = -1 ) ";
 
         LOG.info("Creating staging table with this command: " + sql);
         statement.executeUpdate(sql);
@@ -257,7 +267,7 @@ public class OracleManager extends SqlManager {
                 .append(" trg USING (SELECT ")
                 .append(allColls)
                 .append(" FROM ")
-                .append(this.getSinkStagingTableName())
+                .append(getQualifiedStagingTableName())
                 .append(" ) src ON ")
                 .append(" (");
 

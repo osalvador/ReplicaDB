@@ -401,6 +401,7 @@ public abstract class SqlManager extends ConnManager {
      * @throws SQLException
      */
     public void dropStagingTable() throws SQLException {
+        // TODO: Do not drop stagging table if it's defined by user.
         Statement statement = this.getConnection().createStatement();
         String sql = "DROP TABLE " + getQualifiedStagingTableName();
         LOG.info("Dropping staging table with this command: " + sql);
