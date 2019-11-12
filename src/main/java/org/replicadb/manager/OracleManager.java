@@ -49,14 +49,25 @@ public class OracleManager extends SqlManager {
             sqlCmd = "SELECT  " +
                     allColumns +
                     " FROM " +
-                    escapeTableName(tableName) + " where " + options.getSourceWhere() + " AND ora_hash(rowid," + (options.getJobs() - 1) + ") = ?";
+                    escapeTableName(tableName) + " where " + options.getSourceWhere();
+            if (options.getJobs() == 1)
+                sqlCmd = sqlCmd + " AND 0 = ?";
+            else
+                sqlCmd = sqlCmd + " AND ora_hash(rowid," + (options.getJobs() - 1) + ") = ?";
         } else {
             // Full table read. NO_IDEX and Oracle direct Read
             oracleAlterSession(true);
             sqlCmd = "SELECT /*+ NO_INDEX(" + escapeTableName(tableName) + ")*/ " +
                     allColumns +
                     " FROM " +
-                    escapeTableName(tableName) + " where ora_hash(rowid," + (options.getJobs() - 1) + ") = ?";
+                    escapeTableName(tableName);
+
+            if (options.getJobs() == 1)
+                sqlCmd = sqlCmd + " where 0 = ?";
+            else
+                sqlCmd = sqlCmd + " where ora_hash(rowid," + (options.getJobs() - 1) + ") = ?";
+
+
         }
 
         return super.execute(sqlCmd, (Object) nThread);

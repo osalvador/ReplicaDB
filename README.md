@@ -63,11 +63,11 @@ Source and Sink tables must exists.
 
 ```bash
 $ replicadb --mode=complete -j=1 \
---source-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID \
---source-user=$ORAUSER \
---source-password=$ORAPASS \
+--source-connect=jdbc:oracle:thin:@${ORAHOST}:${ORAPORT}:${ORASID} \
+--source-user=${ORAUSER} \
+--source-password=${ORAPASS} \
 --source-table=dept \
---sink-connect=jdbc:postgresql://$PGHOST/osalvador \
+--sink-connect=jdbc:postgresql://${PGHOST}/osalvador \
 --sink-table=dept
 2018-12-07 16:01:23,808 INFO  ReplicaTask:36: Starting TaskId-0
 2018-12-07 16:01:24,650 INFO  SqlManager:197: TaskId-0: Executing SQL statement: SELECT /*+ NO_INDEX(dept)*/ * FROM dept where ora_hash(rowid,0) = ?
@@ -81,11 +81,11 @@ $ replicadb --mode=complete -j=1 \
 
 ```bash
 $ replicadb --mode=complete -j=1 \
---sink-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID \
---sink-user=$ORAUSER \
---sink-password=$ORAPASS \
+--sink-connect=jdbc:oracle:thin:@${ORAHOST}:${ORAPORT}:${ORASID} \
+--sink-user=${ORAUSER} \
+--sink-password=${ORAPASS} \
 --sink-table=dept \
---source-connect=jdbc:postgresql://$PGHOST/osalvador \
+--source-connect=jdbc:postgresql://${PGHOST}/osalvador \
 --source-table=dept \
 --source-columns=dept.*
 2018-12-07 16:10:35,334 INFO  ReplicaTask:36: Starting TaskId-0
