@@ -52,6 +52,8 @@ public class ManagerFactory {
             return new KafkaManager(options, dsType);
         } else if (SQLSERVER.isTheManagerTypeOf(options, dsType)) {
             return new SQLServerManager(options, dsType);
+        } else if (S3.isTheManagerTypeOf(options, dsType)) {
+            return new S3Manager(options, dsType);
         } else {
             return null;
         }
