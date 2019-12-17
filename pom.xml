@@ -82,26 +82,26 @@
         </dependency>
 
         <!-- Oracle -->
-        <dependency>
-            <groupId>com.oracle.jdbc</groupId>
-            <artifactId>ojdbc8</artifactId>
-            <version>12.2.0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.oracle.jdbc</groupId>
-            <artifactId>orai18n</artifactId>
-            <version>12.2.0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.oracle.jdbc</groupId>
-            <artifactId>xdb6</artifactId>
-            <version>12.2.0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>oracle.xml</groupId>
-            <artifactId>xmlparserv2</artifactId>
-            <version>1.2.10</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.oracle.jdbc</groupId>-->
+<!--            <artifactId>ojdbc8</artifactId>-->
+<!--            <version>12.2.0.1</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>com.oracle.jdbc</groupId>-->
+<!--            <artifactId>orai18n</artifactId>-->
+<!--            <version>12.2.0.1</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>com.oracle.jdbc</groupId>-->
+<!--            <artifactId>xdb6</artifactId>-->
+<!--            <version>12.2.0.1</version>-->
+<!--        </dependency>-->
+<!--        <dependency>-->
+<!--            <groupId>oracle.xml</groupId>-->
+<!--            <artifactId>xmlparserv2</artifactId>-->
+<!--            <version>1.2.10</version>-->
+<!--        </dependency>-->
 
 
         <!--Dependencia con el driver de Denodo-->
@@ -134,24 +134,17 @@
             <version>7.2.2.jre8</version>
         </dependency>
 
+        <!-- Amazon S3 Client-->
         <dependency>
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-s3</artifactId>
         </dependency>
-
 
         <!-- https://mvnrepository.com/artifact/com.github.alexmojaki/s3-stream-upload -->
         <dependency>
             <groupId>com.github.alexmojaki</groupId>
             <artifactId>s3-stream-upload</artifactId>
             <version>2.1.0</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-csv -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-csv</artifactId>
-            <version>1.7</version>
         </dependency>
 
 
