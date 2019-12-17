@@ -2,6 +2,7 @@
 .settings/*
 lib/*
 test/*
+sourcetrail_dependencies/*
 ReplicaDB-*.jar
 ReplicaDB-*.zip
 ReplicaDB-*.gz
@@ -9,3 +10,6 @@ package-release.sh
 .project
 .classpath
 .factorypath
+ReplicaDB.srctrlbm
+ReplicaDB.srctrldb
+ReplicaDB.srctrlprj
