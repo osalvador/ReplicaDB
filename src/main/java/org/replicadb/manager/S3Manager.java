@@ -17,9 +17,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
 
-import java.io.*;
+import java.io.PrintWriter;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.List;
 import java.util.Properties;
@@ -27,6 +26,108 @@ import java.util.Properties;
 public class S3Manager extends SqlManager {
 
     private static final Logger LOG = LogManager.getLogger(S3Manager.class.getName());
+
+    private String accessKey;
+    private String secretKey;
+    private boolean secuereConnection;
+    private boolean objectPerRow;
+    private String rowKeyColumnName;
+    private String rowContentColumnName;
+    private String csvKeyFileName;
+    private char csvFieldSeparator;
+    private char csvTextDelimiter;
+    private String csvLineDelimiter;
+    private boolean csvAlwaysDelimitText;
+    private boolean csvHeader;
+
+    private void setAccessKey(String accessKey) {
+        if (accessKey != null && !accessKey.isEmpty())
+            this.accessKey = accessKey;
+        else
+            throw new IllegalArgumentException("accessKey property cannot be null");
+    }
+
+    private void setSecretKey(String secretKey) {
+        if (secretKey != null && !secretKey.isEmpty())
+            this.secretKey = secretKey;
+        else
+            throw new IllegalArgumentException("secretKey property cannot be null");
+    }
+
+    private void setSecuereConnection(String secuereConnection) {
+        // Secure connection default true
+        if (secuereConnection != null && !secuereConnection.isEmpty())
+            this.secuereConnection = Boolean.parseBoolean(secuereConnection);
+        else
+            this.secuereConnection = true;
+    }
+
+    private void setObjectPerRow(boolean objectPerRow) {
+        this.objectPerRow = objectPerRow;
+    }
+
+    private void setRowKeyColumnName(String rowKeyColumnName) {
+        if (rowKeyColumnName != null && !rowKeyColumnName.isEmpty())
+            this.rowKeyColumnName = rowKeyColumnName;
+        else
+            throw new IllegalArgumentException("row.keyColumn property cannot be null");
+    }
+
+    private void setRowContentColumnName(String rowContentColumnName) {
+        if (rowContentColumnName != null && !rowContentColumnName.isEmpty())
+            this.rowContentColumnName = rowContentColumnName;
+        else
+            throw new IllegalArgumentException("row.contentColumn property cannot be null");
+    }
+
+    private void setCsvKeyFileName(String csvKeyFileName) {
+        if (csvKeyFileName != null && !csvKeyFileName.isEmpty())
+            this.csvKeyFileName = csvKeyFileName;
+        else
+            throw new IllegalArgumentException("csv.keyFileName property cannot be null");
+    }
+
+    private void setCsvFieldSeparator(String csvFieldSeparator) {
+        if (csvFieldSeparator != null && csvFieldSeparator.length() > 1)
+            throw new IllegalArgumentException("FieldSeparator must be a single char");
+
+        if (csvFieldSeparator != null && !csvFieldSeparator.isEmpty())
+            this.csvFieldSeparator = csvFieldSeparator.charAt(0);
+    }
+
+
+    private void setCsvTextDelimiter(String csvTextDelimiter) {
+        if (csvTextDelimiter != null && csvTextDelimiter.length() > 1)
+            throw new IllegalArgumentException("TextDelimiter must be a single char");
+
+        if (csvTextDelimiter != null && !csvTextDelimiter.isEmpty())
+            this.csvTextDelimiter = csvTextDelimiter.charAt(0);
+    }
+
+    private void setCsvLineDelimiter(String csvLineDelimiter) {
+        this.csvLineDelimiter = csvLineDelimiter;
+    }
+
+    private void setCsvAlwaysDelimitText(boolean csvAlwaysDelimitText) {
+        this.csvAlwaysDelimitText = csvAlwaysDelimitText;
+    }
+
+    private void setCsvHeader(boolean csvHeader) {
+        this.csvHeader = csvHeader;
+    }
+
+    private boolean isSecuereConnection() {
+        return secuereConnection;
+    }
+
+    private boolean isObjectPerRow() {
+        return objectPerRow;
+    }
+
+    private boolean isCsvHeader() {
+        return csvHeader;
+    }
+
 
     /**
      * Constructs the SqlManager.
@@ -36,6 +137,60 @@ public class S3Manager extends SqlManager {
     public S3Manager(ToolOptions opts, DataSourceType dsType) {
         super(opts);
         this.dsType = dsType;
+        loadS3CustomProperties();
+    }
+
+    /**
+     * Load ReplicaDB custom options for Amazon S3
+     */
+    private void loadS3CustomProperties() {
+        Properties s3Props;
+
+        if (dsType == DataSourceType.SOURCE)
+            s3Props = options.getSourceConnectionParams();
+        else
+            s3Props = options.getSinkConnectionParams();
+
+        // S3 Client properties
+        setAccessKey(s3Props.getProperty("accessKey"));
+        setSecretKey(s3Props.getProperty("secretKey"));
+        setSecuereConnection(s3Props.getProperty("secure-connection"));
+
+        // S3 ReplicaDB upload Mode
+        setObjectPerRow(Boolean.parseBoolean(s3Props.getProperty("row.isObject")));
+
+        if (isObjectPerRow()) {
+            // One object per row
+            setRowKeyColumnName(s3Props.getProperty("row.keyColumn"));
+            setRowContentColumnName(s3Props.getProperty("row.contentColumn"));
+        } else {
+            // One CSV for all rows
+            setCsvKeyFileName(s3Props.getProperty("csv.keyFileName"));
+            setCsvFieldSeparator(s3Props.getProperty("csv.FieldSeparator"));
+            setCsvTextDelimiter(s3Props.getProperty("csv.TextDelimiter"));
+            setCsvLineDelimiter(s3Props.getProperty("csv.LineDelimiter"));
+            setCsvHeader(Boolean.parseBoolean(s3Props.getProperty("csv.Header")));
+            setCsvAlwaysDelimitText(Boolean.parseBoolean(s3Props.getProperty("csv.AlwaysDelimitText")));
+        }
+
+    }
+
+    @Override
+    public String toString() {
+        return "S3Manager{" +
+                "accessKey='" + accessKey + '\'' +
+                ", secretKey='" + secretKey + '\'' +
+                ", secuereConnection=" + secuereConnection +
+                ", objectPerRow=" + objectPerRow +
+                ", rowKeyColumnName='" + rowKeyColumnName + '\'' +
+                ", rowContentColumnName='" + rowContentColumnName + '\'' +
+                ", csvKeyFileName='" + csvKeyFileName + '\'' +
+                ", csvFieldSeparator=" + csvFieldSeparator +
+                ", csvTextDelimiter=" + csvTextDelimiter +
+                ", csvLineDelimiter='" + csvLineDelimiter + '\'' +
+                ", csvAlwaysDelimitText=" + csvAlwaysDelimitText +
+                ", csvHeader=" + csvHeader +
+                '}';
     }
 
     @Override
@@ -57,19 +212,11 @@ public class S3Manager extends SqlManager {
     @Override
     public int insertDataToTable(ResultSet resultSet, int taskId) throws Exception {
 
-        Properties s3Props = options.getSinkConnectionParams();
-        String accessKey = s3Props.getProperty("accessKey");
-        String secretKey = s3Props.getProperty("secretKey");
-
-        System.setProperty(SDKGlobalConfiguration.DISABLE_CERT_CHECKING_SYSTEM_PROPERTY, "true");
-        AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
-
         URI s3Uri = new URI(options.getSinkConnect());
         // Get Service Endpoint
         // Secure by default
         String serviceEndpoint = "https://";
-        String encryptation = s3Props.getProperty("secure-connection");
-        if (encryptation != null && !encryptation.isEmpty() && Boolean.parseBoolean(encryptation) == false) {
+        if (!isSecuereConnection()) {
             serviceEndpoint = "http://";
         }
 
@@ -83,10 +230,13 @@ public class S3Manager extends SqlManager {
         LOG.debug("Using serviceEndpoint: " + serviceEndpoint);
 
         // Get Bucket name
-        String bucketName = s3Uri.getPath().split("/")[1];
-        LOG.debug("Using bucketName: " + bucketName);
+        String bucketName = s3Uri.getPath().replaceAll("/$", "");
+
+        LOG.debug(this.toString());
 
         // S3 Client
+        System.setProperty(SDKGlobalConfiguration.DISABLE_CERT_CHECKING_SYSTEM_PROPERTY, "true");
+        AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
         AmazonS3 s3Client = AmazonS3ClientBuilder
                 .standard()
                 .withRegion("")
@@ -95,11 +245,8 @@ public class S3Manager extends SqlManager {
                 .withCredentials(new AWSStaticCredentialsProvider(credentials))
                 .build();
 
-        // Get Replicadb custom properties
-        LOG.debug("S3 properties: " + s3Props);
-        Boolean rowIsObject = Boolean.parseBoolean(s3Props.getProperty("row.isObject"));
 
-        if (!rowIsObject) {
+        if (!isObjectPerRow()) {
             // All rows are only one CSV object in s3
             putCsvToS3(resultSet, taskId, s3Client, bucketName);
         } else {
@@ -107,21 +254,14 @@ public class S3Manager extends SqlManager {
             putObjectToS3(resultSet, taskId, s3Client, bucketName);
         }
 
-
         return 0;
 
     }
 
-    private void putObjectToS3(ResultSet resultSet, int taskId, AmazonS3 s3Client, String bucketName) throws SQLException, IOException {
+    private void putObjectToS3(ResultSet resultSet, int taskId, AmazonS3 s3Client, String bucketName) throws SQLException {
 
         ResultSetMetaData rsmd = resultSet.getMetaData();
         int columnCount = rsmd.getColumnCount();
-
-        // Get sinl properties
-        Properties s3Props = options.getSinkConnectionParams();
-
-        String rowKeyColumnName = s3Props.getProperty("row.keyColumn");
-        String rowContentColumnName = s3Props.getProperty("row.contentColumn");
 
         // Get content column index
         int rowContentColumnIndex = 0;
@@ -131,15 +271,15 @@ public class S3Manager extends SqlManager {
             }
         }
 
+        ObjectMetadata binMetadata = new ObjectMetadata();
+
         while (resultSet.next()) {
 
             switch (rsmd.getColumnType(rowContentColumnIndex)) {
                 case Types.BINARY:
                 case Types.BLOB:
                 case Types.CLOB:
-                    ObjectMetadata binMetadata = new ObjectMetadata();
                     s3Client.putObject(bucketName, resultSet.getString(rowKeyColumnName), resultSet.getBinaryStream(rowContentColumnName), binMetadata);
-                    binMetadata = null;
                     break;
                 case Types.SQLXML:
                     throw new IllegalArgumentException("SQLXML Data Type is not supported. You should convert it to BLOB or CLOB");
@@ -156,15 +296,12 @@ public class S3Manager extends SqlManager {
         ResultSetMetaData rsmd = resultSet.getMetaData();
         int columnCount = rsmd.getColumnCount();
 
-        // Get sink properties
-        Properties s3Props = options.getSinkConnectionParams();
-
         // Set File Name.
         // It is not possible to append to an existing S3 file, ReplicaDB will generate one file per job
-        String keyFileName = s3Props.getProperty("csv.keyFileName");
-        //TODO comprobar que el nombre del fichero no es nulo
+        // renaming file name with the taskid
+        String keyFileName = csvKeyFileName;
         if (options.getJobs() > 1)
-            keyFileName = keyFileName + "_" + taskId;
+            keyFileName = keyFileName.substring(0, keyFileName.lastIndexOf(".")) + "_" + taskId + keyFileName.substring(keyFileName.lastIndexOf("."));
 
         // Setting up Streaming transfer
         int numStreams = 1;
@@ -180,15 +317,19 @@ public class S3Manager extends SqlManager {
             MultiPartOutputStream outputStream = streams.get(0);
 
             PrintWriter pw = new PrintWriter(outputStream, true);
+
             CsvWriter csvWriter = new CsvWriter();
             // Custom user csv options
-            setCsvWriterOptions(csvWriter);
+            if ((int) csvFieldSeparator != 0) csvWriter.setFieldSeparator(csvFieldSeparator);
+            if ((int) csvTextDelimiter != 0) csvWriter.setTextDelimiter(csvTextDelimiter);
+            if (csvLineDelimiter != null && !csvLineDelimiter.isEmpty() ) csvWriter.setLineDelimiter(csvLineDelimiter.toCharArray());
+            csvWriter.setAlwaysDelimitText(csvAlwaysDelimitText);
 
             // Write the CSV
             try (CsvAppender csvAppender = csvWriter.append(pw)) {
 
-                // headers, only in the first temporal file.
-                if (taskId == 0 && Boolean.parseBoolean(s3Props.getProperty("csv.Header"))) {
+                // Put headers in the file
+                if (isCsvHeader()) {
                     for (int i = 1; i <= columnCount; i++) {
                         csvAppender.appendField(rsmd.getColumnName(i));
                     }
@@ -220,7 +361,7 @@ public class S3Manager extends SqlManager {
             outputStream.close();
         } catch (Exception e) {
             // Aborts all uploads
-            manager.abort(e);
+            throw manager.abort(e);
         }
 
         // Finishing off
@@ -248,45 +389,6 @@ public class S3Manager extends SqlManager {
 
     @Override
     public void cleanUp() {/*Not implemented*/}
-
-
-    /**
-     * Retrieves and sets the custom options that define the CSV Writer
-     *
-     * @param writer
-     */
-    private void setCsvWriterOptions(CsvWriter writer) {
-        Properties csvProperties = options.getSinkConnectionParams();
-
-        String fieldSeparator, textDelimiter, lineDelimiter;
-
-        fieldSeparator = csvProperties.getProperty("csv.FieldSeparator");
-        textDelimiter = csvProperties.getProperty("csv.TextDelimiter");
-        lineDelimiter = csvProperties.getProperty("csv.LineDelimiter");
-        boolean alwaysDelimitText = Boolean.parseBoolean(csvProperties.getProperty("csv.AlwaysDelimitText"));
-
-        if (fieldSeparator != null && fieldSeparator.length() > 1)
-            throw new IllegalArgumentException("FieldSeparator must be a single char");
-
-        if (textDelimiter != null && textDelimiter.length() > 1)
-            throw new IllegalArgumentException("TextDelimiter must be a single char");
-
-        char charFieldSeparator, charTextDelimiter;
-
-        if (fieldSeparator != null && !fieldSeparator.isEmpty()) {
-            charFieldSeparator = fieldSeparator.charAt(0);
-            writer.setFieldSeparator(charFieldSeparator);
-        }
-        if (textDelimiter != null && !textDelimiter.isEmpty()) {
-            charTextDelimiter = textDelimiter.charAt(0);
-            writer.setTextDelimiter(charTextDelimiter);
-        }
-        if (lineDelimiter != null && !lineDelimiter.isEmpty()) {
-            writer.setLineDelimiter(lineDelimiter.toCharArray());
-        }
-
-        writer.setAlwaysDelimitText(alwaysDelimitText);
-    }
 
 
 }
