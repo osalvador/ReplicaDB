@@ -449,6 +449,8 @@ The s3 protocol is used in a URL that specifies the location of an Amazon S3 buc
 
 > S3 URI format: `s3://S3_endpoint[:port]/bucket_name/[bucket_subfolder]`
 
+Example:
+
 ```properties
 sink.connect=s3://s3.eu-west-3.amazonaws.com/replicadb/images
 
@@ -469,16 +471,11 @@ The purpose of this feature when `sink.connect.parameter.row.isObject = true` is
 
 Similarly, when `sink.connect.parameter.row.isObject = false` ReplicaDB will generate a single CSV file for all rows in the source table and upload it to AWS S3 in memory streaming, without intermediate files.
 
-The CSV file connector is [RFC 4180](http://tools.ietf.org/html/rfc4180) compliant whenever you disable the default escape with `--sink-disable-scape` as argument or on the `options-file`:
-
-```properties
-sink.disable.escape=true
-```
 
 <br>
 #### 4.5.1.1 One Object Per Row
 
-Para generar un objeto por cada fila de la tabla origen, es necesario establacer las sigueintes propiedades
+To generate an object for each row of the source table, it is necessary to set the following properties:
 
 ```properties
 # Each row is a different object in s3
@@ -495,11 +492,11 @@ mode=complete
 jobs=4
 
 ############################# Soruce Options #############################
-source.connect=jdbc:oracle:thin:@MY_DATABASE_SID
+source.connect=jdbc:oracle:thin:@host:port:sid
 source.user=orauser
 source.password=orapassword
-source.table=schema.table_name
-source.columns=refid || '.jpg' as key_column, image as content_column
+source.table=product_image
+source.columns=product_id || '.jpg' as key_column, image as content_column
 
 ############################# Sink Options #############################
 sink.connect=s3://s3.eu-west-3.amazonaws.com/replicadb/images
@@ -513,9 +510,23 @@ sink.connect.parameter.row.contentColumn=content_column
 
 ```
 
+The following objects will be generated in AWS S3:
+
+![AWS S3](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/AWS-S3-Screenshot.png){:class="img-responsive"}
+
 
 <br>
 #### 4.5.1.2 One CSV For All Rows
+
+
+
+
+The CSV file generated is [RFC 4180](http://tools.ietf.org/html/rfc4180) compliant whenever you disable the default escape with `--sink-disable-scape` as argument or on the `options-file`:
+
+```properties
+sink.disable.escape=true
+```
+
 
 <br>
 ### 4.5.2 Extra parameters
