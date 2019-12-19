@@ -9,7 +9,7 @@ homepage: true
 
 ReplicaDB is open source tool for database replication designed for efficiently transferring bulk data between relational and NoSQL databases.
 
-ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. Actualy, ReplicaDB works with Oracle, Postgres, SQL Server, Denodo, CSV and Kafka.
+ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. Actualy, ReplicaDB  works with Oracle, Postgres, SQL Server, Denodo, CSV on local files or on Amazon S3 and Kafka.
   
 ReplicaDB is **Cross Platform**; you can replicate data across different platforms, with compatibility for many databases. You can use **Parallel data transfer** for faster performance and optimal system utilization.
 
@@ -30,7 +30,7 @@ Because I have not found any tool that covers my needs:
 
 - Open Source.
 - Java based cross-platform solution.
-- Any database engine SQL, NoSQL or other persistent stores like CSV or Kafka. 
+- Any database engine SQL, NoSQL or other persistent stores like CSV, Amazon S3 or Kafka.
 - Simple architecture, just a command line tool that can run on any server (including my laptop), without any remote agents in the databases.
 - Good performance for a large amount of data. 
 - I do not need streaming replication, or a pure change data capture (CDC) system that requires installation in the source database.
@@ -118,7 +118,7 @@ $ replicadb --mode=complete -j=1 \
 | CSV             | <i class="far fa-times-circle"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
 | SQL Server             | <i class="far fa-check-circle text-success"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> |  
 | Kafka             | <i class="far fa-times-circle"></i> | N/A | <i class="far fa-check-circle text-success"></i> |  
-
+| Amazon S3       | <i class="far fa-times-circle"></i> | <i class="far fa-check-circle text-success"></i> | N/A |  
 
 # Contributing
   
