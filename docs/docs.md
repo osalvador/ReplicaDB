@@ -518,14 +518,51 @@ The following objects will be generated in AWS S3:
 <br>
 #### 4.5.1.2 One CSV For All Rows
 
+To generate an object for each row of the source table, it is necessary to set the following properties:
 
-
+```properties
+# Each row is a different object in s3
+sink.connect.parameter.row.isObject=true
+sink.connect.parameter.row.keyColumn=[The name of the source table column used as an object key in AWS S3]
+sink.connect.parameter.row.contentColumn=[the name of the source table column used as a payload objet of the object in AWS S3]
+```
 
 The CSV file generated is [RFC 4180](http://tools.ietf.org/html/rfc4180) compliant whenever you disable the default escape with `--sink-disable-scape` as argument or on the `options-file`:
 
 ```properties
 sink.disable.escape=true
 ```
+
+> **IMPORTANT**: To support multi-threaded execution and since it is not possible to append content to an existing AWS S3 file, ReplicaDB will generate one file per job, renaming each file with the taskid.
+
+Example: 
+
+```properties
+############################# ReplicadB Basics #############################
+mode=complete
+jobs=4
+
+############################# Soruce Options #############################
+source.connect=jdbc:oracle:thin:@host:port:sid
+source.user=orauser
+source.password=orapassword
+source.table=product_description
+
+############################# Sink Options #############################
+sink.connect=s3://s3.eu-west-3.amazonaws.com/replicadb/images
+sink.connect.parameter.accessKey=ASDFKLJHIOVNROIUNVSD                                 
+sink.connect.parameter.secretKey=naBMm7jVRyeE945m1jIIxMomoRM9rMCiEvVBtQe3
+
+# All rows are only one CSV object in s3
+sink.connect.parameter.csv.keyFileName=product_description.csv
+sink.disable.escape=true
+
+```
+
+The following objects will be generated in AWS S3:
+
+![AWS S3](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/AWS-S3-Screenshot.png){:class="img-responsive"}
+
 
 
 <br>
@@ -542,7 +579,7 @@ The Amazon S3 connector supports the following extra parameters that can only be
 | `secure-connection`     | Sets if the connection is secure using SSL (HTTPS)                                                           | `true`                                               |
 | `row.isObject`          | Sets whether each row in the source table is a different object in AWS S3                                    | `false`                                              |
 | `row.keyColumn`         | Sets the name of the column in the source table whose content will be used as objectKey (filename) in AWS S3  | Required when the `row.isObject = true`              |
-| `row.keyColumn`         | Sets the name of the column in the source table whose content will be the payload of the object in AWS S3    | Required when the `row.isObject = true`              |
+| `row.contentColumn`     | Sets the name of the column in the source table whose content will be the payload of the object in AWS S3    | Required when the `row.isObject = true`              |
 | `csv.keyFileName`       | Set the name of the target file or object key in AWS S3                                                       | Required when the `row.isObject = false`             |
 | `csv.FieldSeparator`    | Sets the field separator character                                                                            | `,`                                                  |
 | `csv.TextDelimiter`     | Sets a field enclosing character                                                                              | `"`                                                  |
