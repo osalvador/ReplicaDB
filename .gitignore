@@ -9,3 +9,7 @@ package-release.sh
 .project
 .classpath
 .factorypath
+ReplicaDB.srctrlbm
+ReplicaDB.srctrldb
+ReplicaDB.srctrlprj
+sourcetrail_dependencies/*
