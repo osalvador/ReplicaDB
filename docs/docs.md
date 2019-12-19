@@ -456,6 +456,8 @@ sink.connect=s3://s3.eu-west-3.amazonaws.com/replicadb/images
 
 Connecting to Amazon S3 requires *AccessKey* and *SecretKey* provided by your Amazon S3 account. These security keys are specified as additional parameters in the connection.
 
+You can use the AWS S3 connector on any system compatible with their API, such as [MinIO] (https://min.io/) or other cloud providers such as [Dreamhost](https://www.dreamhost.com/cloud/storage/), [Wasabi](https://wasabi.com/), [Dell EMC ECS Object Storage](https://www.dellemc.com/en-us/storage/ecs/index.htm)
+
 <br>
 ### 4.5.1 Row Object Creation Type
 
