@@ -372,9 +372,10 @@ source.connect.parameter.oracle.net.networkCompression=on
 
 ### 4.2.1 Oracle XMLType columns
 
-Oracle XMLType columns are LOBs that have a special treatment. To use these columns natively from Java you need to import the oracle libraries `xdb6` and `xmlparserv2`. In addition to that, in the ReplicaDB performance tests we have verified that there are memory leaks when treating this type of data.
+Oracle XMLType columns are LOBs that have a special treatment. To use these columns natively from Java you need to import the oracle libraries `xdb6` and `xmlparserv2`. In addition to that, in the ReplicaDB performance tests we have verified that there are memory leaks when treating this dataType. More about [Using JDBC to Access XML Documents in Oracle XML DB](https://docs.oracle.com/database/121/ADXDB/xdb11jav.htm#ADXDB4934)
 
-To avoid adding more libraries and memory leaks, we must convert the XMLType column to CLOB or BLOB in the SQL statement using the [`XMLSerialize`](https://docs.oracle.com/en/database/oracle/oracle-database/19/adxdb/generation-of-XML-data-from-relational-data.html#GUID-55FE9CED-5B25-4DA2-9F9E-921DF8276EB8) instruction.
+
+To avoid adding more libraries and memory leaks, we must convert the XMLType column to CLOB or BLOB in the SQL statement using the [`XMLSerialize` instruction.](https://docs.oracle.com/en/database/oracle/oracle-database/19/adxdb/generation-of-XML-data-from-relational-data.html#GUID-55FE9CED-5B25-4DA2-9F9E-921DF8276EB8) 
 
 
 **Example**
@@ -446,11 +447,11 @@ The s3 protocol is used in a URL that specifies the location of an Amazon S3 buc
 
 > S3 URI format: `s3://S3_endpoint[:port]/bucket_name/[bucket_subfolder]`
 
+<br>
 Example:
 
 ```properties
 sink.connect=s3://s3.eu-west-3.amazonaws.com/replicadb/images
-
 ```
 
 Connecting to Amazon S3 requires *AccessKey* and *SecretKey* provided by your Amazon S3 account. These security keys are specified as additional parameters in the connection.
