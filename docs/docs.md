@@ -19,7 +19,7 @@ layout: page
     - [4.1.1 Extra parameters](#411-extra-parameters)
     - [4.1.2 Replication Mode](#412-replication-mode)
   - [4.2 Oracle Connector](#42-oracle-connector)
-    - [4.2.1 Oracle BLOB, CLOB and XMLType columns](#421-oracle-blob-clob-and-xmltype-columns)
+    - [4.2.1 Oracle XMLType columns](#421-oracle-xmltype-columns)
   - [4.3 PostgreSQL Connector](#43-postgresql-connector)
   - [4.4 Denodo Connector](#44-denodo-connector)
   - [4.5 Amazon S3 Connector](#45-amazon-s3-connector)
@@ -370,15 +370,12 @@ source.connect.parameter.oracle.net.networkCompression=on
 
 ```
 
-### 4.2.1 Oracle BLOB, CLOB and XMLType columns
+### 4.2.1 Oracle XMLType columns
 
-ReplicaDB interprets all the columns as Stirng, in this way it simplifies the transformations between different systems, on the other hand it can sometimes suppose a problem (Encodings, date formats...).
+Oracle XMLType columns are LOBs that have a special treatment. To use these columns natively from Java you need to import the oracle libraries `xdb6` and `xmlparserv2`. In addition to that, in the ReplicaDB performance tests we have verified that there are memory leaks when treating this type of data.
 
-So you can replicate any column regardless of its type, as long as it can be interpreted as Stirng. For example, CLOB columns are compatible because the Oracle driver performs the transformation to String. In the case of the XMLType columns, we must perform the conversion in the sql statement, in the `source.query` parameter; for example with `t.xmldoc.getclobval () xmldoc`. For more information: [Oracle XMLType](https://docs.oracle.com/database/121/ARPLS/t_xml.htm#ARPLS71964)
+To avoid adding more libraries and memory leaks, we must convert the XMLType column to CLOB or BLOB in the SQL statement using the [`XMLSerialize`](https://docs.oracle.com/en/database/oracle/oracle-database/19/adxdb/generation-of-XML-data-from-relational-data.html#GUID-55FE9CED-5B25-4DA2-9F9E-921DF8276EB8) instruction.
 
-{::comment}
-El caso de las columnas BLOB tengo que probar.
-{:/comment}
 
 **Example**
 
@@ -391,7 +388,7 @@ jobs=4
 source.connect=jdbc:oracle:thin:@MY_DATABASE_SID
 source.user=orauser
 source.password=orapassword
-source.query=SELECT clob_column, T0.xml_column.getclobval() as xml_column FROM table as T0
+source.query=SELECT clob_column, XMLSerialize(DOCUMENT T0.xml_column AS BLOB) as xml_column FROM table as T0
 
 source.connect.parameter.oracle.net.tns_admin=${TNS_ADMIN}
 
