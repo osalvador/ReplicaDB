@@ -16,12 +16,17 @@ layout: page
   - [3.4 Free-form Query Replications](#34-free-form-query-replications)
 - [4. Notes for specific connectors](#4-notes-for-specific-connectors)
   - [4.1 CSV files Connector](#41-csv-files-connector)
-    - [4.1.2 Extra parameters](#412-extra-parameters)
-    - [4.1.3 Replication Mode](#413-replication-mode)
+    - [4.1.1 Extra parameters](#411-extra-parameters)
+    - [4.1.2 Replication Mode](#412-replication-mode)
   - [4.2 Oracle Connector](#42-oracle-connector)
     - [4.2.1 Oracle BLOB, CLOB and XMLType columns](#421-oracle-blob-clob-and-xmltype-columns)
   - [4.3 PostgreSQL Connector](#43-postgresql-connector)
   - [4.4 Denodo Connector](#44-denodo-connector)
+  - [4.5 Amazon S3 Connector](#45-amazon-s3-connector)
+    - [4.5.1 Row Object Creation Type](#451-row-object-creation-type)
+      - [4.5.1.1 One Object Per Row](#4511-one-object-per-row)
+      - [4.5.1.2 One CSV For All Rows](#4512-one-csv-for-all-rows)
+    - [4.5.2 Extra parameters](#452-extra-parameters)
 
 {::comment}
     3.7. Controlling transaction isolation
@@ -277,13 +282,13 @@ sink.disable.escape=true
 ```
 
 <br>
-### 4.1.2 Extra parameters
+### 4.1.1 Extra parameters
 
 The CSV connector supports the following extra parameters that can only be defined as extra connection parameters in the `options-file`:
 
 {:.table}
 
-| Argument            | Description                                                                                | Default |
+| Parameter           | Description                                                                                | Default |
 | ------------------- | ------------------------------------------------------------------------------------------ | ------- |
 | `FieldSeparator`    | Sets the field separator character                                                         | `,`     |
 | `TextDelimiter`     | Sets a field enclosing character                                                           | `"`     |
@@ -303,7 +308,7 @@ sink.connect.parameter.Header=false
 ```
 
 <br>
-### 4.1.3 Replication Mode
+### 4.1.2 Replication Mode
 
 Unlike in a database, the replication mode for a CSV file as sink has a slight difference:
 
@@ -433,4 +438,114 @@ source.password=vdbpassword
 source.table=schema.table_name
 
 source.connect.parameter.userAgent=ReplicaDB
+```
+
+<br>
+## 4.5 Amazon S3 Connector
+
+Amazon Simple Storage Service (Amazon S3) provides secure, durable, highly-scalable object storage. For information about Amazon S3, [see Amazon S3](https://aws.amazon.com/s3/).
+
+The s3 protocol is used in a URL that specifies the location of an Amazon S3 bucket and a prefix to use for writing files in the bucket.
+
+> S3 URI format: `s3://S3_endpoint[:port]/bucket_name/[bucket_subfolder]`
+
+```properties
+sink.connect=s3://s3.eu-west-3.amazonaws.com/replicadb/images
+
+```
+
+Connecting to Amazon S3 requires *AccessKey* and *SecretKey* provided by your Amazon S3 account. These security keys are specified as additional parameters in the connection.
+
+<br>
+### 4.5.1 Row Object Creation Type
+
+There are two ways to create objects in Amazon S3 through the connector:
+- Generate a single CSV file for all rows of a source table
+- Generate a binary object for each row of the source table
+
+The behavior is set through the `sink.connect.parameter.row.isObject` property where it can be `true` or `false`.
+
+The purpose of this feature when `sink.connect.parameter.row.isObject = true` is to be able to extract or replicate LOBs (Large Objects) from sources to single objects in AWS S3. Where for each row of the table the content of the LOB field (BLOB, CLOB, JSON, XMLTYPE, any ...) will be the payload of the object in AWS S3.
+
+Similarly, when `sink.connect.parameter.row.isObject = false` ReplicaDB will generate a single CSV file for all rows in the source table and upload it to AWS S3 in memory streaming, without intermediate files.
+
+The CSV file connector is [RFC 4180](http://tools.ietf.org/html/rfc4180) compliant whenever you disable the default escape with `--sink-disable-scape` as argument or on the `options-file`:
+
+```properties
+sink.disable.escape=true
+```
+
+<br>
+#### 4.5.1.1 One Object Per Row
+
+Para generar un objeto por cada fila de la tabla origen, es necesario establacer las sigueintes propiedades
+
+```properties
+# Each row is a different object in s3
+sink.connect.parameter.row.isObject=true
+sink.connect.parameter.row.keyColumn=[The name of the source table column used as an object key in AWS S3]
+sink.connect.parameter.row.contentColumn=[the name of the source table column used as a payload objet of the object in AWS S3]
+```
+
+Example: 
+
+```properties
+############################# ReplicadB Basics #############################
+mode=complete
+jobs=4
+
+############################# Soruce Options #############################
+source.connect=jdbc:oracle:thin:@MY_DATABASE_SID
+source.user=orauser
+source.password=orapassword
+source.table=schema.table_name
+source.columns=refid || '.jpg' as key_column, image as content_column
+
+############################# Sink Options #############################
+sink.connect=s3://s3.eu-west-3.amazonaws.com/replicadb/images
+sink.connect.parameter.accessKey=ASDFKLJHIOVNROIUNVSD                                 
+sink.connect.parameter.secretKey=naBMm7jVRyeE945m1jIIxMomoRM9rMCiEvVBtQe3
+
+# Each row is a different object in s3
+sink.connect.parameter.row.isObject=true
+sink.connect.parameter.row.keyColumn=key_column
+sink.connect.parameter.row.contentColumn=content_column
+
+```
+
+
+<br>
+#### 4.5.1.2 One CSV For All Rows
+
+<br>
+### 4.5.2 Extra parameters
+
+The Amazon S3 connector supports the following extra parameters that can only be defined as extra connection parameters in the `options-file`:
+
+{:.table}
+
+| Parameter               | Description                                                                                                  | Default                                              |
+|-------------------------|--------------------------------------------------------------------------------------------------------------|------------------------------------------------------|
+| `accessKey`             | AWS S3 Access Key ID to access the S3 bucket                                                                 | Required                                             |
+| `secretKey`             | AWS S3 Secret Access Key for the S3 Access Key ID to access the S3 bucket                                    | Required                                             |
+| `secure-connection`     | Sets if the connection is secure using SSL (HTTPS)                                                           | `true`                                               |
+| `row.isObject`          | Sets whether each row in the source table is a different object in AWS S3                                    | `false`                                              |
+| `row.keyColumn`         | Sets the name of the column in the source table whose content will be used as objectKey (filename) in AWS S3  | Required when the `row.isObject = true`              |
+| `row.keyColumn`         | Sets the name of the column in the source table whose content will be the payload of the object in AWS S3    | Required when the `row.isObject = true`              |
+| `csv.keyFileName`       | Set the name of the target file or object key in AWS S3                                                       | Required when the `row.isObject = false`             |
+| `csv.FieldSeparator`    | Sets the field separator character                                                                            | `,`                                                  |
+| `csv.TextDelimiter`     | Sets a field enclosing character                                                                              | `"`                                                  |
+| `csv.LineDelimiter`     | Sets the end-of-line character                                                                               | `\n`                                                 |
+| `csv.AlwaysDelimitText` | Sets whether the text should always be delimited                                                             | `false`                                              |
+| `csv.Header`            | Sets whether the first line of the file should be the header, with the names of the fields                      | `false`                                              |
+
+
+**Extra parameters with default values**
+
+```
+sink.connect.parameter.FieldSeparator=,
+sink.connect.parameter.TextDelimiter="
+sink.connect.parameter.LineDelimiter=\n
+sink.connect.parameter.AlwaysDelimitText=false
+sink.connect.parameter.Header=false
 ```
