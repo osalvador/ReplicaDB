@@ -510,6 +510,7 @@ sink.connect.parameter.row.contentColumn=content_column
 
 ```
 
+<br>
 The following objects will be generated in AWS S3:
 
 ![AWS S3](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/AWS-S3-Screenshot.png){:class="img-responsive"}
@@ -518,21 +519,21 @@ The following objects will be generated in AWS S3:
 <br>
 #### 4.5.1.2 One CSV For All Rows
 
-To generate an object for each row of the source table, it is necessary to set the following properties:
+To generate generate a single CSV file for all rows of a source table, it is necessary to set the following properties:
 
 ```properties
-# Each row is a different object in s3
-sink.connect.parameter.row.isObject=true
-sink.connect.parameter.row.keyColumn=[The name of the source table column used as an object key in AWS S3]
-sink.connect.parameter.row.contentColumn=[the name of the source table column used as a payload objet of the object in AWS S3]
+# All rows are only one CSV object in s3
+sink.connect.parameter.csv.keyFileName=[the full name of the target file or object key in AWS S3]
 ```
 
+<br>
 The CSV file generated is [RFC 4180](http://tools.ietf.org/html/rfc4180) compliant whenever you disable the default escape with `--sink-disable-scape` as argument or on the `options-file`:
 
 ```properties
 sink.disable.escape=true
 ```
 
+<br>
 > **IMPORTANT**: To support multi-threaded execution and since it is not possible to append content to an existing AWS S3 file, ReplicaDB will generate one file per job, renaming each file with the taskid.
 
 Example: 
@@ -559,10 +560,10 @@ sink.disable.escape=true
 
 ```
 
+<br>
 The following objects will be generated in AWS S3:
 
 ![AWS S3](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/AWS-S3-Screenshot-CSV.png){:class="img-responsive"}
-
 
 
 <br>
@@ -587,13 +588,3 @@ The Amazon S3 connector supports the following extra parameters that can only be
 | `csv.AlwaysDelimitText` | Sets whether the text should always be delimited                                                             | `false`                                              |
 | `csv.Header`            | Sets whether the first line of the file should be the header, with the names of the fields                      | `false`                                              |
 
-
-**Extra parameters with default values**
-
-```
-sink.connect.parameter.FieldSeparator=,
-sink.connect.parameter.TextDelimiter="
-sink.connect.parameter.LineDelimiter=\n
-sink.connect.parameter.AlwaysDelimitText=false
-sink.connect.parameter.Header=false
-```
