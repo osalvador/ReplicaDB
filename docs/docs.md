@@ -561,7 +561,7 @@ sink.disable.escape=true
 
 The following objects will be generated in AWS S3:
 
-![AWS S3](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/AWS-S3-Screenshot.png){:class="img-responsive"}
+![AWS S3](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/AWS-S3-Screenshot-CSV.png){:class="img-responsive"}
 
 
 
