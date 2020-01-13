@@ -169,7 +169,7 @@ public class PostgresqlManager extends SqlManager {
         // Read table with source-query option specified
         if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
             sqlCmd = "SELECT  * FROM (" +
-                    options.getSourceQuery() + ") OFFSET ? ";
+                    options.getSourceQuery() + ") as T1 OFFSET ? ";
         } else {
 
             sqlCmd = "SELECT " +
@@ -284,7 +284,7 @@ public class PostgresqlManager extends SqlManager {
 
             // Source Query
             if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
-                sql = sql + "( " + this.options.getSourceQuery() + " )";
+                sql = sql + "( " + this.options.getSourceQuery() + " ) as T1";
 
             } else {
 
