@@ -325,10 +325,10 @@ mode=complete
 jobs=4
 
 ############################# Soruce Options #############################
-sink.connect=jdbc:oracle:thin:@host:port:sid
-sink.user=orauser
-sink.password=orapassword
-sink.table=schema.table_name
+source.connect=jdbc:oracle:thin:@host:port:sid
+source.user=orauser
+source.password=orapassword
+source.table=schema.table_name
 
 ############################# Sink Options #############################
 ## Tab delimiter and windwos CRLF
