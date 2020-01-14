@@ -98,7 +98,7 @@ public class PostgresqlManager extends SqlManager {
                 if (this.options.isSinkDisableEscape())
                     row.append(cols.toString());
                 else
-                    row.append(cols.toString().replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r"));
+                    row.append(cols.toString().replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r").replace("\u0000", ""));
 
                 // Row ends with \n
                 row.append("\n");
