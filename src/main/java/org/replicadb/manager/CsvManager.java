@@ -1,19 +1,23 @@
 package org.replicadb.manager;
 
-import de.siegmar.fastcsv.writer.CsvAppender;
-import de.siegmar.fastcsv.writer.CsvWriter;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.csv.QuoteMode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.rowset.CsvCachedRowSetImpl;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.channels.FileChannel;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,6 +25,7 @@ import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.util.Properties;
 import java.util.Random;
 
@@ -30,6 +35,8 @@ public class CsvManager extends SqlManager {
 
     // String array with the paths of the temporal files
     private static String[] tempFilesPath;
+
+    private CsvCachedRowSetImpl csvResultset;
 
     /**
      * Constructs the SqlManager.
@@ -47,6 +54,197 @@ public class CsvManager extends SqlManager {
     protected Connection makeSinkConnection() {
         /*Not necessary for csv*/
         return null;
+    }
+
+    @Override
+    protected Connection makeSourceConnection() throws SQLException {
+        // Initialize the csvResultSet
+        try {
+            csvResultset = new CsvCachedRowSetImpl();
+
+            CSVFormat format = setCsvFormat(DataSourceType.SOURCE);
+            csvResultset.setCsvFormat(format);
+
+            csvResultset.setSourceFile(getFileFromPathString(options.getSourceConnect()));
+            csvResultset.setFetchSize(options.getFetchSize());
+
+            String columnsTypes = options.getSourceConnectionParams().getProperty("columns.types");
+            if (columnsTypes == null || columnsTypes.isEmpty())
+                throw new IllegalArgumentException("Parameter 'source.connect.parameter.columns.types' cannot be null");
+
+            csvResultset.setColumnsTypes(columnsTypes);
+
+            csvResultset.execute();
+
+        } catch (URISyntaxException | MalformedURLException e) {
+            throw new SQLException(e);
+        }
+        return null;
+    }
+
+    private CSVFormat setCsvFormat(DataSourceType dsType) {
+
+        Properties formatProperties;
+        CSVFormat csvFormat = CSVFormat.DEFAULT;
+
+        if (dsType == DataSourceType.SOURCE) {
+            formatProperties = options.getSourceConnectionParams();
+        } else {
+            formatProperties = options.getSinkConnectionParams();
+        }
+
+        // Predfined CSV Formats
+        String predefinedFormats = formatProperties.getProperty("format");
+        if (predefinedFormats != null && !predefinedFormats.isEmpty()) {
+            switch (predefinedFormats.toUpperCase().trim()) {
+                case "EXCEL":
+                    csvFormat = CSVFormat.EXCEL;
+                    LOG.debug("Setting the initial format to EXCEL");
+                    break;
+                case "INFORMIX_UNLOAD":
+                    csvFormat = CSVFormat.INFORMIX_UNLOAD;
+                    LOG.debug("Setting the initial format to INFORMIX_UNLOAD");
+                    break;
+                case "INFORMIX_UNLOAD_CSV":
+                    csvFormat = CSVFormat.INFORMIX_UNLOAD_CSV;
+                    LOG.debug("Setting the initial format to INFORMIX_UNLOAD_CSV");
+                    break;
+                case "MONGODB_CSV":
+                    csvFormat = CSVFormat.MONGODB_CSV;
+                    LOG.debug("Setting the initial format to MONGODB_CSV");
+                    break;
+                case "MONGODB_TSV":
+                    csvFormat = CSVFormat.MONGODB_TSV;
+                    LOG.debug("Setting the initial format to MONGODB_TSV");
+                    break;
+                case "MYSQL":
+                    csvFormat = CSVFormat.MYSQL;
+                    LOG.debug("Setting the initial format to MYSQL");
+                    break;
+                case "ORACLE":
+                    csvFormat = CSVFormat.ORACLE;
+                    LOG.debug("Setting the initial format to ORACLE");
+                    break;
+                case "POSTGRESQL_CSV":
+                    csvFormat = CSVFormat.POSTGRESQL_CSV;
+                    LOG.debug("Setting the initial format to POSTGRESQL_CSV");
+                    break;
+                case "POSTGRESQL_TEXT":
+                    csvFormat = CSVFormat.POSTGRESQL_TEXT;
+                    LOG.debug("Setting the initial format to POSTGRESQL_TEXT");
+                    break;
+                case "RFC4180":
+                    csvFormat = CSVFormat.RFC4180;
+                    LOG.debug("Setting the initial format to RFC4180");
+                    break;
+                case "TDF":
+                    csvFormat = CSVFormat.TDF;
+                    LOG.debug("Setting the initial format to TDF");
+                    break;
+                default:
+                    csvFormat = CSVFormat.DEFAULT;
+                    LOG.debug("Setting the initial format to DEFAULT");
+                    break;
+            }
+        }
+
+        // quoteMode
+        String quoteMode = formatProperties.getProperty("format.quoteMode");
+        if (quoteMode != null && !quoteMode.isEmpty()) {
+            switch (quoteMode.toUpperCase().trim()) {
+                case "ALL":
+                    csvFormat = csvFormat.withQuoteMode(QuoteMode.ALL);
+                    LOG.debug("Setting QuoteMode to ALL");
+                    break;
+                case "ALL_NON_NULL":
+                    csvFormat = csvFormat.withQuoteMode(QuoteMode.ALL_NON_NULL);
+                    LOG.debug("Setting QuoteMode to ALL_NON_NULL");
+                    break;
+                case "MINIMAL":
+                    csvFormat = csvFormat.withQuoteMode(QuoteMode.MINIMAL);
+                    LOG.debug("Setting QuoteMode to MINIMAL");
+                    break;
+                case "NON_NUMERIC":
+                    csvFormat = csvFormat.withQuoteMode(QuoteMode.NON_NUMERIC);
+                    LOG.debug("Setting QuoteMode to NON_NUMERIC");
+                    break;
+                case "NONE":
+                    csvFormat = csvFormat.withQuoteMode(QuoteMode.NONE);
+                    LOG.debug("Setting QuoteMode to NONE");
+                    break;
+            }
+        }
+
+        // Delimiter
+        String delimiter = formatProperties.getProperty("format.delimiter");
+        if (delimiter != null) {
+            if (delimiter.length() == 1) {
+                csvFormat = csvFormat.withDelimiter(delimiter.charAt(0));
+            } else {
+                throw new IllegalArgumentException("delimiter must be a single char");
+            }
+        }
+
+        // Escape
+        String escape = formatProperties.getProperty("format.escape");
+        if (escape != null) {
+            if (escape.length() == 1) {
+                csvFormat = csvFormat.withEscape(escape.charAt(0));
+            } else {
+                throw new IllegalArgumentException("escape must be a single char");
+            }
+        }
+
+        // quote
+        String quote = formatProperties.getProperty("format.quote");
+        if (quote != null) {
+            if (quote.length() == 1) {
+                csvFormat = csvFormat.withQuote(quote.charAt(0));
+            } else {
+                throw new IllegalArgumentException("quote must be a single char");
+            }
+        }
+
+        // recordSeparator
+        String recordSeparator = formatProperties.getProperty("format.recordSeparator");
+        if (recordSeparator != null && !recordSeparator.isEmpty()) {
+            csvFormat = csvFormat.withRecordSeparator(recordSeparator);
+        }
+
+        // nullString
+        String nullString = formatProperties.getProperty("format.nullString");
+        if (nullString != null && !nullString.isEmpty()) {
+            csvFormat = csvFormat.withNullString(nullString);
+        }
+
+        // skipHeaderRecord
+        String firstRecordAsHeader = formatProperties.getProperty("format.firstRecordAsHeader");
+        if (firstRecordAsHeader != null && !firstRecordAsHeader.isEmpty()) {
+            if (Boolean.parseBoolean(firstRecordAsHeader))
+                csvFormat = csvFormat.withFirstRecordAsHeader();
+        }
+
+        // ignoreEmptyLines
+        String ignoreEmptyLines = formatProperties.getProperty("format.ignoreEmptyLines");
+        if (ignoreEmptyLines != null && !ignoreEmptyLines.isEmpty()) {
+            csvFormat = csvFormat.withIgnoreEmptyLines(Boolean.parseBoolean(ignoreEmptyLines));
+        }
+
+        // ignoreSurroundingSpaces
+        String ignoreSurroundingSpaces = formatProperties.getProperty("format.ignoreSurroundingSpaces");
+        if (ignoreSurroundingSpaces != null && !ignoreSurroundingSpaces.isEmpty()) {
+            csvFormat = csvFormat.withIgnoreSurroundingSpaces(Boolean.parseBoolean(ignoreSurroundingSpaces));
+        }
+
+        // trim
+        String trim = formatProperties.getProperty("format.trim");
+        if (trim != null && !trim.isEmpty()) {
+            csvFormat = csvFormat.withTrim(Boolean.parseBoolean(trim));
+        }
+
+        LOG.debug("The final CSVFormat is: " + csvFormat);
+        return csvFormat;
+
     }
 
     @Override
@@ -74,86 +272,31 @@ public class CsvManager extends SqlManager {
 
         File file = getFileFromPathString(randomFileUrl);
 
-        CsvWriter csvWriter = new CsvWriter();
-        // Custom user csv options
-        setCsvWriterOptions(csvWriter);
+        // Set csv format
+        CSVFormat format = setCsvFormat(DataSourceType.SINK);
 
         // Write the CSV
-        try (CsvAppender csvAppender = csvWriter.append(file, StandardCharsets.UTF_8)) {
+        try (BufferedWriter out = Files.newBufferedWriter(file.toPath());
+             CSVPrinter printer = new CSVPrinter(out, format)) {
 
             // headers, only in the first temporal file.
-            if (taskId == 0 && Boolean.valueOf(options.getSinkConnectionParams().getProperty("Header"))) {
-                for (int i = 1; i <= columnsNumber; i++) {
-                    csvAppender.appendField(rsmd.getColumnName(i));
+            if (taskId == 0 && format.getSkipHeaderRecord() ) {
+                String[] allColumns = getAllSinkColumns(rsmd).split(",");
+                for (int i = 0; i < columnsNumber; i++) {
+                    printer.print(allColumns[i]);
                 }
-                csvAppender.endLine();
+                printer.println();
             }
-
-            String colValue;
-            String[] colValues;
-
-            // lines
-            while (resultSet.next()) {
-                colValues = new String[columnsNumber];
-
-                // Iterate over the columns of the row
-                for (int i = 1; i <= columnsNumber; i++) {
-                    colValue = resultSet.getString(i);
-
-                    if (!this.options.isSinkDisableEscape() && !resultSet.wasNull())
-                        colValues[i - 1] = colValue.replace("\n", "\\n").replace("\r", "\\r");
-                    else
-                        colValues[i - 1] = colValue;
-                }
-                csvAppender.appendLine(colValues);
-            }
+            printer.printRecords(resultSet);
         }
 
         return 0;
     }
 
-    /**
-     * Retrieves and sets the custom options that define the CSV Writer
-     *
-     * @param writer
-     */
-    private void setCsvWriterOptions(CsvWriter writer) {
-        Properties fileProperties = options.getSinkConnectionParams();
 
-        // Header option is not supported on incremental mode
-        if (Boolean.valueOf(options.getSinkConnectionParams().getProperty("Header"))
-                && options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
-            throw new IllegalArgumentException("Header option is not supported on incremental mode");
-        }
-
-        String fieldSeparator, textDelimiter, lineDelimiter;
-
-        fieldSeparator = fileProperties.getProperty("FieldSeparator");
-        textDelimiter = fileProperties.getProperty("TextDelimiter");
-        lineDelimiter = fileProperties.getProperty("LineDelimiter");
-        boolean alwaysDelimitText = Boolean.valueOf(fileProperties.getProperty("AlwaysDelimitText"));
-
-        if (fieldSeparator != null && fieldSeparator.length() > 1)
-            throw new IllegalArgumentException("FieldSeparator must be a single char");
-
-        if (textDelimiter != null && textDelimiter.length() > 1)
-            throw new IllegalArgumentException("TextDelimiter must be a single char");
-
-        char charFieldSeparator, charTextDelimiter;
-
-        if (fieldSeparator != null && !fieldSeparator.isEmpty()) {
-            charFieldSeparator = fieldSeparator.charAt(0);
-            writer.setFieldSeparator(charFieldSeparator);
-        }
-        if (textDelimiter != null && !textDelimiter.isEmpty()) {
-            charTextDelimiter = textDelimiter.charAt(0);
-            writer.setTextDelimiter(charTextDelimiter);
-        }
-        if (lineDelimiter != null && !lineDelimiter.isEmpty()) {
-            writer.setLineDelimiter(lineDelimiter.toCharArray());
-        }
-
-        writer.setAlwaysDelimitText(alwaysDelimitText);
+    @Override
+    public ResultSet readTable(String tableName, String[] columns, int nThread) throws SQLException {
+        return this.csvResultset;
     }
 
 
@@ -198,12 +341,17 @@ public class CsvManager extends SqlManager {
 
     }
 
-    @Override
-    public void preSourceTasks() {/*Not implemented*/}
 
     @Override
     public void postSourceTasks() {/*Not implemented*/}
 
+    @Override
+    public void preSourceTasks() {
+
+        if (options.getJobs() > 1)
+            throw new IllegalArgumentException("Only one job is allowed when reading from a file. Jobs parameter must be set to 1. jobs=1");
+
+    }
 
     @Override
     public void postSinkTasks() throws Exception {
