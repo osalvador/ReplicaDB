@@ -60,6 +60,7 @@ ReplicaDB implements two replication modes: `complete` and` incremental`. The ma
     - Copy the data in parallel from the source table to the sink table.
 
 <br>
+
 - The `incremental` mode performs an incremental replication of the data from the source table to the sink table. In the `incremental` mode, the` INSERT or UPDATE` or `UPSERT` technique is used in the sink table. To do this and to allow the copy of the data in parallel, it is necessary to create a staging table in the sink database. ReplicaDB will perform the following actions in an `incremental` replication:
 
     - Automatically create the staging table in the sink database.
@@ -263,9 +264,24 @@ $ replicadb --source-query 'SELECT a.*, b.* FROM a JOIN b on (a.id == b.id)'
 <br>
 ## 4.1 CSV files Connector
 
-To define a CSV file as a sink, set the `sink-connect` parameter to `file:/...`.
+The CSV File Connector uses the [Apache Commons CSV](https://commons.apache.org/proper/commons-csv/) library for read and write the CSV files.
+
+To define a CSV file, set the `sink-connect` parameter to `file:/...`.
 
 ```properties
+############################# Source Options #############################
+# Windows Paths
+source.connect=file:/C:/Users/osalvador/Downloads/file.csv
+## or
+source.connect=file://C:\\Users\\osalvador\\Downloads\\file.csv
+
+# Unix Paths
+source.connect=file:///Users/osalvador/Downloads/file.csv
+
+source.columns=id, name, born
+source.connect.parameter.columns.types=integer, varchar, date
+
+############################# Sink Options #############################
 # Windows Paths
 sink.connect=file:/C:/Users/osalvador/Downloads/file.csv
 ## or
@@ -275,11 +291,9 @@ sink.connect=file://C:\\Users\\osalvador\\Downloads\\file.csv
 sink.connect=file:///Users/osalvador/Downloads/file.csv
 ```
 
-The CSV file connector is [RFC 4180](http://tools.ietf.org/html/rfc4180) compliant whenever you disable the default escape with `--sink-disable-scape` as argument or on the `options-file`:
 
-```properties
-sink.disable.escape=true
-```
+Thanks to Apache Commons CSV you can read or write CSV files in several predefined formats or customize yours with the available parameters. 
+
 
 <br>
 ### 4.1.1 Extra parameters
