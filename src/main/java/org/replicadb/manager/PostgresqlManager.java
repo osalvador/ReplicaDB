@@ -20,7 +20,7 @@ public class PostgresqlManager extends SqlManager {
 
     private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
 
-    private static Long chunkSize;
+    private static Long chunkSize = 0L;
 
     /**
      * Constructs the SqlManager.
@@ -271,43 +271,46 @@ public class PostgresqlManager extends SqlManager {
     @Override
     public void preSourceTasks() throws SQLException {
 
-        /**
-         * Calculating the chunk size for parallel job processing
-         */
-        Statement statement = this.getConnection().createStatement();
+        if (this.options.getJobs() != 1) {
 
-        try {
-            String sql = "SELECT " +
-                    " abs(count(*) / " + options.getJobs() + ") chunk_size" +
-                    ", count(*) total_rows" +
-                    " FROM ";
+            /**
+             * Calculating the chunk size for parallel job processing
+             */
+            Statement statement = this.getConnection().createStatement();
 
-            // Source Query
-            if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
-                sql = sql + "( " + this.options.getSourceQuery() + " ) as T1";
+            try {
+                String sql = "SELECT " +
+                        " abs(count(*) / " + options.getJobs() + ") chunk_size" +
+                        ", count(*) total_rows" +
+                        " FROM ";
 
-            } else {
+                // Source Query
+                if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
+                    sql = sql + "( " + this.options.getSourceQuery() + " ) as T1";
 
-                sql = sql + this.options.getSourceTable();
-                // Source Where
-                if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
-                    sql = sql + " WHERE " + options.getSourceWhere();
+                } else {
+
+                    sql = sql + this.options.getSourceTable();
+                    // Source Where
+                    if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
+                        sql = sql + " WHERE " + options.getSourceWhere();
+                    }
                 }
+
+                LOG.debug("Calculating the chunks size with this sql: " + sql);
+                ResultSet rs = statement.executeQuery(sql);
+                rs.next();
+                chunkSize = rs.getLong(1);
+                long totalNumberRows = rs.getLong(2);
+                LOG.debug("chunkSize: " + chunkSize + " totalNumberRows: " + totalNumberRows);
+
+                statement.close();
+                this.getConnection().commit();
+            } catch (Exception e) {
+                statement.close();
+                this.connection.rollback();
+                throw e;
             }
-
-            LOG.debug("Calculating the chunks size with this sql: " + sql);
-            ResultSet rs = statement.executeQuery(sql);
-            rs.next();
-            chunkSize = rs.getLong(1);
-            long totalNumberRows = rs.getLong(2);
-            LOG.debug("chunkSize: " + chunkSize + " totalNumberRows: " + totalNumberRows);
-
-            statement.close();
-            this.getConnection().commit();
-        } catch (Exception e) {
-            statement.close();
-            this.connection.rollback();
-            throw e;
         }
 
     }
