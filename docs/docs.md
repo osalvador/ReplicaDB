@@ -17,7 +17,7 @@ layout: page
 - [4. Notes for specific connectors](#4-notes-for-specific-connectors)
   - [4.1 CSV files Connector](#41-csv-files-connector)
     - [4.1.1 CSV File as Source](#411-csv-file-as-source)
-    - [4.1.2 Supported Data Types for columns in CSV file as Source](#412-supported-data-types-for-columns-in-csv-file-as-source)
+    - [4.1.2 Supported Data Types for CSV file as Source](#412-supported-data-types-for-csv-file-as-source)
     - [4.1.3 Predefined CSV Formats](#413-predefined-csv-formats)
     - [4.1.4 Predefined Quote Modes](#414-predefined-quote-modes)
     - [4.1.5 Extra parameters](#415-extra-parameters)
@@ -293,7 +293,7 @@ sink.connect=file://C:\\Users\\osalvador\\Downloads\\file.csv
 sink.connect=file:///Users/osalvador/Downloads/file.csv
 ```
 
-By default the format of the CSV File as source or sink is the `DEFAULT` predefined format: 
+By default the format of the CSV File is the `DEFAULT` predefined format: 
 
 ```properties
     delimiter=,
@@ -308,16 +308,18 @@ By default the format of the CSV File as source or sink is the `DEFAULT` predefi
 <br>
 ### 4.1.1 CSV File as Source
 
-Cuando se define un fichefro CSV como fuente, debe tener en cuenta que el parametro `columns.types` es obligatorio. 
+When defining a CSV file as a Source, you should note that the `columns.types` parameter is required. 
 
-This parameter defines the format of the columns in the CSV file. This should include a comma-delimited list of columns data types and **the exact number of columns in the CSV file**. For example: `source.connect.parameter.columns.types=integer,varchar,date`
+This parameter defines the format of the columns in the CSV file. This should include a comma-delimited list of columns data types and **the exact number of columns in the CSV file**.
+
+For example, you set the parameter with `source.connect.parameter.columns.types=integer,varchar,date` for a CSV File with 3 columns.
 
 <br>
-### 4.1.2 Supported Data Types for columns in CSV file as Source
+### 4.1.2 Supported Data Types for CSV file as Source
 
 You can read all columns in the CSV file as `VARCHAR` and ReplicaDB will store them in a `String`. But, if you want to make a standard parsing of your data, you should define the correct data type of your column. 
 
-**CSV supported data Types Mapped to Java Types and the parser used**
+**CSV supported data Types Mapped to Java Types**
 
 {:.table}
 
@@ -550,7 +552,7 @@ Settings are:
 <br>
 ### 4.1.4 Predefined Quote Modes
 
-You can set a predefined quote mode policy when writting a CSV File as source or sink. To define a quote mode, set the `format.quoteMode` extra parameter to any of these available formats: `ALL`, `ALL_NON_NULL`, `MINIMAL`, `NON_NUMERIC`, `NONE`.
+You can set a predefined quote mode policy when writting a CSV File as sink. To define a quote mode, set the `format.quoteMode` extra parameter to any of these available formats: `ALL`, `ALL_NON_NULL`, `MINIMAL`, `NON_NUMERIC`, `NONE`.
 
 {:.table}
 
