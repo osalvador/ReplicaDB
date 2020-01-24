@@ -12,7 +12,7 @@ public class DenodoManager extends SqlManager {
 
     private static final Logger LOG = LogManager.getLogger(DenodoManager.class.getName());
 
-    private static Long chunkSize;
+    private static Long chunkSize = 0L;
 
     /**
      * Constructs the SqlManager.
@@ -46,6 +46,7 @@ public class DenodoManager extends SqlManager {
 
     /**
      * Denodo needs AutoCommit attribute set to true.
+     *
      * @return
      */
     @Override
@@ -100,39 +101,40 @@ public class DenodoManager extends SqlManager {
     @Override
     public void preSourceTasks() throws SQLException {
 
-        /**
-         * Calculating the chunk size for parallel job processing
-         */
+        // Only calculate the chunk size when parallel execution is active
+        if (this.options.getJobs() != 1) {
+            /**
+             * Calculating the chunk size for parallel job processing
+             */
+            Statement statement = this.getConnection().createStatement();
+            String sql = "SELECT " +
+                    " abs(count(*) / " + options.getJobs() + ") chunk_size" +
+                    ", count(*) total_rows" +
+                    " FROM ";
 
-        Statement statement = this.getConnection().createStatement();
-        String sql = "SELECT " +
-                " abs(count(*) / " + options.getJobs() + ") chunk_size" +
-                ", count(*) total_rows" +
-                " FROM ";
+            // Source Query
+            if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
+                sql = sql + "( " + this.options.getSourceQuery() + " )";
 
-        // Source Query
-        if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
-            sql = sql + "( " + this.options.getSourceQuery() + " )";
+            } else {
 
-        } else {
-
-            sql = sql + this.options.getSourceTable();
-            // Source Where
-            if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
-                sql = sql + " WHERE " + options.getSourceWhere();
+                sql = sql + this.options.getSourceTable();
+                // Source Where
+                if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
+                    sql = sql + " WHERE " + options.getSourceWhere();
+                }
             }
+
+            LOG.debug("Calculating the chunks size with this sql: " + sql);
+            ResultSet rs = statement.executeQuery(sql);
+            rs.next();
+            chunkSize = rs.getLong(1);
+            long totalNumberRows = rs.getLong(2);
+            LOG.debug("chunkSize: " + chunkSize + " totalNumberRows: " + totalNumberRows);
+
+            statement.close();
+            this.getConnection().commit();
         }
-
-        LOG.debug("Calculating the chunks size with this sql: " + sql);
-        ResultSet rs = statement.executeQuery(sql);
-        rs.next();
-        chunkSize = rs.getLong(1);
-        long totalNumberRows = rs.getLong(2);
-        LOG.debug("chunkSize: " + chunkSize + " totalNumberRows: " + totalNumberRows);
-
-        statement.close();
-        this.getConnection().commit();
-
     }
 
     @Override
