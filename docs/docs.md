@@ -21,18 +21,6 @@ layout: page
     - [Custom Boolean Parser](#custom-boolean-parser)
     - [4.1.X Predefined CSV Formats](#41x-predefined-csv-formats)
       - [Available Predefined Formats](#available-predefined-formats)
-        - [DEFAULT](#default)
-        - [EXCEL](#excel)
-        - [INFORMIX_UNLOAD](#informixunload)
-        - [INFORMIX_UNLOAD_CSV](#informixunloadcsv)
-        - [MONGO_CSV](#mongocsv)
-        - [MONGODB_TSV](#mongodbtsv)
-        - [MYSQL](#mysql)
-        - [ORACLE](#oracle)
-        - [POSTGRESQL_CSV](#postgresqlcsv)
-        - [POSTGRESQL_TEXT](#postgresqltext)
-        - [RFC4180](#rfc4180)
-        - [TDF](#tdf)
     - [4.1.X Predefined Quote Modes](#41x-predefined-quote-modes)
     - [4.1.1 Extra parameters](#411-extra-parameters)
     - [4.1.2 Replication Mode](#412-replication-mode)
@@ -331,6 +319,8 @@ You can read all columns in the CSV file as `VARCHAR` and ReplicaDB will store t
 
 CSV supported data Types Mapped to Java Types and the parser used: 
 
+{:.table}
+
 | CSV Data Type | Java Type            | Parser | 
 |---------------|----------------------| -- | 
 | `VARCHAR`     | `String`               |  | 
@@ -368,7 +358,7 @@ source.connect.parameter.format=RFC4180
 
 #### Available Predefined Formats
 
-##### DEFAULT
+**DEFAULT**
 
 Standard Comma Separated Value format, as for RFC4180 but allowing empty lines.
 
@@ -381,7 +371,7 @@ Settings are:
     IgnoreEmptyLines=true
 ```
 
-##### EXCEL
+**EXCEL**
 
 The Microsoft Excel CSV format.
 
@@ -401,7 +391,7 @@ Settings are:
 > Note: This is currently like RFC4180 plus withAllowMissingColumnNames(true) and withIgnoreEmptyLines(false).
 
 
-##### INFORMIX_UNLOAD
+**INFORMIX_UNLOAD**
 
 Informix UNLOAD format used by the `UNLOAD TO file_name` operation.
 
@@ -416,7 +406,7 @@ Settings are:
     RecordSeparator=\n
 ```
 
-##### INFORMIX_UNLOAD_CSV
+**INFORMIX_UNLOAD_CSV**
 
 Informix CSV UNLOAD format used by the `UNLOAD TO file_name` operation (escaping is disabled.)
 
@@ -430,7 +420,7 @@ Settings are:
     RecordSeparator=\n
 ```
 
-##### MONGO_CSV
+**MONGO_CSV**
 
 MongoDB CSV format used by the `mongoexport` operation.
 
@@ -448,7 +438,7 @@ Settings are:
     SkipHeaderRecord=false
 ```
 
-##### MONGODB_TSV
+**MONGODB_TSV**
 
 Default MongoDB TSV format used by the `mongoexport` operation.
 
@@ -466,7 +456,7 @@ Settings are:
     SkipHeaderRecord=false
 ```
 
-##### MYSQL
+**MYSQL**
 
 Default MySQL format used by the `SELECT INTO OUTFILE` and `LOAD DATA INFILE` operations.
 
@@ -484,7 +474,7 @@ Settings are:
     QuoteMode=ALL_NON_NULL
 ```
 
-##### ORACLE
+**ORACLE**
 
 Default Oracle format used by the SQL*Loader utility.
 
@@ -502,7 +492,7 @@ Settings are:
     QuoteMode=MINIMAL
 ```
 
-##### POSTGRESQL_CSV
+**POSTGRESQL_CSV**
 
 Default PostgreSQL CSV format used by the `COPY` operation.
 
@@ -520,7 +510,7 @@ Settings are:
     QuoteMode=ALL_NON_NULL
 ```
 
-##### POSTGRESQL_TEXT
+**POSTGRESQL_TEXT**
 
 Default PostgreSQL text format used by the `COPY` operation.
 
@@ -538,7 +528,7 @@ Settings are:
     QuoteMode=ALL_NON_NULL
 ```
 
-##### RFC4180
+**RFC4180**
 
 The RFC-4180 format defined by [RFC-4180](https://tools.ietf.org/html/rfc4180).
 
@@ -552,7 +542,7 @@ Settings are:
 ```
 
 
-##### TDF
+**TDF**
 
 A tab delimited format.
 
@@ -570,6 +560,8 @@ Settings are:
 
 You can set a predefined quote mode reading or writting a CSV File as source or sink. To define a quote mode, set the `format.quoteMode` extra parameter to any of these available formats: `ALL`, `ALL_NON_NULL`, `MINIMAL`, `NON_NUMERIC`, `NONE`.
 
+{:.table}
+
 | Name           | Description                                                                                                                                          |
 |----------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `ALL`          | Quotes all fields.                                                                                                                                   |
@@ -586,20 +578,20 @@ The CSV connector supports the following extra parameters that can only be defin
 
 {:.table}
 
-| Parameter                        | Description                                                                                |
-|----------------------------------|--------------------------------------------------------------------------------------------|
-| `columns.types`                  | Sets the columns data types. This parameter is required for Source CSV Files.              |
-| `format`                         | Sets the base predefined CSV format.                                                         |
-| `format.delimiter`               | Sets a field enclosing character                                                            |
-| `format.escape`                  | Sets the end-of-line character                                                             |
-| `format.quote`                   | Sets whether the text should always be delimited                                           |
-| `format.recordSeparator`         | Sets whether the first line of the file should be the header, with the names of the fields    |
-| `format.firstRecordAsHeader`     | Sets the field separator character                                                           |
-| `format.ignoreEmptyLines`        | Sets a field enclosing character                                                            |
-| `format.nullString`              | Sets the end-of-line character                                                             |
-| `format.ignoreSurroundingSpaces` | Sets whether the text should always be delimited                                           |
-| `format.quoteMode`               | Sets whether the first line of the file should be the header, with the names of the fields   
-| `format.trim`                    | Sets whether the first line of the file should be the header, with the names of the fields  |
+| Parameter                        | Description                                                                                | Default |
+|----------------------------------|--------------------------------------------------------------------------------------------| ------- | 
+| `columns.types`                  | Sets the columns data types. This parameter is required for Source CSV Files              | |
+| `format`                         | Sets the base predefined CSV format                                                        | `DEFAULT` |
+| `format.delimiter`               | Sets the field delimiter character                                                          | `,`|
+| `format.escape`                  | Sets the escape character                                                                  | |
+| `format.quote`                   | Sets the quoteChar character                                                               | `"` |
+| `format.recordSeparator`         | Sets the end-of-line character. This parameter only take effect on Snik CSV Files         | |
+| `format.firstRecordAsHeader`      | Sets whether the first line of the file should be the header, with the names of the fields    | `false` |
+| `format.ignoreEmptyLines`        | Sets whether empty lines between records are ignored om Source CSV Files.                  | `true` |
+| `format.nullString`              | Sets the end-of-line character                                                             | |
+| `format.ignoreSurroundingSpaces` | Sets whether the text should always be delimited                                           | |
+| `format.quoteMode`               | Sets whether the first line of the file should be the header, with the names of the fields   | |
+| `format.trim`                    | Sets whether the first line of the file should be the header, with the names of the fields  | |
 
 **Extra parameters with default values**
 
