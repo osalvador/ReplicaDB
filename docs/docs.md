@@ -303,8 +303,11 @@ By default the format of the CSV File as source or sink is the `DEFAULT` predefi
     recordSeparator=\r\n
     ignoreEmptyLines=true
 ```
-
+<br>
 > Note: The format is taken as the base format, you can modify any of its attributes by setting the rest parameters. 
+
+
+<br>
 
 ### 4.1.X CSV File as Source
 
@@ -365,10 +368,10 @@ Standard Comma Separated Value format, as for RFC4180 but allowing empty lines.
 Settings are:
 
 ```properties
-    Delimiter=,
-    Quote="
-    RecordSeparator=\r\n
-    IgnoreEmptyLines=true
+    delimiter=,
+    quote="
+    recordSeparator=\r\n
+    ignoreEmptyLines=true
 ```
 
 **EXCEL**
@@ -380,80 +383,69 @@ Excel file format (using a comma as the value delimiter). Note that the actual v
 Settings are:
 
 ```properties
-    Delimiter=,
-    Quote="
-    RecordSeparator=\r\n
-    IgnoreEmptyLines=false
-    AllowMissingColumnNames=true
-    AllowDuplicateHeaderNames=true
+    delimiter=,
+    quote="
+    recordSeparator=\r\n
+    ignoreEmptyLines=false
 ```
-
-> Note: This is currently like RFC4180 plus withAllowMissingColumnNames(true) and withIgnoreEmptyLines(false).
-
 
 **INFORMIX_UNLOAD**
 
 Informix UNLOAD format used by the `UNLOAD TO file_name` operation.
 
-This is a comma-delimited format with a LF character as the line separator. Values are not quoted and special characters are escaped with `\`. The default NULL string is `\N`.
+This is a comma-delimited format with a LF character as the line separator. Values are not quoted and special characters are escaped with `\`.
 
 Settings are:
 
 ```properties
-    Delimiter=,
-    Escape=\\
-    Quote="
-    RecordSeparator=\n
+    delimiter=,
+    escape=\\
+    quote="
+    recordSeparator=\n
 ```
 
 **INFORMIX_UNLOAD_CSV**
 
 Informix CSV UNLOAD format used by the `UNLOAD TO file_name` operation (escaping is disabled.)
 
-This is a comma-delimited format with a LF character as the line separator. Values are not quoted and special characters are escaped with `\`. The default NULL string is `\N`.
+This is a comma-delimited format with a LF character as the line separator. Values are not quoted and special characters are escaped with `\`.
 
 Settings are:
 
-```
-    Delimiter=,
-    Quote="
-    RecordSeparator=\n
+```properties
+    delimiter=,
+    quote="
+    recordSeparator=\n
 ```
 
 **MONGO_CSV**
 
 MongoDB CSV format used by the `mongoexport` operation.
 
-**Parsing is not supported yet.**??
-
 This is a comma-delimited format. Values are double quoted only if needed and special characters are escaped with `"`. A header line with field names is expected.
 
 Settings are:
 
 ```properties
-    Delimiter=,
-    Escape="
-    Quote="
-    QuoteMode=ALL_NON_NULL
-    SkipHeaderRecord=false
+    delimiter=,
+    escape="
+    quote="
+    quoteMode=ALL_NON_NULL
 ```
 
 **MONGODB_TSV**
 
 Default MongoDB TSV format used by the `mongoexport` operation.
 
-**Parsing is not supported yet.**
-
 This is a tab-delimited format. Values are double quoted only if needed and special characters are escaped with `"`. A header line with field names is expected.
 
 Settings are:
 
 ```properties
-    Delimiter=\t
-    Escape="
-    Quote="
-    QuoteMode=ALL_NON_NULL
-    SkipHeaderRecord=false
+    delimiter=\t
+    escape="
+    quote="
+    quoteMode=ALL_NON_NULL
 ```
 
 **MYSQL**
@@ -465,31 +457,31 @@ This is a tab-delimited format with a LF character as the line separator. Values
 Settings are:
 
 ```properties
-    Delimiter=\t
-    Escape=\\
-    IgnoreEmptyLines=false
-    Quote=null
-    RecordSeparator=\n
-    NullString=\N
-    QuoteMode=ALL_NON_NULL
+    delimiter=\t
+    escape=\\
+    ignoreEmptyLines=false
+    quote=null
+    recordSeparator=\n
+    nullString=\N
+    quoteMode=ALL_NON_NULL
 ```
 
 **ORACLE**
 
 Default Oracle format used by the SQL*Loader utility.
 
-This is a comma-delimited format with the system line separator character as the record separator. Values are double quoted when needed and special characters are escaped with `"`. The default NULL string is "". Values are trimmed.
+This is a comma-delimited format with the system line separator character as the record separator. Values are double quoted when needed and special characters are escaped with `"`. The default NULL string is `""`. Values are trimmed.
 
 Settings are:
 
 ```properties
-    Delimiter=,
-    Escape=\\
-    IgnoreEmptyLines=false    
-    Quote="
-    NullString=\N
-    Trim=true    
-    QuoteMode=MINIMAL
+    delimiter=,
+    escape=\\
+    ignoreEmptyLines=false    
+    quote="
+    nullString=""
+    trim=true    
+    quoteMode=MINIMAL
 ```
 
 **POSTGRESQL_CSV**
@@ -501,13 +493,13 @@ This is a comma-delimited format with a LF character as the line separator. Valu
 Settings are:
 
 ```properties
-    Delimiter=,
-    Escape="
-    IgnoreEmptyLines=false
-    Quote="
-    RecordSeparator=\n
-    NullString=""
-    QuoteMode=ALL_NON_NULL
+    delimiter=,
+    escape="
+    ignoreEmptyLines=false
+    quote="
+    recordSeparator=\n
+    nullString=""
+    quoteMode=ALL_NON_NULL
 ```
 
 **POSTGRESQL_TEXT**
@@ -519,13 +511,13 @@ This is a tab-delimited format with a LF character as the line separator. Values
 Settings are:
 
 ```properties
-    Delimiter=\t
-    Escape=\\
-    IgnoreEmptyLines=false
-    Quote="
-    RecordSeparator=\n
-    NullString=\\N
-    QuoteMode=ALL_NON_NULL
+    delimiter=\t
+    escape=\\
+    ignoreEmptyLines=false
+    quote="
+    recordSeparator=\n
+    nullString=\\N
+    quoteMode=ALL_NON_NULL
 ```
 
 **RFC4180**
@@ -535,10 +527,10 @@ The RFC-4180 format defined by [RFC-4180](https://tools.ietf.org/html/rfc4180).
 Settings are:
 
 ```properties
-    Delimiter=,
-    Quote="
-    RecordSeparator=\r\n
-    IgnoreEmptyLines=false
+    delimiter=,
+    quote="
+    recordSeparator=\r\n
+    ignoreEmptyLines=false
 ```
 
 
@@ -549,10 +541,10 @@ A tab delimited format.
 Settings are:
 
 ```properties
-    Delimiter=\t
-    Quote="
-    RecordSeparator=\r\n
-    IgnoreSurroundingSpaces=true
+    delimiter=\t
+    quote="
+    recordSeparator=\r\n
+    ignoreSurroundingSpaces=true
 ```
 
 
@@ -593,14 +585,39 @@ The CSV connector supports the following extra parameters that can only be defin
 | `format.quoteMode`               | Sets whether the first line of the file should be the header, with the names of the fields   | |
 | `format.trim`                    | Sets whether the first line of the file should be the header, with the names of the fields  | |
 
-**Extra parameters with default values**
+**Complete Example for CSV File as Source and Sink**
 
-```
-sink.connect.parameter.FieldSeparator=,
-sink.connect.parameter.TextDelimiter="
-sink.connect.parameter.LineDelimiter=\n
-sink.connect.parameter.AlwaysDelimitText=false
-sink.connect.parameter.Header=false
+```properties
+############################# ReplicadB Basics #############################
+mode=complete
+jobs=1
+############################# Soruce Options #############################
+source.connect=file:///Users/osalvador/Downloads/fileSource.txt
+source.connect.parameter.columns.types=integer, integer, varchar, time, float, boolean
+source.connect.parameter.format=DEFAULT
+source.connect.parameter.format.delimiter=|
+source.connect.parameter.format.escape=\\
+source.connect.parameter.format.quote="
+source.connect.parameter.format.recordSeparator=\n
+source.connect.parameter.format.skipHeaderRecord=true
+source.connect.parameter.format.ignoreEmptyLines=true
+source.connect.parameter.format.nullString=
+source.connect.parameter.format.ignoreSurroundingSpaces=true
+source.connect.parameter.format.quoteMode=non_numeric
+source.connect.parameter.format.trim=true
+
+############################# Sink Options #############################
+sink.connect=file:///Users/osalvador/Downloads/fileSink.csv
+sink.connect.parameter.format=RFC4180
+sink.connect.parameter.format.delimiter=,
+sink.connect.parameter.format.escape=\\
+sink.connect.parameter.format.quote="
+sink.connect.parameter.format.recordSeparator=\n
+sink.connect.parameter.format.nullString=
+sink.connect.parameter.format.quoteMode=non_numeric
+
+############################# Other #############################
+verbose=true
 ```
 
 <br>
