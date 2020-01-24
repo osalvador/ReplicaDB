@@ -110,11 +110,13 @@ $ replicadb --mode=complete -j=1 \
 
 # Roadmap
 
-1. MongoDB as source.
-2. MySQL; source and sink.
-3. SQL Server; source and sink.
-4. CSV file as source. 
-5. Kafka as source.
+1. MySQL
+2. SQL Server
+3. MongoDB
+4. IBM Db2
+5. Elasticsearch
+6. Redis
+7. SQLite
 
 
 # Contributing
