@@ -117,6 +117,7 @@ $ replicadb --mode=complete -j=1 \
 5. Elasticsearch
 6. Redis
 7. SQLite
+7. Hive
 
 
 # Contributing
