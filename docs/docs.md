@@ -16,6 +16,24 @@ layout: page
   - [3.4 Free-form Query Replications](#34-free-form-query-replications)
 - [4. Notes for specific connectors](#4-notes-for-specific-connectors)
   - [4.1 CSV files Connector](#41-csv-files-connector)
+    - [4.1.X CSV File as Source](#41x-csv-file-as-source)
+    - [4.1.X Supported Data Types for columns in CSV file as Source](#41x-supported-data-types-for-columns-in-csv-file-as-source)
+    - [Custom Boolean Parser](#custom-boolean-parser)
+    - [4.1.X Predefined CSV Formats](#41x-predefined-csv-formats)
+      - [Available Predefined Formats](#available-predefined-formats)
+        - [DEFAULT](#default)
+        - [EXCEL](#excel)
+        - [INFORMIX_UNLOAD](#informixunload)
+        - [INFORMIX_UNLOAD_CSV](#informixunloadcsv)
+        - [MONGO_CSV](#mongocsv)
+        - [MONGODB_TSV](#mongodbtsv)
+        - [MYSQL](#mysql)
+        - [ORACLE](#oracle)
+        - [POSTGRESQL_CSV](#postgresqlcsv)
+        - [POSTGRESQL_TEXT](#postgresqltext)
+        - [RFC4180](#rfc4180)
+        - [TDF](#tdf)
+    - [4.1.X Predefined Quote Modes](#41x-predefined-quote-modes)
     - [4.1.1 Extra parameters](#411-extra-parameters)
     - [4.1.2 Replication Mode](#412-replication-mode)
   - [4.2 Oracle Connector](#42-oracle-connector)
@@ -223,7 +241,7 @@ $ replicadb --source-connect jdbc:mysql://database.example.com/employees \
 where the options file `./conf/empoloyee.conf` contains the following:
 
 ```properties
-source-password=myEmployeePassword
+source.password=myEmployeePassword
 ```
 
 **Unsecure way of supplying password to the database**
@@ -266,13 +284,12 @@ $ replicadb --source-query 'SELECT a.*, b.* FROM a JOIN b on (a.id == b.id)'
 
 The CSV File Connector uses the [Apache Commons CSV](https://commons.apache.org/proper/commons-csv/) library for read and write the CSV files.
 
-To define a CSV file, set the `sink-connect` parameter to `file:/...`.
+To define a CSV file, set the `source-connect` or `sink-connect` parameter to `file:/...`.
 
 ```properties
 ############################# Source Options #############################
 # Windows Paths
 source.connect=file:/C:/Users/osalvador/Downloads/file.csv
-## or
 source.connect=file://C:\\Users\\osalvador\\Downloads\\file.csv
 
 # Unix Paths
@@ -284,15 +301,282 @@ source.connect.parameter.columns.types=integer, varchar, date
 ############################# Sink Options #############################
 # Windows Paths
 sink.connect=file:/C:/Users/osalvador/Downloads/file.csv
-## or
 sink.connect=file://C:\\Users\\osalvador\\Downloads\\file.csv
 
 # Unix Paths
 sink.connect=file:///Users/osalvador/Downloads/file.csv
 ```
 
+By default the format of the CSV File as source or sink is the `DEFAULT` predefined format: 
 
-Thanks to Apache Commons CSV you can read or write CSV files in several predefined formats or customize yours with the available parameters. 
+```properties
+    delimiter=,
+    quote="
+    recordSeparator=\r\n
+    ignoreEmptyLines=true
+```
+
+> Note: The format is taken as the base format, you can modify any of its attributes by setting the rest parameters. 
+
+### 4.1.X CSV File as Source
+
+Cuando se define un fichefro CSV como fuente, debe tener en cuenta que el parametro `columns.types` es obligatorio. 
+
+This parameter defines the format of the columns in the CSV file. This should include a comma-delimited list of columns data types and **the exact number of columns in the CSV file**. For example: `source.connect.parameter.columns.types=integer,varchar,date`
+
+
+### 4.1.X Supported Data Types for columns in CSV file as Source
+
+You can read all columns in the CSV file as `VARCHAR` and ReplicaDB will store them in a `String`. But, if you want to make a standard parsing of your data, you should define the correct data type of your column. 
+
+CSV supported data Types Mapped to Java Types and the parser used: 
+
+| CSV Data Type | Java Type            | Parser | 
+|---------------|----------------------| -- | 
+| `VARCHAR`     | `String`               |  | 
+| `CHAR`        | `String`               |  | 
+| `LONGVARCHAR` | `String`               |  | 
+| `INTEGER`     | `int`                  | [`Integer.parseInt()`](https://docs.oracle.com/javase/8/docs/api/java/lang/Integer.html#parseInt-java.lang.String-) | 
+| `BIGINT`      | `long`                 | [`Long.parseLong()`](https://docs.oracle.com/javase/8/docs/api/java/lang/Long.html#parseLong-java.lang.String-) | 
+| `TINYINT`     | `byte`                 | [`Byte.parseByte()`](https://docs.oracle.com/javase/8/docs/api/java/lang/Byte.html#parseByte-java.lang.String-) | 
+| `SMALLINT`    | `short`                | [`Short.parseShort()`](https://docs.oracle.com/javase/8/docs/api/java/lang/Short.html#parseShort-java.lang.String-) | 
+| `NUMERIC`     | `java.math.BigDecimal` | [`new BigDecimal()`](https://docs.oracle.com/javase/8/docs/api/java/math/BigDecimal.html#BigDecimal-java.lang.String-) | 
+| `DECIMAL`     | `java.math.BigDecimal` | [`new BigDecimal()`](https://docs.oracle.com/javase/8/docs/api/java/math/BigDecimal.html#BigDecimal-java.lang.String-) | 
+| `DOUBLE`      | `double`               | [`Double.parseDouble()`](https://docs.oracle.com/javase/8/docs/api/java/lang/Double.html#parseDouble-java.lang.String-) | 
+| `FLOAT`       | `float`                 | [`Float.parseFloat()`](https://docs.oracle.com/javase/8/docs/api/java/lang/Float.html#parseFloat-java.lang.String-)  | 
+| `DATE`        | `java.sql.Date`        | [`Date.valueOf()`](https://docs.oracle.com/javase/8/docs/api/java/sql/Date.html#valueOf-java.lang.String-) | 
+| `TIMESTAMP`   | `java.sql.Timestamp`   | [`Timestamp.valueOf()`](https://docs.oracle.com/javase/8/docs/api/java/sql/Timestamp.html#valueOf-java.lang.String-) | 
+| `TIME`        | `java.sql.Time`        | [`Time.valueOf()`](https://docs.oracle.com/javase/8/docs/api/java/sql/Time.html#valueOf-java.lang.String-) | 
+| `BOOLEAN`     | `boolean`              | Custom Boolean Parser | 
+
+### Custom Boolean Parser
+
+The boolean returned represents the value `true` if the string argument is not null and is equal, ignoring case, to the string `true`, `yes`, `on`, `1`, `t`, `y`.
+
+
+### 4.1.X Predefined CSV Formats
+
+Thanks to Apache Commons CSV you can read or write CSV files in several predefined formats or customize yours with the available parameters.
+
+You can use these predefined formats to read or write CSV files. To define a CSV format, set the `format` extra parameter to any of these available formats: `DEFAULT`, `EXCEL`, `INFORMIX_UNLOAD`, `INFORMIX_UNLOAD_CSV`, `MONGO_CSV`, `MONGO_TSV`, `MYSQL`, `ORACLE`, `POSTGRESQL_CSV`, `POSTGRESQL_TEXT`, `RFC4180`, `TDF`.
+
+**Example**
+
+```properteis
+source.connect.parameter.format=RFC4180
+```
+
+#### Available Predefined Formats
+
+##### DEFAULT
+
+Standard Comma Separated Value format, as for RFC4180 but allowing empty lines.
+
+Settings are:
+
+```properties
+    Delimiter=,
+    Quote="
+    RecordSeparator=\r\n
+    IgnoreEmptyLines=true
+```
+
+##### EXCEL
+
+The Microsoft Excel CSV format.
+
+Excel file format (using a comma as the value delimiter). Note that the actual value delimiter used by Excel is locale dependent, it might be necessary to customize this format to accommodate to your regional settings.
+
+Settings are:
+
+```properties
+    Delimiter=,
+    Quote="
+    RecordSeparator=\r\n
+    IgnoreEmptyLines=false
+    AllowMissingColumnNames=true
+    AllowDuplicateHeaderNames=true
+```
+
+> Note: This is currently like RFC4180 plus withAllowMissingColumnNames(true) and withIgnoreEmptyLines(false).
+
+
+##### INFORMIX_UNLOAD
+
+Informix UNLOAD format used by the `UNLOAD TO file_name` operation.
+
+This is a comma-delimited format with a LF character as the line separator. Values are not quoted and special characters are escaped with `\`. The default NULL string is `\N`.
+
+Settings are:
+
+```properties
+    Delimiter=,
+    Escape=\\
+    Quote="
+    RecordSeparator=\n
+```
+
+##### INFORMIX_UNLOAD_CSV
+
+Informix CSV UNLOAD format used by the `UNLOAD TO file_name` operation (escaping is disabled.)
+
+This is a comma-delimited format with a LF character as the line separator. Values are not quoted and special characters are escaped with `\`. The default NULL string is `\N`.
+
+Settings are:
+
+```
+    Delimiter=,
+    Quote="
+    RecordSeparator=\n
+```
+
+##### MONGO_CSV
+
+MongoDB CSV format used by the `mongoexport` operation.
+
+**Parsing is not supported yet.**??
+
+This is a comma-delimited format. Values are double quoted only if needed and special characters are escaped with `"`. A header line with field names is expected.
+
+Settings are:
+
+```properties
+    Delimiter=,
+    Escape="
+    Quote="
+    QuoteMode=ALL_NON_NULL
+    SkipHeaderRecord=false
+```
+
+##### MONGODB_TSV
+
+Default MongoDB TSV format used by the `mongoexport` operation.
+
+**Parsing is not supported yet.**
+
+This is a tab-delimited format. Values are double quoted only if needed and special characters are escaped with `"`. A header line with field names is expected.
+
+Settings are:
+
+```properties
+    Delimiter=\t
+    Escape="
+    Quote="
+    QuoteMode=ALL_NON_NULL
+    SkipHeaderRecord=false
+```
+
+##### MYSQL
+
+Default MySQL format used by the `SELECT INTO OUTFILE` and `LOAD DATA INFILE` operations.
+
+This is a tab-delimited format with a LF character as the line separator. Values are not quoted and special characters are escaped with `\`. The default NULL string is `\N`.
+
+Settings are:
+
+```properties
+    Delimiter=\t
+    Escape=\\
+    IgnoreEmptyLines=false
+    Quote=null
+    RecordSeparator=\n
+    NullString=\N
+    QuoteMode=ALL_NON_NULL
+```
+
+##### ORACLE
+
+Default Oracle format used by the SQL*Loader utility.
+
+This is a comma-delimited format with the system line separator character as the record separator. Values are double quoted when needed and special characters are escaped with `"`. The default NULL string is "". Values are trimmed.
+
+Settings are:
+
+```properties
+    Delimiter=,
+    Escape=\\
+    IgnoreEmptyLines=false    
+    Quote="
+    NullString=\N
+    Trim=true    
+    QuoteMode=MINIMAL
+```
+
+##### POSTGRESQL_CSV
+
+Default PostgreSQL CSV format used by the `COPY` operation.
+
+This is a comma-delimited format with a LF character as the line separator. Values are double quoted and special characters are escaped with `"`. The default NULL string is `""`.
+
+Settings are:
+
+```properties
+    Delimiter=,
+    Escape="
+    IgnoreEmptyLines=false
+    Quote="
+    RecordSeparator=\n
+    NullString=""
+    QuoteMode=ALL_NON_NULL
+```
+
+##### POSTGRESQL_TEXT
+
+Default PostgreSQL text format used by the `COPY` operation.
+
+This is a tab-delimited format with a LF character as the line separator. Values are double quoted and special characters are escaped with `"`. The default NULL string is `\\N`.
+
+Settings are:
+
+```properties
+    Delimiter=\t
+    Escape=\\
+    IgnoreEmptyLines=false
+    Quote="
+    RecordSeparator=\n
+    NullString=\\N
+    QuoteMode=ALL_NON_NULL
+```
+
+##### RFC4180
+
+The RFC-4180 format defined by [RFC-4180](https://tools.ietf.org/html/rfc4180).
+
+Settings are:
+
+```properties
+    Delimiter=,
+    Quote="
+    RecordSeparator=\r\n
+    IgnoreEmptyLines=false
+```
+
+
+##### TDF
+
+A tab delimited format.
+
+Settings are:
+
+```properties
+    Delimiter=\t
+    Quote="
+    RecordSeparator=\r\n
+    IgnoreSurroundingSpaces=true
+```
+
+
+### 4.1.X Predefined Quote Modes
+
+You can set a predefined quote mode reading or writting a CSV File as source or sink. To define a quote mode, set the `format.quoteMode` extra parameter to any of these available formats: `ALL`, `ALL_NON_NULL`, `MINIMAL`, `NON_NUMERIC`, `NONE`.
+
+| Name           | Description                                                                                                                                          |
+|----------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ALL`          | Quotes all fields.                                                                                                                                   |
+| `ALL_NON_NULL` | Quotes all non-null fields.                                                                                                                          |
+| `MINIMAL`      | Quotes fields which contain special characters such as a the field delimiter, quote character or any of the characters in the line separator string. |
+| `NON_NUMERIC`  | Quotes all non-numeric fields.                                                                                                                       |
+| `NONE`         | Never quotes fields.                                                                                                                                 |
 
 
 <br>
@@ -302,14 +586,20 @@ The CSV connector supports the following extra parameters that can only be defin
 
 {:.table}
 
-| Parameter           | Description                                                                                | Default |
-| ------------------- | ------------------------------------------------------------------------------------------ | ------- |
-| `FieldSeparator`    | Sets the field separator character                                                         | `,`     |
-| `TextDelimiter`     | Sets a field enclosing character                                                           | `"`     |
-| `LineDelimiter`     | Sets the end-of-line character                                                             | `\n`    |
-| `AlwaysDelimitText` | Sets whether the text should always be delimited                                           | `false` |
-| `Header`            | Sets whether the first line of the file should be the header, with the names of the fields | `false` |
-
+| Parameter                        | Description                                                                                |
+|----------------------------------|--------------------------------------------------------------------------------------------|
+| `columns.types`                  | Sets the columns data types. This parameter is required for Source CSV Files.              |
+| `format`                         | Sets the base predefined CSV format.                                                         |
+| `format.delimiter`               | Sets a field enclosing character                                                            |
+| `format.escape`                  | Sets the end-of-line character                                                             |
+| `format.quote`                   | Sets whether the text should always be delimited                                           |
+| `format.recordSeparator`         | Sets whether the first line of the file should be the header, with the names of the fields    |
+| `format.firstRecordAsHeader`     | Sets the field separator character                                                           |
+| `format.ignoreEmptyLines`        | Sets a field enclosing character                                                            |
+| `format.nullString`              | Sets the end-of-line character                                                             |
+| `format.ignoreSurroundingSpaces` | Sets whether the text should always be delimited                                           |
+| `format.quoteMode`               | Sets whether the first line of the file should be the header, with the names of the fields   
+| `format.trim`                    | Sets whether the first line of the file should be the header, with the names of the fields  |
 
 **Extra parameters with default values**
 
