@@ -45,8 +45,8 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
 ```bash
-$ curl -o ReplicaDB-0.6.2.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.6.2/ReplicaDB-0.6.2.tar.gz"
-$ tar -xvzf ReplicaDB-0.6.2.tar.gz
+$ curl -o ReplicaDB-0.7.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.7.0/ReplicaDB-0.7.0.tar.gz"
+$ tar -xvzf ReplicaDB-0.7.0.tar.gz
 $ ./bin/replicadb --help
 ```
 
@@ -102,7 +102,7 @@ $ replicadb --mode=complete -j=1 \
 | Oracle          | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:|
 | PostgreSQL      | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:|
 | Denodo          | :heavy_check_mark: | N/A | N/A |  
-| CSV             | :heavy_multiplication_x: | :heavy_check_mark: | :heavy_check_mark: | 
+| CSV             | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | 
 | SQL Server      | :heavy_check_mark: | :heavy_multiplication_x: | :heavy_multiplication_x: |
 | Kafka           | :heavy_multiplication_x: | N/A | :heavy_check_mark: |  
 | Amazon S3       | :heavy_multiplication_x: | :heavy_check_mark: | N/A |  
