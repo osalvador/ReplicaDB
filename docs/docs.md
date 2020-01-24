@@ -16,14 +16,13 @@ layout: page
   - [3.4 Free-form Query Replications](#34-free-form-query-replications)
 - [4. Notes for specific connectors](#4-notes-for-specific-connectors)
   - [4.1 CSV files Connector](#41-csv-files-connector)
-    - [4.1.X CSV File as Source](#41x-csv-file-as-source)
-    - [4.1.X Supported Data Types for columns in CSV file as Source](#41x-supported-data-types-for-columns-in-csv-file-as-source)
-    - [Custom Boolean Parser](#custom-boolean-parser)
-    - [4.1.X Predefined CSV Formats](#41x-predefined-csv-formats)
+    - [4.1.1 CSV File as Source](#411-csv-file-as-source)
+    - [4.1.2 Supported Data Types for columns in CSV file as Source](#412-supported-data-types-for-columns-in-csv-file-as-source)
+    - [4.1.3 Predefined CSV Formats](#413-predefined-csv-formats)
       - [Available Predefined Formats](#available-predefined-formats)
-    - [4.1.X Predefined Quote Modes](#41x-predefined-quote-modes)
-    - [4.1.1 Extra parameters](#411-extra-parameters)
-    - [4.1.2 Replication Mode](#412-replication-mode)
+    - [4.1.4 Predefined Quote Modes](#414-predefined-quote-modes)
+    - [4.1.5 Extra parameters](#415-extra-parameters)
+    - [4.1.6 Replication Mode](#416-replication-mode)
   - [4.2 Oracle Connector](#42-oracle-connector)
     - [4.2.1 Oracle XMLType columns](#421-oracle-xmltype-columns)
   - [4.3 PostgreSQL Connector](#43-postgresql-connector)
@@ -308,15 +307,14 @@ By default the format of the CSV File as source or sink is the `DEFAULT` predefi
 
 
 <br>
-
-### 4.1.X CSV File as Source
+### 4.1.1 CSV File as Source
 
 Cuando se define un fichefro CSV como fuente, debe tener en cuenta que el parametro `columns.types` es obligatorio. 
 
 This parameter defines the format of the columns in the CSV file. This should include a comma-delimited list of columns data types and **the exact number of columns in the CSV file**. For example: `source.connect.parameter.columns.types=integer,varchar,date`
 
-
-### 4.1.X Supported Data Types for columns in CSV file as Source
+<br>
+### 4.1.2 Supported Data Types for columns in CSV file as Source
 
 You can read all columns in the CSV file as `VARCHAR` and ReplicaDB will store them in a `String`. But, if you want to make a standard parsing of your data, you should define the correct data type of your column. 
 
@@ -342,12 +340,15 @@ CSV supported data Types Mapped to Java Types and the parser used:
 | `TIME`        | `java.sql.Time`        | [`Time.valueOf()`](https://docs.oracle.com/javase/8/docs/api/java/sql/Time.html#valueOf-java.lang.String-) | 
 | `BOOLEAN`     | `boolean`              | Custom Boolean Parser | 
 
-### Custom Boolean Parser
+
+<br>
+**Custom Boolean Parser**
 
 The boolean returned represents the value `true` if the string argument is not null and is equal, ignoring case, to the string `true`, `yes`, `on`, `1`, `t`, `y`.
 
 
-### 4.1.X Predefined CSV Formats
+<br>
+### 4.1.3 Predefined CSV Formats
 
 Thanks to Apache Commons CSV you can read or write CSV files in several predefined formats or customize yours with the available parameters.
 
@@ -547,10 +548,10 @@ Settings are:
     ignoreSurroundingSpaces=true
 ```
 
+<br>
+### 4.1.4 Predefined Quote Modes
 
-### 4.1.X Predefined Quote Modes
-
-You can set a predefined quote mode reading or writting a CSV File as source or sink. To define a quote mode, set the `format.quoteMode` extra parameter to any of these available formats: `ALL`, `ALL_NON_NULL`, `MINIMAL`, `NON_NUMERIC`, `NONE`.
+You can set a predefined quote mode policy when writting a CSV File as source or sink. To define a quote mode, set the `format.quoteMode` extra parameter to any of these available formats: `ALL`, `ALL_NON_NULL`, `MINIMAL`, `NON_NUMERIC`, `NONE`.
 
 {:.table}
 
@@ -564,26 +565,26 @@ You can set a predefined quote mode reading or writting a CSV File as source or 
 
 
 <br>
-### 4.1.1 Extra parameters
+### 4.1.5 Extra parameters
 
 The CSV connector supports the following extra parameters that can only be defined as extra connection parameters in the `options-file`:
 
 {:.table}
 
-| Parameter                        | Description                                                                                | Default |
-|----------------------------------|--------------------------------------------------------------------------------------------| ------- | 
-| `columns.types`                  | Sets the columns data types. This parameter is required for Source CSV Files              | |
+| Parameter                        | Description                                                                                | Default   |
+|----------------------------------|--------------------------------------------------------------------------------------------|-----------|
+| `columns.types`                  | Sets the columns data types. This parameter is required for Source CSV Files               |           |
 | `format`                         | Sets the base predefined CSV format                                                        | `DEFAULT` |
-| `format.delimiter`               | Sets the field delimiter character                                                          | `,`|
-| `format.escape`                  | Sets the escape character                                                                  | |
-| `format.quote`                   | Sets the quoteChar character                                                               | `"` |
-| `format.recordSeparator`         | Sets the end-of-line character. This parameter only take effect on Snik CSV Files         | |
-| `format.firstRecordAsHeader`      | Sets whether the first line of the file should be the header, with the names of the fields    | `false` |
-| `format.ignoreEmptyLines`        | Sets whether empty lines between records are ignored om Source CSV Files.                  | `true` |
-| `format.nullString`              | Sets the end-of-line character                                                             | |
-| `format.ignoreSurroundingSpaces` | Sets whether the text should always be delimited                                           | |
-| `format.quoteMode`               | Sets whether the first line of the file should be the header, with the names of the fields   | |
-| `format.trim`                    | Sets whether the first line of the file should be the header, with the names of the fields  | |
+| `format.delimiter`               | Sets the field delimiter character                                                         | `,`       |
+| `format.escape`                  | Sets the escape character                                                                  |           |
+| `format.quote`                   | Sets the quoteChar character                                                               | `"`       |
+| `format.recordSeparator`         | Sets the end-of-line character. This parameter only take effect on Snik CSV Files          |           |
+| `format.firstRecordAsHeader`     | Sets whether the first line of the file should be the header, with the names of the fields | `false`   |
+| `format.ignoreEmptyLines`        | Sets whether empty lines between records are ignored on Source CSV Files                   | `true`    |
+| `format.nullString`              | Sets the nullString character                                                              |           |
+| `format.ignoreSurroundingSpaces` | Sets whether spaces around values are ignored on Source CSV files                          |           |
+| `format.quoteMode`               | Sets the quote policy on Sink CSV files                                                   |           |
+| `format.trim`                    | Sets whether to trim leading and trailing blanks                                           |           |
 
 **Complete Example for CSV File as Source and Sink**
 
@@ -599,11 +600,10 @@ source.connect.parameter.format.delimiter=|
 source.connect.parameter.format.escape=\\
 source.connect.parameter.format.quote="
 source.connect.parameter.format.recordSeparator=\n
-source.connect.parameter.format.skipHeaderRecord=true
+source.connect.parameter.format.firstRecordAsHeader=true
 source.connect.parameter.format.ignoreEmptyLines=true
 source.connect.parameter.format.nullString=
 source.connect.parameter.format.ignoreSurroundingSpaces=true
-source.connect.parameter.format.quoteMode=non_numeric
 source.connect.parameter.format.trim=true
 
 ############################# Sink Options #############################
@@ -621,14 +621,14 @@ verbose=true
 ```
 
 <br>
-### 4.1.2 Replication Mode
+### 4.1.6 Replication Mode
 
 Unlike in a database, the replication mode for a CSV file as sink has a slight difference:
 
 - **complete**: Create a new file. If the file exists it is overwritten with the new data.
 - **incremental**: Add the new data to the existing file. If the file does not exist, it creates it.
 
-> The `Header` parameter is not supported on `incremental` mode.
+> The `firstRecordAsHeader=true` parameter is not supported on `incremental` mode.
 
 **Example**
 
@@ -644,15 +644,7 @@ source.password=orapassword
 source.table=schema.table_name
 
 ############################# Sink Options #############################
-## Tab delimiter and windwos CRLF
-sink.connect=file:/C:/Users/Oscar/Downloads/file.csv
-sink.connect.parameter.FieldSeparator=\t
-sink.connect.parameter.TextDelimiter=
-sink.connect.parameter.LineDelimiter=\r\n
-sink.connect.parameter.AlwaysDelimitText=flase
-sink.connect.parameter.Header=true
-sink.disable.escape=true
-
+sink.connect=file:///Users/osalvador/Downloads/file.csv
 ```
 
 <br>
