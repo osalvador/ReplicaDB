@@ -242,7 +242,7 @@ public class CsvManager extends SqlManager {
             csvFormat = csvFormat.withTrim(Boolean.parseBoolean(trim));
         }
 
-        LOG.debug("The final CSVFormat is: " + csvFormat);
+        LOG.info("The final CSVFormat is: " + csvFormat);
         return csvFormat;
 
     }
