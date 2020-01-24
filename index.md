@@ -56,8 +56,8 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
 ```bash
-$ curl -o ReplicaDB-0.6.2.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.6.2/ReplicaDB-0.6.2.tar.gz"
-$ tar -xvzf ReplicaDB-0.6.2.tar.gz
+$ curl -o ReplicaDB-0.7.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.7.0/ReplicaDB-0.7.0.tar.gz"
+$ tar -xvzf ReplicaDB-0.7.0.tar.gz
 $ ./bin/replicadb --help
 ```
 
@@ -115,7 +115,7 @@ $ replicadb --mode=complete -j=1 \
 | Oracle           | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
 | PostgreSQL       | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
 | Denodo       | <i class="far fa-check-circle text-success"></i> | N/A | N/A | 
-| CSV             | <i class="far fa-times-circle"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
+| CSV             | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | 
 | SQL Server             | <i class="far fa-check-circle text-success"></i> | <i class="far fa-times-circle"></i> | <i class="far fa-times-circle"></i> |  
 | Kafka             | <i class="far fa-times-circle"></i> | N/A | <i class="far fa-check-circle text-success"></i> |  
 | Amazon S3       | <i class="far fa-times-circle"></i> | <i class="far fa-check-circle text-success"></i> | N/A |  
