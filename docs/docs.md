@@ -19,7 +19,6 @@ layout: page
     - [4.1.1 CSV File as Source](#411-csv-file-as-source)
     - [4.1.2 Supported Data Types for columns in CSV file as Source](#412-supported-data-types-for-columns-in-csv-file-as-source)
     - [4.1.3 Predefined CSV Formats](#413-predefined-csv-formats)
-      - [Available Predefined Formats](#available-predefined-formats)
     - [4.1.4 Predefined Quote Modes](#414-predefined-quote-modes)
     - [4.1.5 Extra parameters](#415-extra-parameters)
     - [4.1.6 Replication Mode](#416-replication-mode)
@@ -318,7 +317,7 @@ This parameter defines the format of the columns in the CSV file. This should in
 
 You can read all columns in the CSV file as `VARCHAR` and ReplicaDB will store them in a `String`. But, if you want to make a standard parsing of your data, you should define the correct data type of your column. 
 
-CSV supported data Types Mapped to Java Types and the parser used: 
+**CSV supported data Types Mapped to Java Types and the parser used**
 
 {:.table}
 
@@ -327,17 +326,17 @@ CSV supported data Types Mapped to Java Types and the parser used:
 | `VARCHAR`     | `String`               |  | 
 | `CHAR`        | `String`               |  | 
 | `LONGVARCHAR` | `String`               |  | 
-| `INTEGER`     | `int`                  | [`Integer.parseInt()`](https://docs.oracle.com/javase/8/docs/api/java/lang/Integer.html#parseInt-java.lang.String-) | 
-| `BIGINT`      | `long`                 | [`Long.parseLong()`](https://docs.oracle.com/javase/8/docs/api/java/lang/Long.html#parseLong-java.lang.String-) | 
-| `TINYINT`     | `byte`                 | [`Byte.parseByte()`](https://docs.oracle.com/javase/8/docs/api/java/lang/Byte.html#parseByte-java.lang.String-) | 
-| `SMALLINT`    | `short`                | [`Short.parseShort()`](https://docs.oracle.com/javase/8/docs/api/java/lang/Short.html#parseShort-java.lang.String-) | 
-| `NUMERIC`     | `java.math.BigDecimal` | [`new BigDecimal()`](https://docs.oracle.com/javase/8/docs/api/java/math/BigDecimal.html#BigDecimal-java.lang.String-) | 
-| `DECIMAL`     | `java.math.BigDecimal` | [`new BigDecimal()`](https://docs.oracle.com/javase/8/docs/api/java/math/BigDecimal.html#BigDecimal-java.lang.String-) | 
-| `DOUBLE`      | `double`               | [`Double.parseDouble()`](https://docs.oracle.com/javase/8/docs/api/java/lang/Double.html#parseDouble-java.lang.String-) | 
-| `FLOAT`       | `float`                 | [`Float.parseFloat()`](https://docs.oracle.com/javase/8/docs/api/java/lang/Float.html#parseFloat-java.lang.String-)  | 
-| `DATE`        | `java.sql.Date`        | [`Date.valueOf()`](https://docs.oracle.com/javase/8/docs/api/java/sql/Date.html#valueOf-java.lang.String-) | 
-| `TIMESTAMP`   | `java.sql.Timestamp`   | [`Timestamp.valueOf()`](https://docs.oracle.com/javase/8/docs/api/java/sql/Timestamp.html#valueOf-java.lang.String-) | 
-| `TIME`        | `java.sql.Time`        | [`Time.valueOf()`](https://docs.oracle.com/javase/8/docs/api/java/sql/Time.html#valueOf-java.lang.String-) | 
+| `INTEGER`     | `int`                  | [Integer.parseInt()](https://docs.oracle.com/javase/8/docs/api/java/lang/Integer.html#parseInt-java.lang.String-) | 
+| `BIGINT`      | `long`                 | [Long.parseLong()](https://docs.oracle.com/javase/8/docs/api/java/lang/Long.html#parseLong-java.lang.String-) | 
+| `TINYINT`     | `byte`                 | [Byte.parseByte()](https://docs.oracle.com/javase/8/docs/api/java/lang/Byte.html#parseByte-java.lang.String-) | 
+| `SMALLINT`    | `short`                | [Short.parseShort()](https://docs.oracle.com/javase/8/docs/api/java/lang/Short.html#parseShort-java.lang.String-) | 
+| `NUMERIC`     | `java.math.BigDecimal` | [new BigDecimal()](https://docs.oracle.com/javase/8/docs/api/java/math/BigDecimal.html#BigDecimal-java.lang.String-) | 
+| `DECIMAL`     | `java.math.BigDecimal` | [new BigDecimal()](https://docs.oracle.com/javase/8/docs/api/java/math/BigDecimal.html#BigDecimal-java.lang.String-) | 
+| `DOUBLE`      | `double`               | [Double.parseDouble()](https://docs.oracle.com/javase/8/docs/api/java/lang/Double.html#parseDouble-java.lang.String-) | 
+| `FLOAT`       | `float`                 | [Float.parseFloat()](https://docs.oracle.com/javase/8/docs/api/java/lang/Float.html#parseFloat-java.lang.String-)  | 
+| `DATE`        | `java.sql.Date`        | [Date.valueOf()](https://docs.oracle.com/javase/8/docs/api/java/sql/Date.html#valueOf-java.lang.String-) | 
+| `TIMESTAMP`   | `java.sql.Timestamp`   | [Timestamp.valueOf()](https://docs.oracle.com/javase/8/docs/api/java/sql/Timestamp.html#valueOf-java.lang.String-) | 
+| `TIME`        | `java.sql.Time`        | [Time.valueOf()](https://docs.oracle.com/javase/8/docs/api/java/sql/Time.html#valueOf-java.lang.String-) | 
 | `BOOLEAN`     | `boolean`              | Custom Boolean Parser | 
 
 
@@ -360,7 +359,7 @@ You can use these predefined formats to read or write CSV files. To define a CSV
 source.connect.parameter.format=RFC4180
 ```
 
-#### Available Predefined Formats
+<br>
 
 **DEFAULT**
 
