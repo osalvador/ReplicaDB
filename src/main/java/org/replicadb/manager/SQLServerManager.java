@@ -70,13 +70,25 @@ public class SQLServerManager extends SqlManager {
             sqlCmd = "SELECT  " +
                     allColumns +
                     " FROM " +
-                    escapeTableName(tableName) + " where " + options.getSourceWhere() + " AND ABS(CHECKSUM(%% physloc %%)) % "+(options.getJobs())+" = ?";
+                    escapeTableName(tableName);
+
+            if (options.getJobs() == 1)
+                sqlCmd = sqlCmd + " where " + options.getSourceWhere() + " AND 0 = ?";
+            else
+                sqlCmd = sqlCmd + " where "+ options.getSourceWhere() +" ABS(CHECKSUM(%% physloc %%)) % "+(options.getJobs())+" = ?";
+
         } else {
-            // Full table read. NO_IDEX and Oracle direct Read
+            // Full table read. Force NO_IDEX and table scan
             sqlCmd = "SELECT  " +
                     allColumns +
                     " FROM " +
-                    escapeTableName(tableName) + " WITH (INDEX(0)) where ABS(CHECKSUM(%% physloc %%)) % "+(options.getJobs())+" = ?";
+                    escapeTableName(tableName);
+
+            if (options.getJobs() == 1)
+                sqlCmd = sqlCmd + " where 0 = ?";
+            else
+                sqlCmd = sqlCmd + " where ABS(CHECKSUM(%% physloc %%)) % "+(options.getJobs())+" = ?";
+
         }
 
         return super.execute(sqlCmd, (Object) nThread);
