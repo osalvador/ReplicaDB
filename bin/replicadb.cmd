@@ -28,6 +28,6 @@ call "%bin%\configure-replicadb.cmd" "%bin%"
 :: echo _RUNJAVA "%_RUNJAVA%" 
 :: echo REPLICADB_CLASSPATH "%REPLICADB_CLASSPATH%"
 
-call %_RUNJAVA% -cp %REPLICADB_CLASSPATH% -Dfile.encoding=UTF-8 org.replicadb.ReplicaDB %*
+call %_RUNJAVA% -cp %REPLICADB_CLASSPATH% -Xmx256M -Xms256M -Dfile.encoding=UTF-8 -server -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:+ExplicitGCInvokesConcurrent -Djava.awt.headless=true -Djavax.xml.parsers.DocumentBuilderFactory=org.apache.xerces.jaxp.DocumentBuilderFactoryImpl org.replicadb.ReplicaDB %*
 
 endlocal
