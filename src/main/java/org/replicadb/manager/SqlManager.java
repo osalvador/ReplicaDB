@@ -1,6 +1,7 @@
 package org.replicadb.manager;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.concurrent.TimedSemaphore;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
@@ -10,6 +11,9 @@ import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -25,6 +29,10 @@ public abstract class SqlManager extends ConnManager {
     protected DataSourceType dsType;
 
     private Statement lastStatement;
+    // For Bandwidth Throttling
+    private TimedSemaphore bandwidthRateLimiter;
+    private int rowSize = 0;
+    private long fetchs = 0L;
 
     /**
      * Constructs the SqlManager.
@@ -365,15 +373,57 @@ public abstract class SqlManager extends ConnManager {
     protected void truncateTable() throws SQLException {
         String tableName;
         // Get table name
-        if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
+        if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())
+                || options.getMode().equals(ReplicationMode.COMPLETE_ATOMIC.getModeText())) {
             tableName = getQualifiedStagingTableName();
         } else {
             tableName = getSinkTableName();
         }
         String sql = "TRUNCATE TABLE " + tableName;
-        LOG.debug("Truncating sink table with this command: " + sql);
+        LOG.info("Truncating sink table with this command: " + sql);
         Statement statement = this.getConnection().createStatement();
         statement.executeUpdate(sql);
+        statement.close();
+        this.getConnection().commit();
+    }
+
+    /**
+     * Delete all rows of a sink table within a transaction asynchronously, in a complete-atomic mode
+     *
+     * @param executor the executor service for delete rows asynchronously in a task.
+     * @return the Future of the task.
+     */
+    public Future<Integer> atomicDeleteSinkTable(ExecutorService executor) {
+        String sql = " DELETE FROM " + this.getSinkTableName();
+        LOG.info("Atomic and asynchronous deletion of all data from the sink table with this command: " + sql);
+
+        return executor.submit(() -> {
+            Statement statement = this.getConnection().createStatement();
+            statement.executeUpdate(sql);
+            statement.close();
+            // Do not commit this transaction
+            return 0;
+        });
+    }
+
+    /**
+     * Insert all rows from staging table to the sink table within a transaction
+     *
+     * @throws SQLException
+     */
+    public void atomicInsertStagingTable() throws SQLException {
+        Statement statement = this.getConnection().createStatement();
+        StringBuilder sql = new StringBuilder();
+        String allColls = getAllSinkColumns(null);
+
+        sql.append(" INSERT INTO " + this.getSinkTableName())
+                .append(" (" + allColls + ")")
+                .append(" SELECT ")
+                .append(allColls)
+                .append(" FROM " + getQualifiedStagingTableName());
+
+        LOG.info("Inserting data from staging table to sink table within a transaction: " + sql);
+        statement.executeUpdate(sql.toString());
         statement.close();
         this.getConnection().commit();
     }
@@ -411,30 +461,35 @@ public abstract class SqlManager extends ConnManager {
         this.getConnection().commit();
     }
 
-    ;
-
     @Override
-    public void preSinkTasks() throws Exception {
+    public Future<Integer> preSinkTasks(ExecutorService executor) throws Exception {
 
-        // On INCREMENTAL mode
-        if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
+        // If mode is not COMPLETE
+        if (!options.getMode().equals(ReplicationMode.COMPLETE.getModeText())) {
 
             // Only create staging table if it is not defined by the user
             if (options.getSinkStagingTable() == null || options.getSinkStagingTable().isEmpty()) {
 
                 // If the staging parameters have not been defined then the table is created in the public schema
                 if (options.getSinkStagingSchema() == null || options.getSinkStagingSchema().isEmpty()) {
-                    // TODO?: This is only valid for PostgreSQL
+                    // TODO: This is only valid for PostgreSQL
                     LOG.warn("No staging schema is defined, setting it as PUBLIC");
                     options.setSinkStagingSchema("public");
                 }
                 this.createStagingTable();
             }
+
+            // Truncate sink table if it is enabled
+            if (!options.isSinkDisableTruncate()) {
+                this.truncateTable();
+            }
         }
 
-        // Truncate sink table if it is enabled
-        if (!options.isSinkDisableTruncate()) {
-            this.truncateTable();
+        // On COMPLETE_ATOMIC mode
+        if (options.getMode().equals(ReplicationMode.COMPLETE_ATOMIC.getModeText())) {
+            return atomicDeleteSinkTable(executor);
+        } else {
+            return null;
         }
 
     }
@@ -445,6 +500,8 @@ public abstract class SqlManager extends ConnManager {
         if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
             // Merge Data
             this.mergeStagingTable();
+        } else if (options.getMode().equals(ReplicationMode.COMPLETE_ATOMIC.getModeText())) {
+            this.atomicInsertStagingTable();
         }
     }
 
@@ -505,5 +562,56 @@ public abstract class SqlManager extends ConnManager {
         return returnData;
     }
 
+
+    /**
+     * Acquires the <code>rowSize</code> number of permits from this <code>bandwidthRateLimiter</code>,
+     * blocking until the request can be granted.
+     */
+    protected void bandwidthThrottlingAcquiere() {
+        // Wait for Sleeping Stopwatch
+        if (rowSize != 0) {
+            try {
+                ++fetchs;
+                if (fetchs == options.getFetchSize()) {
+                    bandwidthRateLimiter.acquire();
+                    fetchs = 0;
+                }
+            } catch (InterruptedException e) {
+                LOG.error(e);
+            }
+        }
+    }
+
+    /**
+     * Create a bandwith cap, estimating the size of the first row returned by the resultset
+     * and using it as permits in the rate limit.
+     *
+     * @param resultSet the resultset cursor moved to the first row (resultSet.next())
+     * @param rsmd      the result set metadata object
+     * @throws SQLException
+     */
+    protected void bandwidthThrottlingCreate(ResultSet resultSet, ResultSetMetaData rsmd) throws SQLException {
+        int kilobytesPerSecond = options.getBandwidthThrottling();
+
+        if (kilobytesPerSecond > 0) {
+            // Stimate the Row Size
+            for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+
+                if (rsmd.getColumnType(i) != Types.BLOB) {
+                    String columnValue = resultSet.getString(i);
+                    if (columnValue != null && !resultSet.getString(i).isEmpty())
+                        rowSize = rowSize + resultSet.getString(i).length();
+                }
+            }
+
+            double limit = ((1.0 * kilobytesPerSecond) / rowSize) / (options.getFetchSize() * 1.0 / 1000);
+            if (limit == 0) limit = 1;
+            this.bandwidthRateLimiter = new TimedSemaphore(1, TimeUnit.SECONDS, (int) Math.round(limit));
+
+            LOG.info("Estimated Row Size: {} KB. Estimated limit of fetchs per second: {} ", rowSize, limit);
+
+
+        }
+    }
 
 }
