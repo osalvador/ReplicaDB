@@ -38,6 +38,7 @@ public class ToolOptions {
 
     private int jobs = DEFAULT_JOBS;
     private int fetchSize = DEFAULT_FETCH_SIZE;
+    private int bandwidthThrottling = 0;
     private Boolean help = false;
     private Boolean version = false;
     private Boolean verbose = false;
@@ -241,7 +242,7 @@ public class ToolOptions {
         options.addOption(
                 Option.builder()
                         .longOpt("mode")
-                        .desc("Specifies the replication mode. The allowed values are complete or incremental.")
+                        .desc("Specifies the replication mode. The allowed values are complete, complete-atomic or incremental.")
                         //.required()
                         .hasArg()
                         .argName("mode")
@@ -252,7 +253,7 @@ public class ToolOptions {
         options.addOption(
                 Option.builder()
                         .longOpt("fetch-size")
-                        .desc(" Number of entries to read from database at once.")
+                        .desc("Number of entries to read from database at once.")
                         .hasArg()
                         .argName("fetch-size")
                         .build()
@@ -262,6 +263,15 @@ public class ToolOptions {
                 Option.builder()
                         .longOpt("version")
                         .desc("Show implementation version and exit.")
+                        .build()
+        );
+
+        options.addOption(
+                Option.builder()
+                        .longOpt("bandwidth-throttling")
+                        .desc("Adds a bandwidth cap for the replication in KB/sec.")
+                        .hasArg()
+                        .argName("KB/s")
                         .build()
         );
 
@@ -319,6 +329,7 @@ public class ToolOptions {
             setSourceWhereNotNull(line.getOptionValue("source-where"));
             setJobsNotNull(line.getOptionValue("jobs"));
             setFetchSizeNotNull(line.getOptionValue("fetch-size"));
+            setBandwidthThrottlingNotNull(line.getOptionValue("bandwidth-throttling"));
             setSinkStagingSchemaNotNull(line.getOptionValue("sink-staging-schema"));
             setSinkStagingTableNotNull(line.getOptionValue("sink-staging-table"));
             setSinkStagingTableAliasNotNull(line.getOptionValue("sink-staging-table-alias"));
@@ -414,14 +425,12 @@ public class ToolOptions {
         setSourceWhere(prop.getProperty("source.where"));
         setJobs(prop.getProperty("jobs"));
         setFetchSize(prop.getProperty("fetch.size"));
-
+        setBandwidthThrottling(prop.getProperty("bandwidth.throttling"));
 
         // Connection params
         setSinkConnectionParams(of.getSinkConnectionParams());
         setSourceConnectionParams(of.getSourceConnectionParams());
-
     }
-
 
     /*
      * Geeters & Setters
@@ -602,7 +611,6 @@ public class ToolOptions {
     }
 
     public void setJobs(String jobs) {
-
         try {
             if (jobs != null && !jobs.isEmpty()) {
                 this.jobs = Integer.parseInt(jobs);
@@ -656,8 +664,17 @@ public class ToolOptions {
     public void setMode(String mode) {
 
         if (mode != null && !mode.isEmpty()) {
-            if (!mode.equals(ReplicationMode.COMPLETE.getModeText()) && !mode.equals(ReplicationMode.INCREMENTAL.getModeText()))
-                throw new IllegalArgumentException("mode option must be " + ReplicationMode.COMPLETE.getModeText() + " or " + ReplicationMode.INCREMENTAL.getModeText());
+            if (!mode.equals(ReplicationMode.COMPLETE.getModeText())
+                    && !mode.equals(ReplicationMode.INCREMENTAL.getModeText())
+                    && !mode.equals(ReplicationMode.COMPLETE_ATOMIC.getModeText())
+            )
+                throw new IllegalArgumentException("mode option must be "
+                        + ReplicationMode.COMPLETE.getModeText()
+                        + ", "
+                        + ReplicationMode.COMPLETE_ATOMIC.getModeText()
+                        + " or "
+                        + ReplicationMode.INCREMENTAL.getModeText()
+                );
         }
 
         this.mode = mode;
@@ -810,6 +827,7 @@ public class ToolOptions {
                 ",\n\tsinkDisableTruncate=" + sinkDisableTruncate +
                 ",\n\tsinkAnalyze=" + sinkAnalyze +
                 ",\n\tjobs=" + jobs +
+                ",\n\tbandwidthThrottling=" + bandwidthThrottling +
                 ",\n\tfetchSize=" + fetchSize +
                 ",\n\thelp=" + help +
                 ",\n\tversion=" + version +
@@ -822,6 +840,24 @@ public class ToolOptions {
     }
 
 
+    public int getBandwidthThrottling() {
+        return bandwidthThrottling;
+    }
 
+    public void setBandwidthThrottling(String bandwidthThrottling) {
+        try {
+            if (bandwidthThrottling != null && !bandwidthThrottling.isEmpty()) {
+                this.bandwidthThrottling = Integer.parseInt(bandwidthThrottling);
+                if (this.bandwidthThrottling < 0) throw new NumberFormatException();
+            }
+        } catch (NumberFormatException | NullPointerException e) {
+            LOG.error("Option --bandwidth-throttling must be a positive integer grater than 0.");
+            throw e;
+        }
+    }
 
+    public void setBandwidthThrottlingNotNull(String bandwidthThrottling) {
+        if (bandwidthThrottling != null && !bandwidthThrottling.isEmpty())
+            setBandwidthThrottling(bandwidthThrottling);
+    }
 }

@@ -6,6 +6,8 @@ import org.replicadb.cli.ToolOptions;
 
 import java.sql.*;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 /**
  * Abstract interface that manages connections to a database.
@@ -243,7 +245,7 @@ public abstract class ConnManager {
      */
     public abstract void preSourceTasks() throws Exception;
 
-    public abstract void preSinkTasks() throws Exception;
+    public abstract Future<Integer> preSinkTasks(ExecutorService executor) throws Exception;
 
     /**
      * Sometimes it is necessary to perform some tasks after populating the data with multithreading jobs.

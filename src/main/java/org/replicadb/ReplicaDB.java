@@ -16,9 +16,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 /**
  * ReplicaDB
@@ -34,6 +32,7 @@ public class ReplicaDB {
         boolean exitWithError = false;
         long start = System.nanoTime();
         ConnManager sourceDs = null, sinkDs = null;
+        ExecutorService preSinkTasksExecutor = null, replicaTasksService = null;
 
         try {
 
@@ -55,30 +54,49 @@ public class ReplicaDB {
                 sourceDs = managerF.accept(options, DataSourceType.SOURCE);
                 sinkDs = managerF.accept(options, DataSourceType.SINK);
 
+                // Executor Service for atomic complet refresh replication
+                preSinkTasksExecutor = Executors.newSingleThreadExecutor();
+
                 // Pre tasks
                 sourceDs.preSourceTasks();
-                sinkDs.preSinkTasks();
+                Future<Integer> preSinkTasksFuture = sinkDs.preSinkTasks(preSinkTasksExecutor);
+
+                // Catch exceptions before moving data
+                if (preSinkTasksFuture != null) {
+                    try {
+                        preSinkTasksFuture.get(500, TimeUnit.MILLISECONDS);
+                    } catch (TimeoutException e) {
+                        // The preSinkTask is perfoming in the database
+                    }
+                }
 
                 // Prepare Threads for Job processing
-                ExecutorService service = Executors.newFixedThreadPool(options.getJobs());
                 List<ReplicaTask> replicaTasks = new ArrayList<>();
-
                 for (int i = 0; i < options.getJobs(); i++) {
                     replicaTasks.add(new ReplicaTask(i, options));
                 }
-
                 // Run all Replicate Tasks
-                List<Future<Integer>> futures = service.invokeAll(replicaTasks);
+                replicaTasksService = Executors.newFixedThreadPool(options.getJobs());
+                List<Future<Integer>> futures = replicaTasksService.invokeAll(replicaTasks);
                 for (Future<Integer> future : futures) {
                     // catch tasks exceptions
                     future.get();
                 }
 
+                // wait for terminating
+                if (preSinkTasksFuture != null) {
+                    LOG.info("Waiting for the asynchronous task to be completed...");
+                    preSinkTasksFuture.get();
+                }
+
                 // Post Tasks
                 sourceDs.postSourceTasks();
                 sinkDs.postSinkTasks();
-            }
 
+                // Shutdown Executor Services
+                preSinkTasksExecutor.shutdown();
+                replicaTasksService.shutdown();
+            }
         } catch (Exception e) {
             LOG.error("Got exception running ReplicaDB:", e);
             exitWithError = true;
@@ -93,6 +111,10 @@ public class ReplicaDB {
                 if (null != sourceDs) {
                     sourceDs.close();
                 }
+
+                if (preSinkTasksExecutor != null) preSinkTasksExecutor.shutdownNow();
+                if (replicaTasksService != null) replicaTasksService.shutdownNow();
+
             } catch (Exception e) {
                 LOG.error(e);
             }
