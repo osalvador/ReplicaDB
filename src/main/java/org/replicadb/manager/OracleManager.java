@@ -5,8 +5,10 @@ import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 
+import java.io.IOException;
 import java.sql.*;
 import java.util.Arrays;
+
 
 public class OracleManager extends SqlManager {
 
@@ -89,16 +91,16 @@ public class OracleManager extends SqlManager {
 
 
     @Override
-    public int insertDataToTable(ResultSet resultSet, int taskId) throws SQLException {
+    public int insertDataToTable(ResultSet resultSet, int taskId) throws SQLException, IOException {
 
         ResultSetMetaData rsmd = resultSet.getMetaData();
         String tableName;
 
         // Get table name and columns
-        if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
-            tableName = getQualifiedStagingTableName();
-        } else {
+        if (options.getMode().equals(ReplicationMode.COMPLETE.getModeText())) {
             tableName = getSinkTableName();
+        } else {
+            tableName = getQualifiedStagingTableName();
         }
 
         String allColumns = getAllSinkColumns(rsmd);
@@ -114,99 +116,102 @@ public class OracleManager extends SqlManager {
 
         oracleAlterSession(true);
 
-        while (resultSet.next()) {
+        if (resultSet.next()) {
+            // Create Bandwidth Throttling
+            bandwidthThrottlingCreate(resultSet, rsmd);
 
-            // Get Columns values
-            for (int i = 1; i <= columnsNumber; i++) {
+            do {
+                bandwidthThrottlingAcquiere();
 
-                switch (rsmd.getColumnType(i)) {
-                    case Types.VARCHAR:
-                    case Types.CHAR:
-                    case Types.LONGVARCHAR:
-                        ps.setString(i, resultSet.getString(i));
-                        break;
-                    case Types.INTEGER:
-                    case Types.TINYINT:
-                    case Types.SMALLINT:
-                        ps.setInt(i, resultSet.getInt(i));
-                        break;
-                    case Types.BIGINT:
-                    case Types.NUMERIC:
-                    case Types.DECIMAL:
-                        ps.setBigDecimal(i, resultSet.getBigDecimal(i));
-                        break;
-                    case Types.DOUBLE:
-                        ps.setDouble(i, resultSet.getDouble(i));
-                        break;
-                    case Types.FLOAT:
-                        ps.setFloat(i, resultSet.getFloat(i));
-                        break;
-                    case Types.DATE:
-                        ps.setDate(i, resultSet.getDate(i));
-                        break;
-                    case Types.TIMESTAMP:
-                    case Types.TIMESTAMP_WITH_TIMEZONE:
-                    case -101:
-                    case -102:
-                        ps.setTimestamp(i, resultSet.getTimestamp(i));
-                        break;
-                    case Types.BINARY:
-                        ps.setBinaryStream(i, resultSet.getBinaryStream(i));
-                        break;
-                    case Types.BLOB:
-                        Blob blobData = resultSet.getBlob(i);
-                        ps.setBlob(i, blobData);
-                        blobData.free();
-                        break;
-                    case Types.CLOB:
-                        Clob clobData = resultSet.getClob(i);
-                        ps.setClob(i, clobData);
-                        clobData.free();
-                        break;
-                    case Types.BOOLEAN:
-                        ps.setBoolean(i, resultSet.getBoolean(i));
-                        break;
-                    case Types.NVARCHAR:
-                        ps.setNString(i, resultSet.getNString(i));
-                        break;
-                    case Types.SQLXML:
-                        SQLXML sqlxmlData = resultSet.getSQLXML(i);
-                        ps.setSQLXML(i, sqlxmlData);
-                        sqlxmlData.free();
-                        break;
-                    case Types.ROWID:
-                        ps.setRowId(i, resultSet.getRowId(i));
-                        break;
-                    case Types.ARRAY:
-                        Array arrayData = resultSet.getArray(i);
-                        ps.setArray(i, arrayData);
-                        arrayData.free();
-                        break;
-                    default:
-                        ps.setString(i, resultSet.getString(i));
-                        break;
+                // Get Columns values
+                for (int i = 1; i <= columnsNumber; i++) {
+
+                    switch (rsmd.getColumnType(i)) {
+                        case Types.VARCHAR:
+                        case Types.CHAR:
+                        case Types.LONGVARCHAR:
+                            ps.setString(i, resultSet.getString(i));
+                            break;
+                        case Types.INTEGER:
+                        case Types.TINYINT:
+                        case Types.SMALLINT:
+                            ps.setInt(i, resultSet.getInt(i));
+                            break;
+                        case Types.BIGINT:
+                        case Types.NUMERIC:
+                        case Types.DECIMAL:
+                            ps.setBigDecimal(i, resultSet.getBigDecimal(i));
+                            break;
+                        case Types.DOUBLE:
+                            ps.setDouble(i, resultSet.getDouble(i));
+                            break;
+                        case Types.FLOAT:
+                            ps.setFloat(i, resultSet.getFloat(i));
+                            break;
+                        case Types.DATE:
+                            ps.setDate(i, resultSet.getDate(i));
+                            break;
+                        case Types.TIMESTAMP:
+                        case Types.TIMESTAMP_WITH_TIMEZONE:
+                        case -101:
+                        case -102:
+                            ps.setTimestamp(i, resultSet.getTimestamp(i));
+                            break;
+                        case Types.BINARY:
+                            ps.setBinaryStream(i, resultSet.getBinaryStream(i));
+                            break;
+                        case Types.BLOB:
+                            Blob blobData = resultSet.getBlob(i);
+                            ps.setBlob(i, blobData);
+                            if (blobData != null) blobData.free();
+                            break;
+                        case Types.CLOB:
+                            Clob clobData = resultSet.getClob(i);
+                            ps.setClob(i, clobData);
+                            if (clobData != null) clobData.free();
+                            break;
+                        case Types.BOOLEAN:
+                            ps.setBoolean(i, resultSet.getBoolean(i));
+                            break;
+                        case Types.NVARCHAR:
+                            ps.setNString(i, resultSet.getNString(i));
+                            break;
+                        case Types.SQLXML:
+                            SQLXML sqlxmlData = resultSet.getSQLXML(i);
+                            ps.setSQLXML(i, sqlxmlData);
+                            if (sqlxmlData != null) sqlxmlData.free();
+                            break;
+                        case Types.ROWID:
+                            ps.setRowId(i, resultSet.getRowId(i));
+                            break;
+                        case Types.ARRAY:
+                            Array arrayData = resultSet.getArray(i);
+                            ps.setArray(i, arrayData);
+                            arrayData.free();
+                            break;
+                        default:
+                            ps.setString(i, resultSet.getString(i));
+                            break;
+                    }
+
                 }
 
+                ps.addBatch();
 
-            }
+                if (++count % batchSize == 0) {
+                    ps.executeBatch();
+                    this.getConnection().commit();
+                }
 
-            ps.addBatch();
-
-            if (++count % batchSize == 0) {
-                ps.executeBatch();
-                this.getConnection().commit();
-            }
-
+            } while (resultSet.next());
         }
 
         ps.executeBatch(); // insert remaining records
         ps.close();
 
         this.getConnection().commit();
-
         return 0;
     }
-
 
     private String getInsertSQLCommand(String tableName, String allColumns, int columnsNumber) {
 
@@ -247,7 +252,7 @@ public class OracleManager extends SqlManager {
             allSinkColumns = "*";
         }
 
-        String sql = " CREATE TABLE " + sinkStagingTable + " NOLOGGING AS (SELECT "+allSinkColumns+" FROM " + this.getSinkTableName() + " WHERE rownum = -1 ) ";
+        String sql = " CREATE TABLE " + sinkStagingTable + " NOLOGGING AS (SELECT " + allSinkColumns + " FROM " + this.getSinkTableName() + " WHERE rownum = -1 ) ";
 
         LOG.info("Creating staging table with this command: " + sql);
         statement.executeUpdate(sql);
@@ -258,6 +263,7 @@ public class OracleManager extends SqlManager {
 
     @Override
     protected void mergeStagingTable() throws SQLException {
+        this.getConnection().commit();
 
         Statement statement = this.getConnection().createStatement();
 
@@ -316,19 +322,13 @@ public class OracleManager extends SqlManager {
         statement.executeUpdate(sql.toString());
         statement.close();
         this.getConnection().commit();
-
-    }
-
-
-    @Override
-    public void preSourceTasks() {
-
     }
 
     @Override
-    public void postSourceTasks() {
+    public void preSourceTasks() {}
 
-    }
+    @Override
+    public void postSourceTasks() {}
 
     @Override
     public void dropStagingTable() throws SQLException {
