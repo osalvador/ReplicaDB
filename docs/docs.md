@@ -62,8 +62,8 @@ ReplicaDB implements two replication modes: `complete` and` incremental`. The ma
 
 The `complete` mode makes a complete replica of the source table, of all its data, from source to sink. In `complete` mode, only` INSERT` is done in the sink table without worrying about the primary keys. ReplicaDB will perform the following actions on a `complete` replication:
 
-    - Truncate the sink table with the `TRUNCATE TABLE` statement
-    - Copy the data in parallel from the source table to the sink table.
+  - Truncate the sink table with the `TRUNCATE TABLE` statement
+  - Copy the data in parallel from the source table to the sink table.
 
 ### Incremental
 
@@ -75,12 +75,12 @@ Currently, you must store the last value of the column used to determine changes
 
 In the `incremental` mode, the` INSERT or UPDATE` or `UPSERT` technique is used in the sink table. ReplicaDB needs to create a staging table in the sink database, where data is copied in parallel. The last step of the replication is to merge the staging table with the sink table. ReplicaDB will perform the following actions in an `incremental` replication:
 
-    - Automatically create the staging table in the sink database.
-    - Truncate the staging table.
-    - Copy the data in parallel from the source table to the sink staging table.
-    - Gets the primary keys of the sink table
-    - Execute the `UPSERT` sentence between the sink staging table and the sink table. This statement will depend on the Database Vendor, it can be for example `INSERT ... ON CONFLICT ... DO UPDATE` in PostgreSQL or` MERGE INTO ... `in Oracle.
-    - Drop the sink staging table.
+  - Automatically create the staging table in the sink database.
+  - Truncate the staging table.
+  - Copy the data in parallel from the source table to the sink staging table.
+  - Gets the primary keys of the sink table
+  - Execute the `UPSERT` sentence between the sink staging table and the sink table. This statement will depend on the Database Vendor, it can be for example `INSERT ... ON CONFLICT ... DO UPDATE` in PostgreSQL or` MERGE INTO ... `in Oracle.
+  - Drop the sink staging table.
 
 
 <br>
