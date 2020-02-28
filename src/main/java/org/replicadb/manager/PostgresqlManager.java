@@ -1,6 +1,5 @@
 package org.replicadb.manager;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
@@ -13,6 +12,8 @@ import org.postgresql.jdbc.PgConnection;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 public class PostgresqlManager extends SqlManager {
 
@@ -48,10 +49,10 @@ public class PostgresqlManager extends SqlManager {
             String tableName;
 
             // Get table name and columns
-            if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
-                tableName = getQualifiedStagingTableName();
-            } else {
+            if (options.getMode().equals(ReplicationMode.COMPLETE.getModeText())) {
                 tableName = getSinkTableName();
+            } else {
+                tableName = getQualifiedStagingTableName();
             }
 
             String allColumns = getAllSinkColumns(rsmd);
@@ -71,47 +72,53 @@ public class PostgresqlManager extends SqlManager {
             byte[] bytes;
             String colValue;
 
-            while (resultSet.next()) {
+            if (resultSet.next()) {
+                // Create Bandwidth Throttling
+                bandwidthThrottlingCreate(resultSet, rsmd);
 
-                // Get Columns values
-                for (int i = 1; i <= columnsNumber; i++) {
-                    if (i > 1) cols.append(unitSeparator);
+                do {
+                    bandwidthThrottlingAcquiere();
 
-                    switch (rsmd.getColumnType(i)) {
+                    // Get Columns values
+                    for (int i = 1; i <= columnsNumber; i++) {
+                        if (i > 1) cols.append(unitSeparator);
 
-                        case Types.CLOB:
-                            colValue = clobToString(resultSet.getClob(i));
-                            break;
-                        case Types.BINARY:
-                        case Types.BLOB:
-                            colValue = blobToPostgresHex(resultSet.getBlob(i));
-                            break;
-                        default:
-                            colValue = resultSet.getString(i);
-                            break;
+                        switch (rsmd.getColumnType(i)) {
+
+                            case Types.CLOB:
+                                colValue = clobToString(resultSet.getClob(i));
+                                break;
+                            case Types.BINARY:
+                            case Types.BLOB:
+                                colValue = blobToPostgresHex(resultSet.getBlob(i));
+                                break;
+                            default:
+                                colValue = resultSet.getString(i);
+                                break;
+                        }
+
+                        if (!resultSet.wasNull() || colValue != null) cols.append(colValue);
                     }
 
-                    if (!resultSet.wasNull() || colValue != null) cols.append(colValue);
-                }
+                    // Escape special chars
+                    if (this.options.isSinkDisableEscape())
+                        row.append(cols.toString());
+                    else
+                        row.append(cols.toString().replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r").replace("\u0000", ""));
 
-                //Escape special chars
-                if (this.options.isSinkDisableEscape())
-                    row.append(cols.toString());
-                else
-                    row.append(cols.toString().replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r").replace("\u0000", ""));
+                    // Row ends with \n
+                    row.append("\n");
 
-                // Row ends with \n
-                row.append("\n");
+                    // Copy data to postgres
+                    bytes = row.toString().getBytes(StandardCharsets.UTF_8);
+                    copyIn.writeToCopy(bytes, 0, bytes.length);
 
-                // Copy data to postgres
-                bytes = row.toString().getBytes(StandardCharsets.UTF_8);
-                copyIn.writeToCopy(bytes, 0, bytes.length);
-
-                //Clear el StringBuilders
-                row.setLength(0); // set length of buffer to 0
-                row.trimToSize();
-                cols.setLength(0); // set length of buffer to 0
-                cols.trimToSize();
+                    // Clear StringBuilders
+                    row.setLength(0); // set length of buffer to 0
+                    row.trimToSize();
+                    cols.setLength(0); // set length of buffer to 0
+                    cols.trimToSize();
+                } while (resultSet.next());
             }
 
             copyIn.endCopy();
@@ -317,7 +324,6 @@ public class PostgresqlManager extends SqlManager {
 
     @Override
     public void postSourceTasks() {/*Not implemented*/}
-
 
     /*********************************************************************************************
      * From BLOB to Hexadecimal String for Postgres Copy
