@@ -664,9 +664,9 @@ public class ToolOptions {
     public void setMode(String mode) {
 
         if (mode != null && !mode.isEmpty()) {
-            if (!mode.equals(ReplicationMode.COMPLETE.getModeText())
-                    && !mode.equals(ReplicationMode.INCREMENTAL.getModeText())
-                    && !mode.equals(ReplicationMode.COMPLETE_ATOMIC.getModeText())
+            if (!mode.toLowerCase().equals(ReplicationMode.COMPLETE.getModeText())
+                    && !mode.toLowerCase().equals(ReplicationMode.INCREMENTAL.getModeText())
+                    && !mode.toLowerCase().equals(ReplicationMode.COMPLETE_ATOMIC.getModeText())
             )
                 throw new IllegalArgumentException("mode option must be "
                         + ReplicationMode.COMPLETE.getModeText()
@@ -677,7 +677,7 @@ public class ToolOptions {
                 );
         }
 
-        this.mode = mode;
+        this.mode = mode.toLowerCase();
     }
 
     public void setModeNotNull(String mode) {
