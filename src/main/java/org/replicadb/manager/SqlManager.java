@@ -464,6 +464,7 @@ public abstract class SqlManager extends ConnManager {
     @Override
     public Future<Integer> preSinkTasks(ExecutorService executor) throws Exception {
 
+        // Create staging table
         // If mode is not COMPLETE
         if (!options.getMode().equals(ReplicationMode.COMPLETE.getModeText())) {
 
@@ -478,17 +479,17 @@ public abstract class SqlManager extends ConnManager {
                 }
                 this.createStagingTable();
             }
-
-            // Truncate sink table if it is enabled
-            if (!options.isSinkDisableTruncate()) {
-                this.truncateTable();
-            }
         }
 
         // On COMPLETE_ATOMIC mode
         if (options.getMode().equals(ReplicationMode.COMPLETE_ATOMIC.getModeText())) {
             return atomicDeleteSinkTable(executor);
         } else {
+            // Truncate sink table if it is enabled
+            if (!options.isSinkDisableTruncate()) {
+                this.truncateTable();
+            }
+
             return null;
         }
 
@@ -508,8 +509,8 @@ public abstract class SqlManager extends ConnManager {
     @Override
     public void cleanUp() throws Exception {
 
-        // On INCREMENTAL mode
-        if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
+        // Not Complete mode
+        if (! options.getMode().equals(ReplicationMode.COMPLETE.getModeText())) {
 
             // Only drop staging table if it was created automatically
             if (options.getSinkStagingTable() == null || options.getSinkStagingTable().isEmpty()) {
