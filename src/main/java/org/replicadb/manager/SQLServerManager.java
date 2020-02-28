@@ -1,10 +1,15 @@
 package org.replicadb.manager;
 
+import com.microsoft.sqlserver.jdbc.SQLServerBulkCopy;
+import com.microsoft.sqlserver.jdbc.SQLServerBulkCopyOptions;
+import com.microsoft.sqlserver.jdbc.SQLServerException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 
 public class SQLServerManager extends SqlManager {
@@ -29,17 +34,67 @@ public class SQLServerManager extends SqlManager {
     }
 
     @Override
-    public int insertDataToTable(ResultSet resultSet, int taskId)  {
+    public int insertDataToTable(ResultSet resultSet, int taskId) throws SQLException {
+
+        String tableName;
+
+        // Get table name and columns
+        if (options.getMode().equals(ReplicationMode.COMPLETE.getModeText())) {
+            tableName = getSinkTableName();
+        } else {
+            tableName = getQualifiedStagingTableName();
+        }
+
+        ResultSetMetaData rsmd = resultSet.getMetaData();
+        int columnCount = rsmd.getColumnCount();
+
+        SQLServerBulkCopy bulkCopy = null;
+        try {
+            bulkCopy = new SQLServerBulkCopy(this.getConnection());
+            // BulkCopy Options
+            SQLServerBulkCopyOptions copyOptions = new SQLServerBulkCopyOptions();
+            copyOptions.setBulkCopyTimeout(0);
+            bulkCopy.setBulkCopyOptions(copyOptions);
+
+            bulkCopy.setDestinationTableName(tableName);
+
+            // Columns Mapping
+            if (this.options.getSinkColumns() != null && !this.options.getSinkColumns().isEmpty()) {
+                String sinkColumns = getAllSinkColumns(rsmd);
+                String[] sinkColumnsArray = sinkColumns.split(",");
+                LOG.debug("Mapping columns: source --> sink");
+                for (int i = 1; i <= columnCount; i++) {
+                    bulkCopy.addColumnMapping(rsmd.getColumnName(i), sinkColumnsArray[i - 1]);
+                    LOG.debug("{} --> {}", rsmd.getColumnName(i), sinkColumnsArray[i - 1]);
+                }
+            } else {
+                for (int i = 1; i <= columnCount; i++) {
+                    bulkCopy.addColumnMapping(i, i);
+                }
+            }
+
+
+            LOG.info("Perfoming BulkCopy into {} ", tableName);
+            // Write from the source to the destination.
+            bulkCopy.writeToServer(resultSet);
+        } catch (SQLServerException e) {
+            e.printStackTrace();
+        }
+
+        bulkCopy.close();
+
+        this.getConnection().commit();
+        return 0;
+
+    }
+
+    @Override
+    protected void createStagingTable() {
         throw new UnsupportedOperationException("SQLServer still not support data insertion");
     }
 
     @Override
-    protected void createStagingTable()  {
-        throw new UnsupportedOperationException("SQLServer still not support data insertion");
-    }
-
-    @Override
-    protected void mergeStagingTable()  {
+    protected void mergeStagingTable() {
         throw new UnsupportedOperationException("SQLServer still not support data insertion");
     }
 
@@ -75,7 +130,7 @@ public class SQLServerManager extends SqlManager {
             if (options.getJobs() == 1)
                 sqlCmd = sqlCmd + " where " + options.getSourceWhere() + " AND 0 = ?";
             else
-                sqlCmd = sqlCmd + " where "+ options.getSourceWhere() +" ABS(CHECKSUM(%% physloc %%)) % "+(options.getJobs())+" = ?";
+                sqlCmd = sqlCmd + " where " + options.getSourceWhere() + " ABS(CHECKSUM(%% physloc %%)) % " + (options.getJobs()) + " = ?";
 
         } else {
             // Full table read. Force NO_IDEX and table scan
@@ -87,7 +142,7 @@ public class SQLServerManager extends SqlManager {
             if (options.getJobs() == 1)
                 sqlCmd = sqlCmd + " where 0 = ?";
             else
-                sqlCmd = sqlCmd + " where ABS(CHECKSUM(%% physloc %%)) % "+(options.getJobs())+" = ?";
+                sqlCmd = sqlCmd + " where ABS(CHECKSUM(%% physloc %%)) % " + (options.getJobs()) + " = ?";
 
         }
 
