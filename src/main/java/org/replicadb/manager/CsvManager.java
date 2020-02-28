@@ -22,12 +22,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.Properties;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 public class CsvManager extends SqlManager {
 
@@ -54,6 +53,15 @@ public class CsvManager extends SqlManager {
     protected Connection makeSinkConnection() {
         /*Not necessary for csv*/
         return null;
+    }
+
+    @Override
+    public Future<Integer> preSinkTasks(ExecutorService executor) {
+        // On COMPLETE_ATOMIC mode
+        if (options.getMode().equals(ReplicationMode.COMPLETE_ATOMIC.getModeText()))
+            throw new UnsupportedOperationException("The 'complete-atomic' mode is not applicable to CSV as a sink");
+        else
+            return null;
     }
 
     @Override
@@ -261,7 +269,7 @@ public class CsvManager extends SqlManager {
     public int insertDataToTable(ResultSet resultSet, int taskId) throws Exception {
 
         ResultSetMetaData rsmd = resultSet.getMetaData();
-        int columnsNumber = rsmd.getColumnCount();
+        int columnCount = rsmd.getColumnCount();
 
         // Temporal file name
         String randomFileUrl = options.getSinkConnect() + ".repdb." + (new Random().nextInt(1000) + 9000);
@@ -280,14 +288,27 @@ public class CsvManager extends SqlManager {
              CSVPrinter printer = new CSVPrinter(out, format)) {
 
             // headers, only in the first temporal file.
-            if (taskId == 0 && format.getSkipHeaderRecord() ) {
+            if (taskId == 0 && format.getSkipHeaderRecord()) {
                 String[] allColumns = getAllSinkColumns(rsmd).split(",");
-                for (int i = 0; i < columnsNumber; i++) {
+                for (int i = 0; i < columnCount; i++) {
                     printer.print(allColumns[i]);
                 }
                 printer.println();
             }
-            printer.printRecords(resultSet);
+
+            if (resultSet.next()) {
+                // Create Bandwidth Throttling
+                bandwidthThrottlingCreate(resultSet, rsmd);
+                do {
+                    bandwidthThrottlingAcquiere();
+                    for (int i = 1; i <= columnCount; ++i) {
+                        Object object = resultSet.getObject(i);
+                        printer.print(object instanceof Clob ? ((Clob) object).getCharacterStream() : object);
+                    }
+                    printer.println();
+                } while (resultSet.next());
+            }
+
         }
 
         return 0;
