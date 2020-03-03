@@ -64,7 +64,6 @@ public class KafkaManager extends SqlManager {
         // User Custom kafka properties
         props.putAll(kafkaProps);
 
-
         LOG.debug("kafka properties: " + props);
 
         // Create kafka producer
@@ -86,92 +85,102 @@ public class KafkaManager extends SqlManager {
         ObjectNode obj;
 
 
-        while (resultSet.next()) {
+        if (resultSet.next()) {
+            // Create Bandwidth Throttling
+            bandwidthThrottlingCreate(resultSet, rsmd);
 
-            // Just one sink column and is a JSON.
-            // Create a JSON object form content.
-            if (sinkColumns[0].toLowerCase().equals("json")) {
-                obj = (ObjectNode) mapper.readTree(resultSet.getString(1));
-            } else {
+            do {
+                bandwidthThrottlingAcquiere();
 
-                obj = mapper.createObjectNode();
+                // Just one sink column and is a JSON.
+                // Create a JSON object form content.
+                if (sinkColumns[0].toLowerCase().equals("json")) {
+                    obj = (ObjectNode) mapper.readTree(resultSet.getString(1));
+                } else {
 
-                for (int i = 1; i < columnsNumber + 1; i++) {
+                    obj = mapper.createObjectNode();
 
-                    String columnName = sinkColumns[i - 1];
+                    for (int i = 1; i < columnsNumber + 1; i++) {
 
-                    switch (rsmd.getColumnType(i)) {
-                        case Types.VARCHAR:
-                        case Types.CHAR:
-                        case Types.LONGVARCHAR:
-                            obj.put(columnName, resultSet.getString(i));
-                            break;
-                        case Types.BIGINT:
-                        case Types.INTEGER:
-                        case Types.TINYINT:
-                        case Types.SMALLINT:
-                            obj.put(columnName, resultSet.getInt(i));
-                            break;
-                        case Types.NUMERIC:
-                        case Types.DECIMAL:
-                            obj.put(columnName, resultSet.getBigDecimal(i));
-                            break;
-                        case Types.DOUBLE:
-                            obj.put(columnName, resultSet.getDouble(i));
-                            break;
-                        case Types.FLOAT:
-                            obj.put(columnName, resultSet.getFloat(i));
-                            break;
-                        case Types.DATE:
-                            obj.put(columnName, dateFormat.format(resultSet.getDate(i).getTime()));
-                            break;
-                        case Types.TIMESTAMP:
-                        case Types.TIMESTAMP_WITH_TIMEZONE:
-                        case -101:
-                        case -102:
-                            obj.put(columnName, timestampFormat.format(resultSet.getTimestamp(i).getTime()));
-                            break;
-                        case Types.BINARY:
-                        case Types.BLOB:
-                            // Binary data encode to Base64
-                            Blob data = resultSet.getBlob(i);
-                            obj.put(columnName, data.getBytes(1, (int) data.length()));
-                            data.free();
-                            break;
-                        case Types.CLOB:
-                            obj.put(columnName, clobToString(resultSet.getClob(i)));
-                            break;
-                        case Types.BOOLEAN:
-                            obj.put(columnName, resultSet.getBoolean(i));
-                            break;
-                        case Types.NVARCHAR:
-                            obj.put(columnName, resultSet.getNString(i));
-                            break;
-                        case Types.SQLXML:
-                            obj.put(columnName, sqlxmlToString(resultSet.getSQLXML(i)));
-                            break;
+                        String columnName = sinkColumns[i - 1];
+
+                        switch (rsmd.getColumnType(i)) {
+                            case Types.VARCHAR:
+                            case Types.CHAR:
+                            case Types.LONGVARCHAR:
+                                obj.put(columnName, resultSet.getString(i));
+                                break;
+                            case Types.BIGINT:
+                            case Types.INTEGER:
+                            case Types.TINYINT:
+                            case Types.SMALLINT:
+                                obj.put(columnName, resultSet.getInt(i));
+                                break;
+                            case Types.NUMERIC:
+                            case Types.DECIMAL:
+                                obj.put(columnName, resultSet.getBigDecimal(i));
+                                break;
+                            case Types.DOUBLE:
+                                obj.put(columnName, resultSet.getDouble(i));
+                                break;
+                            case Types.FLOAT:
+                                obj.put(columnName, resultSet.getFloat(i));
+                                break;
+                            case Types.DATE:
+                                obj.put(columnName, dateFormat.format(resultSet.getDate(i).getTime()));
+                                break;
+                            case Types.TIMESTAMP:
+                            case Types.TIMESTAMP_WITH_TIMEZONE:
+                            case -101:
+                            case -102:
+                                Timestamp timeStamp = resultSet.getTimestamp(i);
+                                if (timeStamp != null)
+                                    obj.put(columnName, timestampFormat.format(resultSet.getTimestamp(i).getTime()));
+                                else
+                                    obj.put(columnName,"");
+                                break;
+                            case Types.BINARY:
+                            case Types.BLOB:
+                                // Binary data encode to Base64
+                                Blob data = resultSet.getBlob(i);
+                                obj.put(columnName, data.getBytes(1, (int) data.length()));
+                                data.free();
+                                break;
+                            case Types.CLOB:
+                                obj.put(columnName, clobToString(resultSet.getClob(i)));
+                                break;
+                            case Types.BOOLEAN:
+                                obj.put(columnName, resultSet.getBoolean(i));
+                                break;
+                            case Types.NVARCHAR:
+                                obj.put(columnName, resultSet.getNString(i));
+                                break;
+                            case Types.SQLXML:
+                                obj.put(columnName, sqlxmlToString(resultSet.getSQLXML(i)));
+                                break;
                         /*case Types.ROWID:
                             obj.put(columnName, resultSet.getRowId(i));
                             break;
                         case Types.ARRAY:
                             obj.put(columnName, resultSet.getArray(i));
                             break;*/
-                        default:
-                            obj.put(columnName, resultSet.getString(i));
-                            break;
+                            default:
+                                obj.put(columnName, resultSet.getString(i));
+                                break;
 
+                        }
                     }
                 }
-            }
 
-            // Send to kafka
-            producer.send(new ProducerRecord<>(topic, partition, key, mapper.writeValueAsString(obj)), (m, e) -> {
-                if (e != null) {
-                    LOG.error(e);
-                }/*else {
-                    System.out.printf("Produced record to topic %s partition [%d] @ offset %d%n", m.topic(), m.partition(), m.offset());
-                }*/
-            });
+                // Send to kafka
+                producer.send(new ProducerRecord<>(topic, partition, key, mapper.writeValueAsString(obj)), (m, e) -> {
+                    if (e != null) {
+                        LOG.error(e);
+                    }/*else {
+                      System.out.printf("Produced record to topic %s partition [%d] @ offset %d%n", m.topic(), m.partition(), m.offset());
+                    }*/
+                });
+            } while (resultSet.next());
         }
 
         producer.flush();
