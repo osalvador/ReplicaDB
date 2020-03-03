@@ -322,7 +322,8 @@ public class S3Manager extends SqlManager {
             // Custom user csv options
             if ((int) csvFieldSeparator != 0) csvWriter.setFieldSeparator(csvFieldSeparator);
             if ((int) csvTextDelimiter != 0) csvWriter.setTextDelimiter(csvTextDelimiter);
-            if (csvLineDelimiter != null && !csvLineDelimiter.isEmpty() ) csvWriter.setLineDelimiter(csvLineDelimiter.toCharArray());
+            if (csvLineDelimiter != null && !csvLineDelimiter.isEmpty())
+                csvWriter.setLineDelimiter(csvLineDelimiter.toCharArray());
             csvWriter.setAlwaysDelimitText(csvAlwaysDelimitText);
 
             // Write the CSV
@@ -340,19 +341,25 @@ public class S3Manager extends SqlManager {
                 String[] colValues;
 
                 // lines
-                while (resultSet.next()) {
-                    colValues = new String[columnCount];
+                if (resultSet.next()) {
+                    // Create Bandwidth Throttling
+                    bandwidthThrottlingCreate(resultSet, rsmd);
+                    do {
+                        bandwidthThrottlingAcquiere();
 
-                    // Iterate over the columns of the row
-                    for (int i = 1; i <= columnCount; i++) {
-                        colValue = resultSet.getString(i);
+                        colValues = new String[columnCount];
 
-                        if (!this.options.isSinkDisableEscape() && !resultSet.wasNull())
-                            colValues[i - 1] = colValue.replace("\n", "\\n").replace("\r", "\\r");
-                        else
-                            colValues[i - 1] = colValue;
-                    }
-                    csvAppender.appendLine(colValues);
+                        // Iterate over the columns of the row
+                        for (int i = 1; i <= columnCount; i++) {
+                            colValue = resultSet.getString(i);
+
+                            if (!this.options.isSinkDisableEscape() && !resultSet.wasNull())
+                                colValues[i - 1] = colValue.replace("\n", "\\n").replace("\r", "\\r");
+                            else
+                                colValues[i - 1] = colValue;
+                        }
+                        csvAppender.appendLine(colValues);
+                    } while (resultSet.next());
                 }
             }
 
