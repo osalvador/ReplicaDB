@@ -45,8 +45,8 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
 ```bash
-$ curl -o ReplicaDB-0.7.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.7.0/ReplicaDB-0.7.0.tar.gz"
-$ tar -xvzf ReplicaDB-0.7.0.tar.gz
+$ curl -o ReplicaDB-0.8.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.8.0/ReplicaDB-0.8.0.tar.gz"
+$ tar -xvzf ReplicaDB-0.8.0.tar.gz
 $ ./bin/replicadb --help
 ```
 
@@ -54,6 +54,10 @@ $ ./bin/replicadb --help
 
 You can use ReplicaDB with any JDBC-compliant database. First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory on your client machine. Each driver `.jar` file also has a specific driver class which defines the entry-point to the driver. 
 
+
+## Full Documentation
+
+You can find the full ReplicaDB documentation here: [Docs](https://osalvador.github.io/ReplicaDB/docs/docs.html)
 
 # Usage example
 
@@ -97,16 +101,15 @@ $ replicadb --mode=complete -j=1 \
 
 # Compatible Databases
 
-| Database Vendor | Source | Sink Complete | Sink Incremental |
-|-----------------|:---------:|:---------------:|:------------------:|
-| Oracle          | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:|
-| PostgreSQL      | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:|
-| Denodo          | :heavy_check_mark: | N/A | N/A |  
-| CSV             | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | 
-| SQL Server      | :heavy_check_mark: | :heavy_multiplication_x: | :heavy_multiplication_x: |
-| Kafka           | :heavy_multiplication_x: | N/A | :heavy_check_mark: |  
-| Amazon S3       | :heavy_multiplication_x: | :heavy_check_mark: | N/A |  
-
+| Persistent Store |          Source          |    Sink Complete   | Sink Complete-Atomic |  Sink Incremental  | Sink Bandwidth Throttling |
+|------------------|:------------------------:|:------------------:|:--------------------:|:------------------:|:-------------------------:|
+| Oracle           |    :heavy_check_mark:    | :heavy_check_mark: |  :heavy_check_mark:  | :heavy_check_mark: |     :heavy_check_mark:    |
+| PostgreSQL       |    :heavy_check_mark:    | :heavy_check_mark: |  :heavy_check_mark:  | :heavy_check_mark: |     :heavy_check_mark:    |
+| Denodo           |    :heavy_check_mark:    |         N/A        |          N/A         |         N/A        |            N/A            |
+| CSV              |    :heavy_check_mark:    | :heavy_check_mark: |          N/A         | :heavy_check_mark: |     :heavy_check_mark:    |
+| SQL Server       |    :heavy_check_mark:    | :heavy_check_mark: |  :heavy_check_mark:  | :heavy_check_mark: |  :heavy_multiplication_x: |
+| Kafka            | :heavy_multiplication_x: |         N/A        |          N/A         | :heavy_check_mark: |     :heavy_check_mark:    |
+| Amazon S3        | :heavy_multiplication_x: | :heavy_check_mark: |          N/A         |         N/A        |     :heavy_check_mark:    |
 
 # Roadmap
 
