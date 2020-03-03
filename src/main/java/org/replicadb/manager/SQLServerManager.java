@@ -11,6 +11,8 @@ import org.replicadb.cli.ToolOptions;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Arrays;
 
 public class SQLServerManager extends SqlManager {
 
@@ -63,25 +65,29 @@ public class SQLServerManager extends SqlManager {
                 String sinkColumns = getAllSinkColumns(rsmd);
                 String[] sinkColumnsArray = sinkColumns.split(",");
                 LOG.debug("Mapping columns: source --> sink");
-                for (int i = 1; i <= columnCount; i++) {
+                for (int i = 1; i <= sinkColumnsArray.length; i++) {
                     bulkCopy.addColumnMapping(rsmd.getColumnName(i), sinkColumnsArray[i - 1]);
                     LOG.debug("{} --> {}", rsmd.getColumnName(i), sinkColumnsArray[i - 1]);
                 }
             } else {
                 for (int i = 1; i <= columnCount; i++) {
-                    bulkCopy.addColumnMapping(i, i);
+                    LOG.trace("source {} - {} sink", rsmd.getColumnName(i),i);
+                    bulkCopy.addColumnMapping(rsmd.getColumnName(i), i);
                 }
             }
-
 
             LOG.info("Perfoming BulkCopy into {} ", tableName);
             // Write from the source to the destination.
             bulkCopy.writeToServer(resultSet);
         } catch (SQLServerException e) {
-            e.printStackTrace();
+            throw e;
         }
 
         bulkCopy.close();
+
+        // TODO: getAllSinkColumns should not update the sinkColumns property. Change it in Oracle and check it in Postgres
+        // Set Sink columns
+        getAllSinkColumns(rsmd);
 
         this.getConnection().commit();
         return 0;
@@ -89,13 +95,87 @@ public class SQLServerManager extends SqlManager {
     }
 
     @Override
-    protected void createStagingTable() {
-        throw new UnsupportedOperationException("SQLServer still not support data insertion");
+    protected void createStagingTable() throws SQLException {
+        Statement statement = this.getConnection().createStatement();
+        String sinkStagingTable = getQualifiedStagingTableName();
+
+        // Get sink columns.
+        String allSinkColumns = null;
+        if (this.options.getSinkColumns() != null && !this.options.getSinkColumns().isEmpty()) {
+            allSinkColumns = this.options.getSinkColumns();
+        } else if (this.options.getSourceColumns() != null && !this.options.getSourceColumns().isEmpty()) {
+            allSinkColumns = this.options.getSourceColumns();
+        } else {
+            allSinkColumns = "*";
+        }
+
+        String sql = " SELECT " + allSinkColumns + " INTO " + sinkStagingTable + " FROM " + this.getSinkTableName() + " WHERE 0 = 1 ";
+
+        LOG.info("Creating staging table with this command: " + sql);
+        statement.executeUpdate(sql);
+        statement.close();
+        this.getConnection().commit();
     }
 
     @Override
-    protected void mergeStagingTable() {
-        throw new UnsupportedOperationException("SQLServer still not support data insertion");
+    protected void mergeStagingTable() throws SQLException {
+        this.getConnection().commit();
+
+        Statement statement = this.getConnection().createStatement();
+
+        String[] pks = this.getSinkPrimaryKeys(this.getSinkTableName());
+        // Primary key is required
+        if (pks == null || pks.length == 0) {
+            throw new IllegalArgumentException("Sink table must have at least one primary key column for incremental mode.");
+        }
+
+        // options.sinkColumns was set during the insertDataToTable
+        String allColls = getAllSinkColumns(null);
+
+        StringBuilder sql = new StringBuilder();
+        sql.append("MERGE INTO ")
+                .append(this.getSinkTableName())
+                .append(" trg USING (SELECT ")
+                .append(allColls)
+                .append(" FROM ")
+                .append(getQualifiedStagingTableName())
+                .append(" ) src ON ")
+                .append(" (");
+
+        for (int i = 0; i <= pks.length - 1; i++) {
+            if (i >= 1) sql.append(" AND ");
+            sql.append("src.").append(pks[i]).append("= trg.").append(pks[i]);
+        }
+
+        sql.append(" ) WHEN MATCHED THEN UPDATE SET ");
+
+        // Set all columns for UPDATE SET statement
+        for (String colName : allColls.split("\\s*,\\s*")) {
+            LOG.debug("colName: {}", colName);
+            boolean contains = Arrays.asList(pks).contains(colName);
+            if (!contains)
+                sql.append(" trg.").append(colName).append(" = src.").append(colName).append(" ,");
+        }
+        // Delete the last comma
+        sql.setLength(sql.length() - 1);
+
+
+        sql.append(" WHEN NOT MATCHED THEN INSERT ( ").append(allColls).
+                append(" ) VALUES (");
+
+        // all columns for INSERT VALUES statement
+        for (String colName : allColls.split("\\s*,\\s*")) {
+            sql.append(" src.").append(colName).append(" ,");
+        }
+        // Delete the last comma
+        sql.setLength(sql.length() - 1);
+
+        sql.append(" ); ");
+
+        LOG.info("Merging staging table and sink table with this command: " + sql);
+        statement.executeUpdate(sql.toString());
+        statement.close();
+        this.getConnection().commit();
     }
 
 
@@ -156,4 +236,5 @@ public class SQLServerManager extends SqlManager {
 
     @Override
     public void postSourceTasks() {/*Not implemented*/}
+
 }
