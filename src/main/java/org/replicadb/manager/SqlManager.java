@@ -414,13 +414,28 @@ public abstract class SqlManager extends ConnManager {
     public void atomicInsertStagingTable() throws SQLException {
         Statement statement = this.getConnection().createStatement();
         StringBuilder sql = new StringBuilder();
-        String allColls = getAllSinkColumns(null);
+        String allColls = null;
+        try {
+            allColls = getAllSinkColumns(null);
+        } catch (NullPointerException e) {
+            // Ignore this exception
+        }
 
-        sql.append(" INSERT INTO " + this.getSinkTableName())
-                .append(" (" + allColls + ")")
-                .append(" SELECT ")
-                .append(allColls)
-                .append(" FROM " + getQualifiedStagingTableName());
+        if (allColls != null) {
+            sql.append(" INSERT INTO ")
+                    .append(this.getSinkTableName())
+                    .append(" (" + allColls + ")")
+                    .append(" SELECT ")
+                    .append(allColls)
+                    .append(" FROM ")
+                    .append(getQualifiedStagingTableName());
+        } else {
+            sql.append(" INSERT INTO ")
+                    .append(this.getSinkTableName())
+                    .append(" SELECT * ")
+                    .append(" FROM ")
+                    .append(getQualifiedStagingTableName());
+        }
 
         LOG.info("Inserting data from staging table to sink table within a transaction: " + sql);
         statement.executeUpdate(sql.toString());
@@ -510,7 +525,7 @@ public abstract class SqlManager extends ConnManager {
     public void cleanUp() throws Exception {
 
         // Not Complete mode
-        if (! options.getMode().equals(ReplicationMode.COMPLETE.getModeText())) {
+        if (!options.getMode().equals(ReplicationMode.COMPLETE.getModeText())) {
 
             // Only drop staging table if it was created automatically
             if (options.getSinkStagingTable() == null || options.getSinkStagingTable().isEmpty()) {
