@@ -59,6 +59,10 @@ You can use ReplicaDB with any JDBC-compliant database. First, download the appr
 
 You can find the full ReplicaDB documentation here: [Docs](https://osalvador.github.io/ReplicaDB/docs/docs.html)
 
+## Configuration Wizard
+
+You can create a configuration file for a ReplicaDB process by filling out a simple form: [ReplicaDB configuration wizard](https://osalvador.github.io/ReplicaDB/wizard/index.html)
+
 # Usage example
 
 ## Oracle to PostgreSQL
