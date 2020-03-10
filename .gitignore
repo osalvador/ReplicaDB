@@ -1,4 +1,5 @@
 .idea/*
+wizard/.idea/*
 .settings/*
 lib/*
 test/*
