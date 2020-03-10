@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Configuration Wizard - ReplicaDB - Open Source Database Replication Software</title>
+
+    <!-- Custom fonts for this template-->
+    <link href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css" rel="stylesheet" type="text/css">
+    <link href="//fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+
+    <!-- Custom styles for this template-->
+    <link href="css/sb-admin-2.min.css" rel="stylesheet">
+
+    <link href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/default.min.css" rel="stylesheet">
+    <link href="//cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet"/>
+    <link href="css/select2-bootstrap4.min.css" rel="stylesheet">
+    <style>
+        .handle {
+            cursor: move;
+            cursor: -webkit-grabbing;
+        }
+
+        .list-group-item {
+            display: list-item;
+        }
+
+        input[type='text'] {
+            font-size: 1.2rem;
+            font-family: monospace;
+        }
+
+        textarea {
+            font-size: 1.2rem;
+            font-family: monospace;
+        }
+    </style>
+
+</head>
+
+<body id="page-top">
+
+
+<!-- Begin Page Content -->
+<div class="container-fluid">
+
+    <!-- Page Heading -->
+    <h1 class="">ReplicaDB configuration wizard</h1>
+    <p class="mb-4">Create a configuration file for a ReplicaDB process by filling out the following form</p>
+
+    <div class="row">
+        <div class="col-xl-12">
+
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">ReplicaDB Basics</h6>
+                </div>
+                <div class="card-body">
+
+                    <form id="FormBasics">
+                        <div class="form-row">
+
+                            <div class="form-group col-md-6">
+                                <div class="form-group">
+                                    <label for="FormMode">Mode</label>
+                                    <div>
+                                        <select class="form-control select2" name="mode" id="FormMode">
+                                            <option>complete</option>
+                                            <option>complete-atomic</option>
+                                            <option>incremental</option>
+                                        </select>
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        Specifies the replication mode
+                                        <a href="https://osalvador.github.io/ReplicaDB/docs/docs.html#21-replication-mode" target="_blank">
+                                            <i class="fas fa-info-circle"></i>
+                                        </a>
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="form-group col-md-2">
+                                <label for="FormJobs">Jobs</label>
+                                <input type="number" name="jobs" class="form-control" id="FormJobs" value="1">
+                                <small class="form-text text-muted">
+                                    Use <code>n</code> jobs to replicate in parallel
+                                    <a href="https://osalvador.github.io/ReplicaDB/docs/docs.html#22-controlling-parallelism" target="_blank">
+                                        <i class="fas fa-info-circle"></i>
+                                    </a>
+                                </small>
+                            </div>
+                            <div class="form-group col-md-2">
+                                <label for="FormFetchSize">Fetch Size</label>
+                                <input type="number" name="fetchSize" class="form-control" id="FormFetchSize" value="100">
+                                <small class="form-text text-muted">
+                                    Number of entries to read from database at once
+                                </small>
+                            </div>
+                            <div class="form-group col-md-2">
+                                <label for="FormBandwidthThrottling">Bandwidth Throttling</label>
+                                <input type="number" name="bandwidthThrottling" class="form-control" id="FormBandwidthThrottling">
+                                <small class="form-text text-muted">
+                                    In Kilobytes per second estimated
+                                </small>
+                            </div>
+
+                        </div>
+
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="FormVerbose" name="verbose" value="true">
+                                <label class="form-check-label" for="FormVerbose">
+                                    Verbose
+                                </label>
+                                <small class="form-text text-muted">
+                                    Print more information while working
+                                </small>
+                            </div>
+                        </div>
+                    </form>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+
+    <div class="row">
+
+        <div class="col-xl-6">
+
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Source Options</h6>
+                </div>
+                <div class="card-body">
+
+                    <form id="FormSource">
+                        <h5>Data Source Type</h5>
+                        <div class="form-group">
+                            <div>
+                                <select class="form-control select2" id="FormSourceType" name="sourceType">
+                                    <option value="" disabled selected></option>
+                                    <option value="oracle">Oracle</option>
+                                    <option value="postgres">PostgreSQL</option>
+                                    <option value="sqlserver">SQLServer</option>
+                                    <option value="denodo">Denodo</option>
+                                    <option value="file">File (CSV, TSV...)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="card" id="CardSourceConnectionSettings">
+                            <div class="card-header">Connection Settings</div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group col-md-9">
+                                        <label for="FormSourceHost">Host</label>
+                                        <input type="text" class="form-control" id="FormSourceHost" name="sourceHost">
+
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label for="FormSourcePort">Port</label>
+                                        <input type="number" class="form-control" id="FormSourcePort" name="sourcePort">
+                                    </div>
+                                </div>
+                                <div class="form-group ">
+                                    <label for="FormSourceUser">User</label>
+                                    <input type="text" class="form-control" id="FormSourceUser" name="sourceUser">
+                                </div>
+                                <div class="form-group ">
+                                    <label for="FormSourceDatabase">Database / SID</label>
+                                    <input type="text" class="form-control" id="FormSourceDatabase" name="sourceDatabase">
+                                </div>
+
+                                <div class="form-group ">
+                                    <label for="FormSourceExtraJdbcParams">Extra JDBC parameters</label>
+                                    <textarea class="form-control" id="FormSourceExtraJdbcParams" name="sourceExtraJdbcParams" rows="2" style="font-size: 1.2rem;"
+                                              placeholder="oracle.net.tns_admin=${TNS_ADMIN}"></textarea>
+                                    <small class="form-text text-muted">
+                                        Properties as <code>key=value</code> pairs to pass to the JDBC driver to make the connection, e.g. <code>ApplicationName=ReplicaDB</code>
+                                    </small>
+                                </div>
+
+                            </div>
+                        </div><!-- ./CardSourceConnectionSettings -->
+
+                        <div id="CardSourceDataFiltering">
+                            <br>
+                            <div class="card">
+                                <div class="card-header">Data Filtering <a href="https://osalvador.github.io/ReplicaDB/docs/docs.html#33-selecting-the-data-to-replicate" target="_blank">
+                                    <i class="fas fa-info-circle"></i>
+                                </a>
+                                </div>
+                                <div class="card-body">
+
+
+                                    <!-- Nav tabs -->
+                                    <ul class="nav nav-tabs" role="tablist">
+                                        <li class="nav-item">
+                                            <a class="nav-link active" data-toggle="tab" href="#tabOptions">Options</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link" data-toggle="tab" href="#tabQuery">Query</a>
+                                        </li>
+                                    </ul>
+
+                                    <!-- Tab panes -->
+                                    <div class="tab-content">
+                                        <div id="tabOptions" class="container tab-pane active"><br>
+                                            <div class="form-group ">
+                                                <label for="FormSourceTable">Table</label>
+                                                <input type="text" class="form-control" id="FormSourceTable" name="sourceTable">
+                                                <small class="form-text text-muted">
+                                                    Table to read, e.g. <code>public.employees</code>
+                                                </small>
+                                            </div>
+
+                                            <div class="form-group ">
+                                                <label for="FormSourceColumns">Columns</label>
+                                                <input type="text" class="form-control" id="FormSourceColumns" name="sourceColumns">
+                                                <small class="form-text text-muted">
+                                                    Comma-delimited list of columns to be replicated, e.g. <code>column1, column2, column10</code>
+                                                </small>
+                                            </div>
+
+                                            <div class="form-group ">
+                                                <label for="FormSourceWhere">Where</label>
+                                                <input type="text" class="form-control" id="FormSourceWhere" name="sourceWhere">
+                                                <small class="form-text text-muted">
+                                                    WHERE clause to use during import, e.g. <code>"id > 400"</code>
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div id="tabQuery" class="container tab-pane fade"><br>
+                                            <div class="form-group ">
+                                                <label for="FormSourceQuery">Query</label>
+                                                <textarea class="form-control" id="FormSourceQuery" name="sourceQuery" rows="6" style="font-size: 1.2rem;"></textarea>
+                                                <small class="form-text text-muted">
+                                                    SQL statement to be executed in the source database, e.g. <code>SELECT a.*, b.* FROM a JOIN b on (a.id == b.id)</code>
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div> <!-- ./CardSourceDataFiltering -->
+
+                        <div class="card" id="CardSourceFileSettings">
+                            <div class="card-header">File Settings</div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group col-md-12">
+                                        <label for="FormSourceFilePath">File Path</label>
+                                        <input type="text" class="form-control" id="FormSourceFilePath" name="sourceFilePath">
+                                    </div>
+
+
+                                    <div class="form-group col-md-12">
+                                        <label>Columns Types</label>
+                                        <small class="form-text text-muted">
+                                            <a href="https://osalvador.github.io/ReplicaDB/docs/docs.html#412-supported-data-types-for-csv-file-as-source" target="_blank">
+                                                <i class="fas fa-info-circle"></i>
+                                            </a>
+                                            Sets the columns data types. You should define the correct data type of your columns in the exact order in which they appear in the file.
+                                        </small>
+                                        <br>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeVarchar">VARCHAR</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeChar">CHAR</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeLongvarchar">LONGVARCHAR</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeInteger">INTEGER</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeBigint">BIGINT</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeTinyint">TINYINT</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeSmallint">SMALLINT</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeNumeric">NUMERIC</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeDecimal">DECIMAL</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeDouble">DOUBLE</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeFloat">FLOAT</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeDate">DATE</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeTimestamp">TIMESTAMP</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeTime">TIME</button>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnColumnTypeBoolean">BOOLEAN</button>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-1"></div>
+                                    <div class="col-md-10">
+                                        <table class="table">
+                                            <thead>
+                                            <tr>
+                                                <th scope="col">Column Number</th>
+                                                <th scope="col">Column Data Type</th>
+                                            </tr>
+                                            </thead>
+                                        </table>
+                                        <ol id="FormSourceFileColumnsTypes" class="list-group small text-center"></ol>
+                                    </div>
+                                    <div class="col-md-1"></div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <p>
+                                            <small class="text-muted">
+                                                You can drag and drop table items to rearrange them.
+                                            </small>
+                                        </p>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div><!-- ./CardSourceFileSettings -->
+
+                        <div id="CardSourceFileDataParsing">
+                            <br>
+                            <div class="card">
+                                <div class="card-header">Parsing and Formating File Data</div>
+                                <div class="card-body">
+
+                                    <div class="form-group">
+                                        <label for="FormSourceFileFormat">Format</label>
+
+                                        <select class="form-control select2" id="FormSourceFileFormat" name="sourceFileFormat">
+                                            <option value="" disabled selected></option>
+                                            <option value="DEFAULT">DEFAULT</option>
+                                            <option value="ORACLE">ORACLE</option>
+                                            <option value="EXCEL">EXCEL</option>
+                                            <option value="RFC4180">RFC4180</option>
+                                            <option value="TDF">TDF</option>
+                                            <option value="MYSQL">MYSQL</option>
+                                            <option value="POSTGRESQL_CSV">POSTGRESQL_CSV</option>
+                                            <option value="POSTGRESQL_TEXT">POSTGRESQL_TEXT</option>
+                                            <option value="MONGO_CSV">MONGO_CSV</option>
+                                            <option value="MONGO_TSV">MONGO_TSV</option>
+                                            <option value="INFORMIX_UNLOAD">INFORMIX_UNLOAD</option>
+                                            <option value="INFORMIX_UNLOAD_CSV">INFORMIX_UNLOAD_CSV</option>
+                                        </select>
+
+                                        <small class="form-text text-muted">
+                                            Base predefined CSV format
+                                            <a href="https://osalvador.github.io/ReplicaDB/docs/docs.html#413-predefined-csv-formats" target="_blank">
+                                                <i class="fas fa-info-circle"></i>
+                                            </a>
+                                        </small>
+                                    </div>
+                                    <hr>
+                                    <div class="form-row">
+                                        <div class="form-group col-md-3">
+                                            <label for="FormSourceFileDelimiter">Delimiter</label>
+                                            <input type="text" class="form-control" id="FormSourceFileDelimiter" name="sourceFileDelimiter" maxlength="1">
+                                            <small class="form-text text-muted">
+                                                Field delimiter character
+                                            </small>
+                                        </div>
+
+                                        <div class="form-group col-md-3">
+                                            <label for="FormSourceFileQuote">Quote</label>
+                                            <input type="text" class="form-control" id="FormSourceFileQuote" name="sourceFileQuote" maxlength="1">
+                                            <small class="form-text text-muted">
+                                                QuoteChar character
+                                            </small>
+                                        </div>
+
+                                        <!--<div class="form-group col-md-4">-->
+                                        <!--<label for="FormSourceFileRecordSeparator">Record Separator</label>-->
+                                        <!--<input type="text" class="form-control" id="FormSourceFileRecordSeparator" name="sourceFileRecordSeparator">-->
+                                        <!--<small class="form-text text-muted">-->
+                                        <!--Field delimiter character-->
+                                        <!--</small>-->
+                                        <!--</div>-->
+
+                                        <div class="form-group col-md-3">
+                                            <label for="FormSourceFileEscape">Escape</label>
+                                            <input type="text" class="form-control" id="FormSourceFileEscape" name="sourceFileEscape" maxlength="1">
+                                            <small class="form-text text-muted">
+                                                Escape character
+                                            </small>
+                                        </div>
+
+                                        <div class="form-group col-md-3">
+                                            <label for="FormSourceFileNullString">Null String</label>
+                                            <input type="text" class="form-control" id="FormSourceFileNullString" name="sourceFileNullString">
+                                            <small class="form-text text-muted">
+                                                The String to convert to null
+                                            </small>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="form-group col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="FormSourceFileFirstRecordAsHeader" name="sourceFileFirstRecordAsHeader" value="true">
+                                                <label class="form-check-label" for="FormSourceFileFirstRecordAsHeader">
+                                                    First Record as Header
+                                                </label>
+                                                <small class="form-text text-muted">
+                                                    The first line of the file is the header
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group col-md-6">
+                                            <div class="form-check ">
+                                                <input class="form-check-input" type="checkbox" id="FormSourceFileIgnoreEmptyLines" name="sourceFileIgnoreEmptyLines" value="true">
+                                                <label class="form-check-label" for="FormSourceFileIgnoreEmptyLines">
+                                                    Ignore Empty Lines
+                                                </label>
+                                                <small class="form-text text-muted">
+                                                    Empty lines between records are ignored
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="form-group col-md-6">
+                                            <div class="form-check ">
+                                                <input class="form-check-input" type="checkbox" id="FormSourceFileIgnoreSurroundingSpaces" name="sourceFileIgnoreSurroundingSpaces" value="true">
+                                                <label class="form-check-label" for="FormSourceFileIgnoreSurroundingSpaces">
+                                                    Ignore Surrounding Spaces
+                                                </label>
+                                                <small class="form-text text-muted">
+                                                    Spaces around values are ignored
+                                                </small>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="FormSourceFileTrim" name="sourceFileTrim" value="true">
+                                                <label class="form-check-label" for="FormSourceFileTrim">
+                                                    Trim
+                                                </label>
+                                                <small class="form-text text-muted">
+                                                    Trim leading and trailing blanks
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div><!-- ./CardSourceFileDataParsing -->
+
+                    </form>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-xl-6">
+
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Sink Options</h6>
+                </div>
+                <div class="card-body">
+
+                    <form id="FormSink">
+                        <h5>Data Source Type</h5>
+                        <div class="form-group">
+                            <div>
+                                <select class="form-control select2" id="FormSinkType" name="sinkType">
+                                    <option value="" disabled selected></option>
+                                    <option value="oracle">Oracle</option>
+                                    <option value="postgres">PostgreSQL</option>
+                                    <option value="sqlserver">SQL Server</option>
+                                    <!--<option value="s3">Amazon S3</option>-->
+                                    <option value="file">File (CSV, TSV...)</option>
+                                    <option value="kafka">Apache Kafka</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="card" id="CardSinkConnectionSettings">
+                            <div class="card-header">Connection Settings</div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group col-md-9">
+                                        <label for="FormSinkHost">Host</label>
+                                        <input type="text" class="form-control" id="FormSinkHost" name="sinkHost">
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label for="FormSinkPort">Port</label>
+                                        <input type="number" class="form-control" id="FormSinkPort" name="sinkPort">
+                                    </div>
+                                </div>
+                                <div class="form-group ">
+                                    <label for="FormSinkUser">User</label>
+                                    <input type="text" class="form-control" id="FormSinkUser" name="sinkUser">
+                                </div>
+                                <div class="form-group ">
+                                    <label for="FormSinkDatabase">Database / SID</label>
+                                    <input type="text" class="form-control" id="FormSinkDatabase" name="sinkDatabase">
+                                </div>
+
+                                <div class="form-group ">
+                                    <label for="FormSinkExtraJdbcParams">Extra JDBC parameters</label>
+                                    <textarea class="form-control" id="FormSinkExtraJdbcParams" name="sinkExtraJdbcParams" rows="2" style="font-size: 1.2rem;"
+                                              placeholder="oracle.net.tns_admin=${TNS_ADMIN}"></textarea>
+                                    <small class="form-text text-muted">
+                                        Properties as <code>key=value</code> pairs to pass to the JDBC driver to make the connection, e.g. <code>ApplicationName=ReplicaDB</code>
+                                    </small>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div id="CardSinkDataMapping">
+                            <br>
+                            <div class="card">
+                                <div class="card-header">Data Maping</div>
+                                <div class="card-body">
+                                    <div class="form-group ">
+                                        <label for="FormSinkTable">Table</label>
+                                        <input type="text" class="form-control" id="FormSinkTable" name="sinkTable">
+                                        <small class="form-text text-muted">
+                                            Table to be populated. e.g. <code>hr.collaborators</code>
+                                        </small>
+                                    </div>
+                                    <div class="form-group ">
+                                        <label for="FormSinkColumns">Columns</label>
+                                        <input type="text" class="form-control" id="FormSinkColumns" name="sinkColumns">
+                                        <small class="form-text text-muted">
+                                            Comma-delimited list of table columns to be populated, e.g. <code>column2, column10, column1</code>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div> <!-- /CardSinkDataMapping -->
+
+
+                        <div id="CardSinkStagingOptions">
+                            <br>
+                            <div class="card">
+
+                                <div class="card-header">Staging Options</div>
+                                <div class="card-body">
+
+                                    <!-- Nav tabs -->
+                                    <ul class="nav nav-tabs" role="tablist">
+                                        <li class="nav-item">
+                                            <a class="nav-link active" data-toggle="tab" href="#tabStagingSchema">Schema</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a class="nav-link" data-toggle="tab" href="#tabStagingTable">Table</a>
+                                        </li>
+                                    </ul>
+
+                                    <!-- Tab panes -->
+                                    <div class="tab-content">
+                                        <div id="tabStagingSchema" class="container tab-pane active"><br>
+                                            <div class="form-group ">
+                                                <label for="FormSinkStagingSchema">Staging Schema</label>
+                                                <input type="text" class="form-control" id="FormSinkStagingSchema" name="sinkStagingSchema">
+                                                <small class="form-text text-muted">
+                                                    Scheme name, with right permissions, for creating staging tables
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div id="tabStagingTable" class="container tab-pane fade"><br>
+                                            <div class="form-group ">
+                                                <label for="FormSinkStagingTable">Staging Table</label>
+                                                <input type="text" class="form-control" id="FormSinkStagingTable" name="sinkStagingTable">
+                                                <small class="form-text text-muted">
+                                                    Qualified name of the staging table. The table must exist.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div> <!-- /CardSinkStagingOptions -->
+
+                        <div class="form-group" id="CardSinkDisableEscape">
+                            <br>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="FormSinkDisableEscape" checked name="sinkDisableEscape" value="true">
+                                <label class="form-check-label" for="FormSinkDisableEscape">
+                                    Escape
+                                </label>
+                                <small class="form-text text-muted">
+                                    Escape the strings before inserting into the table.
+                                </small>
+
+                            </div>
+                        </div>
+                        <div class="form-group" id="CardSinkDisableTruncate">
+                            <br>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="FormSinkDisableTruncate" checked name="sinkDisableTruncate" value="true">
+                                <label class="form-check-label" for="FormSinkDisableTruncate">
+                                    Truncate
+                                </label>
+                                <small class="form-text text-muted">
+                                    Truncate the sink table before populating.
+                                </small>
+
+                            </div>
+                        </div>
+
+
+                        <div class="card" id="CardSinkFileSettings">
+                            <div class="card-header">File Settings</div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group col-md-12">
+                                        <label for="FormSinkFilePath">File Path</label>
+                                        <input type="text" class="form-control" id="FormSinkFilePath" name="sinkFilePath">
+                                    </div>
+                                </div>
+                            </div>
+                        </div><!-- ./CardSinkFileSettings -->
+
+                        <div id="CardSinkFileDataParsing">
+                            <br>
+                            <div class="card">
+                                <div class="card-header">Parsing and Formating File Data</div>
+                                <div class="card-body">
+
+                                    <div class="form-group">
+                                        <label for="FormSinkFileFormat">Format</label>
+
+                                        <select class="form-control select2" id="FormSinkFileFormat" name="sinkFileFormat">
+                                            <option value="" disabled selected></option>
+                                            <option value="DEFAULT">DEFAULT</option>
+                                            <option value="ORACLE">ORACLE</option>
+                                            <option value="EXCEL">EXCEL</option>
+                                            <option value="RFC4180">RFC4180</option>
+                                            <option value="TDF">TDF</option>
+                                            <option value="MYSQL">MYSQL</option>
+                                            <option value="POSTGRESQL_CSV">POSTGRESQL_CSV</option>
+                                            <option value="POSTGRESQL_TEXT">POSTGRESQL_TEXT</option>
+                                            <option value="MONGO_CSV">MONGO_CSV</option>
+                                            <option value="MONGO_TSV">MONGO_TSV</option>
+                                            <option value="INFORMIX_UNLOAD">INFORMIX_UNLOAD</option>
+                                            <option value="INFORMIX_UNLOAD_CSV">INFORMIX_UNLOAD_CSV</option>
+                                        </select>
+
+                                        <small class="form-text text-muted">
+                                            Base predefined CSV format
+                                            <a href="https://osalvador.github.io/ReplicaDB/docs/docs.html#413-predefined-csv-formats" target="_blank">
+                                                <i class="fas fa-info-circle"></i>
+                                            </a>
+                                        </small>
+                                    </div>
+                                    <hr>
+                                    <div class="form-row">
+                                        <div class="form-group col-md-3">
+                                            <label for="FormSinkFileDelimiter">Delimiter</label>
+                                            <input type="text" class="form-control" id="FormSinkFileDelimiter" name="sinkFileDelimiter" maxlength="1">
+                                            <small class="form-text text-muted">
+                                                Field delimiter character
+                                            </small>
+                                        </div>
+
+                                        <div class="form-group col-md-3">
+                                            <label for="FormSinkFileQuote">Quote</label>
+                                            <input type="text" class="form-control" id="FormSinkFileQuote" name="sinkFileQuote" maxlength="1">
+                                            <small class="form-text text-muted">
+                                                QuoteChar character
+                                            </small>
+                                        </div>
+
+                                        <div class="form-group col-md-4">
+                                            <label for="FormSinkFileRecordSeparator">Record Separator</label>
+                                            <input type="text" class="form-control" id="FormSinkFileRecordSeparator" name="sinkFileRecordSeparator">
+                                            <small class="form-text text-muted">
+                                                Field delimiter character
+                                            </small>
+                                        </div>
+
+                                    </div>
+
+                                    <div class="row">
+
+                                        <div class="form-group col-md-3">
+                                            <label for="FormSinkFileEscape">Escape</label>
+                                            <input type="text" class="form-control" id="FormSinkFileEscape" name="sinkFileEscape" maxlength="1">
+                                            <small class="form-text text-muted">
+                                                Escape character
+                                            </small>
+                                        </div>
+
+                                        <div class="form-group col-md-3">
+                                            <label for="FormSinkFileNullString">Null String</label>
+                                            <input type="text" class="form-control" id="FormSinkFileNullString" name="sinkFileNullString">
+                                            <small class="form-text text-muted">
+                                                The String to convert to null
+                                            </small>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="form-group col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="FormSinkFileFirstRecordAsHeader" name="sinkFileFirstRecordAsHeader" value="true">
+                                                <label class="form-check-label" for="FormSinkFileFirstRecordAsHeader">
+                                                    First Record as Header
+                                                </label>
+                                                <small class="form-text text-muted">
+                                                    The first line of the file is the header
+                                                </small>
+                                            </div>
+                                        </div>
+
+
+                                    </div>
+
+
+                                </div>
+                            </div>
+                        </div><!-- ./CardSinkFileDataParsing -->
+
+                        <div class="card" id="CardSinkKafkaSettings">
+                            <div class="card-header">Apache Kafka Settings</div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group col-md-12">
+                                        <label for="FormSinkKafkaBootstrapServers">*Bootstrap Servers</label>
+                                        <input type="text" class="form-control" id="FormSinkKafkaBootstrapServers" name="sinkKafkaBootstrapServers" placeholder="host1:port1,host2:port2...">
+                                        <small class="form-text text-muted">
+                                            comma-separated list of host and port pairs, that are the addresses of the Kafka brokers in a Kafka cluster
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-4">
+                                        <label for="FormSinkKafkaTopic">*Topic Name</label>
+                                        <input type="text" class="form-control" id="FormSinkKafkaTopic" name="sinkKafkaTopic">
+                                        <small class="form-text text-muted">
+                                            The Kafka topic used for produced events
+                                        </small>
+                                    </div>
+
+                                    <div class="form-group col-md-4">
+                                        <label for="FormSinkKafkaPartition">Topic Partition</label>
+                                        <input type="number" class="form-control" id="FormSinkKafkaPartition" name="sinkKafkaPartition">
+                                        <small class="form-text text-muted">
+                                            The topic Partition Number
+                                        </small>
+                                    </div>
+
+                                    <div class="form-group col-md-4">
+                                        <label for="FormSinkKafkaAcks">ACKs</label>
+                                        <div>
+                                            <select class="form-control select2" id="FormSinkKafkaAcks" name="sinkKafkaAcks">
+                                                <option value="" disabled selected></option>
+                                                <option value="all">all</option>
+                                                <option value="0">0</option>
+                                                <option value="1">1</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-12">
+                                        <label for="FormSinkExtraKafkaParams">Extra Kafka producer properties</label>
+                                        <textarea class="form-control" id="FormSinkExtraKafkaParams" name="sinkExtraKafkaParams" rows="2" style="font-size: 1.2rem;"
+                                                  placeholder="key=replicadbMessage"></textarea>
+                                        <small class="form-text text-muted">
+                                            Properties as <code>key=value</code> pairs to pass to the Kafka producer client.
+                                            <br>All properties: <a href="https://kafka.apache.org/documentation/#producerconfigs" target="_blank">https://kafka.apache.org/documentation/#producerconfigs</a>
+                                            <br><code>client.id=ReplicaDB</code>
+                                            <br><code>batch.size=10</code>
+                                        </small>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div><!-- ./CardSinkKafkaSettings -->
+
+
+                    </form>
+
+
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- /row -->
+
+
+    <div class="row">
+        <div class="col-xl-12">
+
+            <div class="card shadow mb-4">
+                <!--<div class="card-header py-3">-->
+                <!--<h6 class="m-0 font-weight-bold text-primary">Result</h6>-->
+                <!--</div>-->
+                <div class="card-body">
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button type="button" class="btn btn-primary btn-lg float-md-left" onclick="generateConfigFile()"><i class="far fa-file"></i> Generate</button>
+                            <button type="button" class="btn btn-danger btn-lg float-md-right" onclick="reloadPage();"><i class="far fa-trash-alt"></i> Clear</button>
+                        </div>
+                    </div>
+                    <br>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <!-- The result configuration -->
+                            <pre><code class="properties" id="configResult"></code></pre>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button type="button" class="btn btn-success btn-lg float-md-left" onclick="saveTextAsFile($('#configResult').text(), 'replicadb.conf')"><i class="fas fa-download"></i> Download</button>
+                            <button id="copyBtn" type="button" class="btn btn-light btn-lg float-md-right" data-clipboard-target="#configResult"><i class="far fa-save"></i> Copy Clippboard</button>
+                        </div>
+                    </div>
+                    <br>
+                    <br>
+                    <div class="row" id="commandExample">
+                        <div class="col-md-12">
+                            <h6>Run replicadb on your machine with this command:</h6>
+                            <pre><code class="bash">$ ./bin/replicadb --options-file replicadb.conf</code></pre>
+                        </div>
+                    </div>
+
+                </div> <!-- /card-body -->
+
+            </div>
+        </div>
+    </div>
+
+
+</div>
+<!-- /.container-fluid -->
+
+
+<!-- Footer -->
+<footer class="sticky-footer bg-white">
+    <div class="container my-auto">
+        <div class="copyright text-center my-auto">
+            <span>ReplicaDB - Open Source Database Replication Tool | <a href="https://github.com/osalvador/ReplicaDB">GitHub</a></span>
+        </div>
+    </div>
+</footer>
+<!-- End of Footer -->
+
+
+<!-- Scroll to Top Button-->
+<a class="scroll-to-top rounded" href="#page-top">
+    <i class="fas fa-angle-up"></i>
+</a>
+
+<!-- x-handlebars-template -->
+<script id="configTemplate" type="text/plain">######################## ReplicadB General Options ########################
+mode={{mode}}
+jobs={{jobs}}
+fetch.size={{fetchSize}}
+{{#if bandwidthThrottling}}bandwidth.throttling={{{bandwidthThrottling}}}{{/if}}
+verbose={{#if verbose}}{{verbose}}{{else}}false{{/if}}
+
+############################# Soruce Options ##############################
+source.connect={{#createConnect "source"}}{{/createConnect}}
+{{#if sourceUser}}source.user={{{sourceUser}}}{{/if}}
+{{#if sourceUser}}source.password=<user password>{{/if}}
+{{#if sourceTable}}source.table={{{sourceTable}}}{{/if}}
+{{#if sourceColumns}}source.columns={{{sourceColumns}}}{{/if}}
+{{#if sourceWhere}}source.where={{{sourceWhere}}}{{/if}}
+{{#if sourceQuery}}source.query={{#sourceQueryHelper}}{{/sourceQueryHelper}}{{/if}}
+
+{{#extraJdbcParams "source"}}{{/extraJdbcParams}}
+
+{{#if sourceFileColumnsDataTypes}}source.connect.parameter.columns.types={{{sourceFileColumnsDataTypes}}}{{/if}}
+{{#if sourceFileFormat}}source.connect.parameter.format={{{sourceFileFormat}}}{{/if}}
+{{#if sourceFileDelimiter}}source.connect.parameter.format.delimiter={{{sourceFileDelimiter}}}{{/if}}
+{{#if sourceFileEscape}}source.connect.parameter.format.escape={{{sourceFileEscape}}}{{/if}}
+{{#if sourceFileQuote}}source.connect.parameter.format.quote={{{sourceFileQuote}}}{{/if}}
+{{#if sourceFileNullString}}source.connect.parameter.format.nullString={{{sourceFileNullString}}}{{/if}}
+{{#if sourceFileFirstRecordAsHeader}}source.connect.parameter.format.firstRecordAsHeader={{{sourceFileFirstRecordAsHeader}}}{{/if}}
+{{#if sourceFileIgnoreEmptyLines}}source.connect.parameter.format.ignoreEmptyLines={{{sourceFileIgnoreEmptyLines}}}{{/if}}
+{{#if sourceFileIgnoreSurroundingSpaces}}source.connect.parameter.format.ignoreSurroundingSpaces={{{sourceFileIgnoreSurroundingSpaces}}}{{/if}}
+{{#if sourceFileTrim}}source.connect.parameter.format.trim={{{sourceFileTrim}}}{{/if}}
+
+############################# Sink Options ################################
+sink.connect={{#createConnect "sink"}}{{/createConnect}}
+{{#if sinkUser}}sink.user={{{sinkUser}}}{{/if}}
+{{#if sinkUser}}sink.password=<user password>{{/if}}
+{{#if sinkTable}}sink.table={{{sinkTable}}}{{/if}}
+{{#if sinkColumns}}sink.columns={{{sinkColumns}}}{{/if}}
+
+{{#extraJdbcParams "sink"}}{{/extraJdbcParams}}
+
+{{#if sinkFileFormat}}sink.connect.parameter.format={{{sinkFileFormat}}}{{/if}}
+{{#if sinkFileDelimiter}}sink.connect.parameter.format.delimiter={{{sinkFileDelimiter}}}{{/if}}
+{{#if sinkFileEscape}}sink.connect.parameter.format.escape={{{sinkFileEscape}}}{{/if}}
+{{#if sinkFileQuote}}sink.connect.parameter.format.quote={{{sinkFileQuote}}}{{/if}}
+{{#if sinkFileRecordSeparator}}sink.connect.parameter.format.recordSeparator={{{sinkFileRecordSeparator}}}{{/if}}
+{{#if sinkFileNullString}}sink.connect.parameter.format.nullString={{{sinkFileNullString}}}{{/if}}
+{{#if sinkFileFirstRecordAsHeader}}sink.connect.parameter.format.firstRecordAsHeader={{{sinkFileFirstRecordAsHeader}}}{{/if}}
+
+{{#if sinkStagingTable}}sink.staging.table={{{sinkStagingTable}}}{{/if}}
+{{#if sinkStagingSchema}}sink.staging.schema={{{sinkStagingSchema}}}{{/if}}
+
+{{#if sinkDisableEscape}}{{else}}sink.disable.escape=true{{/if}}
+{{#if sinkDisableTruncate}}{{else}}sink.disable.truncate=true{{/if}}
+
+
+{{#if sinkKafkaTopic}}sink.connect.parameter.topic={{{sinkKafkaTopic}}}{{/if}}
+{{#if sinkKafkaPartition}}sink.connect.parameter.partition={{{sinkKafkaPartition}}}{{/if}}
+{{#if sinkKafkaAcks}}sink.connect.parameter.acks={{{sinkKafkaAcks}}}{{/if}}
+
+{{#extraKafkaParams "sink"}}{{/extraKafkaParams}}
+
+</script>
+
+<!-- Bootstrap core JavaScript-->
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<!-- Core plugin JavaScript-->
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+<!-- Custom scripts for all pages-->
+<script src="js/sb-admin-2.min.js"></script>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+<!-- Include Handlebars from a CDN -->
+<script src="//cdn.jsdelivr.net/npm/handlebars@latest/dist/handlebars.js"></script>
+<script src="//cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+<!-- Latest Sortable -->
+<script src="//raw.githack.com/SortableJS/Sortable/master/Sortable.js"></script>
+
+<script src="//cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js"></script>
+
+<!-- Handlebars Functions -->
+<script>
+
+    // Create Connection Helper
+    Handlebars.registerHelper("createConnect", function (dsType, options) {
+        var connectType, host, port, database, filePath, kafkaServers = "";
+
+        console.log(dsType);
+        if (dsType === "source") {
+            connectType = this.sourceType;
+            host = this.sourceHost;
+            port = this.sourcePort;
+            database = this.sourceDatabase;
+            filePath = this.sourceFilePath;
+        } else {
+            connectType = this.sinkType;
+            host = this.sinkHost;
+            port = this.sinkPort;
+            database = this.sinkDatabase;
+            filePath = this.sinkFilePath;
+            kafkaServers = this.sinkKafkaBootstrapServers;
+        }
+
+        switch (connectType) {
+            case "oracle":
+                return "jdbc:oracle:thin:@" + host + ":" + port + ":" + database;
+                break;
+            case "postgres":
+                return "jdbc:postgresql://" + host + ":" + port + "/" + database;
+                break;
+            case "sqlserver":
+                return "jdbc:sqlserver://" + host + ":" + port + ";database=" + database;
+                break;
+            case "denodo":
+                return "jdbc:vdb://" + host + ":" + port + "/" + database;
+                break;
+            case "file":
+                return "file://" + filePath;
+                break;
+            case "s3":
+                return "s3://" + host;
+                break;
+            case "kafka":
+                return "kafka://" + kafkaServers;
+                break;
+            default:
+                console.log("no se quien soy:" + connectType);
+        }
+
+    });
+
+    // Create extraJdbcParams Helper
+    Handlebars.registerHelper("extraJdbcParams", function (dsType, options) {
+        var vExtraJdbcParams = "";
+
+        if (dsType === "source") {
+            vExtraJdbcParams = this.sourceExtraJdbcParams;
+            vExtraJdbcParams = vExtraJdbcParams.replace(new RegExp("(\\w.+)", "gm"), "source.connect.parmeter.$1");
+        } else {
+            vExtraJdbcParams = this.sinkExtraJdbcParams;
+            vExtraJdbcParams = vExtraJdbcParams.replace(new RegExp("(\\w.+)", "gm"), "sink.connect.parmeter.$1");
+        }
+
+        vExtraJdbcParams = vExtraJdbcParams.replace(/\r/gm, '');
+        //return vExtraJdbcParams;
+        return new Handlebars.SafeString(vExtraJdbcParams);
+    });
+
+    // Create sourceQueryHelper Helper
+    Handlebars.registerHelper("sourceQueryHelper", function (options) {
+        var sourceQuery = this.sourceQuery;
+        // add slash to the end of all lines
+        sourceQuery = sourceQuery.replace(new RegExp("(\\w.+)", "gm"), "$1 \\");
+        // remove last slash
+        sourceQuery = sourceQuery.slice(0, -1);
+        // remove carriage return
+        sourceQuery = sourceQuery.replace(/\r/gm, '');
+
+        return new Handlebars.SafeString(sourceQuery);
+    });
+
+    // Create extraKafkaParams Helper
+    Handlebars.registerHelper("extraKafkaParams", function (dsType, options) {
+        var vExtraKafkaParams = "";
+
+        if (dsType === "source") {
+            vExtraKafkaParams = this.sourceExtraKafkaParams;
+            vExtraKafkaParams = vExtraKafkaParams.replace(new RegExp("(\\w.+)", "gm"), "source.connect.parmeter.$1");
+        } else {
+            vExtraKafkaParams = this.sinkExtraKafkaParams;
+            vExtraKafkaParams = vExtraKafkaParams.replace(new RegExp("(\\w.+)", "gm"), "sink.connect.parmeter.$1");
+        }
+
+        vExtraKafkaParams = vExtraKafkaParams.replace(/\r/gm, '');
+        //return vExtraJdbcParams;
+        return new Handlebars.SafeString(vExtraKafkaParams);
+    });
+
+    // Format Form - JSON
+    function objectifyForm(formArray) {//serialize data function
+
+        var returnArray = {};
+        for (var i = 0; i < formArray.length; i++) {
+            returnArray[formArray[i]['name']] = formArray[i]['value'];
+        }
+        return returnArray;
+    }
+
+    function generateConfigFile() {
+
+        // compile the template
+        var template = Handlebars.compile($('#configTemplate').text());
+
+        var basicOptionsArray = objectifyForm($('#FormBasics').serializeArray());
+        var sourceOptionsArray = objectifyForm($('#FormSource').serializeArray());
+        var sinkOptionsArray = objectifyForm($('#FormSink').serializeArray());
+        var sourceFileColumnsDataTypesObj = {sourceFileColumnsDataTypes: $('#FormSourceFileColumnsTypes li').text().replace(/ /g, ", ").slice(0, -2)};
+
+        var context = $.extend(basicOptionsArray, sourceOptionsArray, sinkOptionsArray, sourceFileColumnsDataTypesObj);
+
+        console.log(context);
+        // execute the compiled template and print the output
+        var result = template(context);
+        result = result.replace(/\n\s*\n/g, '\n');
+
+        $('#configResult').text(result);
+        $('#commandExample').show("slow");
+
+        // Highlighting
+        hljs.initHighlighting.called = false;
+        hljs.initHighlighting();
+
+
+    }
+
+</script>
+
+<!-- Jquery functions-->
+<script>
+    // Ready
+    $(function () {
+        // init
+        hideAllSourceSettings();
+        hideAllSinkSettings();
+        enableSelect2();
+        enableSorteable();
+        $('#commandExample').hide();
+
+        // Events
+        $("#FormSourceType").change(function () {
+            // hide all
+            hideAllSourceSettings();
+
+            switch (this.value) {
+                case "oracle":
+                case "postgres":
+                case "sqlserver":
+                case "denodo":
+                    $('#CardSourceConnectionSettings').show("slow");
+                    $('#CardSourceDataFiltering').show("slow");
+                    break;
+                case "file":
+                    $('#CardSourceFileSettings').show("slow");
+                    $('#CardSourceFileDataParsing').show("slow");
+                    break;
+                default:
+                    console.log("no se quien soy:" + this.value);
+            }
+        });
+
+        $("#FormSinkType").change(function () {
+            // hide all
+            hideAllSinkSettings();
+
+            switch (this.value) {
+                case "postgres":
+                    $('#CardSinkDisableEscape').show("slow");
+                case "oracle":
+                case "sqlserver":
+                    $('#CardSinkConnectionSettings').show("slow");
+                    $('#CardSinkDataMapping').show("slow");
+                    showStagingSettings();
+                    break;
+                case "file":
+                    $('#CardSinkFileSettings').show("slow");
+                    $('#CardSinkFileDataParsing').show("slow");
+                    break;
+                case "kafka":
+                    $('#CardSinkKafkaSettings').show("slow");
+                    break;
+                default:
+                    console.log("no se quien soy:" + this.value);
+            }
+        });
+
+        // Clipboard
+        var copyBtn = document.getElementById('copyBtn');
+        var clipboard = new ClipboardJS(copyBtn);
+        clipboard.on('success', function(e) {
+            setTooltip('Copied!');
+            hideTooltip();
+        });
+        clipboard.on('error', function(e) {
+            setTooltip('Failed!');
+            hideTooltip();
+        });
+        $('#copyBtn').tooltip({
+            trigger: 'click',
+            placement: 'bottom'
+        });
+
+
+    });
+
+    // File Columns Data Types events
+    $("[id^=btnColumnType]").click(function () {
+        var dataType = $(this).text() + ' ';
+        var random = Math.floor((Math.random() * 100) + 1);
+
+        $("#FormSourceFileColumnsTypes").append($("<li>").html(dataType
+            + '<button id="removebtn' + random + '" type="button" class="close" aria-label="Close"><span aria-hidden="true"><i class="fas fa-times"></i></span></button>')
+            .addClass("list-group-item list-group-item-action"));
+
+
+        $('.close').on("click", function () {
+            $(this).parent().remove();
+        });
+
+    });
+
+    function hideAllSourceSettings() {
+        $('#CardSourceConnectionSettings').hide();
+        $('#CardSourceDataFiltering').hide();
+        $('#CardSourceFileSettings').hide();
+        $('#CardSourceFileDataParsing').hide();
+    }
+
+    function hideAllSinkSettings() {
+        $('#CardSinkConnectionSettings').hide();
+        $('#CardSinkDataMapping').hide();
+        $('#CardSinkStagingOptions').hide();
+        $('#CardSinkDisableEscape').hide();
+        $('#CardSinkDisableTruncate').hide();
+        $('#CardSinkFileSettings').hide();
+        $('#CardSinkFileDataParsing').hide();
+        $('#CardSinkKafkaSettings').hide();
+    }
+
+    function showStagingSettings() {
+        if ($("#FormMode").val() !== "complete") {
+            $('#CardSinkStagingOptions').show("slow");
+        }
+
+        if ($("#FormMode").val() !== "complete-atomic") {
+            $('#CardSinkDisableTruncate').show("slow");
+        }
+
+    }
+
+    function enableSelect2() {
+        // initiate select2
+        $('.select2').select2({
+            theme: 'bootstrap4',
+            minimumResultsForSearch: -1
+        });
+    }
+
+    function enableSorteable() {
+        Sortable.create(FormSourceFileColumnsTypes, {
+            ghostClass: 'list-group-item-light',
+            animation: 150
+        });
+
+    }
+
+    function reloadPage() {
+        location.reload(true);
+    }
+
+    // Download file
+    function saveTextAsFile(textToWrite, fileNameToSaveAs) {
+        var textFileAsBlob = new Blob([textToWrite], {type:'text/plain'});
+        var downloadLink = document.createElement("a");
+        downloadLink.download = fileNameToSaveAs;
+        downloadLink.innerHTML = "Download File";
+        if (window.webkitURL !== null) {
+            // Chrome allows the link to be clicked
+            // without actually adding it to the DOM.
+            downloadLink.href = window.webkitURL.createObjectURL(textFileAsBlob);
+        }
+        else {
+            // Firefox requires the link to be added to the DOM
+            // before it can be clicked.
+            downloadLink.href = window.URL.createObjectURL(textFileAsBlob);
+            downloadLink.onclick = destroyClickedElement;
+            downloadLink.style.display = "none";
+            document.body.appendChild(downloadLink);
+        }
+
+        downloadLink.click();
+    }
+
+    // Tooltip
+    function setTooltip(message) {
+        $('#copyBtn').tooltip('hide')
+            .attr('data-original-title', message)
+            .tooltip('show');
+    }
+
+    function hideTooltip() {
+        setTimeout(function() {
+            $('#copyBtn').tooltip('hide');
+        }, 1000);
+    }
+
+</script>
+
+</body>
+
+</html>
