@@ -61,6 +61,15 @@ $ tar -xvzf ReplicaDB-0.7.0.tar.gz
 $ ./bin/replicadb --help
 ```
 
+
+## Full Documentation
+
+You can find the full ReplicaDB documentation here: [Docs](https://osalvador.github.io/ReplicaDB/docs/docs.html)
+
+## Configuration Wizard
+
+You can create a configuration file for a ReplicaDB process by filling out a simple form: [ReplicaDB configuration wizard](https://osalvador.github.io/ReplicaDB/wizard/index.html)
+
 ## JDBC Drivers
 
 You can use ReplicaDB with any JDBC-compliant database. First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory on your client machine. Each driver `.jar` file also has a specific driver class which defines the entry-point to the driver. 
