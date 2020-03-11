@@ -59,7 +59,7 @@ By default, ReplicaDB will truncate the sink table before populating it with dat
 <br>
 ## 2.1 Replication Mode
 
-ReplicaDB implements three replication modes: `complete`, `complete-atomic` and ` incremental`.
+ReplicaDB implements three replication modes: `complete`, `complete-atomic` and `incremental`.
 
 ### Complete
 
