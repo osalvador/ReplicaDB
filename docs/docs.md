@@ -8,6 +8,9 @@ layout: page
 - [1. Introduction](#1-introduction)
 - [2. Basic Usage](#2-basic-usage)
   - [2.1 Replication Mode](#21-replication-mode)
+    - [Complete](#complete)
+    - [Complete Atomic](#complete-atomic)
+    - [Incremental](#incremental)
   - [2.2 Controlling Parallelism](#22-controlling-parallelism)
 - [3. Command Line Arguments](#3-command-line-arguments)
   - [3.1 Using Options Files to Pass Arguments](#31-using-options-files-to-pass-arguments)
@@ -56,14 +59,36 @@ By default, ReplicaDB will truncate the sink table before populating it with dat
 <br>
 ## 2.1 Replication Mode
 
-ReplicaDB implements two replication modes: `complete` and` incremental`. The main difference between them is:
+ReplicaDB implements three replication modes: `complete`, `complete-atomic` and ` incremental`.
 
 ### Complete
 
 The `complete` mode makes a complete replica of the source table, of all its data, from source to sink. In `complete` mode, only` INSERT` is done in the sink table without worrying about the primary keys. ReplicaDB will perform the following actions on a `complete` replication:
 
-  - Truncate the sink table with the `TRUNCATE TABLE` statement
-  - Copy the data in parallel from the source table to the sink table.
+  - Truncate the sink table with the `TRUNCATE TABLE` statement.
+  - Select and copy the data in parallel from the source table to the sink table.
+
+So data is **not** available in the Sink Table during the replication process.
+
+
+![ReplicaDB Mode Complete](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Mode_Complete.png){:class="img-responsive"}
+
+### Complete Atomic
+
+The `complete-atomic` mode performs a complete replication (`DELETE` and `INSERT`) in a single transcaction, allowing the sink table to never be empty. ReplicaDB will perform the following actions on a `complete-atomic` replication:
+
+  - Automatically create the staging table in the sink database.
+  - Begin new transaction, called `"T0"`, and delete the sink table with `DELETE FROM` statement. This operation is executed in a new thread, so ReplicaDB does not wait for the operation to finish. 
+  - Select and copy the data in parallel from the source table to the sink staging table.
+  - Wait until the `DELETE` statement of transaction `"T0"` is completed.
+  - Using transaction `"T0"` the data is moved (using `INSERT INTO ... SELECT` statement) from the sink staging table to the sink table.
+  - Commit transaction `"T0"`.
+  - Drop the sink staging table.
+
+
+So data is available in the Sink Table during the replication process.
+
+![ReplicaDB Mode Complete Atomic](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Mode_Complete-Atomic.png){:class="img-responsive"}
 
 ### Incremental
 
@@ -77,11 +102,16 @@ In the `incremental` mode, the` INSERT or UPDATE` or `UPSERT` technique is used 
 
   - Automatically create the staging table in the sink database.
   - Truncate the staging table.
-  - Copy the data in parallel from the source table to the sink staging table.
+  - Select and copy the data in parallel from the source table to the sink staging table.
   - Gets the primary keys of the sink table
   - Execute the `UPSERT` sentence between the sink staging table and the sink table. This statement will depend on the Database Vendor, it can be for example `INSERT ... ON CONFLICT ... DO UPDATE` in PostgreSQL or` MERGE INTO ... `in Oracle.
   - Drop the sink staging table.
 
+
+So data is available in the Sink Table during the replication process.
+
+
+![ReplicaDB Mode Incremental](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Mode_Incremental.png){:class="img-responsive"}
 
 <br>
 ## 2.2 Controlling Parallelism    
