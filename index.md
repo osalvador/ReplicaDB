@@ -123,9 +123,9 @@ $ replicadb --mode=complete -j=1 \
 |------------------|:------------------------:|:------------------:|:--------------------:|:------------------:|:-------------------------:|
 | Oracle           |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
 | PostgreSQL       |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
-| Denodo           |    <i class="far fa-check-circle text-success"></i>    |         N/A        |          N/A         |         N/A        |            N/A            |
 | CSV              |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |          N/A         | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
 | SQL Server       |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-times-circle"></i> |
+| Denodo           |    <i class="far fa-check-circle text-success"></i>    |         N/A        |          N/A         |         N/A        |            N/A            |
 | Kafka            | <i class="far fa-times-circle"></i> |         N/A        |          N/A         | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
 | Amazon S3        | <i class="far fa-times-circle"></i> | <i class="far fa-check-circle text-success"></i> |          N/A         |         N/A        |     <i class="far fa-check-circle text-success"></i>    |
 
