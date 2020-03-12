@@ -994,10 +994,10 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
 
         if (dsType === "source") {
             vExtraJdbcParams = this.sourceExtraJdbcParams;
-            vExtraJdbcParams = vExtraJdbcParams.replace(new RegExp("(\\w.+)", "gm"), "source.connect.parmeter.$1");
+            vExtraJdbcParams = vExtraJdbcParams.replace(new RegExp("(\\w.+)", "gm"), "source.connect.parameter.$1");
         } else {
             vExtraJdbcParams = this.sinkExtraJdbcParams;
-            vExtraJdbcParams = vExtraJdbcParams.replace(new RegExp("(\\w.+)", "gm"), "sink.connect.parmeter.$1");
+            vExtraJdbcParams = vExtraJdbcParams.replace(new RegExp("(\\w.+)", "gm"), "sink.connect.parameter.$1");
         }
 
         vExtraJdbcParams = vExtraJdbcParams.replace(/\r/gm, '');
