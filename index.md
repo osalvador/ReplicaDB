@@ -129,9 +129,7 @@ $ replicadb --mode=complete -j=1 \
 | Kafka            | <i class="far fa-times-circle"></i> |                    |                      | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
 | Amazon S3        | <i class="far fa-times-circle"></i> | <i class="far fa-check-circle text-success"></i> |                      |                    |     <i class="far fa-check-circle text-success"></i>    |
 
-Supported feature <i class="far fa-check-circle text-success"></i>
-Unsupported feature <i class="far fa-times-circle"></i>
-Not applicable feature `blank`
+Supported feature <i class="far fa-check-circle text-success"></i>. Unsupported feature <i class="far fa-times-circle"></i>. Not applicable feature `blank`
 
 # Contributing
   
