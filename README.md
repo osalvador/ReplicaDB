@@ -45,8 +45,8 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
 ```bash
-$ curl -o ReplicaDB-0.8.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.8.0/ReplicaDB-0.8.0.tar.gz"
-$ tar -xvzf ReplicaDB-0.8.0.tar.gz
+$ curl -o ReplicaDB-0.8.1.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.8.1/ReplicaDB-0.8.1.tar.gz"
+$ tar -xvzf ReplicaDB-0.8.1.tar.gz
 $ ./bin/replicadb --help
 ```
 
@@ -118,12 +118,11 @@ $ replicadb --mode=complete -j=1 \
 # Roadmap
 
 1. MySQL
-2. SQL Server
-3. MongoDB
-4. IBM Db2
-5. Elasticsearch
-6. Redis
-7. SQLite
+2. MongoDB
+3. IBM Db2
+4. Elasticsearch
+5. Redis
+6. SQLite
 7. Hive
 
 
