@@ -42,6 +42,7 @@ public class ToolOptions {
     private Boolean help = false;
     private Boolean version = false;
     private Boolean verbose = false;
+    private Boolean quotedIdentifiers = false;
     private String optionsFile;
 
     private String mode = DEFAULT_MODE;
@@ -286,6 +287,13 @@ public class ToolOptions {
         Option verboseOpt = new Option("v", "verbose", false, "Print more information while working");
         options.addOption(verboseOpt);
 
+        options.addOption(
+                Option.builder()
+                        .longOpt("quoted-identifiers")
+                        .desc("Should all database identifiers be quoted.")
+                        .build()
+        );
+
 
         // create the command line parser
         CommandLineParser parser = new DefaultParser();
@@ -312,6 +320,7 @@ public class ToolOptions {
             if (line.hasOption("sink-disable-escape")) setSinkDisableEscapeNotNull(true);
             if (line.hasOption("sink-disable-truncate")) setSinkDisableTruncateNotNull(true);
             if (line.hasOption("sink-analyze")) setSinkAnalyzeNotNull(true);
+            if (line.hasOption("quoted-identifiers")) setQuotedIdentifiers(true);
 
             setModeNotNull(line.getOptionValue("mode"));
             setSinkColumnsNotNull(line.getOptionValue("sink-columns"));
@@ -426,6 +435,7 @@ public class ToolOptions {
         setJobs(prop.getProperty("jobs"));
         setFetchSize(prop.getProperty("fetch.size"));
         setBandwidthThrottling(prop.getProperty("bandwidth.throttling"));
+        setQuotedIdentifiers(Boolean.parseBoolean(prop.getProperty("quoted.identifiers")));
 
         // Connection params
         setSinkConnectionParams(of.getSinkConnectionParams());
@@ -828,6 +838,7 @@ public class ToolOptions {
                 ",\n\tsinkAnalyze=" + sinkAnalyze +
                 ",\n\tjobs=" + jobs +
                 ",\n\tbandwidthThrottling=" + bandwidthThrottling +
+                ",\n\tquotedIdentifiers=" + quotedIdentifiers +
                 ",\n\tfetchSize=" + fetchSize +
                 ",\n\thelp=" + help +
                 ",\n\tversion=" + version +
@@ -859,5 +870,13 @@ public class ToolOptions {
     public void setBandwidthThrottlingNotNull(String bandwidthThrottling) {
         if (bandwidthThrottling != null && !bandwidthThrottling.isEmpty())
             setBandwidthThrottling(bandwidthThrottling);
+    }
+
+    public Boolean getQuotedIdentifiers() {
+        return quotedIdentifiers;
+    }
+
+    public void setQuotedIdentifiers(Boolean quotedIdentifiers) {
+        this.quotedIdentifiers = quotedIdentifiers;
     }
 }

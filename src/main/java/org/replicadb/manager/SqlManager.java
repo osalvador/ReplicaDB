@@ -347,7 +347,10 @@ public abstract class SqlManager extends ConnManager {
                 ArrayList<String> pks = new ArrayList<>();
                 while (results.next()) {
                     String pkName = results.getString("COLUMN_NAME");
-                    pks.add(pkName);
+                    if (this.options.getQuotedIdentifiers())
+                        pks.add("\""+ pkName +"\"");
+                    else
+                        pks.add(pkName);
                 }
 
                 if (pks.isEmpty())
