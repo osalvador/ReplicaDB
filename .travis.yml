@@ -21,8 +21,9 @@ install:
   - cp ./target/ReplicaDB-*.jar .
   - mkdir lib
   - cp ./target/lib/* ./lib
-  - wget https://github.com/xo/usql/releases/download/v0.7.8/usql-0.7.8-linux-amd64.tar.bz2
-  - tar -xvjf usql-0.7.8-linux-amd64.tar.bz2  
+  #- wget https://github.com/xo/usql/releases/download/v0.7.8/usql-0.7.8-linux-amd64.tar.bz2
+  #- tar -xvjf usql-0.7.8-linux-amd64.tar.bz2
+  - usql --version
 
 before_script: 
   - docker-compose up -d
