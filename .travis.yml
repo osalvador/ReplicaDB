@@ -1,1 +1,11 @@
 language: java
+services:
+  - docker
+sudo: required
+
+#env:
+#  - COMPOSE_FILE=docker-compose.yml:docker-compose.override.travis.yml
+
+script:
+  - ls -lah
+  - docker-compose up -d
