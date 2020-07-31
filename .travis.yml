@@ -10,9 +10,9 @@ jdk:
   - openjdk8
 
 before_install:
-  - sudo add-apt-repository ppa:longsleep/golang-backports
-  - sudo apt-get update
-  - sudo apt install golang-go
+  - sudo add-apt-repository -y ppa:longsleep/golang-backports
+  - sudo apt-get -q update
+  - sudo apt install -y golang-go
   - go get -v -u github.com/xo/usql
 
 
