@@ -9,6 +9,10 @@ cache:
 jdk:
   - openjdk8
 
+before_install:
+  - sudo apt-get update
+  - sudo apt-get -y install sqlite3
+
 install:
   - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V -P release
   - cp ./target/ReplicaDB-*.jar .
