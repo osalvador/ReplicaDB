@@ -2,13 +2,26 @@
 
 CURRENT_PATH="./tests/pg2pg"
 
-# setup
-usql pg://replicadb:replicadb@localhost/replicadb?sslmode=disable -f ${CURRENT_PATH}"/db-setup.sql"
+setUp(){    
+    usql pg://replicadb:replicadb@localhost/replicadb?sslmode=disable -f ${CURRENT_PATH}"/db-setup.sql"
+}
+
+tearDown(){
+    usql pg://replicadb:replicadb@localhost/replicadb?sslmode=disable -f ${CURRENT_PATH}"/db-teardown.sql"    
+}
 
 # Tests
-./bin/replicadb --options-file ${CURRENT_PATH}"/replicadb.conf" --mode complete
-./bin/replicadb --options-file ${CURRENT_PATH}"/replicadb.conf" --mode complete-atomic
-./bin/replicadb --options-file ${CURRENT_PATH}"/replicadb.conf" --mode incremental
+testComplete(){
+    ./bin/replicadb --options-file ${CURRENT_PATH}"/replicadb.conf" --mode complete
+}
 
-# teardown
-usql pg://replicadb:replicadb@localhost/replicadb?sslmode=disable -f ${CURRENT_PATH}"/db-teardown.sql"
+testCompleteAtomic(){
+    ./bin/replicadb --options-file ${CURRENT_PATH}"/replicadb.conf" --mode complete-atomic
+}
+
+testIncremental(){
+    ./bin/replicadb --options-file ${CURRENT_PATH}"/replicadb.conf" --mode incremental
+}
+
+# Load shUnit2.
+. ./tests/shunit2
