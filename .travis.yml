@@ -10,8 +10,11 @@ jdk:
   - openjdk8
 
 before_install:
+  - sudo add-apt-repository ppa:longsleep/golang-backports
   - sudo apt-get update
-  - sudo apt-get -y install sqlite3
+  - sudo apt install golang-go
+  - go get -v -u github.com/xo/usql
+
 
 install:
   - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V -P release
