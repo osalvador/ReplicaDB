@@ -9,7 +9,12 @@ cache:
 jdk:
   - openjdk8
 
-script:
-  - ls -lah
+before_script: 
   - docker-compose up -d
+
+script:
+  - ls -lah  
   - mvn test -B
+
+after_script: 
+  - docker-compose down -v 
