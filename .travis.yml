@@ -12,3 +12,4 @@ jdk:
 script:
   - ls -lah
   - docker-compose up -d
+  - mvn test -B
