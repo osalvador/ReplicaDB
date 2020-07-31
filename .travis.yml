@@ -9,12 +9,21 @@ cache:
 jdk:
   - openjdk8
 
+install:
+  - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V -P release
+  - cp ./target/ReplicaDB-*.jar .
+  - mkdir lib
+  - cp ./target/lib/* ./lib
+  - wget https://github.com/xo/usql/releases/download/v0.7.8/usql-0.7.8-linux-amd64.tar.bz2
+  - tar -xvzf usql-0.7.8-linux-amd64.tar.bz2  
+
 before_script: 
   - docker-compose up -d
 
 script:
   - ls -lah  
   - mvn test -B
+  - ./tests/pg2pg/run-test.sh
 
 after_script: 
   - docker-compose down -v 

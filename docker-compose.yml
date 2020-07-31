@@ -8,3 +8,5 @@ services:
     environment:
       POSTGRES_PASSWORD: replicadb
       POSTGRES_USER: replicadb
+    ports:
+      - 5432:5432
