@@ -1,0 +1,14 @@
+FROM openjdk:8-alpine
+COPY . /usr/src/replicadb
+WORKDIR /usr/src/replicadb
+# One Run for update and maven install
+RUN apk add maven 
+# Exec MVN Command (like .travis.yml)
+RUN mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V -P release
+RUN cp ./target/ReplicaDB-*.jar . && mkdir lib && cp ./target/lib/* ./lib
+# Spring Works (aka Cleaning)
+RUN mvn clean
+RUN rm -rf ReplicaDB.iml docker-compose.yml pom.xml src/ target/ tests/
+# Remove Maven
+RUN apk del maven 
+
