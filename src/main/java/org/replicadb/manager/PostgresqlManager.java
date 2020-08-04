@@ -88,7 +88,7 @@ public class PostgresqlManager extends SqlManager {
                             case Types.CLOB:
                                 colValue = clobToString(resultSet.getClob(i));
                                 break;
-                            case Types.BINARY:
+                            //case Types.BINARY:
                             case Types.BLOB:
                                 colValue = blobToPostgresHex(resultSet.getBlob(i));
                                 break;

@@ -2,6 +2,7 @@
 wizard/.idea/*
 .settings/*
 lib/*
+target/*
 test/*
 sourcetrail_dependencies/*
 ReplicaDB-*.jar
@@ -14,3 +15,4 @@ package-release.sh
 ReplicaDB.srctrlbm
 ReplicaDB.srctrldb
 ReplicaDB.srctrlprj
+usql

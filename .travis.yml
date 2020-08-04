@@ -1,1 +1,38 @@
 language: java
+services:
+  - docker
+
+cache:
+  directories:
+    - $HOME/.m2
+
+jdk:
+  - openjdk8
+
+before_install:
+  # install usql for setup databases
+  - sudo add-apt-repository -y ppa:longsleep/golang-backports
+  - sudo apt-get -q update
+  - sudo apt install -y golang-go
+  - go get -v -u github.com/xo/usql
+  - usql --version
+
+install:
+  - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V -P release
+  - cp ./target/ReplicaDB-*.jar .
+  - mkdir lib
+  - cp ./target/lib/* ./lib
+
+before_script:
+  # Run databases services for integration tests
+  - docker-compose -f tests/docker-compose.yml up -d
+
+script:
+  - ls -lah
+  # unit tests
+  - mvn test -B
+  # integration tests
+  - ./tests/pg2pg/run-test.sh
+
+after_script: 
+  - docker-compose down -v 
