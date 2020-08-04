@@ -22,7 +22,7 @@ tearDown(){
 }
 
 sinkTableCountRows(){
-    numRowsSinkTable=$(usql ${SINK_CONNECT} -c 'select count(*) from public.t_sink;' -t | tail -n 2 | head -n 1)    
+    numRowsSinkTable=$(usql ${SINK_CONNECT} -c 'select count(*) from public.t_sink;' -C | tail -n 2 | head -n 1)    
     echo ${numRowsSinkTable}
 }
 
