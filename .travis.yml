@@ -25,7 +25,7 @@ install:
 
 before_script:
   # Run databases services for integration tests
-  - docker-compose up -d
+  - docker-compose -f tests/docker-compose.yml up -d
 
 script:
   - ls -lah
