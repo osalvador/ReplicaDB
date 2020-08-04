@@ -1,1 +1,0 @@
-drop table public.t_sink_views;
