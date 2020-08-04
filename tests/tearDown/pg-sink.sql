@@ -1,0 +1,1 @@
+drop table public.t_sink CASCADE;
