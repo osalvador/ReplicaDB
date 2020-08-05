@@ -31,8 +31,8 @@ script:
   - ls -lah
   # unit tests
   - mvn test -B
-  # integration tests
-  - ./tests/pg2pg/run-test.sh
+  # integration tests  
+  - ./tests/pg/test-runner.sh
 
 after_script: 
   - docker-compose down -v 
