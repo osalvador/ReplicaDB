@@ -65,7 +65,7 @@ testCompleteMultipleJobs(){
 
 testCompleteAtomicMultipleJobs(){
     ./bin/replicadb --options-file ${CURRENT_PATH}"/replicadb.conf" --mode complete-atomic --jobs 4
-    assertTrue 'Replication failed' "[ $? -eq 1 ]"
+    assertTrue 'Replication failed' "[ $? -eq 0 ]"
     assertEquals ${TOTAL_NUM_ROWS} $(sinkTableCountRows)
 }
 
