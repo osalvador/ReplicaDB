@@ -32,5 +32,6 @@ create table if not exists public.t_sink (
     c_jsonb jsonb,
     c_array integer[],
     c_array2 text[][],
+    "for" text,
     PRIMARY KEY (c_serial)
 );
