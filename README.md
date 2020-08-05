@@ -33,14 +33,16 @@ I have reviewed and tested other open source tools and none of them meets all th
 
 # Installation
 
-## System Requirements
+## Stand Alone
+
+### System Requirements
 
 ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Standard Edition (SE) or Java Development Kit (JDK) Standard Edition (SE) version 8.0 or above. The minimum operating system requirements are:
 
 *   Java SE Runtime Environment 8 or above    
 *   Memory - 128 (MB) available
 
-## Install
+### Install
 
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
@@ -50,16 +52,25 @@ $ tar -xvzf ReplicaDB-0.8.1.tar.gz
 $ ./bin/replicadb --help
 ```
 
-## JDBC Drivers
+### JDBC Drivers
 
 You can use ReplicaDB with any JDBC-compliant database. First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory on your client machine. Each driver `.jar` file also has a specific driver class which defines the entry-point to the driver. 
 
+## Docker
 
-## Full Documentation
+```bash
+$ docker run \
+    -v /tmp/replicadb.conf:/home/replicadb/conf/replicadb.conf \
+    osalvador/replicadb
+```
+
+Visit the [project homepage on Docker Hub](https://hub.docker.com/r/osalvador/replicadb) for more information. 
+
+# Full Documentation
 
 You can find the full ReplicaDB documentation here: [Docs](https://osalvador.github.io/ReplicaDB/docs/docs.html)
 
-## Configuration Wizard
+# Configuration Wizard
 
 You can create a configuration file for a ReplicaDB process by filling out a simple form: [ReplicaDB configuration wizard](https://osalvador.github.io/ReplicaDB/wizard/index.html)
 
