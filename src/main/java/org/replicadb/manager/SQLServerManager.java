@@ -35,6 +35,18 @@ public class SQLServerManager extends SqlManager {
         return JdbcDrivers.SQLSERVER.getDriverClass();
     }
 
+    private void setIdentityInsert(String tableName, Boolean flag) throws SQLException {
+        String valueToSetIdentity ="";
+        if (flag) valueToSetIdentity = "ON";
+        else valueToSetIdentity = "OFF";
+
+        Statement stmt = this.getConnection().createStatement();
+        String sqlCommand = "SET IDENTITY_INSERT "+tableName+" "+valueToSetIdentity;
+        LOG.info(sqlCommand);
+        stmt.executeUpdate(sqlCommand);
+        stmt.close();
+    }
+
     @Override
     public int insertDataToTable(ResultSet resultSet, int taskId) throws SQLException {
 
@@ -43,6 +55,8 @@ public class SQLServerManager extends SqlManager {
         // Get table name and columns
         if (options.getMode().equals(ReplicationMode.COMPLETE.getModeText())) {
             tableName = getSinkTableName();
+            if (options.getJobs() > 1)
+                throw new UnsupportedOperationException("SQLServerBulkCopy does not support parallel execution on the sink table. The `jobs` propertie should be set to 1.");
         } else {
             tableName = getQualifiedStagingTableName();
         }
@@ -63,11 +77,12 @@ public class SQLServerManager extends SqlManager {
             // Columns Mapping
             if (this.options.getSinkColumns() != null && !this.options.getSinkColumns().isEmpty()) {
                 String sinkColumns = getAllSinkColumns(rsmd);
-                String[] sinkColumnsArray = sinkColumns.split(",");
-                LOG.debug("Mapping columns: source --> sink");
+                // Remove quotes from column names, which are not supported by SQLServerBulkCopy
+                String[] sinkColumnsArray = sinkColumns.replace("\"","").split(",");
+                LOG.trace("Mapping columns: source --> sink");
                 for (int i = 1; i <= sinkColumnsArray.length; i++) {
                     bulkCopy.addColumnMapping(rsmd.getColumnName(i), sinkColumnsArray[i - 1]);
-                    LOG.debug("{} --> {}", rsmd.getColumnName(i), sinkColumnsArray[i - 1]);
+                    LOG.trace("{} --> {}", rsmd.getColumnName(i), sinkColumnsArray[i - 1]);
                 }
             } else {
                 for (int i = 1; i <= columnCount; i++) {
@@ -148,12 +163,13 @@ public class SQLServerManager extends SqlManager {
         }
 
         sql.append(" ) WHEN MATCHED THEN UPDATE SET ");
-
+        LOG.trace("allColls: {} \n pks: {}",allColls,pks);
         // Set all columns for UPDATE SET statement
         for (String colName : allColls.split("\\s*,\\s*")) {
-            LOG.debug("colName: {}", colName);
+            LOG.trace("colName: {}", colName);
             boolean contains = Arrays.asList(pks).contains(colName);
-            if (!contains)
+            boolean containsQuoted = Arrays.asList(pks).contains("\""+colName+"\"");
+            if (!contains && !containsQuoted)
                 sql.append(" trg.").append(colName).append(" = src.").append(colName).append(" ,");
         }
         // Delete the last comma
@@ -177,7 +193,6 @@ public class SQLServerManager extends SqlManager {
         statement.close();
         this.getConnection().commit();
     }
-
 
     @Override
     public ResultSet readTable(String tableName, String[] columns, int nThread) throws SQLException {
@@ -237,4 +252,10 @@ public class SQLServerManager extends SqlManager {
     @Override
     public void postSourceTasks() {/*Not implemented*/}
 
+    @Override
+    public void postSinkTasks() throws Exception {
+        setIdentityInsert(getSinkTableName(),true);
+        super.postSinkTasks();
+        setIdentityInsert(getSinkTableName(),false);
+    }
 }
