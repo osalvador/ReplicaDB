@@ -52,8 +52,7 @@ testIncremental(){
 # Test with 4 Jobs
 testCompleteMultipleJobs(){
     ./bin/replicadb --options-file ${CURRENT_PATH}"/replicadb.conf" --mode complete --jobs 4
-    assertTrue 'Replication must fail' "[ $? -eq 0 ]"
-    #assertEquals ${TOTAL_NUM_ROWS} $(sinkTableCountRows)
+    assertTrue 'Replication must fail' "[ $? -eq 1 ]"    
 }
 
 testCompleteAtomicMultipleJobs(){
