@@ -17,7 +17,8 @@ before_install:
 #  - sudo apt install -y golang-go
 #  - go get -v -u github.com/xo/usql
 #  - usql --version
-  - export REPLICADB_RELEASE_VERSION=$(echo ${TRAVIS_COMMIT_MESSAGE} | cut -c10-)
+  # Extract project.version from pom.xml
+  - export REPLICADB_RELEASE_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
   - echo ${REPLICADB_RELEASE_VERSION}
 
 install:
@@ -27,6 +28,7 @@ install:
   - cp ./target/lib/* ./lib  
   - tar -zcvf ReplicaDB-"${REPLICADB_RELEASE_VERSION}".tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE
   - zip -r -X ReplicaDB-"${REPLICADB_RELEASE_VERSION}".zip ReplicaDB-*.jar README.md lib conf bin LICENSE
+  - ls -ltr
 
 
 #before_script:
