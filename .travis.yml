@@ -45,13 +45,7 @@ install:
 #after_script: 
 #  - docker-compose down -v 
 #
-#before_deploy:
-#  # Set up git user name and tag this commit
-#  - git config --local user.name "YOUR GIT USER NAME"
-#  - git config --local user.email "YOUR GIT USER EMAIL"
-#  - export TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)}
-#  - git tag $TRAVIS_TAG
-#  - TRAVIS_COMMIT_MESSAGE
+
 deploy:
   provider: releases
   api_key:
