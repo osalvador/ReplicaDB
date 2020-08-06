@@ -52,13 +52,19 @@ install:
 #  - export TRAVIS_TAG=${TRAVIS_TAG:-$(date +'%Y%m%d%H%M%S')-$(git log --format=%h -1)}
 #  - git tag $TRAVIS_TAG
 #  - TRAVIS_COMMIT_MESSAGE
-#deploy:
-#  provider: releases
-#  api_key: "GITHUB OAUTH TOKEN"
-#  file: "FILE TO UPLOAD"
-#  skip_cleanup: true
-#  on:
-#    tags: true
-#    branch: master
-#    condition: "$TRAVIS_TAG =~ ^release.*$"
-#    draft: true
+deploy:
+  provider: releases
+  api_key:
+    secure: uTsJSmremnkRffvTxwaktVWQ6TShFN9kevhZM147jKF87/2HhUhxPO0qoGDRnALf/I3cUGVTDFA8TtpkSXC3sHChf4x/8t/wXxShSAUJbP1HdrC803s+BzA5lBwq8obiWWFTMwoceDJBYlC5ofisJwjIN0wR2h0pa5gOhU35sqo9dOdmEBE8QPIPYCPxKf3UFJZVNX7ewy57Ag3JYTTlYsV6qYhkBw0Z0Pb0SiaKH3pySYLl4r8KsA35mqlMW3U2vVhWSovGiP6amF9GBePUPRcVpAbdqq5tl7PIRqmLD6uPe93MDZ0jl5gtupNyAPWGHaeNj2ydXO5qpgkgk8mFJzafjAv0IbhVJMg95Dtch/abK8xWKxlFbcX1D8b7j507Bc1i9IA8YAEr3nj2bRq86AgS7yLQu3of5/o36ZPacOwRqVNbkoiswvHj/x4OuQ5C3ywUe/qrRmkDkEuw06G2tYl5XRNg8/TRkLMxcyUTfTJ1Yq2S4sp8EG5h5GEyF7yw5OkuD4eOaW4uvyB2wwfPULmGHwOfNSfzrwqW2qi/zKzt2tARn7r6uWn07OvlDbdbGKAa+pOInlwLmHLNXKR0c7Po629fLVntj7MktNXzB5pRGneojpQtS+pSiGhnmBEeQtWqPpolzVx9ojuwUddPwiVMuPEow8DqrE1x1sPv5Og=
+  file: 
+    - ReplicaDB-"${REPLICADB_RELEASE_VERSION}".tar.gz
+    - ReplicaDB-"${REPLICADB_RELEASE_VERSION}".zip
+  skip_cleanup: 'true'
+  on:
+    tags: true
+    branch: master
+    condition: "$TRAVIS_TAG =~ ^release.*$"
+    draft: true
+    repo: osalvador/ReplicaDB
+  
+
