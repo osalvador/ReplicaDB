@@ -5,6 +5,7 @@ services:
 cache:
   directories:
     - $HOME/.m2
+    - $HOME/.cache
 
 jdk:
   - openjdk8
