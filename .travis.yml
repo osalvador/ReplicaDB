@@ -45,7 +45,7 @@ install:
 #  - docker-compose down -v 
 
 before_deploy:
-  - docker build --build-arg var_name=${REPLICADB_RELEASE_VERSION} -t osalvador/replicadb:${REPLICADB_RELEASE_VERSION} .
+  - docker build --build-arg REPLICADB_RELEASE_VERSION=${REPLICADB_RELEASE_VERSION} -t osalvador/replicadb:${REPLICADB_RELEASE_VERSION} .
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
   - docker push osalvador/replicadb:${REPLICADB_RELEASE_VERSION}
 
