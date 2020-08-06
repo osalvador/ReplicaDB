@@ -45,6 +45,10 @@ script:
 after_script: 
   - docker-compose down -v 
 
+before_deploy:
+  - docker build --build-arg var_name=${REPLICADB_RELEASE_VERSION} -t osalvador/replicadb:${REPLICADB_RELEASE_VERSION} .
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker push osalvador/replicadb:${REPLICADB_RELEASE_VERSION}
 
 deploy:
   provider: releases
@@ -54,8 +58,6 @@ deploy:
     - ReplicaDB-${REPLICADB_RELEASE_VERSION}.tar.gz
     - ReplicaDB-${REPLICADB_RELEASE_VERSION}.zip
   skip_cleanup: 'true'
-  #edge:
-  #  branch: releases-improvements
   draft: true
   name: "release v${REPLICADB_RELEASE_VERSION}"
   on:
