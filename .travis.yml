@@ -59,6 +59,6 @@ deploy:
   draft: true
   name: "release v${REPLICADB_RELEASE_VERSION}"
   on:
-    tags: true
+    #tags: true
     branch: master
     repo: osalvador/ReplicaDB
