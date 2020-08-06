@@ -12,11 +12,11 @@ jdk:
 
 before_install:
   # install usql for setup databases
-#  - sudo add-apt-repository -y ppa:longsleep/golang-backports
-#  - sudo apt-get -q update
-#  - sudo apt install -y golang-go
-#  - go get -v -u github.com/xo/usql
-#  - usql --version
+  - sudo add-apt-repository -y ppa:longsleep/golang-backports
+  - sudo apt-get -q update
+  - sudo apt install -y golang-go
+  - go get -v -u github.com/xo/usql
+  - usql --version
   # Extract project.version from pom.xml
   - export REPLICADB_RELEASE_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
   - echo ${REPLICADB_RELEASE_VERSION}
@@ -31,20 +31,20 @@ install:
   - ls -ltr
 
 
-#before_script:
-#  # Run databases services for integration tests
-#  - docker-compose -f tests/docker-compose.yml up -d
-#
-#script:
-#  - ls -lah
-#  # unit tests
-#  - mvn test -B
-#  # integration tests  
-#  - ./tests/pg/test-runner.sh
-#
-#after_script: 
-#  - docker-compose down -v 
-#
+before_script:
+  # Run databases services for integration tests
+  - docker-compose -f tests/docker-compose.yml up -d
+
+script:
+  - ls -lah
+  # unit tests
+  - mvn test -B
+  # integration tests  
+  - ./tests/pg/test-runner.sh
+
+after_script: 
+  - docker-compose down -v 
+
 
 deploy:
   provider: releases
@@ -59,6 +59,6 @@ deploy:
   draft: true
   name: "release v${REPLICADB_RELEASE_VERSION}"
   on:
-    #tags: true
+    tags: true
     branch: master
     repo: osalvador/ReplicaDB
