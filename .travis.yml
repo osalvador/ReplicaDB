@@ -30,24 +30,26 @@ install:
   - ls -ltr
 
 
-#before_script:
-#  # Run databases services for integration tests
-#  - docker-compose -f tests/docker-compose.yml up -d
-#
-#script:
-#  - ls -lah
-#  # unit tests
-#  - mvn test -B
-#  # integration tests  
-#  - ./tests/pg/test-runner.sh
-#
-#after_script: 
-#  - docker-compose down -v 
+before_script:
+  # Run databases services for integration tests
+  - docker-compose -f tests/docker-compose.yml up -d
+
+script:
+  - ls -lah
+  # unit tests
+  - mvn test -B
+  # integration tests  
+  - ./tests/pg/test-runner.sh
+
+after_script: 
+  - docker-compose down -v 
 
 before_deploy:
-  - docker build --build-arg REPLICADB_RELEASE_VERSION=${REPLICADB_RELEASE_VERSION} -t osalvador/replicadb:${REPLICADB_RELEASE_VERSION} .
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - docker build --build-arg REPLICADB_RELEASE_VERSION=${REPLICADB_RELEASE_VERSION} -t osalvador/replicadb:${REPLICADB_RELEASE_VERSION} .  
   - docker push osalvador/replicadb:${REPLICADB_RELEASE_VERSION}
+  - docker build --build-arg REPLICADB_RELEASE_VERSION=${REPLICADB_RELEASE_VERSION} -t osalvador/replicadb .
+  - docker push osalvador/replicadb
 
 deploy:
   provider: releases
