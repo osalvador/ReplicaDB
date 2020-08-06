@@ -54,8 +54,8 @@ deploy:
     - ReplicaDB-${REPLICADB_RELEASE_VERSION}.tar.gz
     - ReplicaDB-${REPLICADB_RELEASE_VERSION}.zip
   skip_cleanup: 'true'
-  edge:
-    branch: releases-improvements
+  #edge:
+  #  branch: releases-improvements
   draft: true
   name: "release v${REPLICADB_RELEASE_VERSION}"
   on:
