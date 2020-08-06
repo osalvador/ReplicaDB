@@ -5,7 +5,6 @@ services:
 cache:
   directories:
     - $HOME/.m2
-    - $HOME/.cache
 
 jdk:
   - openjdk8
@@ -31,19 +30,19 @@ install:
   - ls -ltr
 
 
-before_script:
-  # Run databases services for integration tests
-  - docker-compose -f tests/docker-compose.yml up -d
-
-script:
-  - ls -lah
-  # unit tests
-  - mvn test -B
-  # integration tests  
-  - ./tests/pg/test-runner.sh
-
-after_script: 
-  - docker-compose down -v 
+#before_script:
+#  # Run databases services for integration tests
+#  - docker-compose -f tests/docker-compose.yml up -d
+#
+#script:
+#  - ls -lah
+#  # unit tests
+#  - mvn test -B
+#  # integration tests  
+#  - ./tests/pg/test-runner.sh
+#
+#after_script: 
+#  - docker-compose down -v 
 
 before_deploy:
   - docker build --build-arg var_name=${REPLICADB_RELEASE_VERSION} -t osalvador/replicadb:${REPLICADB_RELEASE_VERSION} .
@@ -61,6 +60,6 @@ deploy:
   draft: true
   name: "release v${REPLICADB_RELEASE_VERSION}"
   on:
-    tags: true
+#    tags: true
     branch: master
     repo: osalvador/ReplicaDB
