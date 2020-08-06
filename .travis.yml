@@ -63,7 +63,7 @@ deploy:
   on:
     tags: true
     branch: master
-    condition: "$TRAVIS_TAG =~ ^release.*$"
+    condition: "$TRAVIS_TAG =~ ^v.*$"
     draft: true
     repo: osalvador/ReplicaDB
   
