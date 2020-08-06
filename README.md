@@ -1,5 +1,4 @@
-<img src="https://img.shields.io/github/license/osalvador/replicadb?style=for-the-badge" alt="License">
-<img src="https://img.shields.io/github/v/release/osalvador/replicadb?style=for-the-badge"  alt="Last Version">
+<img src="https://img.shields.io/github/license/osalvador/replicadb?style=for-the-badge" alt="License"> <img src="https://img.shields.io/github/v/release/osalvador/replicadb?style=for-the-badge"  alt="Last Version">
 <img src="https://img.shields.io/travis/osalvador/replicadb?style=for-the-badge&logo=travis" alt="Main">
 <img src="https://img.shields.io/docker/pulls/osalvador/replicadb.svg?style=for-the-badge&logo=docker" alt="Docker Pull">
 <img src="https://img.shields.io/github/downloads/osalvador/replicadb/total?style=for-the-badge&logo=github" alt="Github Downloads">
