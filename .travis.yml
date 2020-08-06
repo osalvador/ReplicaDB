@@ -61,10 +61,11 @@ deploy:
     - ReplicaDB-"${REPLICADB_RELEASE_VERSION}".zip
   skip_cleanup: 'true'
   on:
+    provider: releases
     tags: true
-    branch: master
-    #condition: "$TRAVIS_TAG =~ ^v.*$"
     draft: true
+    branch: master
+    #condition: "$TRAVIS_TAG =~ ^release v.*$"
     repo: osalvador/ReplicaDB
   
 
