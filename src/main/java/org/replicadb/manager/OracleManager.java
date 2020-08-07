@@ -158,7 +158,7 @@ public class OracleManager extends SqlManager {
                             ps.setTimestamp(i, resultSet.getTimestamp(i));
                             break;
                         case Types.BINARY:
-                            ps.setBinaryStream(i, resultSet.getBinaryStream(i));
+                            ps.setBytes(i,resultSet.getBytes(i));
                             break;
                         case Types.BLOB:
                             Blob blobData = resultSet.getBlob(i);
@@ -276,7 +276,7 @@ public class OracleManager extends SqlManager {
         // options.sinkColumns was set during the insertDataToTable
         String allColls = getAllSinkColumns(null);
         // Oracle use columns uppercase
-        allColls = allColls.toUpperCase();
+        //allColls = allColls.toUpperCase();
 
         StringBuilder sql = new StringBuilder();
         sql.append("MERGE INTO ")
@@ -299,7 +299,9 @@ public class OracleManager extends SqlManager {
         for (String colName : allColls.split("\\s*,\\s*")) {
 
             boolean contains = Arrays.asList(pks).contains(colName);
-            if (!contains)
+            boolean containsUppercase = Arrays.asList(pks).contains(colName.toUpperCase());
+            boolean containsQuoted = Arrays.asList(pks).contains("\""+colName.toUpperCase()+"\"");
+            if (!contains && !containsUppercase && !containsQuoted)
                 sql.append(" trg.").append(colName).append(" = src.").append(colName).append(" ,");
         }
         // Delete the last comma
