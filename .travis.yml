@@ -14,7 +14,7 @@ before_install:
   - sudo add-apt-repository -y ppa:longsleep/golang-backports
   - sudo apt-get -q update
   - sudo apt install -y golang-go
-  - GO111MODULE=on go get -v -u -tags oracle github.com/xo/usql
+  - GO111MODULE=on go get -v -u -tags oracle github.com/xo/usql@v0.7.8
   - usql --version
   # Extract project.version from pom.xml
   - export REPLICADB_RELEASE_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
