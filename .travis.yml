@@ -15,7 +15,7 @@ before_install:
   - sudo apt-get -q update
   #- sudo apt install -y golang-go
   - curl -O https://storage.googleapis.com/golang/go1.15.2.linux-amd64.tar.gz
-  - tar -xvf go1.12.9.linux-amd64.tar.gz
+  - tar -xvf go1.15.2.linux-amd64.tar.gz
   - sudo chown -R root:root ./go
   - sudo mv go /usr/local
   - GO111MODULE=on go get -v -u -tags oracle github.com/xo/usql@v0.7.8
