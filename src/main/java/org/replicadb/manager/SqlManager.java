@@ -305,30 +305,30 @@ public abstract class SqlManager extends ConnManager {
         pks = getPrimaryKeys(table, schema);
 
         if (null == pks) {
-            LOG.debug("Getting PKs for schema: " + schema + " and table: " + table + ". Not found.");
+            LOG.debug("Getting PKs for schema: {} and table: {}. Not found.", schema, table);
 
             // Trying with uppercase
-            table = getTableNameFromQualifiedTableName(tableName).toUpperCase();
-            schema = getSchemaFromQualifiedTableName(tableName).toUpperCase();
+            table = table != null ? table.toUpperCase() : null;
+            schema = schema != null ? schema.toUpperCase() : null;
 
             pks = getPrimaryKeys(table, schema);
 
             if (null == pks) {
-                LOG.debug("Getting PKs for schema: " + schema + " and table: " + table + ". Not found.");
+                LOG.debug("Getting PKs for schema: {} and table: {}. Not found.", schema, table);
 
                 // Trying with lowercase
-                table = getTableNameFromQualifiedTableName(tableName).toLowerCase();
-                schema = getSchemaFromQualifiedTableName(tableName).toLowerCase();
+                table = table != null ? table.toLowerCase() : null;
+                schema = schema != null ? schema.toLowerCase() : null;
 
                 pks = getPrimaryKeys(table, schema);
                 if (null == pks) {
-                    LOG.debug("Getting PKs for schema: " + schema + " and table: " + table + ". Not found.");
+                    LOG.debug("Getting PKs for schema: {} and table: {}. Not found.", schema, table);
                     return null;
                 }
             }
         }
 
-        LOG.debug("Getting PKs for schema: " + schema + " and table: " + table + ". Found.");
+        LOG.info("Getting PKs for schema: {} and table: {}. Found.", schema, table);
 
         return pks;
     }

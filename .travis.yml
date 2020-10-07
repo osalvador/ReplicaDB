@@ -14,7 +14,7 @@ before_install:
   - sudo add-apt-repository -y ppa:longsleep/golang-backports
   - sudo apt-get -q update
   - sudo apt install -y golang-go
-  - go get -v -u github.com/xo/usql
+  - go get -v -u -tags oracle github.com/xo/usql
   - usql --version
   # Extract project.version from pom.xml
   - export REPLICADB_RELEASE_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
@@ -40,6 +40,7 @@ script:
   - mvn test -B
   # integration tests  
   - ./tests/pg/test-runner.sh
+  #- ./tests/oracle/test-runner.sh
 
 after_script: 
   - docker-compose down -v 
@@ -62,6 +63,6 @@ deploy:
   draft: true
   name: "release v${REPLICADB_RELEASE_VERSION}"
   on:
-#    tags: true
+    tags: true
     branch: master
     repo: osalvador/ReplicaDB
