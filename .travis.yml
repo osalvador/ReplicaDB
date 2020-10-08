@@ -11,14 +11,9 @@ jdk:
 
 before_install:
   # install go and usql for setup databases
-  - curl -O https://storage.googleapis.com/golang/go1.15.2.linux-amd64.tar.gz
-  - tar -xvf go1.15.2.linux-amd64.tar.gz
-  - sudo chown -R root:root ./go
-  - sudo cp -R go /usr/local
-  - export PATH=/usr/local/go/bin:$PATH
-  - go version
-  - ./go/bin/go version
-  - ./go/bin/go get -v -u -tags oracle github.com/xo/usql
+  - curl -O https//raw.githubusercontent.com/osalvador/disaster-box/master/usql
+  - chmod 777 usql
+  - sudo cp  usql /usr/local
   - usql --version
   # Extract project.version from pom.xml
   - export REPLICADB_RELEASE_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
