@@ -11,7 +11,7 @@ jdk:
 
 before_install:
   # install go and usql for setup databases
-  - curl -O https//raw.githubusercontent.com/osalvador/disaster-box/master/usql
+  - curl -O https://raw.githubusercontent.com/osalvador/disaster-box/master/usql
   - chmod 777 usql
   - sudo cp  usql /usr/local
   - usql --version
