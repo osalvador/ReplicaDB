@@ -14,7 +14,7 @@ before_install:
   - curl -O https://storage.googleapis.com/golang/go1.15.2.linux-amd64.tar.gz
   - tar -xvf go1.15.2.linux-amd64.tar.gz
   - sudo chown -R root:root ./go
-  - sudo cp go /usr/local
+  - sudo cp -R go /usr/local
   - export PATH=/usr/local/go/bin:$PATH
   - go version
   - ./go/bin/go version
