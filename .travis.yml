@@ -14,10 +14,11 @@ before_install:
   - curl -O https://storage.googleapis.com/golang/go1.15.2.linux-amd64.tar.gz
   - tar -xvf go1.15.2.linux-amd64.tar.gz
   - sudo chown -R root:root ./go
-  - sudo mv go /usr/local
-  - export PATH=$PATH:/usr/local/go/bin
-  - /usr/local/go version
-  - /usr/local/go get -v -u -tags oracle github.com/xo/usql
+  - sudo cp go /usr/local
+  - export PATH=/usr/local/go/bin:$PATH
+  - go version
+  - ./go/bin/go version
+  - ./go/bin/go get -v -u -tags oracle github.com/xo/usql
   - usql --version
   # Extract project.version from pom.xml
   - export REPLICADB_RELEASE_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
