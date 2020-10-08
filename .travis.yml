@@ -13,7 +13,7 @@ before_install:
   # install go and usql for setup databases
   - curl -O https://raw.githubusercontent.com/osalvador/disaster-box/master/usql
   - chmod 777 usql
-  - sudo cp  usql /usr/local
+  - sudo mv usql /usr/local/bin
   - usql --version
   # Extract project.version from pom.xml
   - export REPLICADB_RELEASE_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
