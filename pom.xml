@@ -6,7 +6,7 @@
 
     <groupId>org.replicadb</groupId>
     <artifactId>ReplicaDB</artifactId>
-    <version>0.8.8</version>
+    <version>0.8.9</version>
 
     <name>ReplicaDB</name>
     <url>https://github.com/osalvador/ReplicaDB</url>
@@ -35,7 +35,7 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.11</version>
+            <version>4.13.1</version>
             <scope>test</scope>
         </dependency>
 

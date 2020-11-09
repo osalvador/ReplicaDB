@@ -36,12 +36,13 @@ public class SQLServerManager extends SqlManager {
     }
 
     private void setIdentityInsert(String tableName, Boolean flag) throws SQLException {
-        String valueToSetIdentity ="";
+        String valueToSetIdentity = "";
         if (flag) valueToSetIdentity = "ON";
         else valueToSetIdentity = "OFF";
 
         Statement stmt = this.getConnection().createStatement();
-        String sqlCommand = "SET IDENTITY_INSERT "+tableName+" "+valueToSetIdentity;
+        String sqlCommand = "IF OBJECTPROPERTY(OBJECT_ID('" + tableName + "'), 'TableHasIdentity') = 1 " +
+                "SET IDENTITY_INSERT " + tableName + " " + valueToSetIdentity;
         LOG.info(sqlCommand);
         stmt.executeUpdate(sqlCommand);
         stmt.close();
@@ -78,7 +79,7 @@ public class SQLServerManager extends SqlManager {
             if (this.options.getSinkColumns() != null && !this.options.getSinkColumns().isEmpty()) {
                 String sinkColumns = getAllSinkColumns(rsmd);
                 // Remove quotes from column names, which are not supported by SQLServerBulkCopy
-                String[] sinkColumnsArray = sinkColumns.replace("\"","").split(",");
+                String[] sinkColumnsArray = sinkColumns.replace("\"", "").split(",");
                 LOG.trace("Mapping columns: source --> sink");
                 for (int i = 1; i <= sinkColumnsArray.length; i++) {
                     bulkCopy.addColumnMapping(rsmd.getColumnName(i), sinkColumnsArray[i - 1]);
@@ -86,7 +87,7 @@ public class SQLServerManager extends SqlManager {
                 }
             } else {
                 for (int i = 1; i <= columnCount; i++) {
-                    LOG.trace("source {} - {} sink", rsmd.getColumnName(i),i);
+                    LOG.trace("source {} - {} sink", rsmd.getColumnName(i), i);
                     bulkCopy.addColumnMapping(rsmd.getColumnName(i), i);
                 }
             }
@@ -163,12 +164,12 @@ public class SQLServerManager extends SqlManager {
         }
 
         sql.append(" ) WHEN MATCHED THEN UPDATE SET ");
-        LOG.trace("allColls: {} \n pks: {}",allColls,pks);
+        LOG.trace("allColls: {} \n pks: {}", allColls, pks);
         // Set all columns for UPDATE SET statement
         for (String colName : allColls.split("\\s*,\\s*")) {
             LOG.trace("colName: {}", colName);
             boolean contains = Arrays.asList(pks).contains(colName);
-            boolean containsQuoted = Arrays.asList(pks).contains("\""+colName+"\"");
+            boolean containsQuoted = Arrays.asList(pks).contains("\"" + colName + "\"");
             if (!contains && !containsQuoted)
                 sql.append(" trg.").append(colName).append(" = src.").append(colName).append(" ,");
         }
@@ -254,8 +255,8 @@ public class SQLServerManager extends SqlManager {
 
     @Override
     public void postSinkTasks() throws Exception {
-        setIdentityInsert(getSinkTableName(),true);
+        setIdentityInsert(getSinkTableName(), true);
         super.postSinkTasks();
-        setIdentityInsert(getSinkTableName(),false);
+        setIdentityInsert(getSinkTableName(), false);
     }
 }
