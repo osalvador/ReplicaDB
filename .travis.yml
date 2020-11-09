@@ -10,7 +10,7 @@ jdk:
   - openjdk8
 
 before_install:
-  # install go and usql for setup databases
+  # Download compiled usql for ubuntu 16.04
   - curl -O https://raw.githubusercontent.com/osalvador/disaster-box/master/usql
   - chmod 777 usql
   - sudo mv usql /usr/local/bin
