@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.ConnManager;
 import org.replicadb.manager.DataSourceType;
@@ -48,54 +49,63 @@ public class ReplicaDB {
             }
 
             if (!options.isHelp() && !options.isVersion()) {
-
                 // Create Connection Managers
                 ManagerFactory managerF = new ManagerFactory();
                 sourceDs = managerF.accept(options, DataSourceType.SOURCE);
                 sinkDs = managerF.accept(options, DataSourceType.SINK);
 
-                // Executor Service for atomic complet refresh replication
-                preSinkTasksExecutor = Executors.newSingleThreadExecutor();
+                if (options.getMode().equals(ReplicationMode.CDC.getModeText())) {
+                    // ReplicaDB in CDC mode is running forever
+                    LOG.info("Running ReplicaDB in CDC mode");
 
-                // Pre tasks
-                sourceDs.preSourceTasks();
-                Future<Integer> preSinkTasksFuture = sinkDs.preSinkTasks(preSinkTasksExecutor);
+                    ReplicaDBCDC cdc = new ReplicaDBCDC(sourceDs, sinkDs);
+                    cdc.run();
 
-                // Catch exceptions before moving data
-                if (preSinkTasksFuture != null) {
-                    try {
-                        preSinkTasksFuture.get(500, TimeUnit.MILLISECONDS);
-                    } catch (TimeoutException e) {
-                        // The preSinkTask is perfoming in the database
+                } else {
+
+                    // Executor Service for atomic complet refresh replication
+                    preSinkTasksExecutor = Executors.newSingleThreadExecutor();
+
+                    // Pre tasks
+                    sourceDs.preSourceTasks();
+                    Future<Integer> preSinkTasksFuture = sinkDs.preSinkTasks(preSinkTasksExecutor);
+
+                    // Catch exceptions before moving data
+                    if (preSinkTasksFuture != null) {
+                        try {
+                            preSinkTasksFuture.get(500, TimeUnit.MILLISECONDS);
+                        } catch (TimeoutException e) {
+                            // The preSinkTask is perfoming in the database
+                        }
                     }
-                }
 
-                // Prepare Threads for Job processing
-                List<ReplicaTask> replicaTasks = new ArrayList<>();
-                for (int i = 0; i < options.getJobs(); i++) {
-                    replicaTasks.add(new ReplicaTask(i, options));
-                }
-                // Run all Replicate Tasks
-                replicaTasksService = Executors.newFixedThreadPool(options.getJobs());
-                List<Future<Integer>> futures = replicaTasksService.invokeAll(replicaTasks);
-                for (Future<Integer> future : futures) {
-                    // catch tasks exceptions
-                    future.get();
-                }
+                    // Prepare Threads for Job processing
+                    List<ReplicaTask> replicaTasks = new ArrayList<>();
+                    for (int i = 0; i < options.getJobs(); i++) {
+                        replicaTasks.add(new ReplicaTask(i, options));
+                    }
+                    // Run all Replicate Tasks
+                    replicaTasksService = Executors.newFixedThreadPool(options.getJobs());
+                    List<Future<Integer>> futures = replicaTasksService.invokeAll(replicaTasks);
+                    for (Future<Integer> future : futures) {
+                        // catch tasks exceptions
+                        future.get();
+                    }
 
-                // wait for terminating
-                if (preSinkTasksFuture != null) {
-                    LOG.info("Waiting for the asynchronous task to be completed...");
-                    preSinkTasksFuture.get();
+                    // wait for terminating
+                    if (preSinkTasksFuture != null) {
+                        LOG.info("Waiting for the asynchronous task to be completed...");
+                        preSinkTasksFuture.get();
+                    }
+
+                    // Post Tasks
+                    sourceDs.postSourceTasks();
+                    sinkDs.postSinkTasks();
+
+                    // Shutdown Executor Services
+                    preSinkTasksExecutor.shutdown();
+                    replicaTasksService.shutdown();
                 }
-
-                // Post Tasks
-                sourceDs.postSourceTasks();
-                sinkDs.postSinkTasks();
-
-                // Shutdown Executor Services
-                preSinkTasksExecutor.shutdown();
-                replicaTasksService.shutdown();
             }
         } catch (Exception e) {
             LOG.error("Got exception running ReplicaDB:", e);

@@ -348,7 +348,7 @@ public abstract class SqlManager extends ConnManager {
                 while (results.next()) {
                     String pkName = results.getString("COLUMN_NAME");
                     if (this.options.getQuotedIdentifiers())
-                        pks.add("\""+ pkName +"\"");
+                        pks.add("\"" + pkName + "\"");
                     else
                         pks.add(pkName);
                 }
@@ -527,8 +527,9 @@ public abstract class SqlManager extends ConnManager {
     @Override
     public void cleanUp() throws Exception {
 
-        // Not Complete mode
-        if (!options.getMode().equals(ReplicationMode.COMPLETE.getModeText())) {
+        // Not Complete or CDC mode
+        if (options.getMode().equals(ReplicationMode.COMPLETE_ATOMIC.getModeText())
+                || options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
 
             // Only drop staging table if it was created automatically
             if (options.getSinkStagingTable() == null || options.getSinkStagingTable().isEmpty()) {
