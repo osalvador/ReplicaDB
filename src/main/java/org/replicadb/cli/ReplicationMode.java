@@ -1,7 +1,10 @@
 package org.replicadb.cli;
 
 public enum ReplicationMode {
-    COMPLETE("complete"), INCREMENTAL("incremental"), COMPLETE_ATOMIC("complete-atomic");
+    COMPLETE("complete"),
+    INCREMENTAL("incremental"),
+    COMPLETE_ATOMIC("complete-atomic"),
+    CDC("cdc");
 
     private final String modeText;
 

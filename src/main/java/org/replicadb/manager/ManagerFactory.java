@@ -2,6 +2,7 @@ package org.replicadb.manager;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 
 import static org.replicadb.manager.SupportedManagers.*;
@@ -21,8 +22,9 @@ public class ManagerFactory {
     /**
      * Instantiate a ConnManager that can fulfill the database connection
      * requirements of the task specified in the JobData.
+     *
      * @param options the user-provided arguments that configure this
-     * Sqoop job.
+     *                Sqoop job.
      * @return a ConnManager that can connect to the specified database
      * and perform the operations required, or null if this factory cannot
      * find a suitable ConnManager implementation.
@@ -40,24 +42,36 @@ public class ManagerFactory {
 
         LOG.debug("Trying with scheme: " + scheme);
 
-        if (POSTGRES.isTheManagerTypeOf(options, dsType)) {
-            return new PostgresqlManager(options, dsType);
-        } else if (ORACLE.isTheManagerTypeOf(options, dsType)) {
-            return new OracleManager(options, dsType);
-        } else if (DENODO.isTheManagerTypeOf(options, dsType)) {
-            return new DenodoManager(options, dsType);
-        } else if (CSV.isTheManagerTypeOf(options, dsType)) {
-            return new CsvManager(options, dsType);
-        } else if (KAFKA.isTheManagerTypeOf(options, dsType)) {
-            return new KafkaManager(options, dsType);
-        } else if (SQLSERVER.isTheManagerTypeOf(options, dsType)) {
-            return new SQLServerManager(options, dsType);
-        } else if (S3.isTheManagerTypeOf(options, dsType)) {
-            return new S3Manager(options, dsType);
-        } else {
-            return null;
-        }
+        if (options.getMode().equals(ReplicationMode.CDC.getModeText())) {
+            LOG.debug("CDC Managers");
 
+            if (SQLSERVER.isTheManagerTypeOf(options, dsType)) {
+                return new SQLServerManagerCDC(options, dsType);
+            } else if (ORACLE.isTheManagerTypeOf(options, dsType)) {
+                return new OracleManagerCDC(options, dsType);
+            }else {
+                return null;
+            }
+
+        } else {
+            if (POSTGRES.isTheManagerTypeOf(options, dsType)) {
+                return new PostgresqlManager(options, dsType);
+            } else if (ORACLE.isTheManagerTypeOf(options, dsType)) {
+                return new OracleManager(options, dsType);
+            } else if (DENODO.isTheManagerTypeOf(options, dsType)) {
+                return new DenodoManager(options, dsType);
+            } else if (CSV.isTheManagerTypeOf(options, dsType)) {
+                return new CsvManager(options, dsType);
+            } else if (KAFKA.isTheManagerTypeOf(options, dsType)) {
+                return new KafkaManager(options, dsType);
+            } else if (SQLSERVER.isTheManagerTypeOf(options, dsType)) {
+                return new SQLServerManager(options, dsType);
+            } else if (S3.isTheManagerTypeOf(options, dsType)) {
+                return new S3Manager(options, dsType);
+            } else {
+                return null;
+            }
+        }
 /*
         if (MYSQL.isTheManagerTypeOf(options)) {
               //return new MySQLManager(options);
