@@ -75,7 +75,7 @@ public class OracleManager extends SqlManager {
         return super.execute(sqlCmd, (Object) nThread);
     }
 
-    private void oracleAlterSession(Boolean directRead) throws SQLException {
+    public void oracleAlterSession(Boolean directRead) throws SQLException {
         // Specific Oracle Alter sessions for reading data
         Statement stmt = this.getConnection().createStatement();
         stmt.executeUpdate("ALTER SESSION SET NLS_NUMERIC_CHARACTERS = '.,'");
@@ -83,6 +83,7 @@ public class OracleManager extends SqlManager {
         stmt.executeUpdate("ALTER SESSION SET NLS_TIMESTAMP_FORMAT='YYYY-MM-DD HH24:MI:SS.FF' ");
         stmt.executeUpdate("ALTER SESSION SET NLS_TIMESTAMP_TZ_FORMAT='YYYY-MM-DD HH24:MI:SS.FF TZH:TZM' ");
         stmt.executeUpdate("ALTER SESSION SET recyclebin = OFF");
+        stmt.executeUpdate("ALTER SESSION ENABLE PARALLEL DML");
 
         if (directRead) stmt.executeUpdate("ALTER SESSION SET \"_serial_direct_read\"=true ");
 
@@ -217,7 +218,8 @@ public class OracleManager extends SqlManager {
 
         StringBuilder sqlCmd = new StringBuilder();
 
-        sqlCmd.append("INSERT INTO /*+APPEND_VALUES*/ ");
+        //sqlCmd.append("INSERT INTO /*+APPEND_VALUES*/ ");
+        sqlCmd.append("INSERT INTO ");
         sqlCmd.append(tableName);
 
         if (allColumns != null) {
@@ -279,7 +281,7 @@ public class OracleManager extends SqlManager {
         //allColls = allColls.toUpperCase();
 
         StringBuilder sql = new StringBuilder();
-        sql.append("MERGE INTO ")
+        sql.append("MERGE /*+ PARALLEL */ INTO ")
                 .append(this.getSinkTableName())
                 .append(" trg USING (SELECT ")
                 .append(allColls)

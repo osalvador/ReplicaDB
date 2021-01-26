@@ -7,13 +7,9 @@ import io.debezium.engine.format.ChangeEventFormat;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.ConnManager;
-import org.replicadb.manager.DataSourceType;
-import org.replicadb.manager.SQLServerManagerCDC;
 
 import java.io.IOException;
-import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -24,6 +20,9 @@ public class ReplicaDBCDC implements Runnable {
     private final ConnManager sourceDs;
     private final ConnManager sinkDs;
 
+    private DebeziumEngine<?> engine;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
     public ReplicaDBCDC(ConnManager sourceDs, ConnManager sinkDs) {
         this.sourceDs = sourceDs;
         this.sinkDs = sinkDs;
@@ -32,20 +31,22 @@ public class ReplicaDBCDC implements Runnable {
     @Override
     public void run() {
         // Create the engine with this configuration ...
-        DebeziumEngine<RecordChangeEvent<SourceRecord>> engine = DebeziumEngine.create(ChangeEventFormat.of(Connect.class))
+        engine = DebeziumEngine.create(ChangeEventFormat.of(Connect.class))
                 .using(sourceDs.getDebeziumProps())
                 .notifying((DebeziumEngine.ChangeConsumer<RecordChangeEvent<SourceRecord>>) sinkDs)
                 .build();
 
         // Run the engine asynchronously ...
-        ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(engine);
-        LOG.info("Executing Engine");
+        LOG.info("Engine executor started");
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             LOG.info("Requesting embedded engine to shut down");
             try {
                 engine.close();
+                executor.shutdown(); // TODO ???
+                awaitTermination(executor);
+                LOG.info("Embedded engine is down");
             } catch (IOException e) {
                 e.printStackTrace();
             }
