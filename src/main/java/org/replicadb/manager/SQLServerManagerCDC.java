@@ -35,31 +35,50 @@ public class SQLServerManagerCDC extends SQLServerManager implements DebeziumEng
 
     @Override
     public Properties getDebeziumProps() {
-
         // Define the configuration for the embedded and SQLServer connector ...
+        Properties extraConnectionProps =this.options.getSourceConnectionParams();
         final Properties props = new Properties();
+
         /* begin engine properties */
         props.setProperty("name", "ReplicaDB-SQLServerCDC");
-        props.setProperty("offset.storage", "org.apache.kafka.connect.storage.FileOffsetBackingStore");
-        //props.setProperty("offset.storage.file.filename", "offset.dat"); //TODO
-        //props.setProperty("offset.flush.interval.ms", "5000"); // deprecated
+        // Default values
+        props.setProperty("offset.flush.interval.ms", "5000");
+        props.setProperty("offset.flush.timeout.ms", "15000");
+        props.setProperty("max.batch.size", "1000");
+        props.setProperty("max.queue.size", "2000");
+        props.setProperty("query.fetch.size", "2000");
+        props.setProperty("query.fetch.size", String.valueOf(this.options.getFetchSize()));
+        props.setProperty("snapshot.fetch.size", "2000");
 
         props.setProperty("snapshot.isolation.mode", "read_committed");
         props.setProperty("snapshot.mode", "schema_only");
+        //props.setProperty("provide.transaction.metadata", "true");
+        props.setProperty("tombstones.on.delete", "false"); // only a delete event is sent.
         props.setProperty("converter.schemas.enable", "false"); // don't include schema in message
         /* connector properties */
         props.setProperty("connector.class", DEBEZIUM_CONNECTOR_CLASS);
-        props.setProperty("database.server.name", "ReplicaDB-SQLServerCDC");
+        props.setProperty("database.server.name", "ReplicaDB_SQLServerCDC");
         //props.setProperty("database.hostname", "localhost");
         //props.setProperty("database.port", "1433");
         //props.setProperty("database.dbname", "BikeStores");
         props.setProperty("database.user", this.options.getSourceUser());
         props.setProperty("database.password", this.options.getSourcePassword());
         //props.setProperty("schema.include.list", "production");
-        props.setProperty("table.include.list", this.options.getSourceTable());
+        props.setProperty("table.include.list", this.options.getSourceTable() != null ? this.options.getSourceTable() : "");
+
+        /* File names */
         props.setProperty("database.history", "io.debezium.relational.history.FileDatabaseHistory");
-        //props.setProperty("database.history.file.filename", "dbhistory.dat");
+        props.setProperty("offset.storage", "org.apache.kafka.connect.storage.FileOffsetBackingStore");
+
+        String fileNamePattern = "ReplicaDB_SQLServerCDC_%s_%s.dat";
+        String dbHistoriFileName = String.format(fileNamePattern, extraConnectionProps.getProperty("database.dbname"),"dbhistory");
+        props.setProperty("database.history.file.filename", "data/"+dbHistoriFileName);
+
+        String offsetFileName = String.format(fileNamePattern, extraConnectionProps.getProperty("database.dbname"),"offset");
+        props.setProperty("offset.storage.file.filename", "data/"+offsetFileName);
+
         props.putAll(this.options.getSourceConnectionParams());
+
         return props;
     }
 
