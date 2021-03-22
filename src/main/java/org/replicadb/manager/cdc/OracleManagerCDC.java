@@ -1,4 +1,4 @@
-package org.replicadb.manager;
+package org.replicadb.manager.cdc;
 
 import io.debezium.data.Envelope;
 import io.debezium.engine.DebeziumEngine;
@@ -10,13 +10,13 @@ import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.manager.DataSourceType;
+import org.replicadb.manager.OracleManager;
 import org.replicadb.time.Conversions;
 
-import javax.xml.transform.Source;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;

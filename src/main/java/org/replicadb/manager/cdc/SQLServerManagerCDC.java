@@ -1,4 +1,4 @@
-package org.replicadb.manager;
+package org.replicadb.manager.cdc;
 
 import io.debezium.data.Envelope;
 import io.debezium.engine.DebeziumEngine;
@@ -7,6 +7,8 @@ import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.manager.DataSourceType;
+import org.replicadb.manager.SQLServerManager;
 
 
 import java.util.List;

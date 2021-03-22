@@ -4,6 +4,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.manager.cdc.OracleManagerCDC;
+import org.replicadb.manager.cdc.SQLServerManagerCDC;
 
 import static org.replicadb.manager.SupportedManagers.*;
 

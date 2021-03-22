@@ -178,7 +178,7 @@
             <version>${version.debezium}</version>
         </dependency>
 
-        
+
     </dependencies>
 
     <build>
