@@ -1,26 +1,20 @@
 package org.replicadb.manager;
 
-import com.microsoft.sqlserver.jdbc.SQLServerDataSource;
-
 import io.debezium.data.Envelope;
 import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.RecordChangeEvent;
-import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+
 import java.util.List;
 import java.util.Properties;
 
 public class SQLServerManagerCDC extends SQLServerManager implements DebeziumEngine.ChangeConsumer<RecordChangeEvent<SourceRecord>> {
 
-    private static final Logger LOG = LogManager.getLogger(SQLServerManagerCDC.class.getName());
+    private static final Logger LOG = LogManager.getLogger(SQLServerManagerCDC.class);
     private static final String DEBEZIUM_CONNECTOR_CLASS="io.debezium.connector.sqlserver.SqlServerConnector";
 
     /**
@@ -51,7 +45,9 @@ public class SQLServerManagerCDC extends SQLServerManager implements DebeziumEng
         props.setProperty("snapshot.fetch.size", "2000");
 
         props.setProperty("snapshot.isolation.mode", "read_committed");
-        props.setProperty("snapshot.mode", "schema_only");
+        //props.setProperty("snapshot.isolation.mode", "repeatable_read");
+        //props.setProperty("snapshot.mode", "schema_only");
+        props.setProperty("snapshot.mode", extraConnectionProps.getProperty("snapshot.mode"));
         //props.setProperty("provide.transaction.metadata", "true");
         props.setProperty("tombstones.on.delete", "false"); // only a delete event is sent.
         props.setProperty("converter.schemas.enable", "false"); // don't include schema in message
@@ -63,7 +59,7 @@ public class SQLServerManagerCDC extends SQLServerManager implements DebeziumEng
         //props.setProperty("database.dbname", "BikeStores");
         props.setProperty("database.user", this.options.getSourceUser());
         props.setProperty("database.password", this.options.getSourcePassword());
-        //props.setProperty("schema.include.list", "production");
+        //props.setProperty("schema.include.list", extraConnectionProps.getProperty("schema.include.list")); // esta propiedad no existe
         props.setProperty("table.include.list", this.options.getSourceTable() != null ? this.options.getSourceTable() : "");
 
         /* File names */
@@ -78,6 +74,10 @@ public class SQLServerManagerCDC extends SQLServerManager implements DebeziumEng
         props.setProperty("offset.storage.file.filename", "data/"+offsetFileName);
 
         props.putAll(this.options.getSourceConnectionParams());
+
+        // Transforms
+        props.setProperty("transforms", "filter");
+        props.setProperty("transforms.filter.type", "org.replicadb.manager.cdc.Filter");
 
         return props;
     }
@@ -184,32 +184,5 @@ public class SQLServerManagerCDC extends SQLServerManager implements DebeziumEng
 //        recordCommitter.markBatchFinished();
 
 
-    }
-
-    private void doInsert(SourceRecord record) throws SQLException {
-        Connection conn = getConnection();
-        Statement st = conn.createStatement();
-        StringBuilder sql = new StringBuilder();
-        sql.append("INSERT INTO " +
-                getSourceTableName(record.value()) +
-                "_copy VALUES (1, 'Oscar')");
-        LOG.info("Inserting data with " + sql);
-        st.executeUpdate(sql.toString());
-        conn.commit();
-        conn.close();
-    }
-
-     public Connection getConnection() throws SQLException {
-        String url = "jdbc:sqlserver://localhost:1433;database=BikeStores";
-        Connection conn = DriverManager.getConnection(url, "sa", "Eroski1234");
-        return conn;
-    }
-
-    private String getSourceTableName(Object recordValue) {
-        Struct struct = (Struct) recordValue;
-        // get source
-        String schemaName = ((Struct) struct.getStruct("source")).getString("schema");
-        String tableName = ((Struct) struct.getStruct("source")).getString("table");
-        return schemaName + "." + tableName;
     }
 }

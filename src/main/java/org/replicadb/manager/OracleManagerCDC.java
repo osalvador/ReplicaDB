@@ -5,17 +5,16 @@ import io.debezium.engine.DebeziumEngine;
 import io.debezium.engine.RecordChangeEvent;
 import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.DataException;
 import org.apache.kafka.connect.source.SourceRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.time.Conversions;
 
+import javax.xml.transform.Source;
 import java.math.BigDecimal;
-import java.sql.Blob;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.SQLXML;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -26,8 +25,8 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
 
     private static final Logger LOG = LogManager.getLogger(OracleManagerCDC.class.getName());
 
-    private final HashMap<String, String[]> cachedPks = new HashMap<String, String[]>();
     private static PreparedStatement batchPS = null;
+    private static HashMap<String, String> mappingSourceSinkTables = new HashMap<>();
 
     /**
      * Constructs the SqlManager.
@@ -42,6 +41,16 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
             super.oracleAlterSession(false);
         } catch (SQLException throwables) {
             throwables.printStackTrace();
+        }
+
+        mapTables();
+    }
+
+    private void mapTables() {
+        String[] sourceTables = options.getSourceTable().split(",");
+        String[] sinkTables = options.getSinkTable().split(",");
+        for (int i = 0; i < sourceTables.length; i++) {
+            mappingSourceSinkTables.put(sourceTables[i].trim(), sinkTables[i].trim());
         }
     }
 
@@ -63,7 +72,6 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
                 if (operation != null) {
                     try {
                         // if the operation OR de sink table changes execute bath operations
-                        // TODO la tabla no lleva esquema, peude haber varias tablas con el mismo nombre en diferente esquema...
                         if (batchPS != null) {
                             LOG.trace("batchPS es nulo");
                             LOG.trace("oldOperation: {}, newOperation: {}", oldOperation, operation);
@@ -177,22 +185,10 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
 
     }
 
-    @Override
-    public String[] getSinkPrimaryKeys(String tableName) {
-        String[] pks = this.cachedPks.get(tableName);
-        if (pks != null) {
-            return pks;
-        } else {
-            pks = super.getSinkPrimaryKeys(tableName);
-            this.cachedPks.put(tableName, pks);
-            return pks;
-        }
-    }
-
     private void doUpdate(SourceRecord record) throws SQLException {
 
-        String sinkTableName = options.getSinkStagingSchema() + "." + getSourceTableName(record);
-        String[] pks = getSinkPrimaryKeys(sinkTableName);
+        String sinkTableName = mappingSourceSinkTables.get(getSourceTableName(record));
+        String[] pks = getSourcePrimaryKeys(record);
         List<String> columns = getColumns(record);
 
         if (batchPS == null) {
@@ -216,23 +212,27 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
         // Binding values to the statement
         Struct value = ((Struct) record.value()).getStruct("after");
         // SET values
-        int psIndex = 1;
-        for (int i = 0; i <= columns.size() - 1; i++) {
-            batchPS.setObject(psIndex, value.get(columns.get(i)));
-            psIndex++;
-        }
-
+        bindValuesToBatchPS(value);
+        int psIndex = columns.size() + 1;
         // WHERE values
         for (int i = 0; i <= pks.length - 1; i++) {
-            batchPS.setObject(psIndex, value.get(pks[i].toLowerCase()));
+            try {
+                batchPS.setObject(psIndex, value.get(pks[i]));
+            } catch (DataException e) {
+                try {
+                    batchPS.setObject(psIndex, value.get(pks[i].toLowerCase()));
+                } catch (DataException ex) {
+                    batchPS.setObject(psIndex, value.get(pks[i].toUpperCase()));
+                }
+            }
             psIndex++;
         }
         batchPS.addBatch();
     }
 
     private void doDelete(SourceRecord record) throws SQLException {
-        String sinkTableName = options.getSinkStagingSchema() + "." + getSourceTableName(record);
-        String[] pks = getSinkPrimaryKeys(sinkTableName);
+        String sinkTableName = mappingSourceSinkTables.get(getSourceTableName(record));
+        String[] pks = getSourcePrimaryKeys(record);
 
         if (batchPS == null) {
 
@@ -249,9 +249,17 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
 
         Struct value = ((Struct) record.value()).getStruct("before");
         for (int i = 0; i <= pks.length - 1; i++) {
-            batchPS.setObject(i + 1, value.get(pks[i].toLowerCase())); // TODO lowercase?
+            // TODO: If the PK is a date we may have an error?
+            try {
+                batchPS.setObject(i + 1, value.get(pks[i]));
+            } catch (DataException e) {
+                try {
+                    batchPS.setObject(i + 1, value.get(pks[i].toLowerCase()));
+                } catch (DataException ex) {
+                    batchPS.setObject(i + 1, value.get(pks[i].toUpperCase()));
+                }
+            }
         }
-
         batchPS.addBatch();
 
     }
@@ -263,11 +271,9 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
             List columns = getColumns(record);
             int columnsNumber = columns.size();
             String columnsNames = columns.stream().collect(Collectors.joining(",")).toString();
-
-            String sinkTableName = options.getSinkStagingSchema() + "." + getSourceTableName(record);
-
+            String sinkTableName = mappingSourceSinkTables.get(getSourceTableName(record));
             StringBuilder sqlCmd = new StringBuilder();
-            sqlCmd.append(String.format("INSERT INTO %s ( %s ) VALUES ( ",sinkTableName,columnsNames));
+            sqlCmd.append(String.format("INSERT INTO %s ( %s ) VALUES ( ", sinkTableName, columnsNames));
             for (int i = 0; i <= columnsNumber - 1; i++) {
                 if (i > 0) sqlCmd.append(",");
                 sqlCmd.append("?");
@@ -309,22 +315,25 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
                     }
                     break;
                 case INT8:
-                    batchPS.setInt(i, value.getInt8(fieldName));
+                    batchPS.setObject(i, value.getInt8(fieldName), Types.INTEGER);
                     break;
                 case INT16:
-                    batchPS.setInt(i, value.getInt16(fieldName));
+                    batchPS.setObject(i, value.getInt16(fieldName), Types.INTEGER);
                     break;
                 case INT32:
-                    if (filedSchemaName != null) {
+                    Integer int32Value = value.getInt32(fieldName);
+                    if (int32Value == null) {
+                        batchPS.setNull(i, Types.INTEGER);
+                    } else if (filedSchemaName != null) {
                         switch (filedSchemaName) {
                             case "io.debezium.time.Date":
-                                batchPS.setDate(i, Conversions.sqlDateOfEpochDay(value.getInt32(fieldName)));
+                                batchPS.setDate(i, Conversions.sqlDateOfEpochDay(int32Value));
                                 break;
                             case "io.debezium.time.Time":
-                                batchPS.setObject(i, Conversions.timeOfMilliOfDay(value.getInt32(fieldName)));
+                                batchPS.setObject(i, Conversions.timeOfMilliOfDay(int32Value));
                                 break;
                             default:
-                                batchPS.setInt(i, value.getInt32(fieldName));
+                                batchPS.setInt(i, int32Value);
                                 break;
                         }
                     } else {
@@ -332,38 +341,47 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
                     }
                     break;
                 case INT64:
+                    Long int64Value = value.getInt64(fieldName);
                     if (filedSchemaName != null) {
-                        switch (filedSchemaName) {
-                            case "io.debezium.time.NanoTime":
-                                batchPS.setObject(i, Conversions.timeOfNanoOfDay(value.getInt64(fieldName)));
-                                break;
-                            case "io.debezium.time.MicroTime":
-                                batchPS.setObject(i, Conversions.timeOfMicroOfDay(value.getInt64(fieldName)));
-                                break;
-                            case "io.debezium.time.Timestamp":
-                                batchPS.setObject(i, Conversions.timestampOfEpochMilli(value.getInt64(fieldName)));
-                                break;
-                            case "io.debezium.time.MicroTimestamp":
-                                batchPS.setObject(i, Conversions.timestampOfEpochMicro(value.getInt64(fieldName)));
-                                break;
-                            case "io.debezium.time.NanoTimestamp":
-                                batchPS.setObject(i, Conversions.timestampOfEpochNano(value.getInt64(fieldName)));
-                                break;
-                            default:
-                                batchPS.setBigDecimal(i, BigDecimal.valueOf(value.getInt64(fieldName)));
+                        if (int64Value == null) {
+                            batchPS.setNull(i, Types.TIMESTAMP);
+                        } else {
+                            switch (filedSchemaName) {
+                                case "io.debezium.time.NanoTime":
+                                    batchPS.setObject(i, Conversions.timeOfNanoOfDay(int64Value), Types.TIMESTAMP);
+                                    break;
+                                case "io.debezium.time.MicroTime":
+                                    batchPS.setObject(i, Conversions.timeOfMicroOfDay(int64Value), Types.TIMESTAMP);
+                                    break;
+                                case "io.debezium.time.Timestamp":
+                                    batchPS.setObject(i, Conversions.timestampOfEpochMilli(int64Value), Types.TIMESTAMP);
+                                    break;
+                                case "io.debezium.time.MicroTimestamp":
+                                    batchPS.setObject(i, Conversions.timestampOfEpochMicro(int64Value), Types.TIMESTAMP);
+                                    break;
+                                case "io.debezium.time.NanoTimestamp":
+                                    batchPS.setObject(i, Conversions.timestampOfEpochNano(int64Value), Types.TIMESTAMP);
+                                    break;
+                                default:
+                                    batchPS.setObject(i, BigDecimal.valueOf(int64Value), Types.NUMERIC);
+                            }
                         }
                     } else {
-                        batchPS.setBigDecimal(i, BigDecimal.valueOf(value.getInt64(fieldName)));
+                        if (int64Value == null) {
+                            batchPS.setNull(i, Types.NUMERIC);
+                        } else {
+                            batchPS.setObject(i, BigDecimal.valueOf(int64Value), Types.NUMERIC);
+                        }
                     }
                     break;
                 case FLOAT32:
-                    batchPS.setFloat(i, value.getFloat32(fieldName));
+                    batchPS.setObject(i, value.getFloat32(fieldName), Types.REAL);
                     break;
                 case FLOAT64:
-                    batchPS.setDouble(i, value.getFloat64(fieldName));
+                    batchPS.setObject(i, value.getFloat64(fieldName), Types.DOUBLE);
                     break;
                 case BOOLEAN:
-                    batchPS.setBoolean(i, value.getBoolean(fieldName));
+                    batchPS.setObject(i, value.getBoolean(fieldName), Types.BIT);
                     break;
                 case BYTES:
                     if (value.get(fieldName) instanceof BigDecimal)
@@ -373,7 +391,7 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
                         //blob.setBytes(1,value.getBytes(fieldName));
                         //batchPS.setBlob(i,blob);
                         //blob.free();
-                        batchPS.setBytes(i,value.getBytes(fieldName));
+                        batchPS.setBytes(i, value.getBytes(fieldName));
                     }
                     break;
                 case ARRAY:
@@ -381,16 +399,16 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
                     /*final List<String> arrayList = value.getArray(fieldName);
                     final String[] data = arrayList.toArray(new String[arrayList.size()]);
                     batchPS.setArray(i, this.getConnection().createArrayOf("VARCHAR",data));*/
-                    batchPS.setObject(i, value.getArray(fieldName));
+                    batchPS.setObject(i, value.getArray(fieldName), Types.ARRAY);
                     break;
                 case MAP:
                     batchPS.setObject(i, value.getMap(fieldName));
                     break;
                 case STRUCT:
-                    batchPS.setObject(i, value.getStruct(fieldName));
+                    batchPS.setObject(i, value.getStruct(fieldName), Types.STRUCT);
                     break;
                 default:
-                    batchPS.setString(i, value.getString(fieldName));
+                    batchPS.setObject(i, value.getString(fieldName), Types.VARCHAR);
                     break;
             }
 
@@ -413,7 +431,18 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
 
     private String getSourceTableName(SourceRecord recordValue) {
         Struct struct = (Struct) recordValue.value();
+        String table =struct.getStruct("source").getString("table");
+        String schema = struct.getStruct("source").getString("schema");
         // get source
-        return struct.getStruct("source").getString("table");
+        return schema + "." + table;
+    }
+
+    public String[] getSourcePrimaryKeys(SourceRecord record) {
+        Struct key = (Struct) record.key();
+        ArrayList<String> pks = new ArrayList<>();
+        for (Field field : key.schema().fields()) {
+            pks.add(field.name());
+        }
+        return pks.toArray(new String[0]);
     }
 }
