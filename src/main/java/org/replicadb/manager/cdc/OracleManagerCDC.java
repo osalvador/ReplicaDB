@@ -40,7 +40,7 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
         try {
             super.oracleAlterSession(false);
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOG.error(throwables);
         }
 
         mapTables();
@@ -111,30 +111,12 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
                                 break;
                         }
                     } catch (Exception throwables) {
-                        throwables.printStackTrace();
+                        LOG.error(throwables);
                     }
                     oldOperation = operation;
                     oldSinkTableName = getSourceTableName(record);
                 }
             }
-            /*
-            // table settings
-            String table = getSourceTableName(record.value());
-            System.out.println(table);
-
-            Struct value = ((Struct) record.value()).getStruct("after");
-
-            for (Field field : value.schema().fields()) {
-                System.out.println(field.name() + "=" + field.schema().type().getName());
-                System.out.println(field.name() + "=" + value.get(field));
-            }
-            System.out.println("----");
-
-
-            //System.out.println("Key = '" + record.key() + "' value = '" + record.value() + "'");
-
-*/
-
 
             committer.markProcessed(r);
         }
@@ -147,41 +129,17 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
                 LOG.info("Commited all records. Rows affected: {}", rows.length);
             }
         } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            LOG.error(throwables);
         } finally {
             try {
                 if (batchPS != null)
                     batchPS.close();
             } catch (SQLException throwables) {
-                throwables.printStackTrace();
+                LOG.error(throwables);
             }
             batchPS = null;
         }
         committer.markBatchFinished();
-
-        // for (SourceRecord record : list) {
-        //System.out.println(record.value());
-
-//            for (Field campo : record.valueSchema().fields()){
-//                System.out.println(campo.name());
-//               /* before
-//                 after
-//                 source
-//                 op
-//                ts_ms */
-//            }
-
-        //       Struct struct = (Struct)record.value();
-
-        //     Struct after = (Struct)struct.get("after");
-
-        //   System.out.println(after.schema().fields());
-
-
-        // recordCommitter.markProcessed(record);
-        //  }
-
-//        recordCommitter.markBatchFinished();
 
     }
 

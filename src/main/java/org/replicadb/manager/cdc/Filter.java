@@ -26,7 +26,7 @@ public class Filter<R extends ConnectRecord<R>> implements Transformation<R> {
             String tableName = getSourceTableName(record);
             Envelope.Operation operation = Envelope.operationFor((SourceRecord) record);
 
-            if (conditions.get(tableName) != null && conditions.get(tableName).contains(operation.code()) ){
+            if (conditions.get(tableName) != null && operation != null && conditions.get(tableName).contains(operation.code()) ){
                 LOG.debug("Filter applied. Source table: {} operation {} ", tableName, operation.code());
                 return null;
             }
