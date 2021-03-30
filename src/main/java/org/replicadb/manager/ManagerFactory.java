@@ -52,7 +52,7 @@ public class ManagerFactory {
             } else if (ORACLE.isTheManagerTypeOf(options, dsType)) {
                 return new OracleManagerCDC(options, dsType);
             }else {
-                return null;
+                throw new IllegalArgumentException("The database with scheme "+scheme+" is not supported in CDC mode");
             }
 
         } else {
@@ -71,7 +71,7 @@ public class ManagerFactory {
             } else if (S3.isTheManagerTypeOf(options, dsType)) {
                 return new S3Manager(options, dsType);
             } else {
-                return null;
+                throw new IllegalArgumentException("The database with scheme "+scheme+" is not supported by ReplicaDB");
             }
         }
 /*
