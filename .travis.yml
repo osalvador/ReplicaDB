@@ -20,7 +20,7 @@ before_install:
   - echo ${REPLICADB_RELEASE_VERSION}
 
 install:
-  - mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V -P release
+  - mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V -P release
   - cp ./target/ReplicaDB-*.jar .
   - mkdir lib
   - cp ./target/lib/* ./lib  
