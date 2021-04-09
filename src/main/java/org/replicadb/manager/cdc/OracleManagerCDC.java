@@ -338,10 +338,6 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
                     batchPS.setObject(i, value.getFloat32(fieldName), Types.REAL);
                     break;
                 case FLOAT64:
-                    if (fieldName.equals("Longitud") || fieldName.equals("FA1") ){
-                        LOG.debug("value:{}, fieldSchemaName:{} ",value.getFloat64(fieldName), fieldSchemaName );
-
-                    }
                     batchPS.setObject(i, value.getFloat64(fieldName), Types.DOUBLE);
                     break;
                 case BOOLEAN:

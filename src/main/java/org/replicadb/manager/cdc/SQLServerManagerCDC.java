@@ -73,8 +73,8 @@ public class SQLServerManagerCDC extends SQLServerManager implements DebeziumEng
         props.setProperty("offset.storage.file.filename", "data/" + offsetFileName);
 
         // Overwrite all defined properties
+        //props.setProperty("decimal.handling.mode", "string");
         props.putAll(this.options.getSourceConnectionParams());
-        props.setProperty("decimal.handling.mode", "string");
         // Transforms
         props.setProperty("transforms", "filter");
         props.setProperty("transforms.filter.type", "org.replicadb.manager.cdc.Filter");
