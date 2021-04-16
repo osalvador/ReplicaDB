@@ -82,8 +82,11 @@ public class OracleManager extends SqlManager {
         stmt.executeUpdate("ALTER SESSION SET NLS_DATE_FORMAT='YYYY-MM-DD HH24:MI:SS' ");
         stmt.executeUpdate("ALTER SESSION SET NLS_TIMESTAMP_FORMAT='YYYY-MM-DD HH24:MI:SS.FF' ");
         stmt.executeUpdate("ALTER SESSION SET NLS_TIMESTAMP_TZ_FORMAT='YYYY-MM-DD HH24:MI:SS.FF TZH:TZM' ");
-        stmt.executeUpdate("ALTER SESSION SET recyclebin = OFF");
         stmt.executeUpdate("ALTER SESSION ENABLE PARALLEL DML");
+
+        // The recyclebin is available since version 10
+        DatabaseMetaData meta = this.getConnection().getMetaData();
+        if ( meta.getDatabaseMajorVersion() >= 10 ) stmt.executeUpdate("ALTER SESSION SET recyclebin = OFF");
 
         if (directRead) stmt.executeUpdate("ALTER SESSION SET \"_serial_direct_read\"=true ");
 
