@@ -688,8 +688,10 @@ public class ToolOptions {
                         + " or "
                         + ReplicationMode.CDC.getModeText()
                 );
+        } else {
+            // Default mode
+            mode = ReplicationMode.COMPLETE.getModeText();
         }
-
         this.mode = mode.toLowerCase();
     }
 
