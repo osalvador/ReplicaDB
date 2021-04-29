@@ -70,6 +70,8 @@ public class ManagerFactory {
                 return new SQLServerManager(options, dsType);
             } else if (S3.isTheManagerTypeOf(options, dsType)) {
                 return new S3Manager(options, dsType);
+            } else if (MYSQL.isTheManagerTypeOf(options, dsType)) {
+                return new MySQLManager(options, dsType);
             } else {
                 throw new IllegalArgumentException("The database with scheme "+scheme+" is not supported by ReplicaDB");
             }
