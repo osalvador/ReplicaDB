@@ -2,7 +2,7 @@
 name: ReplicaDB
 
 project:
-    version: 0.8.7
+    #version: 0.8.7
     download_url: https://github.com/osalvador/ReplicaDB/releases
 
 license:
