@@ -1,5 +1,6 @@
 package org.replicadb;
 
+import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -12,6 +13,7 @@ import org.replicadb.manager.ConnManager;
 import org.replicadb.manager.DataSourceType;
 import org.replicadb.manager.ManagerFactory;
 
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -30,15 +32,30 @@ public class ReplicaDB {
 
     public static void main(String[] args) {
 
-        boolean exitWithError = false;
+        int exitCode = 0;
         long start = System.nanoTime();
+
+        // Parse Option Arguments
+        ToolOptions options = null;
+        try {
+            options = new ToolOptions(args);
+            exitCode = processReplica(options);
+        } catch (ParseException | IOException e) {
+            LOG.error("Got exception running ReplicaDB:", e);
+            exitCode = ERROR;
+        }
+
+        long elapsed = (System.nanoTime() - start) / 1000000;
+        LOG.info("Total process time: " + elapsed + "ms");
+        System.exit(exitCode);
+    }
+
+    public static int processReplica(ToolOptions options) {
+        int exitCode = SUCCESS;
         ConnManager sourceDs = null, sinkDs = null;
         ExecutorService preSinkTasksExecutor = null, replicaTasksService = null;
 
         try {
-
-            // Parse Option Arguments
-            ToolOptions options = new ToolOptions(args);
 
             LOG.info("Running ReplicaDB version: " + options.getVersion());
 
@@ -109,7 +126,7 @@ public class ReplicaDB {
             }
         } catch (Exception e) {
             LOG.error("Got exception running ReplicaDB:", e);
-            exitWithError = true;
+            exitCode = ERROR;
         } finally {
             //Clean Up environment and close connections
             try {
@@ -129,15 +146,7 @@ public class ReplicaDB {
                 LOG.error(e);
             }
         }
-
-        long elapsed = (System.nanoTime() - start) / 1000000;
-        LOG.info("Total process time: " + elapsed + "ms");
-
-        if (exitWithError)
-            System.exit(ERROR);
-        else
-            System.exit(SUCCESS);
-
+        return exitCode;
     }
 
 

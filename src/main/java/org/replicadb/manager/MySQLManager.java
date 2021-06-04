@@ -85,6 +85,9 @@ public class MySQLManager extends SqlManager {
 
     @Override
     public void preSourceTasks() throws SQLException {
+        // Because chunkSize is static it's required to initialize it
+        // when the unit tests are running
+        chunkSize = 0L;
 
         // Only calculate the chunk size when parallel execution is active
         if (this.options.getJobs() != 1) {
