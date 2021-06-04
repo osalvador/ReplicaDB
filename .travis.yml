@@ -20,7 +20,7 @@ before_install:
   - echo ${REPLICADB_RELEASE_VERSION}
 
 install:
-  - mvn clean install -Dmaven.javadoc.skip=true -B -V -P release
+  - mvn clean install -DskipTests=true -Dmaven.javadoc.skip=true -B -V -P release
   - cp ./target/ReplicaDB-*.jar .
   - mkdir lib
   - cp ./target/lib/* ./lib  
@@ -31,18 +31,18 @@ install:
 
 before_script:
   # Run databases services for integration tests
-  - docker-compose -f tests/docker-compose.yml up -d
+  #- docker-compose -f tests/docker-compose.yml up -d
 
 script:
   - ls -lah
   # unit tests
   - mvn test -B
   # integration tests  
-  - ./tests/pg/test-runner.sh
+  #- ./tests/pg/test-runner.sh
   #- ./tests/oracle/test-runner.sh
 
 after_script: 
-  - docker-compose down -v 
+  #- docker-compose down -v
 
 before_deploy:
   - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
