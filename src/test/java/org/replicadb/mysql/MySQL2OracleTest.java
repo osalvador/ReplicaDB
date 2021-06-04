@@ -4,12 +4,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.ClassRule;
-import org.junit.FixMethodOrder;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
@@ -28,8 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers
-class MySQL2Oracle {
-    private static final Logger LOG = LogManager.getLogger(MySQL2Oracle.class);
+class MySQL2OracleTest {
+    private static final Logger LOG = LogManager.getLogger(MySQL2OracleTest.class);
     private static final String RESOURECE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/mysql/mysql2oracle.conf";
     private static final String MYSQL_SOURCE_FILE = "/mysql/mysql-source.sql";
@@ -136,7 +131,7 @@ class MySQL2Oracle {
                 "--sink-password", oracle.getPassword()
         };
         ToolOptions options = new ToolOptions(args);
-        assertEquals(0, ReplicaDB.processReplica(options));
+        Assertions.assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(4096,countSinkRows());
     }
 
