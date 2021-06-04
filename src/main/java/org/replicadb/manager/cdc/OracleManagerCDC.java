@@ -17,6 +17,7 @@ import org.replicadb.time.Conversions;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -39,6 +40,11 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
         //
         try {
             super.oracleAlterSession(false);
+
+            // Disable PARALLEL DML
+            Statement stmt = this.getConnection().createStatement();
+            stmt.executeUpdate("ALTER SESSION DISABLE PARALLEL DML");
+            stmt.close();
         } catch (SQLException throwables) {
             LOG.error(throwables);
         }
@@ -53,7 +59,6 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
             mappingSourceSinkTables.put(sourceTables[i].trim().toLowerCase(), sinkTables[i].trim().toLowerCase());
             LOG.debug("Source Table -> Sink Table: {} -> {}", sourceTables[i].trim(),sinkTables[i].trim() );
         }
-
     }
 
 
@@ -84,18 +89,26 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
                                             (oldSinkTableName != null && !oldSinkTableName.equals(getSourceTableName(record)))
                             ) {
 
-                                int[] rows = batchPS.executeBatch();
-                                this.getConnection().commit();
-                                LOG.info("Commited batch records. Rows affected: {}", rows.length);
-                                batchPS.close();
-                                batchPS = null;
+                              try {
+                                  int[] rows = batchPS.executeBatch();
+                                  this.getConnection().commit();
+                                  LOG.info("Commited batch records. Rows affected: {}", rows.length);
+                                  batchPS.close();
+                                  batchPS = null;
+                              }catch (Exception e){
+                                  LOG.error("Error ejecutando el batchPS.executeBatch: {}",e.getMessage());
+                                  LOG.error(e);
+                                  // TODO Si hay un error en un batchPS se hace rollback en todo el batch y perdemos datos.
+                                  // hay que ver como gestionar este error
+
+                              }
                             }
                         }
 
                         switch (operation) {
                             case READ:
-                                LOG.trace("Read event. Snapshoting - Insert?? Merge??");
-                                doInsert(record);
+                                LOG.trace("Read event. Snapshoting - Merge");
+                                doMerge(record);
                                 break;
                             case CREATE:
                                 LOG.trace("Create event. Insert");
@@ -113,6 +126,7 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
                                 break;
                         }
                     } catch (Exception throwables) {
+                        LOG.error("Error preparando la operacion: {}",throwables.getMessage());
                         LOG.error(throwables);
                     }
                     oldOperation = operation;
@@ -131,7 +145,12 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
                 LOG.info("Commited all records. Rows affected: {}", rows.length);
             }
         } catch (SQLException throwables) {
+            LOG.error("Un SQLException");
             LOG.error(throwables);
+        }catch (Exception e){
+            LOG.error("Salgo por aqui");
+            LOG.error("Error no controlado: {}", e.getMessage());
+            LOG.error(e);
         } finally {
             try {
                 if (batchPS != null)
@@ -250,6 +269,59 @@ public class OracleManagerCDC extends OracleManager implements DebeziumEngine.Ch
         bindValuesToBatchPS(value);
         batchPS.addBatch();
 
+    }
+
+    private void doMerge(SourceRecord record) throws SQLException{
+        String sinkTableName = mappingSourceSinkTables.get(getSourceTableName(record).toLowerCase());
+        String[] pks = getSourcePrimaryKeys(record);
+        List<String> columns = getColumns(record);
+
+        if (batchPS == null) {
+            StringBuilder sqlCmd = new StringBuilder();
+            sqlCmd.append("MERGE INTO " + sinkTableName + " trg USING (SELECT ");
+
+            for (int i = 0; i <= columns.size() - 1; i++) {
+                if (i > 0) sqlCmd.append(",");
+                sqlCmd.append("? as ").append(columns.get(i));
+            }
+            sqlCmd.append(" FROM DUAL) src ON (");
+
+            for (int i = 0; i <= pks.length - 1; i++) {
+                if (i > 0) sqlCmd.append(" AND ");
+                sqlCmd.append("src.").append(pks[i]).append(" = trg.").append(pks[i]);
+            }
+
+            sqlCmd.append(" ) WHEN MATCHED THEN UPDATE SET ");
+            // Set all columns for UPDATE SET statement
+            for (int i = 0; i <= columns.size() - 1; i++) {
+                boolean contains = Arrays.asList(pks).contains(columns.get(i));
+                boolean containsUppercase = Arrays.asList(pks).contains(columns.get(i).toUpperCase());
+                boolean containsQuoted = Arrays.asList(pks).contains("\""+columns.get(i).toUpperCase()+"\"");
+                if (!contains && !containsUppercase && !containsQuoted)
+                    sqlCmd.append(" trg.").append(columns.get(i)).append(" = src.").append(columns.get(i)).append(" ,");
+            }
+            // Delete the last comma
+            sqlCmd.setLength(sqlCmd.length() - 1);
+
+            sqlCmd.append(" WHEN NOT MATCHED THEN INSERT ( ");
+            sqlCmd.append(String.join(",",columns));
+            // Todas las columnas
+            sqlCmd.append(" ) VALUES ( ");
+            for (int i = 0; i <= columns.size() - 1; i++) {
+                if (i > 0) sqlCmd.append(",");
+                sqlCmd.append(" src.").append(columns.get(i));
+            }
+            sqlCmd.append(" ) ");
+
+            LOG.info("Merging record with " + sqlCmd);
+            batchPS = this.getConnection().prepareStatement(String.valueOf(sqlCmd));
+        }
+
+        // Binding values to the statement
+        Struct value = ((Struct) record.value()).getStruct("after");
+        // SET values
+        bindValuesToBatchPS(value);
+        batchPS.addBatch();
     }
 
     private void bindValuesToBatchPS(Struct value) throws SQLException {
