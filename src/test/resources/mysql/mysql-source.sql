@@ -15,52 +15,92 @@ CREATE OR REPLACE VIEW generate_series_4k
 AS SELECT ( ( hi.generate_series << 8 ) | lo.generate_series ) AS generate_series
    FROM generate_series_256 lo, generate_series_16 hi;
 
-
 create table t_source (
-    C_INT INT  AUTO_INCREMENT,
-    C_TINYINT TINYINT,
+    /*Exact Numerics*/
+    C_INTEGER INTEGER AUTO_INCREMENT,
     C_SMALLINT SMALLINT,
-    C_MEDIUMINT MEDIUMINT,
     C_BIGINT BIGINT,
+    C_NUMERIC NUMERIC(65,30),
     C_DECIMAL DECIMAL(65,30),
+    /*Approximate Numerics:*/
+    C_REAL REAL,
+    C_DOUBLE_PRECISION DOUBLE PRECISION,
     C_FLOAT FLOAT,
-    C_BIT BIT,
-    C_CHAR CHAR,
-    C_VARCHAR VARCHAR(2000),
-    C_BINARY BINARY(255),
-    C_VARBINARY VARBINARY(255),
-    C_TINYBLOB TINYBLOB,
-    C_BLOB BLOB,
-    C_MEDIUMBLOB MEDIUMBLOB,
-    C_LONGBLOB LONGBLOB,
-    C_TINYTEXT TINYTEXT,
-    C_TEXT TEXT,
-    C_MEDIUMTEXT MEDIUMTEXT,
-    C_LONGTEXT LONGTEXT,
-    PRIMARY KEY (C_INT)
+    /*Binary Strings:*/
+    C_BINARY BINARY(35),
+    C_BINARY_VAR VARBINARY(255),
+    C_BINARY_LOB BLOB,
+    /*Boolean:*/
+    C_BOOLEAN BOOLEAN,
+    /*Character Strings:*/
+    C_CHARACTER CHAR(35),
+    C_CHARACTER_VAR VARCHAR(255),
+    C_CHARACTER_LOB TEXT,
+    C_NATIONAL_CHARACTER NATIONAL CHARACTER(35),
+    C_NATIONAL_CHARACTER_VAR NVARCHAR(255),
+    /*Datetimes:*/
+    C_DATE DATE,
+    C_TIME_WITHOUT_TIMEZONE TIME,
+    C_TIMESTAMP_WITHOUT_TIMEZONE TIMESTAMP,
+    C_TIME_WITH_TIMEZONE TIME,
+    C_TIMESTAMP_WITH_TIMEZONE TIMESTAMP,
+    --         /*Intervals:*/
+    --         INTERVAL DAY /*not supported*/
+    --         INTERVAL YEAR /*not supported*/
+    --         /*Collection Types:*/
+    --         ARRAY /*not supported*/
+    --         MULTISET /*not supported*/
+    --         /*Other Types:*/
+    --         ROW /*not supported*/
+    --         XML /*not supported*/
+    --          JSON /*not supported*/
+    PRIMARY KEY (C_INTEGER)
 );
 
 insert into t_source (
-    C_TINYINT,
+    /*C_INTEGER, auto incremented*/
     C_SMALLINT,
-    C_MEDIUMINT,
     C_BIGINT,
+    C_NUMERIC,
     C_DECIMAL,
+    C_REAL ,
+    C_DOUBLE_PRECISION,
     C_FLOAT,
-    C_BIT,
-    C_CHAR,
-    C_VARCHAR,
-    C_BINARY
+    C_BINARY,
+    C_BINARY_VAR,
+    C_BINARY_LOB,
+    C_BOOLEAN,
+    C_CHARACTER,
+    C_CHARACTER_VAR,
+    C_CHARACTER_LOB,
+    C_NATIONAL_CHARACTER,
+    C_NATIONAL_CHARACTER_VAR,
+    C_DATE,
+    C_TIME_WITHOUT_TIMEZONE,
+    C_TIMESTAMP_WITHOUT_TIMEZONE,
+    C_TIME_WITH_TIMEZONE ,
+    C_TIMESTAMP_WITH_TIMEZONE
 )
 select
-    substr(CAST(generate_series * rand() as signed),1,2) as C_TINYINT,
     CAST(generate_series * rand() as signed) as C_SMALLINT,
-    CAST(generate_series * rand() as signed) as C_MEDIUMINT,
     CAST(generate_series * rand() as signed) as C_BIGINT,
+    CAST(generate_series * rand() as decimal(65, 30)) as C_NUMERIC,
     CAST(generate_series * rand() as decimal(65, 30)) as C_DECIMAL,
+    CAST(generate_series * rand() as decimal(25, 10)) as C_REAL,
+    CAST(generate_series * rand() as decimal(25, 10)) as C_DOUBLE_PRECISION,
     CAST(generate_series * rand() as decimal(25, 10)) as C_FLOAT,
-    1 as C_BIT,
-    substr(md5(rand()),1,1) as C_CHAR,
+    BINARY(md5(rand())) as C_BINARY,
+    BINARY(md5(rand())) as C_BINARY_VAR,
+    BINARY(md5(rand())) as C_BINARY_LOB,
+    TRUE,
+    md5(rand()) as C_CHAR,
     md5(rand()) as C_VARCHAR,
-    BINARY(md5(rand())) as C_BINARY
+    md5(rand()) as C_VARCHAR_LOB,
+    CONVERT(md5(rand()) using utf8) as C_NATIONAL_CHARACTER,
+    CONVERT(md5(rand()) using utf8) as C_NATIONAL_CHARACTER_VAR,
+    current_date as C_DATE,
+    current_time as C_TIME_WITHOUT_TIMEZONE,
+    current_timestamp as C_TIMESTAMP_WITHOUT_TIMEZONE,
+    CONVERT_TZ(current_time, '+00:00', '+02:00' ) as C_TIME_WITH_TIMEZONE,
+    CONVERT_TZ(current_timestamp, '+00:00', '+02:00' ) as C_TIMESTAMP_WITH_TIMEZONE
 from generate_series_4k;
