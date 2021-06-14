@@ -35,7 +35,7 @@ class MySQL2OracleTest {
     private Connection oracleConn;
 
     @ClassRule
-    private static final MySQLContainer mysql = new MySQLContainer("mysql:5.5")
+    private static final MySQLContainer mysql = new MySQLContainer("mysql:5.6")
             .withDatabaseName(USER_PASSWD_DB)
             .withUsername(USER_PASSWD_DB)
             .withPassword(USER_PASSWD_DB);
@@ -94,7 +94,7 @@ class MySQL2OracleTest {
         rs.next();
         String version = rs.getString(1);
         LOG.info(version);
-        assertTrue(version.contains("5.5"));
+        assertTrue(version.contains("5.6"));
     }
 
     @Test
