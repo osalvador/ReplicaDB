@@ -10,7 +10,7 @@ import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.utils.ScriptRunner;
 import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.containers.OracleContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.BufferedReader;
@@ -23,16 +23,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers
-class MySQL2OracleTest {
-    private static final Logger LOG = LogManager.getLogger(MySQL2OracleTest.class);
+class MySQL2PostgresTest {
+    private static final Logger LOG = LogManager.getLogger(MySQL2PostgresTest.class);
     private static final String RESOURECE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
     private static final String MYSQL_SOURCE_FILE = "/mysql/mysql-source.sql";
-    private static final String ORACLE_SINK_FILE = "/sinks/oracle-sink.sql";
+    private static final String POSTGRES_SINK_FILE = "/sinks/pg-sink.sql";
     private static final String USER_PASSWD_DB = "replicadb";
 
     private Connection mysqlConn;
-    private Connection oracleConn;
+    private Connection postgresConn;
 
     @ClassRule
     private static final MySQLContainer mysql = new MySQLContainer("mysql:5.6")
@@ -40,45 +40,47 @@ class MySQL2OracleTest {
             .withUsername(USER_PASSWD_DB)
             .withPassword(USER_PASSWD_DB);
 
-
     @ClassRule
-    public static final OracleContainer oracle = new OracleContainer("oracleinanutshell/oracle-xe-11g");
+    public static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:9.6")
+            .withDatabaseName(USER_PASSWD_DB)
+            .withUsername(USER_PASSWD_DB)
+            .withPassword(USER_PASSWD_DB);
 
     @BeforeAll
     static void setUp() throws SQLException, IOException {
         // Start the mysql container
         mysql.start();
-        oracle.start();
+        postgres.start();
         // Create tables
         /*MySQL*/
         Connection con = DriverManager.getConnection(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword());
         ScriptRunner runner = new ScriptRunner(con, false, true);
         runner.runScript(new BufferedReader(new FileReader(RESOURECE_DIR + MYSQL_SOURCE_FILE)));
         con.close();
-        /*Oracle*/
-        con = DriverManager.getConnection(oracle.getJdbcUrl(), oracle.getUsername(), oracle.getPassword());
+        /*Postgres*/
+        con = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
         runner = new ScriptRunner(con, false, true);
-        runner.runScript(new BufferedReader(new FileReader(RESOURECE_DIR + ORACLE_SINK_FILE)));
+        runner.runScript(new BufferedReader(new FileReader(RESOURECE_DIR + POSTGRES_SINK_FILE)));
         con.close();
     }
 
     @BeforeEach
     void before() throws SQLException {
         this.mysqlConn = DriverManager.getConnection(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword());
-        this.oracleConn = DriverManager.getConnection(oracle.getJdbcUrl(), oracle.getUsername(), oracle.getPassword());
+        this.postgresConn = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
     }
 
     @AfterEach
     void tearDown() throws SQLException {
         // Truncate sink table and close connections
-        oracleConn.createStatement().execute("TRUNCATE TABLE T_SINK");
+        postgresConn.createStatement().execute("TRUNCATE TABLE T_SINK");
         this.mysqlConn.close();
-        this.oracleConn.close();
+        this.postgresConn.close();
     }
 
 
     public int countSinkRows() throws SQLException {
-        Statement stmt = oracleConn.createStatement();
+        Statement stmt = postgresConn.createStatement();
         ResultSet rs = stmt.executeQuery("select count(*) from t_sink");
         rs.next();
         int count = rs.getInt(1);
@@ -98,15 +100,13 @@ class MySQL2OracleTest {
     }
 
     @Test
-    void testOracleConnection() throws SQLException {
-        Connection oracleConn = DriverManager.getConnection(oracle.getJdbcUrl(), oracle.getUsername(), oracle.getPassword());
-        Statement stmt = oracleConn.createStatement();
-        ResultSet rs = stmt.executeQuery("SELECT 1 FROM DUAL");
+    void testPostgresConnection() throws SQLException {
+        Statement stmt = postgresConn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT 1");
         rs.next();
         String version = rs.getString(1);
         LOG.info(version);
         assertTrue(version.contains("1"));
-        oracleConn.close();
     }
 
     @Test
@@ -120,15 +120,15 @@ class MySQL2OracleTest {
     }
 
     @Test
-    void testMySQL2OracleComplete() throws ParseException, IOException, SQLException {
+    void testMySQL2PostgresComplete() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
-                "--sink-connect", oracle.getJdbcUrl(),
-                "--sink-user", oracle.getUsername(),
-                "--sink-password", oracle.getPassword()
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword()
         };
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
@@ -136,16 +136,15 @@ class MySQL2OracleTest {
     }
 
     @Test
-    void testMySQL2OracleCompleteAtomic() throws ParseException, IOException, SQLException {
+    void testMySQL2PostgresCompleteAtomic() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
-                "--sink-connect", oracle.getJdbcUrl(),
-                "--sink-user", oracle.getUsername(),
-                "--sink-password", oracle.getPassword(),
-                "--sink-staging-schema", oracle.getUsername(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
@@ -155,16 +154,15 @@ class MySQL2OracleTest {
     }
 
     @Test
-    void testMySQL2OracleIncremental() throws ParseException, IOException, SQLException {
+    void testMySQL2PostgresIncremental() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
-                "--sink-connect", oracle.getJdbcUrl(),
-                "--sink-user", oracle.getUsername(),
-                "--sink-password", oracle.getPassword(),
-                "--sink-staging-schema", oracle.getUsername(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
@@ -174,15 +172,15 @@ class MySQL2OracleTest {
     }
 
     @Test
-    void testMySQL2OracleCompleteParallel() throws ParseException, IOException, SQLException {
+    void testMySQL2PostgresCompleteParallel() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
-                "--sink-connect", oracle.getJdbcUrl(),
-                "--sink-user", oracle.getUsername(),
-                "--sink-password", oracle.getPassword(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
                 "--jobs", "4"
         };
         ToolOptions options = new ToolOptions(args);
@@ -191,16 +189,15 @@ class MySQL2OracleTest {
     }
 
     @Test
-    void testMySQL2OracleCompleteAtomicParallel() throws ParseException, IOException, SQLException {
+    void testMySQL2PostgresCompleteAtomicParallel() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
-                "--sink-connect", oracle.getJdbcUrl(),
-                "--sink-user", oracle.getUsername(),
-                "--sink-password", oracle.getPassword(),
-                "--sink-staging-schema", oracle.getUsername(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
                 "--jobs", "4"
         };
@@ -210,16 +207,15 @@ class MySQL2OracleTest {
     }
 
     @Test
-    void testMySQL2OracleIncrementalParallel() throws ParseException, IOException, SQLException {
+    void testMySQL2PostgresIncrementalParallel() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
-                "--sink-connect", oracle.getJdbcUrl(),
-                "--sink-user", oracle.getUsername(),
-                "--sink-password", oracle.getPassword(),
-                "--sink-staging-schema", oracle.getUsername(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
                 "--jobs", "4"
         };
