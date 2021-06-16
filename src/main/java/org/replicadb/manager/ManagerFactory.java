@@ -7,6 +7,8 @@ import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.cdc.OracleManagerCDC;
 import org.replicadb.manager.cdc.SQLServerManagerCDC;
 
+import java.util.Properties;
+
 import static org.replicadb.manager.SupportedManagers.*;
 
 /**
@@ -71,6 +73,13 @@ public class ManagerFactory {
             } else if (S3.isTheManagerTypeOf(options, dsType)) {
                 return new S3Manager(options, dsType);
             } else if (MYSQL.isTheManagerTypeOf(options, dsType)) {
+                // In MySQL this properties are required
+                if (dsType.equals(DataSourceType.SINK)){
+                    Properties mysqlProps = new Properties();
+                    mysqlProps.setProperty("characterEncoding", "UTF-8");
+                    mysqlProps.setProperty("allowLoadLocalInfile", "true");
+                    options.setSinkConnectionParams(mysqlProps);
+                }
                 return new MySQLManager(options, dsType);
             } else {
                 throw new IllegalArgumentException("The database with scheme "+scheme+" is not supported by ReplicaDB");
