@@ -75,14 +75,18 @@ public class OracleManager extends SqlManager {
         return super.execute(sqlCmd, (Object) nThread);
     }
 
-    private void oracleAlterSession(Boolean directRead) throws SQLException {
+    public void oracleAlterSession(Boolean directRead) throws SQLException {
         // Specific Oracle Alter sessions for reading data
         Statement stmt = this.getConnection().createStatement();
         stmt.executeUpdate("ALTER SESSION SET NLS_NUMERIC_CHARACTERS = '.,'");
         stmt.executeUpdate("ALTER SESSION SET NLS_DATE_FORMAT='YYYY-MM-DD HH24:MI:SS' ");
         stmt.executeUpdate("ALTER SESSION SET NLS_TIMESTAMP_FORMAT='YYYY-MM-DD HH24:MI:SS.FF' ");
         stmt.executeUpdate("ALTER SESSION SET NLS_TIMESTAMP_TZ_FORMAT='YYYY-MM-DD HH24:MI:SS.FF TZH:TZM' ");
-        stmt.executeUpdate("ALTER SESSION SET recyclebin = OFF");
+        stmt.executeUpdate("ALTER SESSION ENABLE PARALLEL DML");
+
+        // The recyclebin is available since version 10
+        DatabaseMetaData meta = this.getConnection().getMetaData();
+        if ( meta.getDatabaseMajorVersion() >= 10 ) stmt.executeUpdate("ALTER SESSION SET recyclebin = OFF");
 
         if (directRead) stmt.executeUpdate("ALTER SESSION SET \"_serial_direct_read\"=true ");
 
@@ -158,7 +162,7 @@ public class OracleManager extends SqlManager {
                             ps.setTimestamp(i, resultSet.getTimestamp(i));
                             break;
                         case Types.BINARY:
-                            ps.setBinaryStream(i, resultSet.getBinaryStream(i));
+                            ps.setBytes(i,resultSet.getBytes(i));
                             break;
                         case Types.BLOB:
                             Blob blobData = resultSet.getBlob(i);
@@ -217,7 +221,8 @@ public class OracleManager extends SqlManager {
 
         StringBuilder sqlCmd = new StringBuilder();
 
-        sqlCmd.append("INSERT INTO /*+APPEND_VALUES*/ ");
+        //sqlCmd.append("INSERT INTO /*+APPEND_VALUES*/ ");
+        sqlCmd.append("INSERT INTO ");
         sqlCmd.append(tableName);
 
         if (allColumns != null) {
@@ -276,10 +281,10 @@ public class OracleManager extends SqlManager {
         // options.sinkColumns was set during the insertDataToTable
         String allColls = getAllSinkColumns(null);
         // Oracle use columns uppercase
-        allColls = allColls.toUpperCase();
+        //allColls = allColls.toUpperCase();
 
         StringBuilder sql = new StringBuilder();
-        sql.append("MERGE INTO ")
+        sql.append("MERGE /*+ PARALLEL */ INTO ")
                 .append(this.getSinkTableName())
                 .append(" trg USING (SELECT ")
                 .append(allColls)
@@ -299,7 +304,9 @@ public class OracleManager extends SqlManager {
         for (String colName : allColls.split("\\s*,\\s*")) {
 
             boolean contains = Arrays.asList(pks).contains(colName);
-            if (!contains)
+            boolean containsUppercase = Arrays.asList(pks).contains(colName.toUpperCase());
+            boolean containsQuoted = Arrays.asList(pks).contains("\""+colName.toUpperCase()+"\"");
+            if (!contains && !containsUppercase && !containsQuoted)
                 sql.append(" trg.").append(colName).append(" = src.").append(colName).append(" ,");
         }
         // Delete the last comma

@@ -5,8 +5,8 @@ create table if not exists public.t_source (
     c_smallint smallint,
     c_integer integer,
     c_bigint bigint,
-    c_decimal decimal,
-    c_numeric numeric,
+    c_decimal decimal(30,15),
+    c_numeric numeric(30,15),
     c_real real,
     c_double double precision,
     c_money money,
@@ -32,6 +32,7 @@ create table if not exists public.t_source (
     c_jsonb jsonb,
     c_array integer[],
     c_array2 text[][],
+    "for" text,
     PRIMARY KEY (c_serial)
 );
 
@@ -68,11 +69,14 @@ insert into  public.t_source (
     c_json,
     c_jsonb,
     c_array,
-    c_array2
+    c_array2,
+    "for"
 )
 WITH numbers AS (
   SELECT *
-  FROM generate_series(1, 10000)
+  FROM generate_series(1, 1000)
+),binaryFile as MATERIALIZED (
+	select * from pg_read_binary_file('/bin/tempfile')
 )
 SELECT
     (generate_series * random())::smallint,
@@ -86,7 +90,7 @@ SELECT
     left(MD5((generate_series * random())::text),10),
     left(MD5((generate_series * random())::text),2),
     MD5((generate_series * random())::text),
-    '\xDEADBEEF'::bytea,
+    pg_read_binary_file,
     now(),
     current_timestamp,
     current_timestamp,
@@ -104,8 +108,9 @@ SELECT
     '{"bar": "baz", "balance": 7.77, "active":false}'::json,
     '{"bar": "baz", "balance": 7.77, "active":false}'::jsonb,
     '{10000, 10000, 10000, 10000}'::integer[],
-    '{{"meeting", "lunch"}, {"training", "presentation"}}'::text[][]
-FROM numbers;
+    '{{"meeting", "lunch"}, {"training", "presentation"}}'::text[][],
+    MD5((generate_series * random())::text)
+FROM numbers,binaryFile;
 
 
 /*

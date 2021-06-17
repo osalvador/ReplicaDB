@@ -305,30 +305,30 @@ public abstract class SqlManager extends ConnManager {
         pks = getPrimaryKeys(table, schema);
 
         if (null == pks) {
-            LOG.debug("Getting PKs for schema: " + schema + " and table: " + table + ". Not found.");
+            LOG.debug("Getting PKs for schema: {} and table: {}. Not found.", schema, table);
 
             // Trying with uppercase
-            table = getTableNameFromQualifiedTableName(tableName).toUpperCase();
-            schema = getSchemaFromQualifiedTableName(tableName).toUpperCase();
+            table = table != null ? table.toUpperCase() : null;
+            schema = schema != null ? schema.toUpperCase() : null;
 
             pks = getPrimaryKeys(table, schema);
 
             if (null == pks) {
-                LOG.debug("Getting PKs for schema: " + schema + " and table: " + table + ". Not found.");
+                LOG.debug("Getting PKs for schema: {} and table: {}. Not found.", schema, table);
 
                 // Trying with lowercase
-                table = getTableNameFromQualifiedTableName(tableName).toLowerCase();
-                schema = getSchemaFromQualifiedTableName(tableName).toLowerCase();
+                table = table != null ? table.toLowerCase() : null;
+                schema = schema != null ? schema.toLowerCase() : null;
 
                 pks = getPrimaryKeys(table, schema);
                 if (null == pks) {
-                    LOG.debug("Getting PKs for schema: " + schema + " and table: " + table + ". Not found.");
+                    LOG.debug("Getting PKs for schema: {} and table: {}. Not found.", schema, table);
                     return null;
                 }
             }
         }
 
-        LOG.debug("Getting PKs for schema: " + schema + " and table: " + table + ". Found.");
+        LOG.info("Getting PKs for schema: {} and table: {}. Found.", schema, table);
 
         return pks;
     }
@@ -348,7 +348,7 @@ public abstract class SqlManager extends ConnManager {
                 while (results.next()) {
                     String pkName = results.getString("COLUMN_NAME");
                     if (this.options.getQuotedIdentifiers())
-                        pks.add("\""+ pkName +"\"");
+                        pks.add("\"" + pkName + "\"");
                     else
                         pks.add(pkName);
                 }
@@ -527,8 +527,9 @@ public abstract class SqlManager extends ConnManager {
     @Override
     public void cleanUp() throws Exception {
 
-        // Not Complete mode
-        if (!options.getMode().equals(ReplicationMode.COMPLETE.getModeText())) {
+        // Not Complete or CDC mode
+        if (options.getMode().equals(ReplicationMode.COMPLETE_ATOMIC.getModeText())
+                || options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
 
             // Only drop staging table if it was created automatically
             if (options.getSinkStagingTable() == null || options.getSinkStagingTable().isEmpty()) {
