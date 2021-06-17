@@ -1,4 +1,8 @@
-[![Build Status](https://travis-ci.org/osalvador/ReplicaDB.svg?branch=master)](https://travis-ci.org/osalvador/ReplicaDB) [![GitHub license](https://img.shields.io/github/license/osalvador/ReplicaDB.svg)](https://github.com/osalvador/ReplicaDB/blob/master/LICENSE) [![Twitter](https://img.shields.io/twitter/url/https/github.com/osalvador/ReplicaDB.svg?style=social)](https://twitter.com/intent/tweet?text=Wow:&url=https%3A%2F%2Fgithub.com%2Fosalvador%2FReplicaDB)
+<img src="https://img.shields.io/github/license/osalvador/replicadb?style=for-the-badge" alt="License"> <img src="https://img.shields.io/github/v/release/osalvador/replicadb?style=for-the-badge"  alt="Last Version">
+<img src="https://img.shields.io/travis/osalvador/replicadb?style=for-the-badge&logo=travis" alt="Main">
+<img src="https://img.shields.io/docker/pulls/osalvador/replicadb.svg?style=for-the-badge&logo=docker" alt="Docker Pull">
+<img src="https://img.shields.io/github/downloads/osalvador/replicadb/total?style=for-the-badge&logo=github" alt="Github Downloads">
+<img src="https://img.shields.io/github/stars/osalvador/replicadb.svg?style=for-the-badge&logo=github" alt="Github Start">
 
 ![replicadb-logo](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png)
 
@@ -33,33 +37,44 @@ I have reviewed and tested other open source tools and none of them meets all th
 
 # Installation
 
-## System Requirements
+## Stand Alone
+
+### System Requirements
 
 ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Standard Edition (SE) or Java Development Kit (JDK) Standard Edition (SE) version 8.0 or above. The minimum operating system requirements are:
 
 *   Java SE Runtime Environment 8 or above    
 *   Memory - 128 (MB) available
 
-## Install
+### Install
 
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
 ```bash
-$ curl -o ReplicaDB-0.8.1.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.8.1/ReplicaDB-0.8.1.tar.gz"
-$ tar -xvzf ReplicaDB-0.8.1.tar.gz
+$ curl -o ReplicaDB-0.8.9.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.8.9/ReplicaDB-0.8.9.tar.gz"
+$ tar -xvzf ReplicaDB-0.8.9.tar.gz
 $ ./bin/replicadb --help
 ```
 
-## JDBC Drivers
+### JDBC Drivers
 
 You can use ReplicaDB with any JDBC-compliant database. First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory on your client machine. Each driver `.jar` file also has a specific driver class which defines the entry-point to the driver. 
 
+## Docker
 
-## Full Documentation
+```bash
+$ docker run \
+    -v /tmp/replicadb.conf:/home/replicadb/conf/replicadb.conf \
+    osalvador/replicadb
+```
+
+Visit the [project homepage on Docker Hub](https://hub.docker.com/r/osalvador/replicadb) for more information. 
+
+# Full Documentation
 
 You can find the full ReplicaDB documentation here: [Docs](https://osalvador.github.io/ReplicaDB/docs/docs.html)
 
-## Configuration Wizard
+# Configuration Wizard
 
 You can create a configuration file for a ReplicaDB process by filling out a simple form: [ReplicaDB configuration wizard](https://osalvador.github.io/ReplicaDB/wizard/index.html)
 

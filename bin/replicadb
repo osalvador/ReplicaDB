@@ -98,5 +98,10 @@ bin=`dirname ${prgm}`
 bin=`cd ${bin} && pwd`
 
 source ${bin}/configure-replicadb "${bin}"
+
+if [ "${REPLICADB_CONFIGURATION}" ]; then
+    echo "${REPLICADB_CONFIGURATION}" > ${REPLICADB_CONF_DIR}/replicadb.conf
+fi
+
 exec ${_RUNJAVA} ${JAVA_OPTS} ${JVM_PERFORMANCE_OPTS} ${JMX_OPTS} -cp ${REPLICADB_CLASSPATH} org.replicadb.ReplicaDB "$@"
 
