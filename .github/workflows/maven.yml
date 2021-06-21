@@ -43,7 +43,7 @@ jobs:
         tar -zcvf ReplicaDB-v${REPLICADB_RELEASE_VERSION}.tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE 
         zip -r -X ReplicaDB-v${REPLICADB_RELEASE_VERSION}.zip ReplicaDB-*.jar README.md lib conf bin LICENSE 
         ls -lahtr
-        gh releases create v${REPLICADB_RELEASE_VERSION} ./ReplicaDB-v*  -t "Release v${REPLICADB_RELEASE_VERSION}"
+        gh release create v${REPLICADB_RELEASE_VERSION} ./ReplicaDB-v*  -t "Release v${REPLICADB_RELEASE_VERSION}"
         
         
   
