@@ -60,12 +60,8 @@ jobs:
         files: |
           ReplicaDB-v*.zip
           ReplicaDB-v*.tar.gz
-          ReplicaDB-*.jar 
-          README.md 
-          lib 
-          conf
-          bin
-          LICENSE 
+
+
 
 
     
