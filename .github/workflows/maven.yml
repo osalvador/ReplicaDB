@@ -29,14 +29,10 @@ jobs:
  
     - name: Build with Maven
       run: mvn -DskipTests -B package --file pom.xml
-      
-    - name: Publish to GitHub Packages Apache Maven
-      run: mvn -DskipTests deploy -s -PPROD $GITHUB_WORKSPACE/settings.xml
-      env:
-        GITHUB_TOKEN: ${{ github.token }}      
+        
 
     - name: Clean Install
-      run: mvn clean install -Dmaven.javadoc.skip=true -DskipTests -B -V -P release && cp ./target/ReplicaDB-*.jar . && mkdir lib && cp ./target/lib/* ./lib && tar -zcvf ReplicaDB-"${REPLICADB_RELEASE_VERSION}".tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE && zip -r -X ReplicaDB-"${REPLICADB_RELEASE_VERSION}".zip ReplicaDB-*.jar README.md lib conf bin LICENSE 
+      run: mvn clean install -Dmaven.javadoc.skip=true -DskipTests -B -V -P release && cp ./target/ReplicaDB-*.jar . && mkdir lib && cp ./target/lib/* ./lib && tar -zcvf ReplicaDB-${REPLICADB_RELEASE_VERSION}.tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE && zip -r -X ReplicaDB-${REPLICADB_RELEASE_VERSION}.zip ReplicaDB-*.jar README.md lib conf bin LICENSE 
 
     - name: LS
       run: ls -lahtr
