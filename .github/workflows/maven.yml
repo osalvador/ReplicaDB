@@ -28,7 +28,7 @@ jobs:
 #      run: export REPLICADB_RELEASE_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) && echo ${REPLICADB_RELEASE_VERSION}
  
     - name: Get version
-      run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_EN
+      run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
  
  
     - name: Build with Maven
