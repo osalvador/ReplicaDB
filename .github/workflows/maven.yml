@@ -28,4 +28,4 @@ jobs:
       run: mvn -B package --file pom.xml
 
     - name: Clean Install
-      run: mvn clean install -Dmaven.javadoc.skip=true -B -V -P release && cp ./target/ReplicaDB-*.jar . && mkdir lib && cp ./target/lib/* ./lib && tar -zcvf ReplicaDB-"${REPLICADB_RELEASE_VERSION}".tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE && zip -r -X ReplicaDB-"${REPLICADB_RELEASE_VERSION}".zip ReplicaDB-*.jar README.md lib conf bin LICENSE 
+      run: mvn clean install -Dmaven.javadoc.skip=true -DskipTests -B -V -P release && cp ./target/ReplicaDB-*.jar . && mkdir lib && cp ./target/lib/* ./lib && tar -zcvf ReplicaDB-"${REPLICADB_RELEASE_VERSION}".tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE && zip -r -X ReplicaDB-"${REPLICADB_RELEASE_VERSION}".zip ReplicaDB-*.jar README.md lib conf bin LICENSE 
