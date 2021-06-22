@@ -23,10 +23,7 @@ jobs:
         distribution: 'adopt'
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
-        
-#    - name: Tag Version
-#      run: export REPLICADB_RELEASE_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) && echo ${REPLICADB_RELEASE_VERSION}
- 
+
     - name: Get version
       run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
  
@@ -88,10 +85,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: osalvador/replicadb:ubi8-${{ env.version }}, osalvador/replicadb:ubi8-latest
           build-args: REPLICADB_RELEASE_VERSION=${{ env.version }}
-<<<<<<< HEAD
-    
-=======
->>>>>>> 59081ceb97cf203e91d423654c651f32d43a5eb0
+
 
 
     
