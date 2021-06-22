@@ -78,6 +78,7 @@ jobs:
           file: Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: osalvador/replicadb:${{ env.version }}, osalvador/replicadb:latest
+          build-args: REPLICADB_RELEASE_VERSION=${{ env.version }}
 
     -   name: Build and push
         uses: docker/build-push-action@v2
@@ -86,7 +87,7 @@ jobs:
           file: Containerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: osalvador/replicadb:ubi8-${{ env.version }}, osalvador/replicadb:ubi8-latest
-    
+          build-args: REPLICADB_RELEASE_VERSION=${{ env.version }}
 
 
     
