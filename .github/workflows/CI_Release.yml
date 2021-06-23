@@ -47,6 +47,7 @@ jobs:
         zip -r -X ReplicaDB-v${REPLICADB_RELEASE_VERSION}.zip ReplicaDB-*.jar README.md lib conf bin LICENSE 
         echo "release.package.folder=$(pwd)" >> $GITHUB_ENV
         echo ${{ env.release.package.folder }}
+        cat $GITHUB_ENV
         ls -lah
         
     
