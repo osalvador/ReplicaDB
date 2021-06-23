@@ -42,7 +42,8 @@ jobs:
         cp ./target/lib/* ./lib 
         tar -zcvf ReplicaDB-v${REPLICADB_RELEASE_VERSION}.tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE 
         zip -r -X ReplicaDB-v${REPLICADB_RELEASE_VERSION}.zip ReplicaDB-*.jar README.md lib conf bin LICENSE 
-        ls -lahtr
+        pwd
+        ls -lah
         
     
     - uses: "marvinpinto/action-automatic-releases@latest"
