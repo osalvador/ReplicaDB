@@ -14,10 +14,10 @@ USER "${USERNAME}:${USERNAME}"
 WORKDIR /home/${USERNAME}
 
 RUN ls -al *
-COPY "./ReplicaDB-${REPLICADB_VERSION}.tar.gz" /home/${USERNAME}
+#COPY "ReplicaDB-${REPLICADB_VERSION}.tar.gz" /home/${USERNAME}
 
-RUN tar -xvzf ReplicaDB-${REPLICADB_VERSION}.tar.gz
-RUN rm ReplicaDB-${REPLICADB_VERSION}.tar.gz
+#RUN tar -xvzf ReplicaDB-${REPLICADB_VERSION}.tar.gz
+#RUN rm ReplicaDB-${REPLICADB_VERSION}.tar.gz
 
 
 ENTRYPOINT ["bash", "/home/replicadb/bin/replicadb","--options-file","/home/replicadb/conf/replicadb.conf" ]
