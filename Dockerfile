@@ -13,7 +13,7 @@ USER "${USERNAME}:${USERNAME}"
 
 WORKDIR /home/${USERNAME}
 
-COPY "${TARGET_DIR}/ReplicaDB-${REPLICADB_VERSION}.tar.gz" /home/${USERNAME}
+COPY "./ReplicaDB-${REPLICADB_VERSION}.tar.gz" /home/${USERNAME}
 
 RUN tar -xvzf ReplicaDB-${REPLICADB_VERSION}.tar.gz
 RUN rm ReplicaDB-${REPLICADB_VERSION}.tar.gz
