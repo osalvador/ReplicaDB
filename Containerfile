@@ -15,7 +15,8 @@ ARG REPLICADB_RELEASE_VERSION=0.0.0
 ENV REPLICADB_VERSION=$REPLICADB_RELEASE_VERSION
 
 WORKDIR /home/${USERNAME}
-RUN wget https://github.com/osalvador/ReplicaDB/releases/download/v${REPLICADB_VERSION}/ReplicaDB-${REPLICADB_VERSION}.tar.gz 
+
+COPY "ReplicaDB-${REPLICADB_VERSION}.tar.gz" /home/${USERNAME}
 
 RUN tar -xvzf ReplicaDB-${REPLICADB_VERSION}.tar.gz
 RUN rm ReplicaDB-${REPLICADB_VERSION}.tar.gz
