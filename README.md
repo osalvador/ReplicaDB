@@ -70,6 +70,16 @@ $ docker run \
 
 Visit the [project homepage on Docker Hub](https://hub.docker.com/r/osalvador/replicadb) for more information. 
 
+## Podman 
+
+Based on Red Hat UBI 8
+
+```bash
+$ podman run \
+    -v /tmp/replicadb.conf:/home/replicadb/conf/replicadb.conf:Z \
+    osalvador/replicadb:ubi8-latest
+```
+
 # Full Documentation
 
 You can find the full ReplicaDB documentation here: [Docs](https://osalvador.github.io/ReplicaDB/docs/docs.html)
