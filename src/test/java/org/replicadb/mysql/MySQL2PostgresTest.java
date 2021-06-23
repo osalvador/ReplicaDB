@@ -56,11 +56,13 @@ class MySQL2PostgresTest {
         Connection con = DriverManager.getConnection(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword());
         ScriptRunner runner = new ScriptRunner(con, false, true);
         runner.runScript(new BufferedReader(new FileReader(RESOURECE_DIR + MYSQL_SOURCE_FILE)));
+        LOG.info("Creating MySQL source tables");
         con.close();
         /*Postgres*/
         con = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
         runner = new ScriptRunner(con, false, true);
         runner.runScript(new BufferedReader(new FileReader(RESOURECE_DIR + POSTGRES_SINK_FILE)));
+        LOG.info("Creating Postgres sink tables");
         con.close();
     }
 
