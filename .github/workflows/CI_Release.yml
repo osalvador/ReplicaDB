@@ -43,8 +43,8 @@ jobs:
         mkdir lib
         echo ${REPLICADB_RELEASE_VERSION} 
         cp ./target/lib/* ./lib 
-        tar -zcvf ReplicaDB-v${REPLICADB_RELEASE_VERSION}.tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE 
-        zip -r -X ReplicaDB-v${REPLICADB_RELEASE_VERSION}.zip ReplicaDB-*.jar README.md lib conf bin LICENSE
+        tar -zcvf ReplicaDB-${REPLICADB_RELEASE_VERSION}.tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE
+        zip -r -X ReplicaDB-${REPLICADB_RELEASE_VERSION}.zip ReplicaDB-*.jar README.md lib conf bin LICENSE
         ls -lah
 
     - uses: "marvinpinto/action-automatic-releases@latest"
@@ -53,8 +53,8 @@ jobs:
         automatic_release_tag: v${{ env.version }}
         prerelease: false
         files: |
-          ReplicaDB-v*.zip
-          ReplicaDB-v*.tar.gz
+          ReplicaDB-*.zip
+          ReplicaDB-*.tar.gz
 
     -   name: Set up QEMU
         uses: docker/setup-qemu-action@v1
