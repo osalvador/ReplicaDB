@@ -44,13 +44,9 @@ jobs:
         echo ${REPLICADB_RELEASE_VERSION} 
         cp ./target/lib/* ./lib 
         tar -zcvf ReplicaDB-v${REPLICADB_RELEASE_VERSION}.tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE 
-        zip -r -X ReplicaDB-v${REPLICADB_RELEASE_VERSION}.zip ReplicaDB-*.jar README.md lib conf bin LICENSE 
-        echo "release_package_folder=$(pwd)" >> $GITHUB_ENV
-        echo ${{ env.release_package_folder }}
-        cat $GITHUB_ENV
+        zip -r -X ReplicaDB-v${REPLICADB_RELEASE_VERSION}.zip ReplicaDB-*.jar README.md lib conf bin LICENSE
         ls -lah
-        
-    
+
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
