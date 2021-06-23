@@ -113,11 +113,11 @@ class Postgres2MySQLTest {
     @Test
     void testMysqlInit() throws SQLException {
         Statement stmt = mysqlConn.createStatement();
-        ResultSet rs = stmt.executeQuery("select count(*) from t_source");
+        ResultSet rs = stmt.executeQuery("select 1");
         rs.next();
         String version = rs.getString(1);
         LOG.info(version);
-        assertTrue(version.contains("4096"));
+        assertTrue(version.contains("1"));
     }
 
     @Test
@@ -137,15 +137,16 @@ class Postgres2MySQLTest {
     }
 
     @Test
-    void testMySQL2PostgresCompleteAtomic() throws ParseException, IOException, SQLException {
+    void testPostgres2MySQLCompleteAtomic() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mysql.getJdbcUrl(),
-                "--source-user", mysql.getUsername(),
-                "--source-password", mysql.getPassword(),
-                "--sink-connect", postgres.getJdbcUrl(),
-                "--sink-user", postgres.getUsername(),
-                "--sink-password", postgres.getPassword(),
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", mysql.getJdbcUrl(),
+                "--sink-user", mysql.getUsername(),
+                "--sink-password", mysql.getPassword(),
+                "--sink-staging-schema", mysql.getDatabaseName(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
@@ -155,15 +156,16 @@ class Postgres2MySQLTest {
     }
 
     @Test
-    void testMySQL2PostgresIncremental() throws ParseException, IOException, SQLException {
+    void testPostgres2MySQLIncremental() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mysql.getJdbcUrl(),
-                "--source-user", mysql.getUsername(),
-                "--source-password", mysql.getPassword(),
-                "--sink-connect", postgres.getJdbcUrl(),
-                "--sink-user", postgres.getUsername(),
-                "--sink-password", postgres.getPassword(),
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", mysql.getJdbcUrl(),
+                "--sink-user", mysql.getUsername(),
+                "--sink-password", mysql.getPassword(),
+                "--sink-staging-schema", mysql.getDatabaseName(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
@@ -173,15 +175,15 @@ class Postgres2MySQLTest {
     }
 
     @Test
-    void testMySQL2PostgresCompleteParallel() throws ParseException, IOException, SQLException {
+    void testPostgres2MySQLCompleteParallel() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mysql.getJdbcUrl(),
-                "--source-user", mysql.getUsername(),
-                "--source-password", mysql.getPassword(),
-                "--sink-connect", postgres.getJdbcUrl(),
-                "--sink-user", postgres.getUsername(),
-                "--sink-password", postgres.getPassword(),
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", mysql.getJdbcUrl(),
+                "--sink-user", mysql.getUsername(),
+                "--sink-password", mysql.getPassword(),
                 "--jobs", "4"
         };
         ToolOptions options = new ToolOptions(args);
@@ -190,15 +192,16 @@ class Postgres2MySQLTest {
     }
 
     @Test
-    void testMySQL2PostgresCompleteAtomicParallel() throws ParseException, IOException, SQLException {
+    void testPostgres2MySQLCompleteAtomicParallel() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mysql.getJdbcUrl(),
-                "--source-user", mysql.getUsername(),
-                "--source-password", mysql.getPassword(),
-                "--sink-connect", postgres.getJdbcUrl(),
-                "--sink-user", postgres.getUsername(),
-                "--sink-password", postgres.getPassword(),
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", mysql.getJdbcUrl(),
+                "--sink-user", mysql.getUsername(),
+                "--sink-password", mysql.getPassword(),
+                "--sink-staging-schema", mysql.getDatabaseName(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
                 "--jobs", "4"
         };
@@ -211,12 +214,13 @@ class Postgres2MySQLTest {
     void testMySQL2PostgresIncrementalParallel() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mysql.getJdbcUrl(),
-                "--source-user", mysql.getUsername(),
-                "--source-password", mysql.getPassword(),
-                "--sink-connect", postgres.getJdbcUrl(),
-                "--sink-user", postgres.getUsername(),
-                "--sink-password", postgres.getPassword(),
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", mysql.getJdbcUrl(),
+                "--sink-user", mysql.getUsername(),
+                "--sink-password", mysql.getPassword(),
+                "--sink-staging-schema", mysql.getDatabaseName(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
                 "--jobs", "4"
         };
