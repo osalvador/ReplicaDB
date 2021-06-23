@@ -4,11 +4,10 @@
 name: Java CI/CD ReplicaDB Release
 
 on:
-#  push:
-#    tags:
-#      - 'v*'
   push:
-    branches: [ master ]
+    tags:
+      - 'v*'
+
 
 
 jobs:
@@ -68,9 +67,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    -   name: Where is my realse package
-        run: ls -lah
 
     -   name: Build and push
         uses: docker/build-push-action@v2
