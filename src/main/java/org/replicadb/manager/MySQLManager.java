@@ -10,6 +10,10 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.TimeZone;
 
 public class MySQLManager extends SqlManager {
 
@@ -87,10 +91,19 @@ public class MySQLManager extends SqlManager {
                                 // TODO revisar los BLOB y CLOB
                                 colValue = "";
                                 break;
+                            /*case Types.TIMESTAMP:
+                            case Types.TIMESTAMP_WITH_TIMEZONE:
+                            case -101:
+                            case -102:
+                                //colValue = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS XXX").format(resultSet.getTimestamp(i)) ;
+                                //colValue= String.valueOf(resultSet.getTimestamp(i).getTime());
+                                //colValue= resultSet.getTimestamp(i));
+                                colValue = resultSet.getString(i);
+                                LOG.debug("colName: {}, colValue: {}, epoch: {}", rsmd.getColumnName(i) ,colValue,resultSet.getTimestamp(i,utc).getTime());
+                                break;*/
                             default:
                                 colValue = resultSet.getString(i);
                                 break;
-                                // TODO revisar los timestamp con timezone
                         }
 
                         if (!resultSet.wasNull() || colValue != null) cols.append(colValue);
@@ -179,7 +192,47 @@ public class MySQLManager extends SqlManager {
 
     @Override
     protected void mergeStagingTable() throws SQLException {
-        throw new UnsupportedOperationException("MySQL does not yet support data insertion");
+        Statement statement = this.getConnection().createStatement();
+
+        try {
+            String[] pks = this.getSinkPrimaryKeys(this.getSinkTableName());
+            // Primary key is required
+            if (pks == null || pks.length == 0) {
+                throw new IllegalArgumentException("Sink table must have at least one primary key column for incremental mode.");
+            }
+
+            // options.sinkColumns was set during the insertDataToTable
+            String allColls = getAllSinkColumns(null);
+
+            StringBuilder sql = new StringBuilder();
+            sql.append("INSERT INTO ")
+                    .append(this.getSinkTableName())
+                    .append(" (")
+                    .append(allColls)
+                    .append(" ) ")
+                    .append(" SELECT ")
+                    .append(allColls)
+                    .append(" FROM ")
+                    .append(this.getSinkStagingTableName())
+                    .append(" as excluded ON DUPLICATE KEY UPDATE ");
+
+            // Set all columns for DO UPDATE SET statement
+            for (String colName : allColls.split(",")) {
+                sql.append(" ").append(colName).append(" = excluded.").append(colName).append(" ,");
+            }
+            // Delete the last comma
+            sql.setLength(sql.length() - 1);
+
+            LOG.info("Merging staging table and sink table with this command: " + sql);
+            statement.executeUpdate(sql.toString());
+            statement.close();
+            this.getConnection().commit();
+
+        } catch (Exception e) {
+            statement.close();
+            this.connection.rollback();
+            throw e;
+        }
     }
 
     @Override
