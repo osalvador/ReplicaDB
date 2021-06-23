@@ -45,8 +45,8 @@ jobs:
         cp ./target/lib/* ./lib 
         tar -zcvf ReplicaDB-v${REPLICADB_RELEASE_VERSION}.tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE 
         zip -r -X ReplicaDB-v${REPLICADB_RELEASE_VERSION}.zip ReplicaDB-*.jar README.md lib conf bin LICENSE 
-        pwd
-        echo "user home: ${HOME}"
+        echo "release.package.folder=$(pwd)" >> $GITHUB_ENV
+        echo ${{ env.release.package.folder }}
         ls -lah
         
     
@@ -79,7 +79,7 @@ jobs:
           file: Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: osalvador/replicadb:${{ env.version }}, osalvador/replicadb:latest
-          build-args: REPLICADB_RELEASE_VERSION=${{ env.version }}
+          build-args: REPLICADB_RELEASE_VERSION=${{ env.version }}, RELEASE_PACKAGE_FOLDER=${{env.release.package.folder}}
 
     -   name: Build and push
         uses: docker/build-push-action@v2
@@ -88,7 +88,7 @@ jobs:
           file: Containerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: osalvador/replicadb:ubi8-${{ env.version }}, osalvador/replicadb:ubi8-latest
-          build-args: REPLICADB_RELEASE_VERSION=${{ env.version }}
+          build-args: REPLICADB_RELEASE_VERSION=${{ env.version }}, RELEASE_PACKAGE_FOLDER=${{env.release.package.folder}}
 
 
 
