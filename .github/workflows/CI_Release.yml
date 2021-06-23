@@ -80,7 +80,9 @@ jobs:
           file: Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: osalvador/replicadb:${{ env.version }}, osalvador/replicadb:latest
-          build-args: REPLICADB_RELEASE_VERSION=${{ env.version }}, RELEASE_PACKAGE_FOLDER=${{env.release_package_folder}}
+          build-args: |
+            REPLICADB_RELEASE_VERSION=${{ env.version }}
+            RELEASE_PACKAGE_FOLDER=${{env.release_package_folder}}
 
     -   name: Build and push
         uses: docker/build-push-action@v2
