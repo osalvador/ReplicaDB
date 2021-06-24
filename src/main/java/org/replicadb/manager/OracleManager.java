@@ -193,11 +193,13 @@ public class OracleManager extends SqlManager {
                             ps.setArray(i, arrayData);
                             arrayData.free();
                             break;
+                        case Types.STRUCT:
+                            ps.setObject(i, resultSet.getObject(i),Types.STRUCT);
+                            break;
                         default:
                             ps.setString(i, resultSet.getString(i));
                             break;
                     }
-
                 }
 
                 ps.addBatch();
