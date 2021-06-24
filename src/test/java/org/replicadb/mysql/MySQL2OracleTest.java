@@ -18,6 +18,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.*;
+import java.util.TimeZone;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -56,6 +57,8 @@ class MySQL2OracleTest {
         runner.runScript(new BufferedReader(new FileReader(RESOURECE_DIR + MYSQL_SOURCE_FILE)));
         con.close();
         /*Oracle*/
+        TimeZone timeZone = TimeZone.getTimeZone("UTC");
+        TimeZone.setDefault(timeZone);
         con = DriverManager.getConnection(oracle.getJdbcUrl(), oracle.getUsername(), oracle.getPassword());
         runner = new ScriptRunner(con, false, true);
         runner.runScript(new BufferedReader(new FileReader(RESOURECE_DIR + ORACLE_SINK_FILE)));
