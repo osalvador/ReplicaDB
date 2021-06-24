@@ -16,3 +16,4 @@ ReplicaDB.srctrlbm
 ReplicaDB.srctrldb
 ReplicaDB.srctrlprj
 usql
+data/*
