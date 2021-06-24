@@ -34,6 +34,7 @@
     <orderEntry type="library" scope="TEST" name="Maven: org.testcontainers:mysql:1.15.3" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.testcontainers:jdbc:1.15.3" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.testcontainers:database-commons:1.15.3" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.testcontainers:mariadb:1.15.3" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.testcontainers:oracle-xe:1.15.3" level="project" />
     <orderEntry type="library" scope="TEST" name="Maven: org.testcontainers:postgresql:1.15.3" level="project" />
     <orderEntry type="library" name="Maven: org.apache.logging.log4j:log4j-api:2.13.0" level="project" />
@@ -62,6 +63,7 @@
     <orderEntry type="library" name="Maven: com.oracle.ojdbc:xmlparserv2:19.3.0.0" level="project" />
     <orderEntry type="library" name="Maven: mysql:mysql-connector-java:8.0.21" level="project" />
     <orderEntry type="library" name="Maven: com.google.protobuf:protobuf-java:3.11.4" level="project" />
+    <orderEntry type="library" name="Maven: org.mariadb.jdbc:mariadb-java-client:2.7.3" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-log4j12:1.7.25" level="project" />
     <orderEntry type="library" name="Maven: log4j:log4j:1.2.17" level="project" />
     <orderEntry type="library" name="Maven: com.fasterxml.jackson.core:jackson-databind:2.12.1" level="project" />

@@ -5,12 +5,12 @@ import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
 
 public enum SupportedManagers {
-    MYSQL(JdbcDrivers.MYSQL.getSchemePrefix()), POSTGRES(JdbcDrivers.POSTGRES.getSchemePrefix()),
+    MYSQL(JdbcDrivers.MYSQL.getSchemePrefix()), MARIADB(JdbcDrivers.MARIADB.getSchemePrefix()), POSTGRES(JdbcDrivers.POSTGRES.getSchemePrefix()),
     HSQLDB(JdbcDrivers.HSQLDB.getSchemePrefix()), ORACLE(JdbcDrivers.ORACLE.getSchemePrefix()),
     SQLSERVER(JdbcDrivers.SQLSERVER.getSchemePrefix()), CUBRID(JdbcDrivers.CUBRID.getSchemePrefix()),
     JTDS_SQLSERVER(JdbcDrivers.JTDS_SQLSERVER.getSchemePrefix()), DB2(JdbcDrivers.DB2.getSchemePrefix()),
     NETEZZA(JdbcDrivers.NETEZZA.getSchemePrefix()), DENODO(JdbcDrivers.DENODO.getSchemePrefix()),
-    CSV(JdbcDrivers.CSV.getSchemePrefix()),KAFKA(JdbcDrivers.KAFKA.getSchemePrefix()),S3(JdbcDrivers.S3.getSchemePrefix());
+    CSV(JdbcDrivers.CSV.getSchemePrefix()), KAFKA(JdbcDrivers.KAFKA.getSchemePrefix()), S3(JdbcDrivers.S3.getSchemePrefix());
 
     private final String schemePrefix;
 
@@ -44,9 +44,9 @@ public enum SupportedManagers {
 
         String connectStr = null;
 
-        if (dsType == DataSourceType.SOURCE){
+        if (dsType == DataSourceType.SOURCE) {
             connectStr = options.getSourceConnect();
-        } else if (dsType == DataSourceType.SINK){
+        } else if (dsType == DataSourceType.SINK) {
             connectStr = options.getSinkConnect();
         } else {
             LOG.error("DataSourceType must be Source or Sink");

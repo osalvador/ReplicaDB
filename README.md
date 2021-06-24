@@ -1,5 +1,4 @@
 <img src="https://img.shields.io/github/license/osalvador/replicadb?style=for-the-badge" alt="License"> <img src="https://img.shields.io/github/v/release/osalvador/replicadb?style=for-the-badge"  alt="Last Version">
-<img src="https://img.shields.io/travis/osalvador/replicadb?style=for-the-badge&logo=travis" alt="Main">
 <img src="https://img.shields.io/docker/pulls/osalvador/replicadb.svg?style=for-the-badge&logo=docker" alt="Docker Pull">
 <img src="https://img.shields.io/github/downloads/osalvador/replicadb/total?style=for-the-badge&logo=github" alt="Github Downloads">
 <img src="https://img.shields.io/github/stars/osalvador/replicadb.svg?style=for-the-badge&logo=github" alt="Github Start">
@@ -133,6 +132,8 @@ $ replicadb --mode=complete -j=1 \
 | Persistent Store |          Source          |    Sink Complete   | Sink Complete-Atomic |  Sink Incremental  | Sink Bandwidth Throttling |
 |------------------|:------------------------:|:------------------:|:--------------------:|:------------------:|:-------------------------:|
 | Oracle           |    :heavy_check_mark:    | :heavy_check_mark: |  :heavy_check_mark:  | :heavy_check_mark: |     :heavy_check_mark:    |
+| MySQL            |    :heavy_check_mark:    | :heavy_check_mark: |  :heavy_check_mark:  | :heavy_check_mark: |     :heavy_check_mark:    |
+| MariaDB          |    :heavy_check_mark:    | :heavy_check_mark: |  :heavy_check_mark:  | :heavy_check_mark: |     :heavy_check_mark:    |
 | PostgreSQL       |    :heavy_check_mark:    | :heavy_check_mark: |  :heavy_check_mark:  | :heavy_check_mark: |     :heavy_check_mark:    |
 | Denodo           |    :heavy_check_mark:    |         N/A        |          N/A         |         N/A        |            N/A            |
 | CSV              |    :heavy_check_mark:    | :heavy_check_mark: |          N/A         | :heavy_check_mark: |     :heavy_check_mark:    |
