@@ -7,9 +7,9 @@
 
 ReplicaDB is open source tool for database replication designed for efficiently transferring bulk data between relational and NoSQL databases.
 
-ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. Actualy, ReplicaDB  works with Oracle, Postgres, SQL Server, MySQL and MariaDB, Denodo, CSV on local files or on Amazon S3 and Kafka. 
+ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. ReplicaDB currently works with Oracle, Postgres, SQL Server, MySQL and MariaDB, Denodo, CSV on local files or on Amazon S3 and Kafka. 
   
-ReplicaDB is **Cross Platform**; you can replicate data across different platforms, with compatibility for many databases. You can use **Parallel data transfer** for faster performance and optimal system utilization.
+ReplicaDB is **Cross Platform**; you can replicate data across different platforms (Windows, Linux, MacOS), with compatibility for many databases. You can use **Parallel data transfer** for faster performance and optimal system utilization.
 
 <br>
 
@@ -50,8 +50,8 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
 ```bash
-$ curl -o ReplicaDB-0.8.9.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.8.9/ReplicaDB-0.8.9.tar.gz"
-$ tar -xvzf ReplicaDB-0.8.9.tar.gz
+$ curl -o ReplicaDB-0.10.2.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.10.2/ReplicaDB-0.10.2.tar.gz"
+$ tar -xvzf ReplicaDB-0.10.2.tar.gz
 $ ./bin/replicadb --help
 ```
 
@@ -107,6 +107,26 @@ $ replicadb --mode=complete -j=1 \
 2018-12-07 16:01:24,772 INFO  ReplicaDB:89: Total process time: 1302ms
 ```
 
+You can use a configuration file intead, `replicadb.conf`:
+
+```properties
+######################## ReplicadB General Options ########################
+mode=complete
+jobs=1
+############################# Soruce Options ##############################
+source.connect=jdbc:oracle:thin:@${ORAHOST}:${ORAPORT}:${ORASID}
+source.user=${ORAUSER}
+source.password=${ORAPASS}
+source.table=dept
+############################# Sink Options ################################
+sink.connect=jdbc:postgresql://${PGHOST}/osalvador
+sink.table=dept
+```
+
+```bash
+$ replicadb --options-file replicadb.conf
+```
+
 ![ReplicaDB-Ora2PG.gif](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif)
 
 ## PostgreSQL to Oracle
@@ -142,14 +162,13 @@ $ replicadb --mode=complete -j=1 \
 | Amazon S3        | :heavy_multiplication_x: | :heavy_check_mark: |          N/A         |         N/A        |     :heavy_check_mark:    |
 
 # Roadmap
-
-1. MySQL
-2. MongoDB
-3. IBM Db2
-4. Elasticsearch
-5. Redis
-6. SQLite
-7. Hive
+      
+- MongoDB
+- IBM Db2
+- Elasticsearch
+- Redis
+- SQLite
+- Hive
 
 
 # Contributing
