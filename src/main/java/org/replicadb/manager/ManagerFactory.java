@@ -72,8 +72,8 @@ public class ManagerFactory {
                 return new SQLServerManager(options, dsType);
             } else if (S3.isTheManagerTypeOf(options, dsType)) {
                 return new S3Manager(options, dsType);
-            } else if (MYSQL.isTheManagerTypeOf(options, dsType)) {
-                // In MySQL this properties are required
+            } else if (MYSQL.isTheManagerTypeOf(options, dsType) || MARIADB.isTheManagerTypeOf(options, dsType)) {
+                // In MySQL and MariaDB this properties are required
                 if (dsType.equals(DataSourceType.SINK)){
                     Properties mysqlProps = new Properties();
                     mysqlProps.setProperty("characterEncoding", "UTF-8");
