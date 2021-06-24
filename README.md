@@ -107,7 +107,7 @@ $ replicadb --mode=complete -j=1 \
 2018-12-07 16:01:24,772 INFO  ReplicaDB:89: Total process time: 1302ms
 ```
 
-You can use a configuration file intead, `replicadb.conf`:
+Instead, you can use a configuration file, `replicadb.conf`:
 
 ```properties
 ######################## ReplicadB General Options ########################
