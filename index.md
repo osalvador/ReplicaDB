@@ -31,8 +31,8 @@ TODO:
 Because I have not found any tool that covers my needs:
 
 - Open Source.
-- Java based cross-platform solution.
-- Any database engine SQL, NoSQL or other persistent stores like CSV, Amazon S3 or Kafka.
+- Java based cross-platform solution, compatible with Linux, Windows and MacOS.
+- Any database engine SQL, NoSQL or other persistent stores like CSV, Amazon S3 or Kafka. 
 - Simple architecture, just a command line tool that can run on any server (including my laptop), without any remote agents in the databases.
 - Good performance for a large amount of data. 
 - I do not need streaming replication, or a pure change data capture (CDC) system that requires installation in the source database.
@@ -60,8 +60,8 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
 ```bash
-$ curl -o ReplicaDB-0.8.9.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.8.9/ReplicaDB-0.8.9.tar.gz"
-$ tar -xvzf ReplicaDB-0.8.9.tar.gz
+$ curl -o ReplicaDB-0.10.2.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.10.2/ReplicaDB-0.10.2.tar.gz"
+$ tar -xvzf ReplicaDB-0.10.2.tar.gz
 $ ./bin/replicadb --help
 ```
 
@@ -78,6 +78,16 @@ $ docker run \
 ```
 
 Visit the [project homepage on Docker Hub](https://hub.docker.com/r/osalvador/replicadb) for more information. 
+
+## Podman 
+
+Based on Red Hat UBI 8
+
+```bash
+$ podman run \
+    -v /tmp/replicadb.conf:/home/replicadb/conf/replicadb.conf:Z \
+    osalvador/replicadb:ubi8-latest
+```
 
 # Full Documentation
 
@@ -107,6 +117,26 @@ $ replicadb --mode=complete -j=1 \
 2018-12-07 16:01:24,772 INFO  ReplicaDB:89: Total process time: 1302ms
 ```
 
+Instead, you can use a configuration file, `replicadb.conf`:
+
+```properties
+######################## ReplicadB General Options ########################
+mode=complete
+jobs=1
+############################# Soruce Options ##############################
+source.connect=jdbc:oracle:thin:@${ORAHOST}:${ORAPORT}:${ORASID}
+source.user=${ORAUSER}
+source.password=${ORAPASS}
+source.table=dept
+############################# Sink Options ################################
+sink.connect=jdbc:postgresql://${PGHOST}/osalvador
+sink.table=dept
+```
+
+```bash
+$ replicadb --options-file replicadb.conf
+```
+
 ![ReplicaDB-Ora2PG.gif](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif){:class="img-responsive"}
 
 ## PostgreSQL to Oracle
@@ -134,6 +164,8 @@ $ replicadb --mode=complete -j=1 \
 | Persistent Store |          Source          |    Sink Complete   | Sink Complete-Atomic |  Sink Incremental  | Sink Bandwidth Throttling |
 |------------------|:------------------------:|:------------------:|:--------------------:|:------------------:|:-------------------------:|
 | Oracle           |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
+| MySQL            |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
+| MariaDB          |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
 | PostgreSQL       |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
 | SQL Server       |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-times-circle"></i> |
 | CSV              |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |                      | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
