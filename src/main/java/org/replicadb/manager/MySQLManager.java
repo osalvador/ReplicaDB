@@ -1,10 +1,10 @@
 package org.replicadb.manager;
 
 //import com.mysql.cj.jdbc.JdbcPreparedStatement;
+import org.mariadb.jdbc.MariaDbStatement;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.mariadb.jdbc.MariaDbStatement;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 

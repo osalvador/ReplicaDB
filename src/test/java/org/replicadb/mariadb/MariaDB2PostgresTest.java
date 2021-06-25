@@ -30,6 +30,7 @@ class MariaDB2PostgresTest {
     private static final String MARIADB_SOURCE_FILE = "/mariadb/mariadb-source.sql";
     private static final String POSTGRES_SINK_FILE = "/sinks/pg-sink.sql";
     private static final String USER_PASSWD_DB = "replicadb";
+    private static final int EXPECTED_ROWS = 4096;
 
     private Connection mariadbConn;
     private Connection postgresConn;
@@ -75,7 +76,7 @@ class MariaDB2PostgresTest {
     @AfterEach
     void tearDown() throws SQLException {
         // Truncate sink table and close connections
-        postgresConn.createStatement().execute("TRUNCATE TABLE T_SINK");
+        postgresConn.createStatement().execute("TRUNCATE TABLE t_sink");
         this.mariadbConn.close();
         this.postgresConn.close();
     }
@@ -86,7 +87,6 @@ class MariaDB2PostgresTest {
         ResultSet rs = stmt.executeQuery("select count(*) from t_sink");
         rs.next();
         int count = rs.getInt(1);
-        LOG.info(count);
         return count;
     }
 
@@ -116,9 +116,8 @@ class MariaDB2PostgresTest {
         Statement stmt = mariadbConn.createStatement();
         ResultSet rs = stmt.executeQuery("select count(*) from t_source");
         rs.next();
-        String version = rs.getString(1);
-        LOG.info(version);
-        assertTrue(version.contains("4096"));
+        int count = rs.getInt(1);
+        assertEquals(EXPECTED_ROWS,count);
     }
 
     @Test
@@ -134,7 +133,7 @@ class MariaDB2PostgresTest {
         };
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096,countSinkRows());
+        assertEquals(EXPECTED_ROWS,countSinkRows());
     }
 
     @Test
@@ -151,7 +150,7 @@ class MariaDB2PostgresTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096,countSinkRows());
+        assertEquals(EXPECTED_ROWS,countSinkRows());
 
     }
 
@@ -169,7 +168,7 @@ class MariaDB2PostgresTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096,countSinkRows());
+        assertEquals(EXPECTED_ROWS,countSinkRows());
 
     }
 
@@ -187,7 +186,7 @@ class MariaDB2PostgresTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096,countSinkRows());
+        assertEquals(EXPECTED_ROWS,countSinkRows());
     }
 
     @Test
@@ -205,7 +204,7 @@ class MariaDB2PostgresTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096,countSinkRows());
+        assertEquals(EXPECTED_ROWS,countSinkRows());
     }
 
     @Test
@@ -223,6 +222,6 @@ class MariaDB2PostgresTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096,countSinkRows());
+        assertEquals(EXPECTED_ROWS,countSinkRows());
     }
 }
