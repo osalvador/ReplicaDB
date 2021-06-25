@@ -1,8 +1,10 @@
 package org.replicadb.manager;
 
-import com.mysql.cj.jdbc.JdbcPreparedStatement;
+//import com.mysql.cj.jdbc.JdbcPreparedStatement;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.mariadb.jdbc.MariaDbStatement;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 
@@ -10,10 +12,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
-import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.TimeZone;
 
 public class MySQLManager extends SqlManager {
 
@@ -56,7 +54,8 @@ public class MySQLManager extends SqlManager {
             // Get MySQL LOAD DATA manager
             String loadDataSql = getLoadDataSql(tableName, allColumns);
             PreparedStatement statement = this.connection.prepareStatement(loadDataSql);
-            JdbcPreparedStatement mysqlStatement = statement.unwrap(com.mysql.cj.jdbc.JdbcPreparedStatement.class);
+            //JdbcPreparedStatement mysqlStatement = statement.unwrap(com.mysql.cj.jdbc.JdbcPreparedStatement.class);
+            MariaDbStatement mysqlStatement = statement.unwrap(MariaDbStatement.class);
 
             char unitSeparator = 0x1F;
             int columnsNumber = rsmd.getColumnCount();
@@ -123,7 +122,7 @@ public class MySQLManager extends SqlManager {
 
                     if (++rowCounts % batchSize == 0) {
                         mysqlStatement.setLocalInfileInputStream(new ByteArrayInputStream(bytes));
-                        mysqlStatement.executeUpdate();
+                        mysqlStatement.executeUpdate(loadDataSql);
 
                         // Clear StringBuilders
                         row.setLength(0); // set length of buffer to 0
@@ -140,7 +139,7 @@ public class MySQLManager extends SqlManager {
             // insert remaining records
             if (rowCounts != 0) {
                 mysqlStatement.setLocalInfileInputStream(new ByteArrayInputStream(bytes));
-                mysqlStatement.executeUpdate();
+                mysqlStatement.executeUpdate(loadDataSql);
             }
 
         } catch (Exception e) {
