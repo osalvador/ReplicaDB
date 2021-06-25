@@ -1,6 +1,6 @@
 package org.replicadb.manager;
 
-//import com.mysql.cj.jdbc.JdbcPreparedStatement;
+import com.mysql.cj.jdbc.JdbcPreparedStatement;
 import org.mariadb.jdbc.MariaDbStatement;
 
 import org.apache.logging.log4j.LogManager;
@@ -54,8 +54,14 @@ public class MySQLManager extends SqlManager {
             // Get MySQL LOAD DATA manager
             String loadDataSql = getLoadDataSql(tableName, allColumns);
             PreparedStatement statement = this.connection.prepareStatement(loadDataSql);
-            //JdbcPreparedStatement mysqlStatement = statement.unwrap(com.mysql.cj.jdbc.JdbcPreparedStatement.class);
-            MariaDbStatement mysqlStatement = statement.unwrap(MariaDbStatement.class);
+
+            JdbcPreparedStatement mysqlStatement = null;
+            MariaDbStatement mariadbStatement = null;
+            if (statement.isWrapperFor(MariaDbStatement.class)) {
+                mariadbStatement = statement.unwrap(MariaDbStatement.class);
+            } else {
+                mysqlStatement = statement.unwrap(JdbcPreparedStatement.class);
+            }
 
             char unitSeparator = 0x1F;
             int columnsNumber = rsmd.getColumnCount();
@@ -121,8 +127,13 @@ public class MySQLManager extends SqlManager {
                     bytes = row.toString().getBytes(StandardCharsets.UTF_8);
 
                     if (++rowCounts % batchSize == 0) {
-                        mysqlStatement.setLocalInfileInputStream(new ByteArrayInputStream(bytes));
-                        mysqlStatement.executeUpdate(loadDataSql);
+                        if (mysqlStatement instanceof JdbcPreparedStatement) {
+                            mysqlStatement.setLocalInfileInputStream(new ByteArrayInputStream(bytes));
+                            mysqlStatement.executeUpdate(loadDataSql);
+                        } else {
+                            mariadbStatement.setLocalInfileInputStream(new ByteArrayInputStream(bytes));
+                            mariadbStatement.executeUpdate(loadDataSql);
+                        }
 
                         // Clear StringBuilders
                         row.setLength(0); // set length of buffer to 0
@@ -138,8 +149,13 @@ public class MySQLManager extends SqlManager {
 
             // insert remaining records
             if (rowCounts != 0) {
-                mysqlStatement.setLocalInfileInputStream(new ByteArrayInputStream(bytes));
-                mysqlStatement.executeUpdate(loadDataSql);
+                if (mysqlStatement instanceof JdbcPreparedStatement) {
+                    mysqlStatement.setLocalInfileInputStream(new ByteArrayInputStream(bytes));
+                    mysqlStatement.executeUpdate(loadDataSql);
+                } else {
+                    mariadbStatement.setLocalInfileInputStream(new ByteArrayInputStream(bytes));
+                    mariadbStatement.executeUpdate(loadDataSql);
+                }
             }
 
         } catch (Exception e) {

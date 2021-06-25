@@ -31,7 +31,8 @@ class MySQL2MySQLTest {
     private static final String USER_PASSWD_DB = "replicadb";
     private static final int EXPECTED_ROWS = 4096;
 
-    private Connection mysqlConn;    
+    private Connection mysqlConn;
+    private String mysqlJdbcUrl = "";
 
     @ClassRule
     private static final MySQLContainer mysql = new MySQLContainer("mysql:5.6")
@@ -54,7 +55,9 @@ class MySQL2MySQLTest {
 
     @BeforeEach
     void before() throws SQLException {
-        this.mysqlConn = DriverManager.getConnection(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword());
+        // Set JDBC URL
+        this.mysqlJdbcUrl = mysql.getJdbcUrl() ;
+        this.mysqlConn = DriverManager.getConnection(mysqlJdbcUrl, mysql.getUsername(), mysql.getPassword());
     }
 
     @AfterEach
@@ -63,7 +66,7 @@ class MySQL2MySQLTest {
         mysqlConn.createStatement().execute("TRUNCATE TABLE t_sink");
         this.mysqlConn.close();
     }
-    
+
     public int countSinkRows() throws SQLException {
         Statement stmt = mysqlConn.createStatement();
         ResultSet rs = stmt.executeQuery("select count(*) from t_sink");
@@ -86,7 +89,7 @@ class MySQL2MySQLTest {
 
     @Test
     void testMysqlConnection() throws SQLException {
-        Connection mysqlConn = DriverManager.getConnection(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword());
+        Connection mysqlConn = DriverManager.getConnection(mysqlJdbcUrl, mysql.getUsername(), mysql.getPassword());
         Statement stmt = mysqlConn.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT 1");
         rs.next();
@@ -102,33 +105,33 @@ class MySQL2MySQLTest {
         ResultSet rs = stmt.executeQuery("select count(*) from t_source");
         rs.next();
         int rows = rs.getInt(1);
-        assertEquals(EXPECTED_ROWS,rows);
+        assertEquals(EXPECTED_ROWS, rows);
     }
 
     @Test
     void testMySQL2MySQLComplete() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mysql.getJdbcUrl(),
+                "--source-connect", mysqlJdbcUrl,
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
-                "--sink-connect", mysql.getJdbcUrl(),
+                "--sink-connect", mysqlJdbcUrl,
                 "--sink-user", mysql.getUsername(),
                 "--sink-password", mysql.getPassword()
         };
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS,countSinkRows());
+        assertEquals(EXPECTED_ROWS, countSinkRows());
     }
 
     @Test
     void testMySQL2MySQLCompleteAtomic() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mysql.getJdbcUrl(),
+                "--source-connect", mysqlJdbcUrl,
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
-                "--sink-connect", mysql.getJdbcUrl(),
+                "--sink-connect", mysqlJdbcUrl,
                 "--sink-user", mysql.getUsername(),
                 "--sink-password", mysql.getPassword(),
                 "--sink-staging-schema", mysql.getUsername(),
@@ -136,7 +139,7 @@ class MySQL2MySQLTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS,countSinkRows());
+        assertEquals(EXPECTED_ROWS, countSinkRows());
 
     }
 
@@ -144,10 +147,10 @@ class MySQL2MySQLTest {
     void testMySQL2MySQLIncremental() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mysql.getJdbcUrl(),
+                "--source-connect", mysqlJdbcUrl,
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
-                "--sink-connect", mysql.getJdbcUrl(),
+                "--sink-connect", mysqlJdbcUrl,
                 "--sink-user", mysql.getUsername(),
                 "--sink-password", mysql.getPassword(),
                 "--sink-staging-schema", mysql.getDatabaseName(),
@@ -155,7 +158,7 @@ class MySQL2MySQLTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS,countSinkRows());
+        assertEquals(EXPECTED_ROWS, countSinkRows());
 
     }
 
@@ -163,27 +166,27 @@ class MySQL2MySQLTest {
     void testMySQL2MySQLCompleteParallel() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mysql.getJdbcUrl(),
+                "--source-connect", mysqlJdbcUrl,
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
-                "--sink-connect", mysql.getJdbcUrl(),
+                "--sink-connect", mysqlJdbcUrl,
                 "--sink-user", mysql.getUsername(),
                 "--sink-password", mysql.getPassword(),
                 "--jobs", "4"
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS,countSinkRows());
+        assertEquals(EXPECTED_ROWS, countSinkRows());
     }
 
     @Test
     void testMySQL2MySQLCompleteAtomicParallel() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mysql.getJdbcUrl(),
+                "--source-connect", mysqlJdbcUrl,
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
-                "--sink-connect", mysql.getJdbcUrl(),
+                "--sink-connect", mysqlJdbcUrl,
                 "--sink-user", mysql.getUsername(),
                 "--sink-password", mysql.getPassword(),
                 "--sink-staging-schema", mysql.getUsername(),
@@ -192,17 +195,17 @@ class MySQL2MySQLTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS,countSinkRows());
+        assertEquals(EXPECTED_ROWS, countSinkRows());
     }
 
     @Test
     void testMySQL2MySQLIncrementalParallel() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mysql.getJdbcUrl(),
+                "--source-connect", mysqlJdbcUrl,
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
-                "--sink-connect", mysql.getJdbcUrl(),
+                "--sink-connect", mysqlJdbcUrl,
                 "--sink-user", mysql.getUsername(),
                 "--sink-password", mysql.getPassword(),
                 "--sink-staging-schema", mysql.getUsername(),
@@ -211,6 +214,6 @@ class MySQL2MySQLTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS,countSinkRows());
+        assertEquals(EXPECTED_ROWS, countSinkRows());
     }
 }
