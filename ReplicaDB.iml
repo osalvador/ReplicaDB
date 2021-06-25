@@ -61,8 +61,8 @@
     <orderEntry type="library" name="Maven: com.oracle.ojdbc:orai18n:19.3.0.0" level="project" />
     <orderEntry type="library" name="Maven: com.oracle.ojdbc:xdb:19.3.0.0" level="project" />
     <orderEntry type="library" name="Maven: com.oracle.ojdbc:xmlparserv2:19.3.0.0" level="project" />
-    <orderEntry type="library" name="Maven: mysql:mysql-connector-java:8.0.21" level="project" />
-    <orderEntry type="library" scope="RUNTIME" name="Maven: com.google.protobuf:protobuf-java:3.11.4" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: mysql:mysql-connector-java:8.0.21" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: com.google.protobuf:protobuf-java:3.11.4" level="project" />
     <orderEntry type="library" name="Maven: org.mariadb.jdbc:mariadb-java-client:2.7.3" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-log4j12:1.7.25" level="project" />
     <orderEntry type="library" name="Maven: log4j:log4j:1.2.17" level="project" />
