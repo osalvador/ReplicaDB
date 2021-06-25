@@ -78,6 +78,7 @@ public class ManagerFactory {
                     Properties mysqlProps = new Properties();
                     mysqlProps.setProperty("characterEncoding", "UTF-8");
                     mysqlProps.setProperty("allowLoadLocalInfile", "true");
+                    mysqlProps.setProperty("rewriteBatchedStatements","true");
                     options.setSinkConnectionParams(mysqlProps);
                 }
                 return new MySQLManager(options, dsType);

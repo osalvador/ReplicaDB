@@ -1,7 +1,7 @@
 package org.replicadb.manager;
 
 public enum JdbcDrivers {
-    MYSQL("org.mariadb.jdbc.Driver", "jdbc:mysql:"),MARIADB("org.mariadb.jdbc.Driver", "jdbc:mariadb:"), POSTGRES("org.postgresql.Driver", "jdbc:postgresql:"),
+    MYSQL("org.mariadb.jdbc.Driver", "jdbc:mysql:"), MARIADB("org.mariadb.jdbc.Driver", "jdbc:mariadb:"), POSTGRES("org.postgresql.Driver", "jdbc:postgresql:"),
     HSQLDB("org.hsqldb.jdbcDriver", "jdbc:hsqldb:"), ORACLE("oracle.jdbc.OracleDriver", "jdbc:oracle:"),
     SQLSERVER("com.microsoft.sqlserver.jdbc.SQLServerDriver", "jdbc:sqlserver:"),
     JTDS_SQLSERVER("net.sourceforge.jtds.jdbc.Driver", "jdbc:jtds:sqlserver:"),
