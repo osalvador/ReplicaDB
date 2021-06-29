@@ -927,5 +927,4 @@ source.user=pguser
 source.password=pgpassword
 source.table=schema.table_name
 
-source.connect.parameter.ApplicationName=ReplicaDB
 ```
