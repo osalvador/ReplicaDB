@@ -149,6 +149,8 @@
                                 <select class="form-control select2" id="FormSourceType" name="sourceType">
                                     <option value="" disabled selected></option>
                                     <option value="oracle">Oracle</option>
+                                    <option value="mysql">MySQL</option>
+                                    <option value="mariadb">MariaDB</option>
                                     <option value="postgres">PostgreSQL</option>
                                     <option value="sqlserver">SQLServer</option>
                                     <option value="denodo">Denodo</option>
@@ -471,6 +473,8 @@
                                 <select class="form-control select2" id="FormSinkType" name="sinkType">
                                     <option value="" disabled selected></option>
                                     <option value="oracle">Oracle</option>
+                                    <option value="mysql">MySQL</option>
+                                    <option value="mariadb">MariaDB</option>
                                     <option value="postgres">PostgreSQL</option>
                                     <option value="sqlserver">SQL Server</option>
                                     <!--<option value="s3">Amazon S3</option>-->
@@ -964,6 +968,12 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
             case "oracle":
                 return "jdbc:oracle:thin:@" + host + ":" + port + ":" + database;
                 break;
+            case "mysql":
+                return "jdbc:mysql://" + host + ":" + port + "/" + database;
+                break;                
+            case "mariadb":
+                return "jdbc:mariadb://" + host + ":" + port + "/" + database;
+                break;
             case "postgres":
                 return "jdbc:postgresql://" + host + ":" + port + "/" + database;
                 break;
@@ -1092,6 +1102,8 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
 
             switch (this.value) {
                 case "oracle":
+                case "mysql":
+                case "mariadb":
                 case "postgres":
                 case "sqlserver":
                 case "denodo":
@@ -1112,6 +1124,8 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
             hideAllSinkSettings();
 
             switch (this.value) {
+                case "mysql":
+                case "mariadb":
                 case "postgres":
                     $('#CardSinkDisableEscape').show("slow");
                 case "oracle":
