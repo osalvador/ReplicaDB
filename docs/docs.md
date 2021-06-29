@@ -26,7 +26,6 @@ layout: page
     - [4.1.5 Extra parameters](#415-extra-parameters)
     - [4.1.6 Replication Mode](#416-replication-mode)
   - [4.2 Oracle Connector](#42-oracle-connector)
-    - [4.2.1 Oracle XMLType columns](#421-oracle-xmltype-columns)
   - [4.3 PostgreSQL Connector](#43-postgresql-connector)
   - [4.4 Denodo Connector](#44-denodo-connector)
   - [4.5 Amazon S3 Connector](#45-amazon-s3-connector)
@@ -34,6 +33,7 @@ layout: page
       - [4.5.1.1 One Object Per Row](#4511-one-object-per-row)
       - [4.5.1.2 One CSV For All Rows](#4512-one-csv-for-all-rows)
     - [4.5.2 Extra parameters](#452-extra-parameters)
+  - [4.6 MySQL and MariaDB Connector](#46-mysql-and-mariadb-connector)
 
 {::comment}
     3.7. Controlling transaction isolation
@@ -715,32 +715,6 @@ source.connect.parameter.oracle.net.networkCompression=on
 
 ```
 
-### 4.2.1 Oracle XMLType columns
-
-Oracle XMLType columns are LOBs that have a special treatment. To use these columns natively from Java you need to import the oracle libraries `xdb6` and `xmlparserv2`. In addition to that, in the ReplicaDB performance tests we have verified that there are memory leaks when treating this dataType. More about [Using JDBC to Access XML Documents in Oracle XML DB](https://docs.oracle.com/database/121/ADXDB/xdb11jav.htm#ADXDB4934)
-
-
-To avoid adding more libraries and memory leaks, we must convert the XMLType column to CLOB or BLOB in the SQL statement using the [`XMLSerialize` instruction.](https://docs.oracle.com/en/database/oracle/oracle-database/19/adxdb/generation-of-XML-data-from-relational-data.html#GUID-55FE9CED-5B25-4DA2-9F9E-921DF8276EB8) 
-
-
-**Example**
-
-```properties
-############################# ReplicadB Basics #############################
-mode=complete
-jobs=4
-
-############################# Soruce Options #############################
-source.connect=jdbc:oracle:thin:@MY_DATABASE_SID
-source.user=orauser
-source.password=orapassword
-source.query=SELECT clob_column, XMLSerialize(DOCUMENT T0.xml_column AS BLOB) as xml_column FROM table as T0
-
-source.connect.parameter.oracle.net.tns_admin=${TNS_ADMIN}
-
-############################# Sink Options #############################
-...
-```
 
 <br>
 ## 4.3 PostgreSQL Connector
@@ -933,3 +907,25 @@ The Amazon S3 connector supports the following extra parameters that can only be
 | `csv.AlwaysDelimitText` | Sets whether the text should always be delimited                                                             | `false`                                              |
 | `csv.Header`            | Sets whether the first line of the file should be the header, with the names of the fields                      | `false`                                              |
 
+<br>
+## 4.6 MySQL and MariaDB Connector
+
+Because the MariaDB JDBC driver is compatible with MySQL, and the MariaDB driver has better performance compared to the MySQL JDBC driver, in ReplicaDB we use only the MariaDB driver for both databases.
+
+This connector uses the SQL `LOAD DATA INFILE` command and its implementation in JDBC [JDBC API Implementation Notes](https://mariadb.com/kb/en/about-mariadb-connector-j/#load-data-infile) what offers a great performance.
+
+ReplicaDB automatically sets these connection properties that are necessary to use the `LOAD DATA INFILE` command: 
+- `characterEncoding=UTF-8`
+- `allowLoadLocalInfile=true`
+- `rewriteBatchedStatements=true`
+
+**Example**
+
+```properties
+source.connect=jdbc:mysql://host:port/db
+source.user=pguser
+source.password=pgpassword
+source.table=schema.table_name
+
+source.connect.parameter.ApplicationName=ReplicaDB
+```
