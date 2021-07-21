@@ -146,7 +146,7 @@ usage: replicadb [OPTIONS]
 | `--sink-disable-truncate`           | Disable the truncation of the sink database table before populate.                    | `false`            |
 | `--sink-password <password>`        | Sink database authentication password                                                 |                    |
 | `--sink-staging-schema <schema-name>`| Scheme name on the sink database, with right permissions for creating staging tables. | `PUBLIC`           |
-| `--sink-staging-table`              | Qualified name of the sink staging table. The table must exist in the sink database.  |                    |
+| `--sink-staging-table <table-name>`  | Qualified name of the sink staging table. The table must exist in the sink database.  |                    |
 | `--sink-table <table-name>`         | Sink database table to populate                                                       | `--source-table`   |
 | `--sink-user <username>`            | Sink database authentication username                                                 |                    |
 | `--source-columns <col,col,col...>` | Source database table columns to be extracted                                         | `*`                |
