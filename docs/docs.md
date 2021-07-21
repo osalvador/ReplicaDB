@@ -145,7 +145,7 @@ usage: replicadb [OPTIONS]
 | `--sink-disable-escape`             | Escape srings before populating to the table of the sink database.                    | `false`            |
 | `--sink-disable-truncate`           | Disable the truncation of the sink database table before populate.                    | `false`            |
 | `--sink-password <password>`        | Sink database authentication password                                                 |                    |
-| `--sink-staging-schema`             | Scheme name on the sink database, with right permissions for creating staging tables. | `PUBLIC`           |
+| `--sink-staging-schema <schema-name>`| Scheme name on the sink database, with right permissions for creating staging tables. | `PUBLIC`           |
 | `--sink-staging-table`              | Qualified name of the sink staging table. The table must exist in the sink database.  |                    |
 | `--sink-table <table-name>`         | Sink database table to populate                                                       | `--source-table`   |
 | `--sink-user <username>`            | Sink database authentication username                                                 |                    |
