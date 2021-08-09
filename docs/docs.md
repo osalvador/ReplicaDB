@@ -46,13 +46,13 @@ layout: page
 
 # 1. Introduction
 
-ReplicaDB is primarily a command line, portable and cross-platform tool for data replication between a source and a sink databases. Its main objective is performance, implementing all the specific DataBase engine techniques to achieve the best performance for each of them, either as source or as sink.
+ReplicaDB is primarily a command line, portable and cross-platform tool for data replication between a source and a sink databases. Its main objective is performance, implementing all the specific DataBase engine techniques to achieve the best performance for each of them, either as a source or as a sink.
 
 ReplicaDB follows the Convention over configuration design, so the user will introduce the minimum parameters necessary for the replication process, the rest will be default.
 
 # 2. Basic Usage
 
-With ReplicaDB, you can _replicate_ data between relational databases and non replational databases. The input to the replication process is a database table, or custom query. ReplicaDB will read the source table row-by-row and the output of this replication process is table in the sink database containing a copy of the source table. The replication process is performed in parallel.
+With ReplicaDB, you can _replicate_ data between relational databases and non-relational databases. The input to the replication process is a database table or custom query. ReplicaDB will read the source table row-by-row and the output of this replication process is q table in the sink database containing a copy of the source table. The replication process is performed in parallel.
 
 By default, ReplicaDB will truncate the sink table before populating it with data, unless `--sink-disable-truncate false` is indicated.
 
@@ -75,10 +75,10 @@ So data is **not** available in the Sink Table during the replication process.
 
 ### Complete Atomic
 
-The `complete-atomic` mode performs a complete replication (`DELETE` and `INSERT`) in a single transcaction, allowing the sink table to never be empty. ReplicaDB will perform the following actions on a `complete-atomic` replication:
+The `complete-atomic` mode performs a complete replication (`DELETE` and `INSERT`) in a single transaction, allowing the sink table to never be empty. ReplicaDB will perform the following actions on a `complete-atomic` replication:
 
   - Automatically create the staging table in the sink database.
-  - Begin new transaction, called `"T0"`, and delete the sink table with `DELETE FROM` statement. This operation is executed in a new thread, so ReplicaDB does not wait for the operation to finish. 
+  - Begin a new transaction, called `"T0"`, and delete the sink table with the `DELETE FROM` statement. This operation is executed in a new thread, so ReplicaDB does not wait for the operation to finish. 
   - Select and copy the data in parallel from the source table to the sink staging table.
   - Wait until the `DELETE` statement of transaction `"T0"` is completed.
   - Using transaction `"T0"` the data is moved (using `INSERT INTO ... SELECT` statement) from the sink staging table to the sink table.
@@ -94,7 +94,7 @@ So data is available in the Sink Table during the replication process.
 
 The `incremental` mode performs an incremental replication of the data from the source table to the sink table. The `incremental` mode aims to replicate only the new data added in the source table to the sink table. This technique drastically reduces the amount of data that must be moved between both databases and becomes essential with large tables with billions of rows.
 
-To do this, it is necessary to have a strategy for filtering the new data at the source. Usually a date type column or a unique incremental ID is used. Therefore it will be necessary to use the `source.where` parameter to retrieve only the newly added rows in the source table since the last time the replica was executed.
+To do this, it is necessary to have a strategy for filtering the new data at the source. Usually, a date type column or a unique incremental ID is used. Therefore it will be necessary to use the `source.where` parameter to retrieve only the newly added rows in the source table since the last time the replica was executed.
 
 Currently, you must store the last value of the column used to determine changes in the source table. In future versions, ReplicaDB will do this automatically.
 
@@ -116,7 +116,7 @@ So data is available in the Sink Table during the replication process.
 <br>
 ## 2.2 Controlling Parallelism    
 
-ReplicaDB replicate data in parallel from most database sources. You can specify the number of job tasks (parallel processes) to use to perform the replication by using the `-j` or `--jobs` argument. Each of these arguments takes an integer value which corresponds to the degree of parallelism to employ. By default, four tasks are used. Some databases may see improved performance by increasing this value to 8 or 16. Do not increase the degree of parallism higher than that which your database can reasonably support. Connecting 100 concurrent clients to your database may increase the load on the database server to a point where performance suffers as a result.
+ReplicaDB replicates data in parallel from most database sources. You can specify the number of job tasks (parallel processes) to use to perform the replication by using the `-j` or `--jobs` argument. Each of these arguments takes an integer value which corresponds to the degree of parallelism to employ. By default, four tasks are used. Some databases may see improved performance by increasing this value to 8 or 16. Do not increase the degree of parallelism beyond what your database can reasonably support. Connecting 100 concurrent clients to your database may increase the load on the database server to a point where performance suffers as a result.
 
 
 # 3. Command Line Arguments 
@@ -165,7 +165,7 @@ usage: replicadb [OPTIONS]
 
 When using ReplicaDB, the command line options that do not change from invocation to invocation can be put in an options file for convenience. An options file is a Java properties text file where each line identifies an option. Option files allow specifying a single option on multiple lines by using the back-slash character at the end of intermediate lines. Also supported are comments within option files that begin with the hash character. Comments must be specified on a new line and may not be mixed with option text. All comments and empty lines are ignored when option files are expanded. 
 
-Option files can be specified anywhere on the command line. Command line argunents override those in the options file. To specify an options file, simply create an options file in a convenient location and pass it to the command line via `--options-file` argument.
+Option files can be specified anywhere on the command line. Command line arguments override those in the options file. To specify an options file, simply create an options file in a convenient location and pass it to the command line via `--options-file` argument.
 
 For example, the following ReplicaDB invocation for replicate a full table into PostgreSQL can be specified alternatively as shown below:
 
@@ -209,12 +209,12 @@ source.table=TEST
 
 Variables are interpolated from system properties. ReplicaDB will search for a system property with the given name and replace the variable by its value. This is a very easy means for accessing the values of system properties in the options configuration file.
 
-Note that if a variable cannot be resolved, e.g. because the name is invalid or an unknown prefix is used, it won't be replaced, but is returned as is including the dollar sign and the curly braces.
+Note that if a variable cannot be resolved, e.g. because the name is invalid or an unknown prefix is used, it won't be replaced, but is returned as-is including the dollar sign and the curly braces.
 
 <br>
 ## 3.2 Connecting to a Database Server
 
-ReplicaDB is designed to replicate tables between databases. To do so, you must specify a _connect string_ that describes how to connect to the database. The _connect string_ is similar to a URL, and is communicated to ReplicaDB with the `--source-connect` or `--sink-connect` arguments. This describes the server and database to connect to; it may also specify the port. For example:
+ReplicaDB is designed to replicate tables between databases. To do so, you must specify a _connect string_ that describes how to connect to the database. The _connect string_ is similar to a URL and is communicated to ReplicaDB with the `--source-connect` or `--sink-connect` arguments. This describes the server and database to connect to; it may also specify the port. For example:
 
 ```bash
 $ replicadb --source-connect jdbc:mysql://database.example.com/employees
@@ -224,12 +224,12 @@ This string will connect to a MySQL database named `employees` on the host `data
 
 You might need to authenticate against the database before you can access it. You can use the `--source-username` or `--sink-username` to supply a username to the database.
 
-ReplicaDB provides couple of different ways to supply a password, secure and non-secure, to the database which is detailed below.
+ReplicaDB provides a couple of different ways to supply a password, secure and non-secure, to the database which is detailed below.
 
 <br>
 **Specifying extra JDBC parameters**
 
-When connecting to a database using JDBC, you can optionally specify extra JDBC parameters **only** via options file. The contents of this properties are parsed as standard Java properties and passed into the driver while creating a connection.
+When connecting to a database using JDBC, you can optionally specify extra JDBC parameters **only** via the options file. The contents of these properties are parsed as standard Java properties and passed into the driver while creating a connection.
 
 You can specify these parameters for both the source and sink databases. ReplicaDB will retrieve all the parameters that start with `source.connect.parameter.` or` sink.connect.parameter.` followed by the name of the specific parameter of the database engine.
 
@@ -254,7 +254,7 @@ sink.connect.parameter.reWriteBatchedInserts=true
 
 
 <br>
-**Secure way of supplying password to the database**
+**Secure way of supplying a password to the database**
 
 To supply a password securely, the options file must be used using the `--options-file` argument. For example:
 
@@ -273,22 +273,22 @@ source.password=myEmployeePassword
 
 ```bash
 $ replicadb --source-connect jdbc:mysql://database.example.com/employees \
---source-username boss --options-file myEmployeePassword
+--source-username boss --source-password myEmployeePassword
 ```
 
 <br>
 ## 3.3 Selecting the Data to Replicate
 
-ReplicaDB typically replciate data in a table-centric fashion. Use the `--source-table` argument to select the table to replicate. For example, `--source-table employees`. This argument can also identify a `VIEW` or other table-like entity in a database.
+ReplicaDB typically replicates data in a table-centric fashion. Use the `--source-table` argument to select the table to replicate. For example, `--source-table employees`. This argument can also identify a `VIEW` or other table-like entity in a database.
 
 By default, all columns within a table are selected for replication. You can select a subset of columns and control their ordering by using the `--source-columns` argument. This should include a comma-delimited list of columns to replicate. For example: `--source-columns "name,employee_id,jobtitle"`.
 
-You can control which rows are replicated by adding a SQL `WHERE` clause to the statement. By default, ReplicaDB generates statements of the form `SELECT <column list> FROM <table name>`. You can append a `WHERE` clause to this with the `--sourece-where` argument. For example: `--source-where "id > 400"`. Only rows where the `id` column has a value greater than 400 will be replicated.
+You can control which rows are replicated by adding a SQL `WHERE` clause to the statement. By default, ReplicaDB generates statements of the form `SELECT <column list> FROM <table name>`. You can append a `WHERE` clause to this with the `--source-where` argument. For example: `--source-where "id > 400"`. Only rows where the `id` column has a value greater than 400 will be replicated.
 
 <br>
 ## 3.4 Free-form Query Replications
 
-ReplicaDB can also replicate the result set of an arbitrary SQL query. Instead of using the `--sourece-table`, `--sourece-columns` and `--source-where` arguments, you can specify a SQL statement with the `--sourece-query` argument.
+ReplicaDB can also replicate the result set of an arbitrary SQL query. Instead of using the `--source-table`, `--source-columns` and `--source-where` arguments, you can specify a SQL statement with the `--source-query` argument.
 
 For example:
 
@@ -307,7 +307,7 @@ $ replicadb --source-query 'SELECT a.*, b.* FROM a JOIN b on (a.id == b.id)'
 <br>
 ## 4.1 CSV files Connector
 
-The CSV File Connector uses the [Apache Commons CSV](https://commons.apache.org/proper/commons-csv/) library for read and write the CSV files.
+The CSV File Connector uses the [Apache Commons CSV](https://commons.apache.org/proper/commons-csv/) library to read and write the CSV files.
 
 To define a CSV file, set the `source-connect` or `sink-connect` parameter to `file:/...`.
 
@@ -591,7 +591,7 @@ Settings are:
 <br>
 ### 4.1.4 Predefined Quote Modes
 
-You can set a predefined quote mode policy when writting a CSV File as sink. To define a quote mode, set the `format.quoteMode` extra parameter to any of these available formats: `ALL`, `ALL_NON_NULL`, `MINIMAL`, `NON_NUMERIC`, `NONE`.
+You can set a predefined quote mode policy when writing a CSV File as a sink. To define a quote mode, set the `format.quoteMode` extra parameter to any of these available formats: `ALL`, `ALL_NON_NULL`, `MINIMAL`, `NON_NUMERIC`, `NONE`.
 
 {:.table}
 
@@ -599,9 +599,9 @@ You can set a predefined quote mode policy when writting a CSV File as sink. To 
 |----------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `ALL`          | Quotes all fields.                                                                                                                                   |
 | `ALL_NON_NULL` | Quotes all non-null fields.                                                                                                                          |
-| `MINIMAL`      | Quotes fields which contain special characters such as a the field delimiter, quote character or any of the characters in the line separator string. |
+| `MINIMAL`      | Quotes fields which contain special characters such as the field delimiter, quote character, or any of the characters in the line separator string. |
 | `NON_NUMERIC`  | Quotes all non-numeric fields.                                                                                                                       |
-| `NONE`         | Never quotes fields.                                                                                                                                 |
+| `NONE`         | Never quote fields.                                                                                                                                 |
 
 
 <br>
@@ -719,7 +719,7 @@ source.connect.parameter.oracle.net.networkCompression=on
 <br>
 ## 4.3 PostgreSQL Connector
 
-The PostgreSQL connector uses the SQL COPY command and its implementation in JDBC [PostgreSQL COPY bulk data transfer](https://jdbc.postgresql.org/documentation/publicapi/org/postgresql/copy/CopyManager.html) what offers a great performance.
+The PostgreSQL connector uses the SQL COPY command and its implementation in JDBC [PostgreSQL COPY bulk data transfer](https://jdbc.postgresql.org/documentation/publicapi/org/postgresql/copy/CopyManager.html) what offers great performance.
 
 
 > The PostgreSQL JDBC driver has much better performance if the network is not included in the data transfer. Therefore, it is recommended that ReplicaDB be executed on the same machine where the PostgreSQL database resides.
@@ -800,7 +800,7 @@ To generate an object for each row of the source table, it is necessary to set t
 # Each row is a different object in s3
 sink.connect.parameter.row.isObject=true
 sink.connect.parameter.row.keyColumn=[The name of the source table column used as an object key in AWS S3]
-sink.connect.parameter.row.contentColumn=[the name of the source table column used as a payload objet of the object in AWS S3]
+sink.connect.parameter.row.contentColumn=[the name of the source table column used as a payload object of the object in AWS S3]
 ```
 
 Example: 
@@ -838,7 +838,7 @@ The following objects will be generated in AWS S3:
 <br>
 #### 4.5.1.2 One CSV For All Rows
 
-To generate generate a single CSV file for all rows of a source table, it is necessary to set the following properties:
+To generate a single CSV file for all rows of a source table, it is necessary to set the following properties:
 
 ```properties
 # All rows are only one CSV object in s3
@@ -912,7 +912,7 @@ The Amazon S3 connector supports the following extra parameters that can only be
 
 Because the MariaDB JDBC driver is compatible with MySQL, and the MariaDB driver has better performance compared to the MySQL JDBC driver, in ReplicaDB we use only the MariaDB driver for both databases.
 
-This connector uses the SQL `LOAD DATA INFILE` command and its implementation in JDBC [JDBC API Implementation Notes](https://mariadb.com/kb/en/about-mariadb-connector-j/#load-data-infile) what offers a great performance.
+This connector uses the SQL `LOAD DATA INFILE` command and its implementation in JDBC [JDBC API Implementation Notes](https://mariadb.com/kb/en/about-mariadb-connector-j/#load-data-infile) what offers great performance.
 
 ReplicaDB automatically sets these connection properties that are necessary to use the `LOAD DATA INFILE` command: 
 - `characterEncoding=UTF-8`
