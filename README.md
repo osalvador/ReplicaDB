@@ -5,9 +5,9 @@
 
 ![replicadb-logo](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/replicadb-logo.png)
 
-ReplicaDB is open source tool for database replication designed for efficiently transferring bulk data between relational and NoSQL databases.
+ReplicaDB is an open source tool for database replication designed for efficiently transferring bulk data between relational and NoSQL databases.
 
-ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. ReplicaDB currently works with Oracle, Postgres, SQL Server, MySQL and MariaDB, Denodo, CSV on local files or on Amazon S3 and Kafka. 
+ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. ReplicaDB currently works with Oracle, Postgres, SQL Server, MySQL and MariaDB, Denodo, CSV on local files or Amazon S3 and Kafka. 
   
 ReplicaDB is **Cross Platform**; you can replicate data across different platforms (Windows, Linux, MacOS), with compatibility for many databases. You can use **Parallel data transfer** for faster performance and optimal system utilization.
 
@@ -21,11 +21,11 @@ ReplicaDB is **Cross Platform**; you can replicate data across different platfor
 Because I have not found any tool that covers my needs:
 
 - Open Source.
-- Java based cross-platform solution, compatible with Linux, Windows and MacOS.
-- Any database engine SQL, NoSQL or other persistent stores like CSV, Amazon S3 or Kafka. 
+- Java based cross-platform solution, compatible with Linux, Windows, and MacOS.
+- Any database engine SQL, NoSQL, or other persistent stores like CSV, Amazon S3, or Kafka. 
 - Simple architecture, just a command line tool that can run on any server (including my laptop), without any remote agents in the databases.
 - Good performance for a large amount of data. 
-- I do not need streaming replication, or a pure change data capture (CDC) system that requires installation in the source database.
+- I do not need streaming replication or a pure change data capture (CDC) system that requires installation in the source database.
 
 I have reviewed and tested other open source tools and none of them meets all the above requirements:
 
@@ -57,7 +57,7 @@ $ ./bin/replicadb --help
 
 ### JDBC Drivers
 
-You can use ReplicaDB with any JDBC-compliant database. First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory on your client machine. Each driver `.jar` file also has a specific driver class which defines the entry-point to the driver. 
+You can use ReplicaDB with any JDBC-compliant database. First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory on your client machine. Each driver `.jar` file also has a specific driver class that defines the entry-point to the driver. 
 
 ## Docker
 
@@ -91,7 +91,7 @@ You can create a configuration file for a ReplicaDB process by filling out a sim
 
 ## Oracle to PostgreSQL
 
-Source and Sink tables must exists. 
+Source and Sink tables must exist. 
 
 ```bash
 $ replicadb --mode=complete -j=1 \
