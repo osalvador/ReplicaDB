@@ -12,6 +12,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
+import java.util.Properties;
 
 public class MySQLManager extends SqlManager {
 
@@ -27,6 +28,14 @@ public class MySQLManager extends SqlManager {
     public MySQLManager(ToolOptions opts, DataSourceType dsType) {
         super(opts);
         this.dsType = dsType;
+        // In MySQL and MariaDB this properties are required
+        if (this.dsType.equals(DataSourceType.SINK)){
+            Properties mysqlProps = new Properties();
+            mysqlProps.setProperty("characterEncoding", "UTF-8");
+            mysqlProps.setProperty("allowLoadLocalInfile", "true");
+            mysqlProps.setProperty("rewriteBatchedStatements","true");
+            options.setSinkConnectionParams(mysqlProps);
+        }
     }
 
     @Override
