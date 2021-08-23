@@ -6,7 +6,7 @@
 
     <groupId>org.replicadb</groupId>
     <artifactId>ReplicaDB</artifactId>
-    <version>0.10.5</version>
+    <version>0.11.0</version>
 
     <name>ReplicaDB</name>
     <url>https://github.com/osalvador/ReplicaDB</url>
@@ -244,6 +244,43 @@
             <artifactId>debezium-connector-sqlserver</artifactId>
             <version>${version.debezium}</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.orc</groupId>
+            <artifactId>orc-core</artifactId>
+            <version>1.6.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.orc</groupId>
+            <artifactId>orc-mapreduce</artifactId>
+            <version>1.6.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.orc</groupId>
+            <artifactId>orc-tools</artifactId>
+            <version>1.6.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+            <version>3.3.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>29.0-jre</version>
+        </dependency>
+
+<!--        <dependency>-->
+<!--            <groupId>org.apache.hadoop</groupId>-->
+<!--            <artifactId>hadoop-hdfs-client</artifactId>-->
+<!--            <version>3.3.0</version>-->
+<!--        </dependency>-->
+
 
     </dependencies>
 

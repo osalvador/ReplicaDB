@@ -21,6 +21,7 @@ public class ToolOptions {
     private String sourceColumns;
     private String sourceWhere;
     private String sourceQuery;
+    private String sourceFileFormat;
 
     private String sinkConnect;
     private String sinkUser;
@@ -30,6 +31,7 @@ public class ToolOptions {
     private String sinkStagingTableAlias;
     private String sinkStagingSchema;
     private String sinkColumns;
+    private String sinkFileformat;
     private Boolean sinkDisableEscape = false;
     private Boolean sinkDisableIndex = false;
     private Boolean sinkDisableTruncate = false;
@@ -122,6 +124,15 @@ public class ToolOptions {
                         .desc("SQL statement to be executed in the source database")
                         .hasArg()
                         .argName("statement")
+                        .build()
+        );
+
+        options.addOption(
+                Option.builder()
+                        .longOpt("source-file-format")
+                        .desc("Source file format. The allowed values are csv, json, avro, parquet, orc")
+                        .hasArg()
+                        .argName("file format")
                         .build()
         );
 
@@ -229,6 +240,14 @@ public class ToolOptions {
                         .build()
         );
 
+        options.addOption(
+                Option.builder()
+                        .longOpt("sink-file-format")
+                        .desc("Sink file format. The allowed values are csv, json, avro, parquet, orc")
+                        .hasArg()
+                        .argName("file format")
+                        .build()
+        );
 
         // Other Options
         options.addOption(
@@ -342,6 +361,8 @@ public class ToolOptions {
             setSinkStagingSchemaNotNull(line.getOptionValue("sink-staging-schema"));
             setSinkStagingTableNotNull(line.getOptionValue("sink-staging-table"));
             setSinkStagingTableAliasNotNull(line.getOptionValue("sink-staging-table-alias"));
+            setSourceFileFormatNotNull(line.getOptionValue("source-file-format"));
+            setSinkFileFormatNotNull(line.getOptionValue("sink-file-format"));
 
             //Check for required values
             if (!checkRequiredValues()) throw new IllegalArgumentException("Missing any of the required parameters:" +
@@ -436,6 +457,7 @@ public class ToolOptions {
         setFetchSize(prop.getProperty("fetch.size"));
         setBandwidthThrottling(prop.getProperty("bandwidth.throttling"));
         setQuotedIdentifiers(Boolean.parseBoolean(prop.getProperty("quoted.identifiers")));
+        setSinkFileformat(prop.getProperty("sink.file.format"));
 
         // Connection params
         setSinkConnectionParams(of.getSinkConnectionParams());
@@ -842,7 +864,7 @@ public class ToolOptions {
                 ",\n\tsinkDisableTruncate=" + sinkDisableTruncate +
                 ",\n\tsinkAnalyze=" + sinkAnalyze +
                 ",\n\tjobs=" + jobs +
-                ",\n\tbandwidthThrottling=" + bandwidthThrottling +
+                ",\n\tBandwidthThrottling=" + bandwidthThrottling +
                 ",\n\tquotedIdentifiers=" + quotedIdentifiers +
                 ",\n\tfetchSize=" + fetchSize +
                 ",\n\thelp=" + help +
@@ -852,6 +874,8 @@ public class ToolOptions {
                 ",\n\tmode='" + mode + '\'' +
                 ",\n\tsourceConnectionParams=" + sourceConnectionParams +
                 ",\n\tsinkConnectionParams=" + sinkConnectionParams +
+                ",\n\tsourceFileFormat='" + sourceFileFormat + '\'' +
+                ",\n\tsinkFileformat='" + sinkFileformat + '\'' +
                 '}';
     }
 
@@ -884,4 +908,31 @@ public class ToolOptions {
     public void setQuotedIdentifiers(Boolean quotedIdentifiers) {
         this.quotedIdentifiers = quotedIdentifiers;
     }
+
+    public String getSourceFileFormat() {
+        return sourceFileFormat;
+    }
+
+    public void setSourceFileFormat(String sourceFileFormat) {
+        this.sourceFileFormat = sourceFileFormat;
+    }
+
+    private void setSourceFileFormatNotNull(String fileFormat) {
+        if (fileFormat != null && !fileFormat.isEmpty())
+            this.sourceFileFormat = fileFormat;
+    }
+
+    public String getSinkFileformat() {
+        return sinkFileformat;
+    }
+
+    public void setSinkFileformat(String sinkFileformat) {
+        this.sinkFileformat = sinkFileformat;
+    }
+
+    private void setSinkFileFormatNotNull(String fileFormat) {
+        if (fileFormat != null && !fileFormat.isEmpty())
+            this.sinkFileformat = fileFormat;
+    }
+
 }

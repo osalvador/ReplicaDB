@@ -30,6 +30,7 @@ class Postgres2MySQLTest {
     private static final String POSTGRES_SOURCE_FILE = "/postgres/pg-source.sql";
     private static final String MYSQL_SINK_FILE = "/sinks/mysql-sink.sql";
     private static final String USER_PASSWD_DB = "replicadb";
+    private static final int TOTAL_SINK_ROWS = 4097;
 
     private Connection mysqlConn;
     private Connection postgresConn;
@@ -133,7 +134,7 @@ class Postgres2MySQLTest {
         };
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096, countSinkRows());
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
     }
 
     @Test
@@ -151,7 +152,7 @@ class Postgres2MySQLTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096, countSinkRows());
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
 
     }
 
@@ -170,7 +171,7 @@ class Postgres2MySQLTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096, countSinkRows());
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
 
     }
 
@@ -188,7 +189,7 @@ class Postgres2MySQLTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096, countSinkRows());
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
     }
 
     @Test
@@ -207,7 +208,7 @@ class Postgres2MySQLTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096, countSinkRows());
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
     }
 
     @Test
@@ -226,6 +227,6 @@ class Postgres2MySQLTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096, countSinkRows());
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
     }
 }

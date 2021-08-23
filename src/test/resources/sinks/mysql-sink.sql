@@ -29,13 +29,14 @@ create table t_sink
     C_TIME_WITH_TIMEZONE         TIME,
     C_TIMESTAMP_WITH_TIMEZONE    TIMESTAMP,
     /*Intervals:*/
-    C_INTERVAL_DAY               TEXT /*not supported*/,
-    C_INTERVAL_YEAR              TEXT/*not supported*/,
+    C_INTERVAL_DAY               text/*not supported*/,
+    C_INTERVAL_YEAR              text/*not supported*/,
     /*Collection Types:*/
-    C_ARRAY                        TEXT/*not supported*/,
-    C_MULTISET                     TEXT/*not supported*/,
+    C_ARRAY                      text/*not supported*/,
+    C_MULTIDIMENSIONAL_ARRAY     text/*not supported*/,
+    C_MULTISET                   text/*not supported*/,
     /*Other Types:*/
-    C_XML                        TEXT/*not supported*/,
-    C_JSON                       TEXT/*not supported*/,
+    C_XML                        text/*not supported*/,
+    C_JSON                       text/*not supported*/,
     PRIMARY KEY (C_INTEGER)
 );
