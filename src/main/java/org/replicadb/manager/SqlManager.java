@@ -587,6 +587,7 @@ public abstract class SqlManager extends ConnManager {
      * Acquires the <code>rowSize</code> number of permits from this <code>bandwidthRateLimiter</code>,
      * blocking until the request can be granted.
      */
+    @Deprecated
     protected void bandwidthThrottlingAcquiere() {
         // Wait for Sleeping Stopwatch
         if (rowSize != 0) {
@@ -610,6 +611,7 @@ public abstract class SqlManager extends ConnManager {
      * @param rsmd      the result set metadata object
      * @throws SQLException
      */
+    @Deprecated
     protected void bandwidthThrottlingCreate(ResultSet resultSet, ResultSetMetaData rsmd) throws SQLException {
         int kilobytesPerSecond = options.getBandwidthThrottling();
 

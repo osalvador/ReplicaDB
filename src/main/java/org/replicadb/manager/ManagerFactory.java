@@ -7,21 +7,18 @@ import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.cdc.OracleManagerCDC;
 import org.replicadb.manager.cdc.SQLServerManagerCDC;
 
-import java.util.Properties;
-
 import static org.replicadb.manager.SupportedManagers.*;
 
 /**
  * Contains instantiation code for all ConnManager implementations
- * ???? ManagerFactories are instantiated by o.a.h.s.ConnFactory and
- * ???? stored in an ordered list. The ConnFactory.getManager() implementation
- * ???? calls the accept() method of each ManagerFactory, in order until
- * ???? one such call returns a non-null ConnManager instance.
+ *  ManagerFactories are instantiated by o.a.h.s.ConnFactory and
+ *  stored in an ordered list. The ConnFactory.getManager() implementation
+ *  calls the accept() method of each ManagerFactory, in order until
+ *  one such call returns a non-null ConnManager instance.
  */
 public class ManagerFactory {
 
     private static final Logger LOG = LogManager.getLogger(ManagerFactory.class.getName());
-    //public static final String NET_SOURCEFORGE_JTDS_JDBC_DRIVER = "net.sourceforge.jtds.jdbc.Driver";
 
     /**
      * Instantiate a ConnManager that can fulfill the database connection
@@ -64,8 +61,8 @@ public class ManagerFactory {
                 return new OracleManager(options, dsType);
             } else if (DENODO.isTheManagerTypeOf(options, dsType)) {
                 return new DenodoManager(options, dsType);
-            } else if (CSV.isTheManagerTypeOf(options, dsType)) {
-                return new CsvManager(options, dsType);
+//            } else if (CSV.isTheManagerTypeOf(options, dsType)) {
+//                return new CsvManager(options, dsType);
             } else if (KAFKA.isTheManagerTypeOf(options, dsType)) {
                 return new KafkaManager(options, dsType);
             } else if (SQLSERVER.isTheManagerTypeOf(options, dsType)) {
@@ -74,37 +71,13 @@ public class ManagerFactory {
                 return new S3Manager(options, dsType);
             } else if (MYSQL.isTheManagerTypeOf(options, dsType) || MARIADB.isTheManagerTypeOf(options, dsType)) {
                 return new MySQLManager(options, dsType);
+            } else if (FILE.isTheManagerTypeOf(options, dsType)) {
+                return new LocalFileManager(options, dsType);
             } else {
                 throw new IllegalArgumentException("The database with scheme "+scheme+" is not supported by ReplicaDB");
             }
         }
-/*
-        if (MYSQL.isTheManagerTypeOf(options)) {
-              //return new MySQLManager(options);
-            }
-        } else if (SupportedManagers.POSTGRES.isTheManagerTypeOf(options)) {
-                return new PostgresqlManager(options);
-        } else if (HSQLDB.isTheManagerTypeOf(options)) {
-            return new HsqldbManager(options);
-        } else if (ORACLE.isTheManagerTypeOf(options)) {
-            return new OracleManager(options);
-        } else if (SQLSERVER.isTheManagerTypeOf(options)) {
-            return new SQLServerManager(options);
-        } else if (JTDS_SQLSERVER.isTheManagerTypeOf(options)) {
-            return new SQLServerManager(NET_SOURCEFORGE_JTDS_JDBC_DRIVER, options);
-        } else if (DB2.isTheManagerTypeOf(options)) {
-            return new Db2Manager(options);
-        } else if (NETEZZA.isTheManagerTypeOf(options)) {
-            if (options.isDirect()) {
-                return new DirectNetezzaManager(options);
-            } else {
-                return new NetezzaManager(options);
-            }
-        } else if (CUBRID.isTheManagerTypeOf(options)) {
-            return new CubridManager(options);
-        } else {
-            return null;
-        }*/
+
     }
 
     protected String extractScheme(ToolOptions options, DataSourceType dsType) {

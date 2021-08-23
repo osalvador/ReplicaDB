@@ -1,4 +1,4 @@
-package org.replicadb.manager;
+package org.replicadb.manager.file;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
@@ -7,88 +7,33 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.manager.DataSourceType;
+import org.replicadb.manager.util.BandwidthThrottling;
 import org.replicadb.rowset.CsvCachedRowSetImpl;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.*;
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.sql.*;
+import java.util.Map;
 import java.util.Properties;
-import java.util.Random;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 
-public class CsvManager extends SqlManager {
+import static org.replicadb.manager.LocalFileManager.getFileFromPathString;
+import static org.replicadb.manager.util.SqlNames.getAllSinkColumns;
 
-    private static final Logger LOG = LogManager.getLogger(CsvManager.class.getName());
+public class CsvFileManager extends FileManager {
+    private static final Logger LOG = LogManager.getLogger(CsvFileManager.class);
 
-    // String array with the paths of the temporal files
-    private static String[] tempFilesPath;
+    public CsvFileManager(ToolOptions opts, DataSourceType dsType) {
+        super(opts, dsType);
+    }
 
     private CsvCachedRowSetImpl csvResultset;
-
-    /**
-     * Constructs the SqlManager.
-     *
-     * @param opts the ReplicaDB ToolOptions describing the user's requested action.
-     */
-    public CsvManager(ToolOptions opts, DataSourceType dsType) {
-        super(opts);
-        this.dsType = dsType;
-        // Fixed size String Array
-        tempFilesPath = new String[options.getJobs()];
-    }
-
-    @Override
-    protected Connection makeSinkConnection() {
-        /*Not necessary for csv*/
-        return null;
-    }
-
-    @Override
-    public Future<Integer> preSinkTasks(ExecutorService executor) {
-        // On COMPLETE_ATOMIC mode
-        if (options.getMode().equals(ReplicationMode.COMPLETE_ATOMIC.getModeText()))
-            throw new UnsupportedOperationException("The 'complete-atomic' mode is not applicable to CSV as a sink");
-        else
-            return null;
-    }
-
-    @Override
-    protected Connection makeSourceConnection() throws SQLException {
-        // Initialize the csvResultSet
-        try {
-            csvResultset = new CsvCachedRowSetImpl();
-
-            CSVFormat format = setCsvFormat(DataSourceType.SOURCE);
-            csvResultset.setCsvFormat(format);
-
-            csvResultset.setSourceFile(getFileFromPathString(options.getSourceConnect()));
-            csvResultset.setFetchSize(options.getFetchSize());
-
-            String columnsTypes = options.getSourceConnectionParams().getProperty("columns.types");
-            if (columnsTypes == null || columnsTypes.isEmpty())
-                throw new IllegalArgumentException("Parameter 'source.connect.parameter.columns.types' cannot be null");
-
-            csvResultset.setColumnsTypes(columnsTypes);
-
-            csvResultset.execute();
-
-        } catch (URISyntaxException | MalformedURLException e) {
-            throw new SQLException(e);
-        }
-        return null;
-    }
 
     private CSVFormat setCsvFormat(DataSourceType dsType) {
 
@@ -256,41 +201,51 @@ public class CsvManager extends SqlManager {
     }
 
     @Override
-    protected void truncateTable() {
-        /*Not necessary for csv*/
+    public void init() throws SQLException {
+        // Initialize the csvResultSet
+        try {
+            csvResultset = new CsvCachedRowSetImpl();
+
+            CSVFormat format = setCsvFormat(DataSourceType.SOURCE);
+            csvResultset.setCsvFormat(format);
+
+            csvResultset.setSourceFile(getFileFromPathString(options.getSourceConnect()));
+            csvResultset.setFetchSize(options.getFetchSize());
+
+            String columnsTypes = options.getSourceConnectionParams().getProperty("columns.types");
+            if (columnsTypes == null || columnsTypes.isEmpty())
+                throw new IllegalArgumentException("Parameter 'source.connect.parameter.columns.types' cannot be null");
+
+            csvResultset.setColumnsTypes(columnsTypes);
+
+            csvResultset.execute();
+
+        } catch (URISyntaxException | MalformedURLException e) {
+            throw new SQLException(e);
+        }
     }
 
     @Override
-    public String getDriverClass() {
-        //return JdbcDrivers.CSV.getDriverClass();
-        return null;
+    public ResultSet readData() {
+        return this.csvResultset;
     }
 
     @Override
-    public int insertDataToTable(ResultSet resultSet, int taskId) throws Exception {
-
-        ResultSetMetaData rsmd = resultSet.getMetaData();
-        int columnCount = rsmd.getColumnCount();
-
-        // Temporal file name
-        String randomFileUrl = options.getSinkConnect() + ".repdb." + (new Random().nextInt(1000) + 9000);
-        LOG.info("Temp CSV file path: " + randomFileUrl);
-
-        // Save the path of temp file
-        tempFilesPath[taskId] = randomFileUrl;
-
-        File file = getFileFromPathString(randomFileUrl);
+    public int writeData(OutputStream out, ResultSet resultSet, int taskId, File tempFile) throws IOException, SQLException {
 
         // Set csv format
         CSVFormat format = setCsvFormat(DataSourceType.SINK);
 
-        // Write the CSV
-        try (BufferedWriter out = Files.newBufferedWriter(file.toPath());
-             CSVPrinter printer = new CSVPrinter(out, format)) {
+        ResultSetMetaData rsmd = resultSet.getMetaData();
+        int columnCount = rsmd.getColumnCount();
+
+        // Write the CSV to the OutputStream
+        try (BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(out));
+             CSVPrinter printer = new CSVPrinter(bufferedWriter, format)) {
 
             // headers, only in the first temporal file.
             if (taskId == 0 && format.getSkipHeaderRecord()) {
-                String[] allColumns = getAllSinkColumns(rsmd).split(",");
+                String[] allColumns = getAllSinkColumns(options, rsmd).split(",");
                 for (int i = 0; i < columnCount; i++) {
                     printer.print(allColumns[i]);
                 }
@@ -299,12 +254,17 @@ public class CsvManager extends SqlManager {
 
             if (resultSet.next()) {
                 // Create Bandwidth Throttling
-                bandwidthThrottlingCreate(resultSet, rsmd);
+                BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
                 do {
-                    bandwidthThrottlingAcquiere();
+                    bt.acquiere();
                     for (int i = 1; i <= columnCount; ++i) {
                         Object object = resultSet.getObject(i);
-                        printer.print(object instanceof Clob ? ((Clob) object).getCharacterStream() : object);
+                        if (object instanceof Clob) {
+                            printer.print(((Clob) object).getCharacterStream());
+                        } else if (object instanceof SQLXML) {
+                            printer.print(((SQLXML) object).getCharacterStream());
+                        } else
+                            printer.print(object);
                     }
                     printer.println();
                 } while (resultSet.next());
@@ -315,24 +275,10 @@ public class CsvManager extends SqlManager {
         return 0;
     }
 
-
     @Override
-    public ResultSet readTable(String tableName, String[] columns, int nThread) throws SQLException {
-        return this.csvResultset;
-    }
-
-
-    @Override
-    protected void createStagingTable() {}
-
-    @Override
-    /**
-     * Merging temporal files
-     */
-    protected void mergeStagingTable() throws Exception {
-
+    public void mergeFiles() throws IOException, URISyntaxException {
         File finalFile = getFileFromPathString(options.getSinkConnect());
-        File firstTemporalFile = getFileFromPathString(tempFilesPath[0]);
+        File firstTemporalFile = getFileFromPathString(tempFilesPath.get(0));
         Path firstTemporalFilePath = Paths.get(firstTemporalFile.getPath());
 
         int tempFilesIdx = 0;
@@ -349,65 +295,36 @@ public class CsvManager extends SqlManager {
         try (FileChannel finalFileChannel = new FileOutputStream(finalFile, true).getChannel()) {
 
             // Starts with 1 because the first temp file was renamed.
-            for (int i = tempFilesIdx; i <= tempFilesPath.length - 1; i++) {
+            for (int i = tempFilesIdx; i <= tempFilesPath.size() - 1; i++) {
                 // Temp file channel
-                FileChannel tempFileChannel = new FileInputStream(getFileFromPathString(tempFilesPath[i])).getChannel();
+                FileChannel tempFileChannel = new FileInputStream(getFileFromPathString(tempFilesPath.get(i))).getChannel();
                 // Append temp file to final file
                 finalFileChannel.transferFrom(tempFileChannel, finalFileChannel.size(), tempFileChannel.size());
                 tempFileChannel.close();
                 // Delete temp file
-                getFileFromPathString(tempFilesPath[i]).delete();
+                getFileFromPathString(tempFilesPath.get(i)).delete();
             }
         }
 
     }
 
-
-    @Override
-    public void postSourceTasks() {/*Not implemented*/}
-
-    @Override
-    public void preSourceTasks() {
-
-        if (options.getJobs() > 1)
-            throw new IllegalArgumentException("Only one job is allowed when reading from a file. Jobs parameter must be set to 1. jobs=1");
-
-    }
-
-    @Override
-    public void postSinkTasks() throws Exception {
-        // Always merge data
-        this.mergeStagingTable();
-    }
-
     @Override
     public void cleanUp() throws Exception {
-        // Ensure drop temporal file
-        for (int i = 0; i <= tempFilesPath.length - 1; i++) getFileFromPathString(tempFilesPath[i]).delete();
-    }
+        // Ensure drop all temporal files
+        for (Map.Entry<Integer, String> filePath : tempFilesPath.entrySet()) {
+            File tempFile = getFileFromPathString(filePath.getValue());
 
+            String crcPath = "file://" + tempFile.getParent() + "/." + tempFile.getName() + ".crc";
+            File crcFile = getFileFromPathString(crcPath);
 
-    /**
-     * Returns an instance of a File given the url string of the csv path.
-     * It gives compatibility with the windows, linux and mac URL Strings.
-     *
-     * @param urlString
-     * @return
-     * @throws MalformedURLException
-     * @throws URISyntaxException
-     */
-    private File getFileFromPathString(String urlString) throws MalformedURLException, URISyntaxException {
-
-        URL url = new URL(urlString);
-        URI uri = url.toURI();
-
-        if (uri.getAuthority() != null && uri.getAuthority().length() > 0) {
-            // Hack for UNC Path
-            uri = (new URL("file://" + urlString.substring("file:".length()))).toURI();
+            if (tempFile.exists()) {
+                LOG.debug("Remove temp file {}", tempFile.getPath());
+                tempFile.delete();
+            }
+            if (crcFile.exists()) {
+                LOG.debug("Remove crc temp file {}", crcFile.getPath());
+                crcFile.delete();
+            }
         }
-
-        File file = new File(uri);
-        return file;
     }
-
 }

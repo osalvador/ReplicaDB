@@ -11,15 +11,15 @@ import com.amazonaws.client.builder.AwsClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import de.siegmar.fastcsv.writer.CsvAppender;
-import de.siegmar.fastcsv.writer.CsvWriter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.manager.file.FileManager;
+import org.replicadb.manager.file.FileManagerFactory;
 
-import java.io.PrintWriter;
 import java.net.URI;
 import java.sql.*;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -33,12 +33,8 @@ public class S3Manager extends SqlManager {
     private boolean objectPerRow;
     private String rowKeyColumnName;
     private String rowContentColumnName;
-    private String csvKeyFileName;
-    private char csvFieldSeparator;
-    private char csvTextDelimiter;
-    private String csvLineDelimiter;
-    private boolean csvAlwaysDelimitText;
-    private boolean csvHeader;
+    private String keyFileName;
+    private final FileManager fileManager;
 
     private void setAccessKey(String accessKey) {
         if (accessKey != null && !accessKey.isEmpty())
@@ -80,40 +76,11 @@ public class S3Manager extends SqlManager {
             throw new IllegalArgumentException("row.contentColumn property cannot be null");
     }
 
-    private void setCsvKeyFileName(String csvKeyFileName) {
-        if (csvKeyFileName != null && !csvKeyFileName.isEmpty())
-            this.csvKeyFileName = csvKeyFileName;
-        else
-            throw new IllegalArgumentException("csv.keyFileName property cannot be null");
-    }
-
-    private void setCsvFieldSeparator(String csvFieldSeparator) {
-        if (csvFieldSeparator != null && csvFieldSeparator.length() > 1)
-            throw new IllegalArgumentException("FieldSeparator must be a single char");
-
-        if (csvFieldSeparator != null && !csvFieldSeparator.isEmpty())
-            this.csvFieldSeparator = csvFieldSeparator.charAt(0);
-    }
-
-
-    private void setCsvTextDelimiter(String csvTextDelimiter) {
-        if (csvTextDelimiter != null && csvTextDelimiter.length() > 1)
-            throw new IllegalArgumentException("TextDelimiter must be a single char");
-
-        if (csvTextDelimiter != null && !csvTextDelimiter.isEmpty())
-            this.csvTextDelimiter = csvTextDelimiter.charAt(0);
-    }
-
-    private void setCsvLineDelimiter(String csvLineDelimiter) {
-        this.csvLineDelimiter = csvLineDelimiter;
-    }
-
-    private void setCsvAlwaysDelimitText(boolean csvAlwaysDelimitText) {
-        this.csvAlwaysDelimitText = csvAlwaysDelimitText;
-    }
-
-    private void setCsvHeader(boolean csvHeader) {
-        this.csvHeader = csvHeader;
+    private void setKeyFileName(String keyFileName) {
+        if (keyFileName != null && !keyFileName.isEmpty())
+            this.keyFileName = keyFileName;
+        /*else
+            throw new IllegalArgumentException("csv.keyFileName property cannot be null");*/
     }
 
     private boolean isSecuereConnection() {
@@ -124,10 +91,7 @@ public class S3Manager extends SqlManager {
         return objectPerRow;
     }
 
-    private boolean isCsvHeader() {
-        return csvHeader;
-    }
-
+    // TODO: complete-atomic and incremental? is not supported in s3
 
     /**
      * Constructs the SqlManager.
@@ -138,6 +102,11 @@ public class S3Manager extends SqlManager {
         super(opts);
         this.dsType = dsType;
         loadS3CustomProperties();
+
+        if (!isObjectPerRow())
+            this.fileManager = new FileManagerFactory().accept(opts, dsType);
+        else
+            this.fileManager = null;
     }
 
     /**
@@ -164,13 +133,8 @@ public class S3Manager extends SqlManager {
             setRowKeyColumnName(s3Props.getProperty("row.keyColumn"));
             setRowContentColumnName(s3Props.getProperty("row.contentColumn"));
         } else {
-            // One CSV for all rows
-            setCsvKeyFileName(s3Props.getProperty("csv.keyFileName"));
-            setCsvFieldSeparator(s3Props.getProperty("csv.FieldSeparator"));
-            setCsvTextDelimiter(s3Props.getProperty("csv.TextDelimiter"));
-            setCsvLineDelimiter(s3Props.getProperty("csv.LineDelimiter"));
-            setCsvHeader(Boolean.parseBoolean(s3Props.getProperty("csv.Header")));
-            setCsvAlwaysDelimitText(Boolean.parseBoolean(s3Props.getProperty("csv.AlwaysDelimitText")));
+            // One File for all rows
+            setKeyFileName(s3Props.getProperty("keyFileName"));
         }
 
     }
@@ -179,17 +143,12 @@ public class S3Manager extends SqlManager {
     public String toString() {
         return "S3Manager{" +
                 "accessKey='" + accessKey + '\'' +
-                ", secretKey='" + secretKey + '\'' +
+                ", secretKey='" + "****" + '\'' +
                 ", secuereConnection=" + secuereConnection +
                 ", objectPerRow=" + objectPerRow +
                 ", rowKeyColumnName='" + rowKeyColumnName + '\'' +
                 ", rowContentColumnName='" + rowContentColumnName + '\'' +
-                ", csvKeyFileName='" + csvKeyFileName + '\'' +
-                ", csvFieldSeparator=" + csvFieldSeparator +
-                ", csvTextDelimiter=" + csvTextDelimiter +
-                ", csvLineDelimiter='" + csvLineDelimiter + '\'' +
-                ", csvAlwaysDelimitText=" + csvAlwaysDelimitText +
-                ", csvHeader=" + csvHeader +
+                ", keyFileName='" + keyFileName + '\'' +
                 '}';
     }
 
@@ -231,8 +190,11 @@ public class S3Manager extends SqlManager {
 
         // Get Bucket name
         String bucketName = s3Uri.getPath().replaceAll("/$", "");
-
-        LOG.debug(this.toString());
+        if (keyFileName == null) {
+            this.keyFileName = bucketName.substring(bucketName.lastIndexOf("/") + 1);
+            bucketName = bucketName.replace(keyFileName,"").replaceAll("/$", "");
+        }
+        LOG.info("Bucket Name: {}, File Name: {}", bucketName, keyFileName);
 
         // S3 Client
         System.setProperty(SDKGlobalConfiguration.DISABLE_CERT_CHECKING_SYSTEM_PROPERTY, "true");
@@ -245,20 +207,17 @@ public class S3Manager extends SqlManager {
                 .withCredentials(new AWSStaticCredentialsProvider(credentials))
                 .build();
 
-
         if (!isObjectPerRow()) {
-            // All rows are only one CSV object in s3
-            putCsvToS3(resultSet, taskId, s3Client, bucketName);
+            // All rows are only one File object in s3
+            return putFileToS3(resultSet, taskId, s3Client, bucketName);
         } else {
             // Each row is a different object in s3
-            putObjectToS3(resultSet, taskId, s3Client, bucketName);
+            return putObjectToS3(resultSet, taskId, s3Client, bucketName);
         }
-
-        return 0;
 
     }
 
-    private void putObjectToS3(ResultSet resultSet, int taskId, AmazonS3 s3Client, String bucketName) throws SQLException {
+    private int putObjectToS3(ResultSet resultSet, int taskId, AmazonS3 s3Client, String bucketName) throws SQLException {
 
         ResultSetMetaData rsmd = resultSet.getMetaData();
         int columnCount = rsmd.getColumnCount();
@@ -272,7 +231,7 @@ public class S3Manager extends SqlManager {
         }
 
         ObjectMetadata binMetadata = new ObjectMetadata();
-
+        int processedRows = 0;
         while (resultSet.next()) {
 
             switch (rsmd.getColumnType(rowContentColumnIndex)) {
@@ -282,24 +241,23 @@ public class S3Manager extends SqlManager {
                     s3Client.putObject(bucketName, resultSet.getString(rowKeyColumnName), resultSet.getBinaryStream(rowContentColumnName), binMetadata);
                     break;
                 case Types.SQLXML:
-                    throw new IllegalArgumentException("SQLXML Data Type is not supported. You should convert it to BLOB or CLOB");
+                    SQLXML sqlxmlData = resultSet.getSQLXML(rowContentColumnName);
+                    s3Client.putObject(bucketName, resultSet.getString(rowKeyColumnName), sqlxmlData.getBinaryStream(), binMetadata);
+                    sqlxmlData.free();
                 default:
                     s3Client.putObject(bucketName, resultSet.getString(rowKeyColumnName), resultSet.getString(rowContentColumnName));
                     break;
             }
+            processedRows++;
         }
+        return processedRows;
     }
 
-
-    private void putCsvToS3(ResultSet resultSet, int taskId, AmazonS3 s3Client, String bucketName) throws SQLException {
-
-        ResultSetMetaData rsmd = resultSet.getMetaData();
-        int columnCount = rsmd.getColumnCount();
+    private int putFileToS3(ResultSet resultSet, int taskId, AmazonS3 s3Client, String bucketName) throws SQLException {
 
         // Set File Name.
         // It is not possible to append to an existing S3 file, ReplicaDB will generate one file per job
         // renaming file name with the taskid
-        String keyFileName = csvKeyFileName;
         if (options.getJobs() > 1)
             keyFileName = keyFileName.substring(0, keyFileName.lastIndexOf(".")) + "_" + taskId + keyFileName.substring(keyFileName.lastIndexOf("."));
 
@@ -312,59 +270,12 @@ public class S3Manager extends SqlManager {
                 .partSize(5);
 
         final List<MultiPartOutputStream> streams = manager.getMultiPartOutputStreams();
+        int processedRows = 0;
 
         try {
             MultiPartOutputStream outputStream = streams.get(0);
-
-            PrintWriter pw = new PrintWriter(outputStream, true);
-
-            CsvWriter csvWriter = new CsvWriter();
-            // Custom user csv options
-            if ((int) csvFieldSeparator != 0) csvWriter.setFieldSeparator(csvFieldSeparator);
-            if ((int) csvTextDelimiter != 0) csvWriter.setTextDelimiter(csvTextDelimiter);
-            if (csvLineDelimiter != null && !csvLineDelimiter.isEmpty())
-                csvWriter.setLineDelimiter(csvLineDelimiter.toCharArray());
-            csvWriter.setAlwaysDelimitText(csvAlwaysDelimitText);
-
-            // Write the CSV
-            try (CsvAppender csvAppender = csvWriter.append(pw)) {
-
-                // Put headers in the file
-                if (isCsvHeader()) {
-                    for (int i = 1; i <= columnCount; i++) {
-                        csvAppender.appendField(rsmd.getColumnName(i));
-                    }
-                    csvAppender.endLine();
-                }
-
-                String colValue;
-                String[] colValues;
-
-                // lines
-                if (resultSet.next()) {
-                    // Create Bandwidth Throttling
-                    bandwidthThrottlingCreate(resultSet, rsmd);
-                    do {
-                        bandwidthThrottlingAcquiere();
-
-                        colValues = new String[columnCount];
-
-                        // Iterate over the columns of the row
-                        for (int i = 1; i <= columnCount; i++) {
-                            colValue = resultSet.getString(i);
-
-                            if (!this.options.isSinkDisableEscape() && !resultSet.wasNull())
-                                colValues[i - 1] = colValue.replace("\n", "\\n").replace("\r", "\\r");
-                            else
-                                colValues[i - 1] = colValue;
-                        }
-                        csvAppender.appendLine(colValues);
-                    } while (resultSet.next());
-                }
-            }
-
-            // The stream must be closed once all the data has been written
-            pw.close();
+            // Write data to the specific file manager
+            processedRows = this.fileManager.writeData(outputStream, resultSet, taskId, null);
             outputStream.close();
         } catch (Exception e) {
             // Aborts all uploads
@@ -373,6 +284,7 @@ public class S3Manager extends SqlManager {
 
         // Finishing off
         manager.complete();
+        return processedRows;
 
     }
 
@@ -395,8 +307,10 @@ public class S3Manager extends SqlManager {
     public void postSinkTasks() {/*Not implemented*/}
 
     @Override
-    public void cleanUp() {/*Not implemented*/}
-
+    public void cleanUp() throws Exception {
+        if (fileManager != null)
+            this.fileManager.cleanUp();
+    }
 
 }
 
