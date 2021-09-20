@@ -1,5 +1,8 @@
 package org.replicadb;
 
+import io.sentry.ITransaction;
+import io.sentry.Sentry;
+import io.sentry.SpanStatus;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -20,6 +23,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
+
+import static org.replicadb.config.Sentry.SentryInit;
 
 /**
  * ReplicaDB
@@ -55,17 +60,20 @@ public class ReplicaDB {
         ConnManager sourceDs = null, sinkDs = null;
         ExecutorService preSinkTasksExecutor = null, replicaTasksService = null;
 
-        try {
+        LOG.info("Running ReplicaDB version: " + options.getVersion());
 
-            LOG.info("Running ReplicaDB version: " + options.getVersion());
+        if (options.isVerbose()) {
+            setLogToDebugMode();
+            LOG.info("Setting verbose mode");
+            LOG.debug(options.toString());
+        }
 
-            if (options.isVerbose()) {
-                setLogToDebugMode();
-                LOG.info("Setting verbose mode");
-                LOG.debug(options.toString());
-            }
+        if (!options.isHelp() && !options.isVersion()) {
+            // Sentry
+            SentryInit(options);
+            ITransaction transaction = Sentry.startTransaction("processReplica()", "task");
 
-            if (!options.isHelp() && !options.isVersion()) {
+            try {
                 // Create Connection Managers
                 ManagerFactory managerF = new ManagerFactory();
                 sourceDs = managerF.accept(options, DataSourceType.SOURCE);
@@ -123,27 +131,32 @@ public class ReplicaDB {
                     preSinkTasksExecutor.shutdown();
                     replicaTasksService.shutdown();
                 }
-            }
-        } catch (Exception e) {
-            LOG.error("Got exception running ReplicaDB:", e);
-            exitCode = ERROR;
-        } finally {
-            //Clean Up environment and close connections
-            try {
-                if (null != sinkDs) {
-                    //aka drop staging table)
-                    sinkDs.cleanUp();
-                    sinkDs.close();
-                }
-                if (null != sourceDs) {
-                    sourceDs.close();
-                }
-
-                if (preSinkTasksExecutor != null) preSinkTasksExecutor.shutdownNow();
-                if (replicaTasksService != null) replicaTasksService.shutdownNow();
 
             } catch (Exception e) {
-                LOG.error(e);
+                LOG.error("Got exception running ReplicaDB:", e);
+                Sentry.captureException(e);
+                transaction.setThrowable(e);
+                transaction.setStatus(SpanStatus.INTERNAL_ERROR);
+                exitCode = ERROR;
+            } finally {
+                transaction.finish();
+                //Clean Up environment and close connections
+                try {
+                    if (null != sinkDs) {
+                        //aka drop staging table)
+                        sinkDs.cleanUp();
+                        sinkDs.close();
+                    }
+                    if (null != sourceDs) {
+                        sourceDs.close();
+                    }
+
+                    if (preSinkTasksExecutor != null) preSinkTasksExecutor.shutdownNow();
+                    if (replicaTasksService != null) replicaTasksService.shutdownNow();
+
+                } catch (Exception e) {
+                    LOG.error(e);
+                }
             }
         }
         return exitCode;
