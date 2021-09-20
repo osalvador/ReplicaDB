@@ -37,7 +37,7 @@ class Postgres2S3FileTest {
 
     private static final String S3_CONNECTION = "s3://s3.eu-west-3.amazonaws.com/replicadb-cicd";
     private static final String ACCESS_KEY="AKIAIK74DFEZJKMRVCLA";
-    private static final String SECRET_KEY="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";
+    private static final String SECRET_KEY="";
 
     private Connection postgresConn;
 
