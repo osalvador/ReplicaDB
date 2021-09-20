@@ -51,6 +51,7 @@ public class ToolOptions {
 
     private Properties sourceConnectionParams;
     private Properties sinkConnectionParams;
+    private String sentryDsn;
 
     private Options options;
 
@@ -458,6 +459,7 @@ public class ToolOptions {
         setBandwidthThrottling(prop.getProperty("bandwidth.throttling"));
         setQuotedIdentifiers(Boolean.parseBoolean(prop.getProperty("quoted.identifiers")));
         setSinkFileformat(prop.getProperty("sink.file.format"));
+        setSentryDsn(prop.getProperty("sentry.dsn"));
 
         // Connection params
         setSinkConnectionParams(of.getSinkConnectionParams());
@@ -872,6 +874,7 @@ public class ToolOptions {
                 ",\n\tverbose=" + verbose +
                 ",\n\toptionsFile='" + optionsFile + '\'' +
                 ",\n\tmode='" + mode + '\'' +
+                ",\n\tsentryDsn='" + sentryDsn + '\'' +
                 ",\n\tsourceConnectionParams=" + sourceConnectionParams +
                 ",\n\tsinkConnectionParams=" + sinkConnectionParams +
                 ",\n\tsourceFileFormat='" + sourceFileFormat + '\'' +
@@ -933,6 +936,14 @@ public class ToolOptions {
     private void setSinkFileFormatNotNull(String fileFormat) {
         if (fileFormat != null && !fileFormat.isEmpty())
             this.sinkFileformat = fileFormat;
+    }
+
+    public String getSentryDsn() {
+        return sentryDsn;
+    }
+
+    public void setSentryDsn(String sentryDsn) {
+        this.sentryDsn = sentryDsn;
     }
 
 }
