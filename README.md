@@ -43,8 +43,8 @@ I have reviewed and tested other open source tools and none of them meets all th
 
 ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Standard Edition (SE) or Java Development Kit (JDK) Standard Edition (SE) version 8.0 or above. The minimum operating system requirements are:
 
-*   Java SE Runtime Environment 8 or above    
-*   Memory - 128 (MB) available
+*   Java SE Runtime Environment 8 or above
+*   Memory - 256 (MB) available
 
 ### Install
 
