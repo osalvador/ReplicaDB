@@ -29,16 +29,17 @@ class MySQL2MySQLTest {
     private static final String MYSQL_SOURCE_FILE = "/mysql/mysql-source.sql";
     private static final String MYSQL_SINK_FILE = "/sinks/mysql-sink.sql";
     private static final String USER_PASSWD_DB = "replicadb";
-    private static final int EXPECTED_ROWS = 4096;
+    private static final int EXPECTED_ROWS = 4097;
 
     private Connection mysqlConn;
     private String mysqlJdbcUrl = "";
 
     @ClassRule
-    private static final MySQLContainer mysql = new MySQLContainer("mysql:5.6")
+    private static final MySQLContainer mysql = (MySQLContainer) new MySQLContainer("mysql:5.6")
             .withDatabaseName(USER_PASSWD_DB)
             .withUsername(USER_PASSWD_DB)
-            .withPassword(USER_PASSWD_DB);
+            .withPassword(USER_PASSWD_DB)
+            .withCommand("--local-infile=1");
 
     @BeforeAll
     static void setUp() throws SQLException, IOException {
@@ -70,6 +71,27 @@ class MySQL2MySQLTest {
     public int countSinkRows() throws SQLException {
         Statement stmt = mysqlConn.createStatement();
         ResultSet rs = stmt.executeQuery("select count(*) from t_sink");
+        rs.next();
+        int count = rs.getInt(1);
+        LOG.info(count);
+        return count;
+    }
+
+    public int countSinkNullRows() throws SQLException {
+        String sqlQuery = "select count(*) " +
+                "from t_sink " +
+                "where C_SMALLINT is null ";
+                /*" and "+
+                "C_BIGINT is null and C_NUMERIC is null and C_DECIMAL is null and C_REAL is null and " +
+                "C_DOUBLE_PRECISION is null and C_FLOAT is null and C_BINARY is null and C_BINARY_VAR is null and " +
+                "C_BINARY_LOB is null and C_BOOLEAN is null and C_CHARACTER is null and C_CHARACTER_VAR is null and " +
+                "C_CHARACTER_LOB is null and C_NATIONAL_CHARACTER is null and C_NATIONAL_CHARACTER_VAR is null and C_DATE is null and " +
+                "C_TIME_WITHOUT_TIMEZONE is null and C_TIMESTAMP_WITHOUT_TIMEZONE is null and C_TIME_WITH_TIMEZONE is null and " +
+                "C_TIMESTAMP_WITH_TIMEZONE is null";*/
+
+        Statement stmt = mysqlConn.createStatement();
+        ResultSet rs = stmt.executeQuery(sqlQuery);
+        //ReplicaDB.printResultSet(rs);
         rs.next();
         int count = rs.getInt(1);
         LOG.info(count);
@@ -122,6 +144,7 @@ class MySQL2MySQLTest {
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(EXPECTED_ROWS, countSinkRows());
+        assertEquals(1, countSinkNullRows(),"There must be a row with all its values set to null");
     }
 
     @Test

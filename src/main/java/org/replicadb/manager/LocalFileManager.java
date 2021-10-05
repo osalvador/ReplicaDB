@@ -141,7 +141,7 @@ public class LocalFileManager extends SqlManager {
     public static File getFileFromPathString(String urlString) throws MalformedURLException, URISyntaxException {
 
         //TODO: delete me. Only meanwhile developing the new file manager
-        urlString = urlString.replaceAll("new:", "");
+        if (urlString != null) urlString = urlString.replaceAll("new:", "");
         //
         URL url = null;
         try {

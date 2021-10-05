@@ -31,6 +31,7 @@ class MySQL2OracleTest {
     private static final String MYSQL_SOURCE_FILE = "/mysql/mysql-source.sql";
     private static final String ORACLE_SINK_FILE = "/sinks/oracle-sink.sql";
     private static final String USER_PASSWD_DB = "replicadb";
+    private static final int EXPECTED_ROWS = 4097;
 
     private Connection mysqlConn;
     private Connection oracleConn;
@@ -117,9 +118,8 @@ class MySQL2OracleTest {
         Statement stmt = mysqlConn.createStatement();
         ResultSet rs = stmt.executeQuery("select count(*) from t_source");
         rs.next();
-        String version = rs.getString(1);
-        LOG.info(version);
-        assertTrue(version.contains("4096"));
+        int rows = rs.getInt(1);
+        assertEquals(EXPECTED_ROWS, rows);
     }
 
     @Test
@@ -135,7 +135,7 @@ class MySQL2OracleTest {
         };
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096,countSinkRows());
+        assertEquals(EXPECTED_ROWS, countSinkRows());
     }
 
     @Test
@@ -153,7 +153,7 @@ class MySQL2OracleTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096,countSinkRows());
+        assertEquals(EXPECTED_ROWS, countSinkRows());
 
     }
 
@@ -172,7 +172,7 @@ class MySQL2OracleTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096,countSinkRows());
+        assertEquals(EXPECTED_ROWS, countSinkRows());
 
     }
 
@@ -190,7 +190,7 @@ class MySQL2OracleTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096,countSinkRows());
+        assertEquals(EXPECTED_ROWS, countSinkRows());
     }
 
     @Test
@@ -209,7 +209,7 @@ class MySQL2OracleTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096,countSinkRows());
+        assertEquals(EXPECTED_ROWS, countSinkRows());
     }
 
     @Test
@@ -228,6 +228,6 @@ class MySQL2OracleTest {
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(4096,countSinkRows());
+        assertEquals(EXPECTED_ROWS, countSinkRows());
     }
 }

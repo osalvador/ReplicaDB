@@ -36,7 +36,7 @@ class Postgres2CsvFileTest {
     private static final String USER_PASSWD_DB = "replicadb";
     private static final int TOTAL_SINK_ROWS = 4097;
 
-    private static final String SINK_FILE_PATH = "new:file:///tmp/fileSink.csv";
+    private static final String SINK_FILE_PATH = "file:///tmp/fileSink.csv";
     private static final String SINK_FILE_URI_PATH = "file:///tmp/fileSink.csv";
 
     private Connection postgresConn;

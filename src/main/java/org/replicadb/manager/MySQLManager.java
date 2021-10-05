@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.manager.util.BandwidthThrottling;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -45,7 +46,7 @@ public class MySQLManager extends SqlManager {
 
     @Override
     public int insertDataToTable(ResultSet resultSet, int taskId) throws SQLException, IOException {
-
+        int totalRows = 0;
         try {
 
             ResultSetMetaData rsmd = resultSet.getMetaData();
@@ -73,6 +74,7 @@ public class MySQLManager extends SqlManager {
             }
 
             char unitSeparator = 0x1F;
+            char nullAscii = 0x00;
             int columnsNumber = rsmd.getColumnCount();
 
             StringBuilder row = new StringBuilder();
@@ -85,10 +87,10 @@ public class MySQLManager extends SqlManager {
 
             if (resultSet.next()) {
                 // Create Bandwidth Throttling
-                bandwidthThrottlingCreate(resultSet, rsmd);
+                BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
 
                 do {
-                    bandwidthThrottlingAcquiere();
+                    bt.acquiere();
 
                     // Get Columns values
                     for (int i = 1; i <= columnsNumber; i++) {
@@ -117,6 +119,8 @@ public class MySQLManager extends SqlManager {
                                 break;*/
                             default:
                                 colValue = resultSet.getString(i);
+                                if (colValue == null)
+                                    colValue = String.valueOf(nullAscii);
                                 break;
                         }
 
@@ -125,9 +129,15 @@ public class MySQLManager extends SqlManager {
 
                     // Escape special chars
                     if (this.options.isSinkDisableEscape())
-                        row.append(cols);
+                        row.append(cols.toString()
+                                .replace("\u0000", "\\N") // MySQL localInfile Null value
+                        );
                     else
-                        row.append(cols.toString().replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r").replace("\u0000", ""));
+                        row.append(cols.toString().replace("\\", "\\\\")
+                                .replace("\n", "\\n")
+                                .replace("\r", "\\r")
+                                .replace("\u0000", "\\N") // MySQL localInfile Null value
+                        );
 
                     // Row ends with \n
                     row.append("\n");
@@ -153,6 +163,7 @@ public class MySQLManager extends SqlManager {
                     // Clear StringBuilders
                     cols.setLength(0); // set length of buffer to 0
                     cols.trimToSize();
+                    totalRows++;
                 } while (resultSet.next());
             }
 
@@ -173,7 +184,7 @@ public class MySQLManager extends SqlManager {
         }
 
         this.getConnection().commit();
-        return 0;
+        return totalRows;
     }
 
     private String getLoadDataSql(String tableName, String allColumns) {

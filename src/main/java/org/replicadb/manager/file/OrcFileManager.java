@@ -163,6 +163,7 @@ public class OrcFileManager extends FileManager {
         conf.set(OrcConf.OVERWRITE_OUTPUT_FILE.getAttribute(), "true");
 
         for (int i = tempFilesIdx; i <= tempFilesPath.size() - 1; i++) {
+            LOG.debug("tempFilesPath.get({}): {}", i, tempFilesPath.get(i));
             File tempFile = getFileFromPathString(tempFilesPath.get(i));
             Path tempFilePath = new Path(tempFile.toPath().toUri());
             List<Path> filesToMerge = new ArrayList<>();
