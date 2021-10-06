@@ -41,7 +41,7 @@ public abstract class FileManager {
     public FileManager(ToolOptions opts, DataSourceType dsType) {
         this.options = opts;
         this.dsType = dsType;
-        tempFilesPath =  new HashMap<>();
+        newTempFilesPath();
     }
 
     /**
@@ -80,6 +80,14 @@ public abstract class FileManager {
     /**
      * Getters and Setters
      */
+    public static synchronized void newTempFilesPath() {
+        LOG.debug("Creating new tempFilesPath HasMap");
+        if (tempFilesPath == null)
+            tempFilesPath =  new HashMap<>();
+        else
+            LOG.debug("temFilesPath is not null!!!");
+    }
+
     public static synchronized Map<Integer, String> getTempFilesPath() {
         return tempFilesPath;
     }
