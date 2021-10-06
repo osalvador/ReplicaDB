@@ -84,11 +84,9 @@ public abstract class FileManager {
         return tempFilesPath;
     }
 
-    public void setTempFilesPath(Map<Integer, String> tempFilesPath) {
-        FileManager.tempFilesPath = tempFilesPath;
-    }
+    public static synchronized void setTempFilesPath(Map<Integer, String> tempFilesPath) {FileManager.tempFilesPath = tempFilesPath;}
 
-    public void setTempFilePath(int taskId, String path) {
+    public static synchronized void setTempFilePath(int taskId, String path) {
         tempFilesPath.put(taskId, path);
     }
 
