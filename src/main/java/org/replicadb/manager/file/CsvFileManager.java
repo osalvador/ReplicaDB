@@ -278,7 +278,7 @@ public class CsvFileManager extends FileManager {
     @Override
     public void mergeFiles() throws IOException, URISyntaxException {
         File finalFile = getFileFromPathString(options.getSinkConnect());
-        File firstTemporalFile = getFileFromPathString(tempFilesPath.get(0));
+        File firstTemporalFile = getFileFromPathString(getTempFilePath(0));
         Path firstTemporalFilePath = Paths.get(firstTemporalFile.getPath());
 
         int tempFilesIdx = 0;
@@ -295,14 +295,14 @@ public class CsvFileManager extends FileManager {
         try (FileChannel finalFileChannel = new FileOutputStream(finalFile, true).getChannel()) {
 
             // Starts with 1 because the first temp file was renamed.
-            for (int i = tempFilesIdx; i <= tempFilesPath.size() - 1; i++) {
+            for (int i = tempFilesIdx; i <= getTempFilePathSize() - 1; i++) {
                 // Temp file channel
-                FileChannel tempFileChannel = new FileInputStream(getFileFromPathString(tempFilesPath.get(i))).getChannel();
+                FileChannel tempFileChannel = new FileInputStream(getFileFromPathString(getTempFilePath(i))).getChannel();
                 // Append temp file to final file
                 finalFileChannel.transferFrom(tempFileChannel, finalFileChannel.size(), tempFileChannel.size());
                 tempFileChannel.close();
                 // Delete temp file
-                getFileFromPathString(tempFilesPath.get(i)).delete();
+                getFileFromPathString(getTempFilePath(i)).delete();
             }
         }
 
@@ -311,7 +311,7 @@ public class CsvFileManager extends FileManager {
     @Override
     public void cleanUp() throws Exception {
         // Ensure drop all temporal files
-        for (Map.Entry<Integer, String> filePath : tempFilesPath.entrySet()) {
+        for (Map.Entry<Integer, String> filePath : getTempFilesPath().entrySet()) {
             File tempFile = getFileFromPathString(filePath.getValue());
 
             String crcPath = "file://" + tempFile.getParent() + "/." + tempFile.getName() + ".crc";

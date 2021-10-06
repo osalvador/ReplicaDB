@@ -145,7 +145,7 @@ public class OrcFileManager extends FileManager {
         int tempFilesIdx = 0;
         if (options.getMode().equals(ReplicationMode.COMPLETE.getModeText())) {
             // Rename first temporal file to the final file
-            File firstTemporalFile = getFileFromPathString(tempFilesPath.get(0));
+            File firstTemporalFile = getFileFromPathString(getTempFilePath(0));
             String crcFile = "file://" + firstTemporalFile.getParent() + "/." + firstTemporalFile.getName() + ".crc";
             LOG.debug("The crc file: {}", crcFile);
             getFileFromPathString(crcFile).delete();
@@ -162,9 +162,9 @@ public class OrcFileManager extends FileManager {
         Configuration conf = new Configuration();
         conf.set(OrcConf.OVERWRITE_OUTPUT_FILE.getAttribute(), "true");
 
-        for (int i = tempFilesIdx; i <= tempFilesPath.size() - 1; i++) {
-            LOG.debug("tempFilesPath.get({}): {}", i, tempFilesPath.get(i));
-            File tempFile = getFileFromPathString(tempFilesPath.get(i));
+        for (int i = tempFilesIdx; i <= getTempFilePathSize() - 1; i++) {
+            LOG.debug("tempFilesPath.get({}): {}", i, getTempFilePath(i) );
+            File tempFile = getFileFromPathString( getTempFilePath(i) );
             Path tempFilePath = new Path(tempFile.toPath().toUri());
             List<Path> filesToMerge = new ArrayList<>();
             filesToMerge.add(tempFilePath);
@@ -416,7 +416,7 @@ public class OrcFileManager extends FileManager {
     @Override
     public void cleanUp() {
         // Ensure drop all temporal files
-        for (Map.Entry<Integer, String> filePath : tempFilesPath.entrySet()) {
+        for (Map.Entry<Integer, String> filePath : getTempFilesPath().entrySet()) {
             File tempFile = null;
             File crcFile = null;
             try {
