@@ -80,7 +80,7 @@ public abstract class FileManager {
     /**
      * Getters and Setters
      */
-    public Map<Integer, String> getTempFilesPath() {
+    public static synchronized Map<Integer, String> getTempFilesPath() {
         return tempFilesPath;
     }
 
@@ -88,6 +88,14 @@ public abstract class FileManager {
 
     public static synchronized void setTempFilePath(int taskId, String path) {
         tempFilesPath.put(taskId, path);
+    }
+
+    public static synchronized String getTempFilePath(int idx) {
+        return tempFilesPath.get(idx);
+    }
+
+    public static synchronized int getTempFilePathSize() {
+        return tempFilesPath.size();
     }
 
 }
