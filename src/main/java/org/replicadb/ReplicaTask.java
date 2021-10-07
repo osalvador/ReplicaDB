@@ -69,7 +69,7 @@ final public class ReplicaTask implements Callable<Integer> {
         try {
             int processedRows = sinkDs.insertDataToTable(rs, taskId);
             // TODO determine the total rows processed in all the managers
-            LOG.debug("A total of {} rows processed by task {}", processedRows,  taskId);
+            LOG.info("A total of {} rows processed by task {}", processedRows,  taskId);
         } catch (Exception e) {
             LOG.error("ERROR in " + this.taskName + " inserting data to sink table: " + e.getMessage());
             throw e;

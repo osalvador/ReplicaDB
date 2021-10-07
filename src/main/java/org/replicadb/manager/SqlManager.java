@@ -195,7 +195,7 @@ public abstract class SqlManager extends ConnManager {
 
         Properties connectionParams = options.getSourceConnectionParams();
         if (connectionParams != null && connectionParams.size() > 0) {
-            LOG.debug("User specified connection params. Using properties specific API for making connection.");
+            LOG.trace("User specified connection params. Using properties specific API for making connection.");
 
             Properties props = new Properties();
             if (username != null) {
@@ -209,7 +209,7 @@ public abstract class SqlManager extends ConnManager {
             props.putAll(connectionParams);
             connection = DriverManager.getConnection(connectString, props);
         } else {
-            LOG.debug("No connection parameters specified. Using regular API for making connection.");
+            LOG.trace("No connection parameters specified. Using regular API for making connection.");
             if (username == null) {
                 connection = DriverManager.getConnection(connectString);
             } else {
@@ -252,7 +252,7 @@ public abstract class SqlManager extends ConnManager {
 
         Properties connectionParams = options.getSinkConnectionParams();
         if (connectionParams != null && connectionParams.size() > 0) {
-            LOG.debug("User specified connection params. Using properties specific API for making connection.");
+            LOG.trace("User specified connection params. Using properties specific API for making connection.");
 
             Properties props = new Properties();
             if (username != null) {
@@ -266,7 +266,7 @@ public abstract class SqlManager extends ConnManager {
             props.putAll(connectionParams);
             connection = DriverManager.getConnection(connectString, props);
         } else {
-            LOG.debug("No connection parameters specified. Using regular API for making connection.");
+            LOG.trace("No connection parameters specified. Using regular API for making connection.");
             if (username == null) {
                 connection = DriverManager.getConnection(connectString);
             } else {
