@@ -41,7 +41,7 @@ public class ManagerFactory {
             return null;
         }
 
-        LOG.debug("Trying with scheme: " + scheme);
+        LOG.trace("Trying with scheme: " + scheme);
 
         if (options.getMode().equals(ReplicationMode.CDC.getModeText())) {
             LOG.debug("CDC Managers");

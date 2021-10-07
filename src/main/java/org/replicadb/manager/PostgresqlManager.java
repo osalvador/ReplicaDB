@@ -42,6 +42,7 @@ public class PostgresqlManager extends SqlManager {
     public int insertDataToTable(ResultSet resultSet, int taskId) throws SQLException, IOException {
 
         CopyIn copyIn = null;
+        int totalRows = 0;
 
         try {
 
@@ -64,6 +65,7 @@ public class PostgresqlManager extends SqlManager {
             copyIn = copyManager.copyIn(copyCmd);
 
             char unitSeparator = 0x1F;
+            char nullAscii = 0x00;
             int columnsNumber = rsmd.getColumnCount();
 
             StringBuilder row = new StringBuilder();
@@ -94,6 +96,8 @@ public class PostgresqlManager extends SqlManager {
                                 break;
                             default:
                                 colValue = resultSet.getString(i);
+                                if (colValue == null)
+                                    colValue = String.valueOf(nullAscii);
                                 break;
                         }
 
@@ -102,9 +106,9 @@ public class PostgresqlManager extends SqlManager {
 
                     // Escape special chars
                     if (this.options.isSinkDisableEscape())
-                        row.append(cols.toString());
+                        row.append(cols.toString().replace("\u0000", "\\N"));
                     else
-                        row.append(cols.toString().replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r").replace("\u0000", ""));
+                        row.append(cols.toString().replace("\\", "\\\\").replace("\n", "\\n").replace("\r", "\\r").replace("\u0000", "\\N"));
 
                     // Row ends with \n
                     row.append("\n");
@@ -118,6 +122,7 @@ public class PostgresqlManager extends SqlManager {
                     row.trimToSize();
                     cols.setLength(0); // set length of buffer to 0
                     cols.trimToSize();
+                    totalRows++;
                 } while (resultSet.next());
             }
 
@@ -137,7 +142,7 @@ public class PostgresqlManager extends SqlManager {
 
         this.getConnection().commit();
 
-        return 0;
+        return totalRows;
     }
 
     private String getCopyCommand(String tableName, String allColumns) {
@@ -153,7 +158,7 @@ public class PostgresqlManager extends SqlManager {
             copyCmd.append(")");
         }
 
-        copyCmd.append(" FROM STDIN WITH DELIMITER e'\\x1f'  NULL '' ENCODING 'UTF-8' ");
+        copyCmd.append(" FROM STDIN WITH DELIMITER e'\\x1f' ENCODING 'UTF-8' ");
 
         LOG.info("Copying data with this command: " + copyCmd.toString());
 
