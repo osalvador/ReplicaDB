@@ -93,7 +93,6 @@ public abstract class FileManager {
 
     public static synchronized void setTempFilePath(int taskId, String path) {
         tempFilesPath.put(taskId, path);
-        //LOG.debug("A new value has been set in the temporary file map. taskId {} - path {}. Map: {}", taskId, path, tempFilesPath);
     }
 
     public static synchronized String getTempFilePath(int idx) {
