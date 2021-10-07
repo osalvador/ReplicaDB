@@ -81,11 +81,8 @@ public abstract class FileManager {
      * Getters and Setters
      */
     public static synchronized void newTempFilesPath() {
-        LOG.debug("Creating new tempFilesPath HasMap");
         if (tempFilesPath == null)
             tempFilesPath =  new HashMap<>();
-        else
-            LOG.debug("temFilesPath is not null!!!");
     }
 
     public static synchronized Map<Integer, String> getTempFilesPath() {
@@ -96,7 +93,7 @@ public abstract class FileManager {
 
     public static synchronized void setTempFilePath(int taskId, String path) {
         tempFilesPath.put(taskId, path);
-        LOG.debug("A new value has been set in the temporary file map. taskId {} - path {}. Map: {}", taskId, path, tempFilesPath);
+        //LOG.debug("A new value has been set in the temporary file map. taskId {} - path {}. Map: {}", taskId, path, tempFilesPath);
     }
 
     public static synchronized String getTempFilePath(int idx) {
