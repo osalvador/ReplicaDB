@@ -30,8 +30,7 @@ jobs:
     - name: Build with Maven
       run: mvn -DskipTests -B package --file pom.xml
         
-
-    - name: Clean Install
+    - name: Maven Install
       run: |
         export REPLICADB_RELEASE_VERSION=${{ env.version }}
         echo ${REPLICADB_RELEASE_VERSION}  
@@ -42,6 +41,18 @@ jobs:
         cp ./target/lib/* ./lib 
         tar -zcvf ReplicaDB-${REPLICADB_RELEASE_VERSION}.tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE
         zip -r -X ReplicaDB-${REPLICADB_RELEASE_VERSION}.zip ReplicaDB-*.jar README.md lib conf bin LICENSE
+        ls -lah        
+
+    - name: Maven Install no-oracle
+      run: |
+        export REPLICADB_RELEASE_VERSION=${{ env.version }}
+        mvn clean install -Dmaven.javadoc.skip=true -DskipTests -B -V -P release-no-oracle
+        cp ./target/ReplicaDB-*.jar . 
+        rm -Rf lib 2>/dev/null
+        mkdir lib        
+        cp ./target/lib/* ./lib 
+        tar -zcvf ReplicaDB-${REPLICADB_RELEASE_VERSION}-no-oracle.tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE
+        zip -r -X ReplicaDB-${REPLICADB_RELEASE_VERSION}-no-oracle.zip ReplicaDB-*.jar README.md lib conf bin LICENSE
         ls -lah
 
     - uses: "marvinpinto/action-automatic-releases@latest"
