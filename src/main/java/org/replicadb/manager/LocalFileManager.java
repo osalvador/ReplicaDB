@@ -70,7 +70,7 @@ public class LocalFileManager extends SqlManager {
 
         // Temporal file name
         String randomFileUrl = options.getSinkConnect() + ".repdb." + (new Random().nextInt(9000) + 1000);
-        LOG.info("Temporal file path: " + randomFileUrl);
+        LOG.info("Temporal file path: {}",randomFileUrl);
 
         // Save the path of temp file
         FileManager.setTempFilePath(taskId,randomFileUrl);
