@@ -458,6 +458,7 @@ public class ToolOptions {
         setFetchSize(prop.getProperty("fetch.size"));
         setBandwidthThrottling(prop.getProperty("bandwidth.throttling"));
         setQuotedIdentifiers(Boolean.parseBoolean(prop.getProperty("quoted.identifiers")));
+        setSourceFileFormat(prop.getProperty("source.file.format"));
         setSinkFileformat(prop.getProperty("sink.file.format"));
         setSentryDsn(prop.getProperty("sentry.dsn"));
 

@@ -35,7 +35,9 @@ public class FileManagerFactory {
             LOG.info("return CsvFileManager");
             return new CsvFileManager(options, dsType);
         } else {
-            throw new IllegalArgumentException("The file format " + options.getSinkFileformat() + " is not supported. ");
+            // CSV is the Default file format
+            LOG.warn("The file format is not defined, setting CSV as the default file format.");
+            return new CsvFileManager(options, dsType);
         }
     }
 }
