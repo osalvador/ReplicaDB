@@ -304,7 +304,7 @@ public class OrcFileManager extends FileManager {
                         Object[] values = (Object[]) arrayData.getArray();
                         lcv.lengths[rowInBatch] = values.length;
                         lcv.offsets[rowInBatch] = lcv.childCount;
-                        lcv.childCount += lcv.lengths[rowInBatch];
+                        lcv.childCount = Math.toIntExact(lcv.lengths[rowInBatch]) ;
                         lcv.child.ensureSize(lcv.childCount, true);
                         for (int j = 0; j < values.length; j++) {
                             setValueToBytesColumnVector(lcv.child, (int) lcv.offsets[rowInBatch] + j, values[j]);
