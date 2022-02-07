@@ -472,7 +472,7 @@ public abstract class SqlManager extends ConnManager {
         // TODO: Do not drop stagging table if it's defined by user.
         Statement statement = this.getConnection().createStatement();
         String sql = "DROP TABLE " + getQualifiedStagingTableName();
-        LOG.info("Dropping staging table with this command: " + sql);
+        LOG.info("Dropping staging table with this command: {}", sql);
 
         statement.executeUpdate(sql);
         statement.close();
