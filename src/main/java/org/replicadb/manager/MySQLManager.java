@@ -96,13 +96,15 @@ public class MySQLManager extends SqlManager {
                     // Get Columns values
                     for (int i = 1; i <= columnsNumber; i++) {
                         if (i > 1) cols.append(unitSeparator);
-
+                        
                         switch (rsmd.getColumnType(i)) {
 
                             case Types.CLOB:
                                 colValue = clobToString(resultSet.getClob(i));
                                 break;
                             case Types.BINARY:
+                                colValue = byteToMysqlHex(resultSet.getBytes(i));
+                                break;
                             case Types.BLOB:
                             case Types.VARBINARY:
                             case Types.LONGVARBINARY:
@@ -369,9 +371,22 @@ public class MySQLManager extends SqlManager {
                 blobData.free();
             }
         }
-
         return returnData;
-
     }
 
+    private String byteToMysqlHex(byte[] bytes) {
+      String returnData = "";
+
+      if (bytes != null) {
+
+        char[] hexChars = new char[bytes.length * 2];
+        for (int j = 0; j < bytes.length; j++) {
+          int v = bytes[j] & 0xFF;
+          hexChars[j * 2] = hexArray[v >>> 4];
+          hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        returnData = "0x" + new String(hexChars);
+      }
+      return returnData;
+    }
 }
