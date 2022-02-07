@@ -19,6 +19,7 @@ public class MySQLManager extends SqlManager {
 
     private static final Logger LOG = LogManager.getLogger(MySQLManager.class.getName());
 
+    private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
     private static Long chunkSize = 0L;
 
     /**
@@ -101,22 +102,12 @@ public class MySQLManager extends SqlManager {
                             case Types.CLOB:
                                 colValue = clobToString(resultSet.getClob(i));
                                 break;
-                            //case Types.BINARY:
+                            case Types.BINARY:
                             case Types.BLOB:
-                                //colValue = blobToPostgresHex(resultSet.getBlob(i));
-                                // TODO revisar los BLOB y CLOB
-                                colValue = "";
+                            case Types.VARBINARY:
+                            case Types.LONGVARBINARY:
+                                colValue = blobToMysqlHex(resultSet.getBlob(i));
                                 break;
-                            /*case Types.TIMESTAMP:
-                            case Types.TIMESTAMP_WITH_TIMEZONE:
-                            case -101:
-                            case -102:
-                                //colValue = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSSSSS XXX").format(resultSet.getTimestamp(i)) ;
-                                //colValue= String.valueOf(resultSet.getTimestamp(i).getTime());
-                                //colValue= resultSet.getTimestamp(i));
-                                colValue = resultSet.getString(i);
-                                LOG.debug("colName: {}, colValue: {}, epoch: {}", rsmd.getColumnName(i) ,colValue,resultSet.getTimestamp(i,utc).getTime());
-                                break;*/
                             default:
                                 colValue = resultSet.getString(i);
                                 if (colValue == null)
@@ -353,4 +344,34 @@ public class MySQLManager extends SqlManager {
 
     @Override
     public void postSourceTasks() {/*Not implemented*/}
+
+    /*********************************************************************************************
+     * From BLOB to Hexadecimal String for Postgres Copy
+     * @return string representation of blob
+     *********************************************************************************************/
+    private String blobToMysqlHex(Blob blobData) throws SQLException {
+
+        String returnData = "";
+
+        if (blobData != null) {
+            try {
+                byte[] bytes = blobData.getBytes(1, (int) blobData.length());
+
+                char[] hexChars = new char[bytes.length * 2];
+                for (int j = 0; j < bytes.length; j++) {
+                    int v = bytes[j] & 0xFF;
+                    hexChars[j * 2] = hexArray[v >>> 4];
+                    hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+                }
+                returnData = "0x" + new String(hexChars);
+            } finally {
+                // The most important thing here is free the BLOB to avoid memory Leaks
+                blobData.free();
+            }
+        }
+
+        return returnData;
+
+    }
+
 }
