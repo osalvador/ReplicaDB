@@ -96,7 +96,7 @@ public class MySQLManager extends SqlManager {
                     // Get Columns values
                     for (int i = 1; i <= columnsNumber; i++) {
                         if (i > 1) cols.append(unitSeparator);
-                        
+
                         switch (rsmd.getColumnType(i)) {
 
                             case Types.CLOB:
