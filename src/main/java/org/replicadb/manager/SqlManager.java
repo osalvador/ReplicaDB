@@ -179,14 +179,13 @@ public abstract class SqlManager extends ConnManager {
      */
     protected Connection makeSourceConnection() throws SQLException {
 
-        Connection connection;
+        Connection conn;
         String driverClass = getDriverClass();
 
         try {
             Class.forName(driverClass);
         } catch (ClassNotFoundException cnfe) {
-            throw new RuntimeException("Could not load db driver class: "
-                    + driverClass);
+            throw new RuntimeException("Could not load db driver class: " + driverClass);
         }
 
         String username = options.getSourceUser();
@@ -207,43 +206,30 @@ public abstract class SqlManager extends ConnManager {
             }
 
             props.putAll(connectionParams);
-            connection = DriverManager.getConnection(connectString, props);
+            conn = DriverManager.getConnection(connectString, props);
         } else {
             LOG.trace("No connection parameters specified. Using regular API for making connection.");
             if (username == null) {
-                connection = DriverManager.getConnection(connectString);
+                conn = DriverManager.getConnection(connectString);
             } else {
-                connection = DriverManager.getConnection(connectString, username, password);
+                conn = DriverManager.getConnection(connectString, username, password);
             }
         }
 
-        // We only use this for metadata queries. Loosest semantics are okay.
-        //connection.setTransactionIsolation(getMetadataIsolationLevel());
-        connection.setAutoCommit(false);
+        conn.setAutoCommit(false);
 
-        return connection;
+        return conn;
     }
-
-//    /**
-//     * @return the transaction isolation level to use for metadata queries
-//     * (queries executed by the ConnManager itself).
-//     */
- /*   protected int getMetadataIsolationLevel() {
-        return options.getMetadataTransactionIsolationLevel();
-    }
-*/
-
 
     protected Connection makeSinkConnection() throws SQLException {
 
-        Connection connection;
+        Connection conn;
         String driverClass = getDriverClass();
 
         try {
             Class.forName(driverClass);
         } catch (ClassNotFoundException cnfe) {
-            throw new RuntimeException("Could not load db driver class: "
-                    + driverClass);
+            throw new RuntimeException("Could not load db driver class: " + driverClass);
         }
 
         String username = options.getSinkUser();
@@ -264,21 +250,19 @@ public abstract class SqlManager extends ConnManager {
             }
 
             props.putAll(connectionParams);
-            connection = DriverManager.getConnection(connectString, props);
+            conn = DriverManager.getConnection(connectString, props);
         } else {
             LOG.trace("No connection parameters specified. Using regular API for making connection.");
             if (username == null) {
-                connection = DriverManager.getConnection(connectString);
+                conn = DriverManager.getConnection(connectString);
             } else {
-                connection = DriverManager.getConnection(connectString, username, password);
+                conn = DriverManager.getConnection(connectString, username, password);
             }
         }
 
-        // We only use this for metadata queries. Loosest semantics are okay.
-        //connection.setTransactionIsolation(getMetadataIsolationLevel());
-        connection.setAutoCommit(false);
+        conn.setAutoCommit(false);
 
-        return connection;
+        return conn;
     }
 
 
