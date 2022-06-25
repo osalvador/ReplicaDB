@@ -1,4 +1,4 @@
-package org.replicadb.mariadb;
+package org.replicadb.postgres;
 
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
@@ -22,11 +22,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers
-class MariaDB2PostgresTest {
-    private static final Logger LOG = LogManager.getLogger(MariaDB2PostgresTest.class);
+class Postgres2MariaDBTest {
+    private static final Logger LOG = LogManager.getLogger(Postgres2MariaDBTest.class);
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-    private static final int EXPECTED_ROWS = 4096;
+    private static final int TOTAL_SINK_ROWS = 4097;
 
     private Connection mariadbConn;
     private Connection postgresConn;
@@ -50,17 +50,19 @@ class MariaDB2PostgresTest {
     @AfterEach
     void tearDown() throws SQLException {
         // Truncate sink table and close connections
-        postgresConn.createStatement().execute("TRUNCATE TABLE t_sink");
+        mariadbConn.createStatement().execute("TRUNCATE TABLE t_sink");
         this.mariadbConn.close();
         this.postgresConn.close();
     }
 
 
     public int countSinkRows() throws SQLException {
-        Statement stmt = postgresConn.createStatement();
+        Statement stmt = mariadbConn.createStatement();
         ResultSet rs = stmt.executeQuery("select count(*) from t_sink");
         rs.next();
-        return rs.getInt(1);
+        int count = rs.getInt(1);
+        LOG.info(count);
+        return count;
     }
 
 
@@ -85,116 +87,121 @@ class MariaDB2PostgresTest {
     }
 
     @Test
-    void testMariadbInit() throws SQLException {
+    void testMariaDBInit() throws SQLException {
         Statement stmt = mariadbConn.createStatement();
-        ResultSet rs = stmt.executeQuery("select count(*) from t_source");
+        ResultSet rs = stmt.executeQuery("select 1");
         rs.next();
-        int count = rs.getInt(1);
-        assertEquals(EXPECTED_ROWS,count);
+        String version = rs.getString(1);
+        LOG.info(version);
+        assertTrue(version.contains("1"));
     }
 
     @Test
-    void testMariadb2PostgresComplete() throws ParseException, IOException, SQLException {
+    void testPostgres2MariaDBComplete() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mariadb.getJdbcUrl(),
-                "--source-user", mariadb.getUsername(),
-                "--source-password", mariadb.getPassword(),
-                "--sink-connect", postgres.getJdbcUrl(),
-                "--sink-user", postgres.getUsername(),
-                "--sink-password", postgres.getPassword()
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", mariadb.getJdbcUrl(),
+                "--sink-user", mariadb.getUsername(),
+                "--sink-password", mariadb.getPassword()
         };
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS,countSinkRows());
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
     }
 
     @Test
-    void testMariadb2PostgresCompleteAtomic() throws ParseException, IOException, SQLException {
+    void testPostgres2MariaDBCompleteAtomic() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mariadb.getJdbcUrl(),
-                "--source-user", mariadb.getUsername(),
-                "--source-password", mariadb.getPassword(),
-                "--sink-connect", postgres.getJdbcUrl(),
-                "--sink-user", postgres.getUsername(),
-                "--sink-password", postgres.getPassword(),
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", mariadb.getJdbcUrl(),
+                "--sink-user", mariadb.getUsername(),
+                "--sink-password", mariadb.getPassword(),
+                "--sink-staging-schema", mariadb.getDatabaseName(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS,countSinkRows());
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
 
     }
 
     @Test
-    void testMariadb2PostgresIncremental() throws ParseException, IOException, SQLException {
+    void testPostgres2MariaDBIncremental() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mariadb.getJdbcUrl(),
-                "--source-user", mariadb.getUsername(),
-                "--source-password", mariadb.getPassword(),
-                "--sink-connect", postgres.getJdbcUrl(),
-                "--sink-user", postgres.getUsername(),
-                "--sink-password", postgres.getPassword(),
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", mariadb.getJdbcUrl(),
+                "--sink-user", mariadb.getUsername(),
+                "--sink-password", mariadb.getPassword(),
+                "--sink-staging-schema", mariadb.getDatabaseName(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS,countSinkRows());
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
 
     }
 
     @Test
-    void testMariadb2PostgresCompleteParallel() throws ParseException, IOException, SQLException {
+    void testPostgres2MariaDBCompleteParallel() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mariadb.getJdbcUrl(),
-                "--source-user", mariadb.getUsername(),
-                "--source-password", mariadb.getPassword(),
-                "--sink-connect", postgres.getJdbcUrl(),
-                "--sink-user", postgres.getUsername(),
-                "--sink-password", postgres.getPassword(),
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", mariadb.getJdbcUrl(),
+                "--sink-user", mariadb.getUsername(),
+                "--sink-password", mariadb.getPassword(),
                 "--jobs", "4"
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS,countSinkRows());
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
     }
 
     @Test
-    void testMariadb2PostgresCompleteAtomicParallel() throws ParseException, IOException, SQLException {
+    void testPostgres2MariaDBCompleteAtomicParallel() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mariadb.getJdbcUrl(),
-                "--source-user", mariadb.getUsername(),
-                "--source-password", mariadb.getPassword(),
-                "--sink-connect", postgres.getJdbcUrl(),
-                "--sink-user", postgres.getUsername(),
-                "--sink-password", postgres.getPassword(),
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", mariadb.getJdbcUrl(),
+                "--sink-user", mariadb.getUsername(),
+                "--sink-password", mariadb.getPassword(),
+                "--sink-staging-schema", mariadb.getDatabaseName(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
                 "--jobs", "4"
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS,countSinkRows());
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
     }
 
     @Test
-    void testMariadb2PostgresIncrementalParallel() throws ParseException, IOException, SQLException {
+    void testMariaDB2PostgresIncrementalParallel() throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", mariadb.getJdbcUrl(),
-                "--source-user", mariadb.getUsername(),
-                "--source-password", mariadb.getPassword(),
-                "--sink-connect", postgres.getJdbcUrl(),
-                "--sink-user", postgres.getUsername(),
-                "--sink-password", postgres.getPassword(),
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", mariadb.getJdbcUrl(),
+                "--sink-user", mariadb.getUsername(),
+                "--sink-password", mariadb.getPassword(),
+                "--sink-staging-schema", mariadb.getDatabaseName(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
                 "--jobs", "4"
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS,countSinkRows());
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
     }
 }
