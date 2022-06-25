@@ -12,6 +12,7 @@ import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.TimeZone;
 
 public class ReplicadbOracleContainer extends OracleContainer {
   private static final Logger LOG = LogManager.getLogger(ReplicadbOracleContainer.class);
@@ -41,7 +42,8 @@ public class ReplicadbOracleContainer extends OracleContainer {
 
     // Creating Database
     ScriptRunner runner;
-    LOG.info("Oralce getJdbcUrl(): {}",container.getJdbcUrl() );
+    TimeZone timeZone = TimeZone.getTimeZone("UTC");
+    TimeZone.setDefault(timeZone);
     try (Connection con = DriverManager.getConnection(container.getJdbcUrl(), container.getUsername(), container.getPassword())) {
       LOG.info("Creating Oracle tables");
       runner = new ScriptRunner(con, false, true);
