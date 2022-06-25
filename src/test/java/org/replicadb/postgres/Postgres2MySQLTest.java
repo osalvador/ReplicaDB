@@ -4,10 +4,12 @@ import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.config.ReplicadbPostgresqlContainer;
 import org.replicadb.utils.ScriptRunner;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -25,9 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Testcontainers
 class Postgres2MySQLTest {
     private static final Logger LOG = LogManager.getLogger(Postgres2MySQLTest.class);
-    private static final String RESOURECE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
+    private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-    private static final String POSTGRES_SOURCE_FILE = "/postgres/pg-source.sql";
     private static final String MYSQL_SINK_FILE = "/sinks/mysql-sink.sql";
     private static final String USER_PASSWD_DB = "replicadb";
     private static final int TOTAL_SINK_ROWS = 4097;
@@ -41,27 +42,18 @@ class Postgres2MySQLTest {
             .withUsername(USER_PASSWD_DB)
             .withPassword(USER_PASSWD_DB);
 
-    @ClassRule
-    public static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:9.6")
-            .withDatabaseName(USER_PASSWD_DB)
-            .withUsername(USER_PASSWD_DB)
-            .withPassword(USER_PASSWD_DB);
+    @Rule
+    public static PostgreSQLContainer<ReplicadbPostgresqlContainer> postgres = ReplicadbPostgresqlContainer.getInstance();
 
     @BeforeAll
     static void setUp() throws SQLException, IOException {
         // Start the mysql container
         mysql.start();
-        postgres.start();
         // Create tables
-        /*Postgres*/
-        Connection con = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
-        ScriptRunner runner = new ScriptRunner(con, false, true);
-        runner.runScript(new BufferedReader(new FileReader(RESOURECE_DIR + POSTGRES_SOURCE_FILE)));
-        con.close();
         /*MySQL*/
-        con = DriverManager.getConnection(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword());
-        runner = new ScriptRunner(con, false, true);
-        runner.runScript(new BufferedReader(new FileReader(RESOURECE_DIR + MYSQL_SINK_FILE)));
+        Connection con = DriverManager.getConnection(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword());
+        ScriptRunner runner = new ScriptRunner(con, false, true);
+        runner.runScript(new BufferedReader(new FileReader(RESOURCE_DIR + MYSQL_SINK_FILE)));
         con.close();
 
     }
@@ -124,7 +116,7 @@ class Postgres2MySQLTest {
     @Test
     void testPostgres2MySQLComplete() throws ParseException, IOException, SQLException {
         String[] args = {
-                "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", postgres.getJdbcUrl(),
                 "--source-user", postgres.getUsername(),
                 "--source-password", postgres.getPassword(),
@@ -140,7 +132,7 @@ class Postgres2MySQLTest {
     @Test
     void testPostgres2MySQLCompleteAtomic() throws ParseException, IOException, SQLException {
         String[] args = {
-                "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", postgres.getJdbcUrl(),
                 "--source-user", postgres.getUsername(),
                 "--source-password", postgres.getPassword(),
@@ -159,7 +151,7 @@ class Postgres2MySQLTest {
     @Test
     void testPostgres2MySQLIncremental() throws ParseException, IOException, SQLException {
         String[] args = {
-                "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", postgres.getJdbcUrl(),
                 "--source-user", postgres.getUsername(),
                 "--source-password", postgres.getPassword(),
@@ -178,7 +170,7 @@ class Postgres2MySQLTest {
     @Test
     void testPostgres2MySQLCompleteParallel() throws ParseException, IOException, SQLException {
         String[] args = {
-                "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", postgres.getJdbcUrl(),
                 "--source-user", postgres.getUsername(),
                 "--source-password", postgres.getPassword(),
@@ -195,7 +187,7 @@ class Postgres2MySQLTest {
     @Test
     void testPostgres2MySQLCompleteAtomicParallel() throws ParseException, IOException, SQLException {
         String[] args = {
-                "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", postgres.getJdbcUrl(),
                 "--source-user", postgres.getUsername(),
                 "--source-password", postgres.getPassword(),
@@ -214,7 +206,7 @@ class Postgres2MySQLTest {
     @Test
     void testMySQL2PostgresIncrementalParallel() throws ParseException, IOException, SQLException {
         String[] args = {
-                "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", postgres.getJdbcUrl(),
                 "--source-user", postgres.getUsername(),
                 "--source-password", postgres.getPassword(),

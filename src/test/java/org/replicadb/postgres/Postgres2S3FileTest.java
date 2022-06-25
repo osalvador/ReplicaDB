@@ -36,7 +36,7 @@ class Postgres2S3FileTest {
 //    private static final int TOTAL_SINK_ROWS = 4097;
 //
 //    private static final String S3_CONNECTION = "s3://s3.eu-west-3.amazonaws.com/replicadb-cicd";
-//    private static final String ACCESS_KEY="AKIAIK74DFEZJKMRVCLA";
+//    private static final String ACCESS_KEY="";
 //    private static final String SECRET_KEY="";
 //
 //    private Connection postgresConn;
