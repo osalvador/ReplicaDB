@@ -3,20 +3,17 @@ package org.replicadb.postgres;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.config.ReplicadbMysqlContainer;
 import org.replicadb.config.ReplicadbPostgresqlContainer;
-import org.replicadb.utils.ScriptRunner;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.*;
@@ -29,33 +26,19 @@ class Postgres2MySQLTest {
     private static final Logger LOG = LogManager.getLogger(Postgres2MySQLTest.class);
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-    private static final String MYSQL_SINK_FILE = "/sinks/mysql-sink.sql";
-    private static final String USER_PASSWD_DB = "replicadb";
     private static final int TOTAL_SINK_ROWS = 4097;
 
     private Connection mysqlConn;
     private Connection postgresConn;
 
-    @ClassRule
-    private static final MySQLContainer mysql = new MySQLContainer("mysql:5.6")
-            .withDatabaseName(USER_PASSWD_DB)
-            .withUsername(USER_PASSWD_DB)
-            .withPassword(USER_PASSWD_DB);
+    @Rule
+    public static MySQLContainer<ReplicadbMysqlContainer> mysql = ReplicadbMysqlContainer.getInstance();
 
     @Rule
     public static PostgreSQLContainer<ReplicadbPostgresqlContainer> postgres = ReplicadbPostgresqlContainer.getInstance();
 
     @BeforeAll
-    static void setUp() throws SQLException, IOException {
-        // Start the mysql container
-        mysql.start();
-        // Create tables
-        /*MySQL*/
-        Connection con = DriverManager.getConnection(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword());
-        ScriptRunner runner = new ScriptRunner(con, false, true);
-        runner.runScript(new BufferedReader(new FileReader(RESOURCE_DIR + MYSQL_SINK_FILE)));
-        con.close();
-
+    static void setUp(){
     }
 
     @BeforeEach

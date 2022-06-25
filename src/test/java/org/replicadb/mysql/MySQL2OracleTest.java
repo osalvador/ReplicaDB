@@ -3,22 +3,20 @@ package org.replicadb.mysql;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
-import org.replicadb.utils.ScriptRunner;
+import org.replicadb.config.ReplicadbMysqlContainer;
+import org.replicadb.config.ReplicadbOracleContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.containers.OracleContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.TimeZone;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -26,44 +24,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Testcontainers
 class MySQL2OracleTest {
     private static final Logger LOG = LogManager.getLogger(MySQL2OracleTest.class);
-    private static final String RESOURECE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
+    private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-    private static final String MYSQL_SOURCE_FILE = "/mysql/mysql-source.sql";
-    private static final String ORACLE_SINK_FILE = "/sinks/oracle-sink.sql";
-    private static final String USER_PASSWD_DB = "replicadb";
     private static final int EXPECTED_ROWS = 4097;
 
     private Connection mysqlConn;
     private Connection oracleConn;
 
-    @ClassRule
-    private static final MySQLContainer mysql = new MySQLContainer("mysql:5.6")
-            .withDatabaseName(USER_PASSWD_DB)
-            .withUsername(USER_PASSWD_DB)
-            .withPassword(USER_PASSWD_DB);
-
-
-    @ClassRule
-    public static final OracleContainer oracle = new OracleContainer("oracleinanutshell/oracle-xe-11g");
+    @Rule
+    public static MySQLContainer<ReplicadbMysqlContainer> mysql = ReplicadbMysqlContainer.getInstance();
+    @Rule
+    public static OracleContainer oracle = ReplicadbOracleContainer.getInstance();
 
     @BeforeAll
-    static void setUp() throws SQLException, IOException {
-        // Start the mysql container
-        mysql.start();
-        oracle.start();
-        // Create tables
-        /*MySQL*/
-        Connection con = DriverManager.getConnection(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword());
-        ScriptRunner runner = new ScriptRunner(con, false, true);
-        runner.runScript(new BufferedReader(new FileReader(RESOURECE_DIR + MYSQL_SOURCE_FILE)));
-        con.close();
-        /*Oracle*/
-        TimeZone timeZone = TimeZone.getTimeZone("UTC");
-        TimeZone.setDefault(timeZone);
-        con = DriverManager.getConnection(oracle.getJdbcUrl(), oracle.getUsername(), oracle.getPassword());
-        runner = new ScriptRunner(con, false, true);
-        runner.runScript(new BufferedReader(new FileReader(RESOURECE_DIR + ORACLE_SINK_FILE)));
-        con.close();
+    static void setUp() {
     }
 
     @BeforeEach
@@ -125,7 +99,7 @@ class MySQL2OracleTest {
     @Test
     void testMySQL2OracleComplete() throws ParseException, IOException, SQLException {
         String[] args = {
-                "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
@@ -141,7 +115,7 @@ class MySQL2OracleTest {
     @Test
     void testMySQL2OracleCompleteAtomic() throws ParseException, IOException, SQLException {
         String[] args = {
-                "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
@@ -160,7 +134,7 @@ class MySQL2OracleTest {
     @Test
     void testMySQL2OracleIncremental() throws ParseException, IOException, SQLException {
         String[] args = {
-                "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
@@ -179,7 +153,7 @@ class MySQL2OracleTest {
     @Test
     void testMySQL2OracleCompleteParallel() throws ParseException, IOException, SQLException {
         String[] args = {
-                "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
@@ -196,7 +170,7 @@ class MySQL2OracleTest {
     @Test
     void testMySQL2OracleCompleteAtomicParallel() throws ParseException, IOException, SQLException {
         String[] args = {
-                "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
@@ -215,7 +189,7 @@ class MySQL2OracleTest {
     @Test
     void testMySQL2OracleIncrementalParallel() throws ParseException, IOException, SQLException {
         String[] args = {
-                "--options-file", RESOURECE_DIR + REPLICADB_CONF_FILE,
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
                 "--source-user", mysql.getUsername(),
                 "--source-password", mysql.getPassword(),
