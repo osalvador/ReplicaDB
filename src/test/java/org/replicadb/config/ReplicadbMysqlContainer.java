@@ -27,7 +27,8 @@ public class ReplicadbMysqlContainer extends MySQLContainer<ReplicadbMysqlContai
 
   public static ReplicadbMysqlContainer getInstance() {
     if (container == null) {
-      container = new ReplicadbMysqlContainer().withCommand("--local-infile=1");
+      container = new ReplicadbMysqlContainer()
+          .withCommand("--local-infile=1");
       container.start();
     }
     return container;
