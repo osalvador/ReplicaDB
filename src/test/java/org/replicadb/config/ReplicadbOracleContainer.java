@@ -20,7 +20,8 @@ public class ReplicadbOracleContainer extends OracleContainer {
   private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
   private static final String ORACLE_SINK_FILE = "/sinks/oracle-sink.sql";
   // TODO
-  private static final String ORACLE_SOURCE_FILE = "/oracle/oracle-sdo_geometry.sql";
+  private static final String ORACLE_SOURCE_FILE_GEO = "/oracle/oracle-sdo_geometry.sql";
+  private static final String ORACLE_SOURCE_FILE = "/oracle/oracle-source.sql";
   private static ReplicadbOracleContainer container;
 
   private ReplicadbOracleContainer () {
@@ -42,6 +43,7 @@ public class ReplicadbOracleContainer extends OracleContainer {
 
     // Creating Database
     ScriptRunner runner;
+    // Set the Timezone, this is required to start the container in GitHub Actions
     TimeZone timeZone = TimeZone.getTimeZone("UTC");
     TimeZone.setDefault(timeZone);
     try (Connection con = DriverManager.getConnection(container.getJdbcUrl(), container.getUsername(), container.getPassword())) {
@@ -49,6 +51,7 @@ public class ReplicadbOracleContainer extends OracleContainer {
       runner = new ScriptRunner(con, false, true);
       runner.runScript(new BufferedReader(new FileReader(RESOURCE_DIR + ORACLE_SINK_FILE)));
       runner.runScript(new BufferedReader(new FileReader(RESOURCE_DIR + ORACLE_SOURCE_FILE)));
+      runner.runScript(new BufferedReader(new FileReader(RESOURCE_DIR + ORACLE_SOURCE_FILE_GEO)));
     } catch (SQLException | IOException e) {
       throw new RuntimeException(e);
     }
