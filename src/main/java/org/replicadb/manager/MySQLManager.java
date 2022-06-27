@@ -103,11 +103,11 @@ public class MySQLManager extends SqlManager {
                         colValue = clobToString(resultSet.getClob(i));
                         break;
                      case Types.BINARY:
+                     case Types.VARBINARY:
                         colValue = byteToHex(resultSet.getBytes(i));
                         break;
-                     case Types.BLOB:
-                     case Types.VARBINARY:
                      case Types.LONGVARBINARY:
+                     case Types.BLOB:
                         colValue = blobToHex(resultSet.getBlob(i));
                         break;
                      default:
