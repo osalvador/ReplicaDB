@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.manager.util.BandwidthThrottling;
 
 import java.io.IOException;
 import java.sql.*;
@@ -122,10 +123,10 @@ public class OracleManager extends SqlManager {
 
         if (resultSet.next()) {
             // Create Bandwidth Throttling
-            bandwidthThrottlingCreate(resultSet, rsmd);
+            BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
 
             do {
-                bandwidthThrottlingAcquiere();
+                bt.acquiere();
 
                 // Get Columns values
                 for (int i = 1; i <= columnsNumber; i++) {
@@ -165,7 +166,7 @@ public class OracleManager extends SqlManager {
                             ps.setBytes(i,resultSet.getBytes(i));
                             break;
                         case Types.BLOB:
-                            Blob blobData = resultSet.getBlob(i);
+                            Blob blobData = getBlob(resultSet,i);
                             ps.setBlob(i, blobData);
                             if (blobData != null) blobData.free();
                             break;

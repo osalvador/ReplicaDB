@@ -41,7 +41,7 @@ public class ManagerFactory {
             return null;
         }
 
-        LOG.trace("Trying with scheme: " + scheme);
+        LOG.trace("Trying with scheme: {}", scheme);
 
         if (options.getMode().equals(ReplicationMode.CDC.getModeText())) {
             LOG.debug("CDC Managers");
@@ -73,8 +73,12 @@ public class ManagerFactory {
                 return new MySQLManager(options, dsType);
             } else if (FILE.isTheManagerTypeOf(options, dsType)) {
                 return new LocalFileManager(options, dsType);
+            } else if (SQLITE.isTheManagerTypeOf(options, dsType)) {
+                return new SqliteManager(options, dsType);
             } else {
-                throw new IllegalArgumentException("The database with scheme "+scheme+" is not supported by ReplicaDB");
+                LOG.warn("The database with scheme {} was not found. Trying  with standard JDBC manager ", scheme);
+                //throw new IllegalArgumentException("The database with scheme "+scheme+" is not supported by ReplicaDB");
+                return new StandardJDBCManager(options, dsType);
             }
         }
 
