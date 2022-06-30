@@ -56,8 +56,6 @@ public class SQLServerManager extends SqlManager {
         // Get table name and columns
         if (options.getMode().equals(ReplicationMode.COMPLETE.getModeText())) {
             tableName = getSinkTableName();
-            if (options.getJobs() > 1)
-                throw new UnsupportedOperationException("SQLServerBulkCopy does not support parallel execution on the sink table. The `jobs` propertie should be set to 1.");
         } else {
             tableName = getQualifiedStagingTableName();
         }
@@ -92,7 +90,7 @@ public class SQLServerManager extends SqlManager {
                 }
             }
 
-            LOG.info("Perfoming BulkCopy into {} ", tableName);
+            LOG.info("Performing BulkCopy into {} ", tableName);
             // Write from the source to the destination.
             bulkCopy.writeToServer(resultSet);
         } catch (SQLServerException e) {
@@ -189,7 +187,7 @@ public class SQLServerManager extends SqlManager {
 
         sql.append(" ); ");
 
-        LOG.info("Merging staging table and sink table with this command: " + sql);
+        LOG.info("Merging staging table and sink table with this command: {}",sql);
         statement.executeUpdate(sql.toString());
         statement.close();
         this.getConnection().commit();

@@ -38,10 +38,9 @@ public class ReplicadbPostgresqlContainer extends PostgreSQLContainer<ReplicadbP
     super.start();
 
     // Creating Database
-    ScriptRunner runner;
     try (Connection con = DriverManager.getConnection(container.getJdbcUrl(), container.getUsername(), container.getPassword())) {
       LOG.info("Creating Postgres tables");
-      runner = new ScriptRunner(con, false, true);
+      ScriptRunner runner = new ScriptRunner(con, false, true);
       runner.runScript(new BufferedReader(new FileReader(RESOURCE_DIR + POSTGRES_SINK_FILE)));
       runner.runScript(new BufferedReader(new FileReader(RESOURCE_DIR + POSTGRES_SOURCE_FILE)));
     } catch (SQLException | IOException e) {

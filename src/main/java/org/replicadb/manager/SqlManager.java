@@ -125,10 +125,12 @@ public abstract class SqlManager extends ConnManager {
         // Release any previously-open statement.
         release();
 
+        LOG.info("{}: Executing SQL statement: {}",Thread.currentThread().getName(), stmt);
+
         PreparedStatement statement = this.getConnection().prepareStatement(stmt, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
 
         if (fetchSize != null) {
-            LOG.debug(Thread.currentThread().getName() + ": Using fetchSize for next query: " + fetchSize);
+            LOG.debug("{}: Using fetchSize for next query: {}",Thread.currentThread().getName() , fetchSize);
             statement.setFetchSize(fetchSize);
         }
         this.lastStatement = statement;
@@ -138,14 +140,12 @@ public abstract class SqlManager extends ConnManager {
             }
         }
 
-        LOG.info(Thread.currentThread().getName() + ": Executing SQL statement: " + stmt);
-
         StringBuilder sb = new StringBuilder();
         for (Object o : args) {
             sb.append(o.toString())
                     .append(", ");
         }
-        LOG.info(Thread.currentThread().getName() + ": With args: " + sb.toString());
+        LOG.info("{}: With args: {}",Thread.currentThread().getName() , sb);
 
         return statement.executeQuery();
     }
@@ -367,7 +367,7 @@ public abstract class SqlManager extends ConnManager {
             tableName = getSinkTableName();
         }
         String sql = "TRUNCATE TABLE " + tableName;
-        LOG.info("Truncating sink table with this command: " + sql);
+        LOG.info("Truncating sink table with this command: {}", sql);
         Statement statement = this.getConnection().createStatement();
         statement.executeUpdate(sql);
         statement.close();
@@ -424,7 +424,7 @@ public abstract class SqlManager extends ConnManager {
                     .append(getQualifiedStagingTableName());
         }
 
-        LOG.info("Inserting data from staging table to sink table within a transaction: " + sql);
+        LOG.info("Inserting data from staging table to sink table within a transaction: {}", sql);
         statement.executeUpdate(sql.toString());
         statement.close();
         this.getConnection().commit();
@@ -617,6 +617,22 @@ public abstract class SqlManager extends ConnManager {
             LOG.info("Estimated Row Size: {} KB. Estimated limit of fetchs per second: {} ", rowSize, limit);
 
 
+        }
+    }
+
+
+    /**
+     * Catch the exception SQLFeatureNotSupportedException getting a Blob from some databases
+     * @param rs the resultset
+     * @param columnIndex the column index
+     * @return
+     * @throws SQLException
+     */
+    protected Blob getBlob (ResultSet rs, Integer columnIndex) throws SQLException {
+        try {
+            return rs.getBlob(columnIndex);
+        } catch (SQLFeatureNotSupportedException e) {
+            return null;
         }
     }
 
