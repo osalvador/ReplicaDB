@@ -34,6 +34,8 @@ layout: page
       - [4.5.1.2 One CSV For All Rows](#4512-one-csv-for-all-rows)
     - [4.5.2 Extra parameters](#452-extra-parameters)
   - [4.6 MySQL and MariaDB Connector](#46-mysql-and-mariadb-connector)
+  - [4.7 MSSQL Server Connector](#47-mssql-server-connector)
+  - [4.8 SQLite Connector](#48-sqlite-connector)
 
 {::comment}
     3.7. Controlling transaction isolation
@@ -133,31 +135,31 @@ usage: replicadb [OPTIONS]
 
 {:.table}
 
-| Argument                            | Description                                                                           | Default            |
-| ----------------------------------- | ------------------------------------------------------------------------------------- | ------------------ |
-| `--fetch-size <fetch-size>`         | Number of entries to read from database at once.                                      | `5000`             |
-| `-h`,`--help`                       | Print this help screen                                                                |                    |
-| `-j`,`--jobs <n>`                   | Use n jobs to replicate in parallel.                                                  | `4`                |
-| `--mode <mode>`                     | Specifies the replication mode. The allowed values are complete or incremental        | `complete`         |
-| `--options-file <file-path>`        | Options file path location                                                            |                    |
-| `--sink-columns <col,col,col...>`   | Sink database table columns to be populated                                           | `--source-columns` |
-| `--sink-connect <jdbc-uri>`         | Sink database JDBC connect string                                                     | required           |
-| `--sink-disable-escape`             | Escape srings before populating to the table of the sink database.                    | `false`            |
-| `--sink-disable-truncate`           | Disable the truncation of the sink database table before populate.                    | `false`            |
-| `--sink-password <password>`        | Sink database authentication password                                                 |                    |
-| `--sink-staging-schema <schema-name>`| Scheme name on the sink database, with right permissions for creating staging tables. | `PUBLIC`           |
-| `--sink-staging-table <table-name>`  | Qualified name of the sink staging table. The table must exist in the sink database.  |                    |
-| `--sink-table <table-name>`         | Sink database table to populate                                                       | `--source-table`   |
-| `--sink-user <username>`            | Sink database authentication username                                                 |                    |
-| `--source-columns <col,col,col...>` | Source database table columns to be extracted                                         | `*`                |
-| `--source-connect <jdbc-uri>`       | Source database JDBC connect string                                                   | required           |
-| `--source-password <password>`      | Source databse authentication password                                                |                    |
-| `--source-query <statement>`        | SQL statement to be executed in the source database                                   |                    |
-| `--source-table <table-name>`       | Source database table to read                                                         |                    |
-| `--source-user <username>`          | Source database authentication username                                               |                    |
-| `--source-where <where clause>`     | Source database WHERE clause to use during extraction                                 |                    |
-| `-v`,`--verbose`                    | Print more information while working                                                  |                    |
-| `--version`                         | Show implementation version and exit                                                  |                    |
+| Argument                            | Description                                                                                        | Default            |
+| ----------------------------------- |----------------------------------------------------------------------------------------------------|--------------------|
+| `--fetch-size <fetch-size>`         | Number of entries to read from database at once.                                                   | `100`              |
+| `-h`,`--help`                       | Print this help screen                                                                             |                    |
+| `-j`,`--jobs <n>`                   | Use n jobs to replicate in parallel.                                                               | `4`                |
+| `--mode <mode>`                     | Specifies the replication mode. The allowed values are `complete`, `complete-atomic` or `incremental` | `complete`         |
+| `--options-file <file-path>`        | Options file path location                                                                         |                    |
+| `--sink-columns <col,col,col...>`   | Sink database table columns to be populated                                                        | `--source-columns` |
+| `--sink-connect <jdbc-uri>`         | Sink database JDBC connect string                                                                  | required           |
+| `--sink-disable-escape`             | Escape srings before populating to the table of the sink database.                                 | `false`            |
+| `--sink-disable-truncate`           | Disable the truncation of the sink database table before populate.                                 | `false`            |
+| `--sink-password <password>`        | Sink database authentication password                                                              |                    |
+| `--sink-staging-schema <schema-name>`| Scheme name on the sink database, with right permissions for creating staging tables.              | `PUBLIC`           |
+| `--sink-staging-table <table-name>`  | Qualified name of the sink staging table. The table must exist in the sink database.               |                    |
+| `--sink-table <table-name>`         | Sink database table to populate                                                                    | `--source-table`   |
+| `--sink-user <username>`            | Sink database authentication username                                                              |                    |
+| `--source-columns <col,col,col...>` | Source database table columns to be extracted                                                      | `*`                |
+| `--source-connect <jdbc-uri>`       | Source database JDBC connect string                                                                | required           |
+| `--source-password <password>`      | Source databse authentication password                                                             |                    |
+| `--source-query <statement>`        | SQL statement to be executed in the source database                                                |                    |
+| `--source-table <table-name>`       | Source database table to read                                                                      |                    |
+| `--source-user <username>`          | Source database authentication username                                                            |                    |
+| `--source-where <where clause>`     | Source database WHERE clause to use during extraction                                              |                    |
+| `-v`,`--verbose`                    | Print more information while working                                                               |                    |
+| `--version`                         | Show implementation version and exit                                                               |                    |
 
 
 <br>
@@ -926,5 +928,63 @@ source.connect=jdbc:mysql://host:port/db
 source.user=pguser
 source.password=pgpassword
 source.table=schema.table_name
+
+```
+
+<br>
+## 4.7 MSSQL Server Connector
+
+ReplicaDB uses the MSSQL Server [bulk copy API](https://docs.microsoft.com/en-gb/sql/connect/jdbc/using-bulk-copy-with-the-jdbc-driver) for load data into the database.
+
+Hence, depending on the source database, some data types are not supported by the *MSSQL Server bulk copy*, and must be cast during the replication process to avoid the `Specification of length or precision 0 is invalid` exception.
+
+In addition, to avoid the exception `Column xx is invalid. Please check your column mappings` it will be necessary to include all source and sink columns.
+
+In this example, 4 columns from table `t_source` in PostgresSQL are replicated to `t_sink` in MSSQL Server. The `c_numeric` and `c_decimal` columns are converted to `text`, the binary column is `hex` encoded and the `xml` type column is not supported by the bulk copy API, so it is converted to `text`.
+
+**Example**
+
+```properties
+...
+############################# Soruce Options ##############################
+source.connect=jdbc:postgresql://localhost:5432/postgres
+source.user=root
+source.password=ReplicaDB_1234
+source.table=public.t_source
+source.columns=c_numeric::text,\
+  c_decimal::text,\
+  encode(c_binary_lob, 'hex'),\
+  c_xml::text
+
+############################# Sink Options ################################
+sink.connect=jdbc:sqlserver://localhost:1433;database=master
+sink.user=sa
+sink.password=ReplicaDB_1234
+sink.table=dbo.t_sink
+sink.staging.schema=dbo
+sink.columns=c_numeric, c_decimal, c_binary_blob, c_xml
+```
+
+<br>
+## 4.8 SQLite Connector
+
+In the SQLite connector the `complete-atomic` mode is not supported because replicadb performs multiple transactions on the same table and rows and cannot control the transaction isolation level.
+
+**Example**
+
+```properties
+...
+######################## ReplicadB General Options ########################
+mode=complete
+jobs=1
+############################# Soruce Options ##############################
+source.connect=jdbc:postgresql://localhost:5432/postgres
+source.user=sa
+source.password=root
+source.table=t_source
+############################# Sink Options ################################
+sink.connect=jdbc:sqlite:/tmp/replicadb-sqlite.db
+sink.table=main.t_sink
+sink.staging.schema=main
 
 ```
