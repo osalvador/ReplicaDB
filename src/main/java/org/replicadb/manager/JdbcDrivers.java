@@ -8,7 +8,7 @@ public enum JdbcDrivers {
     DB2("com.ibm.db2.jcc.DB2Driver", "jdbc:db2:"), NETEZZA("org.netezza.Driver", "jdbc:netezza:"),
     CUBRID("cubrid.jdbc.driver.CUBRIDDriver", "jdbc:cubrid:"), DENODO("com.denodo.vdp.jdbc.Driver", "jdbc:vdb:"),
     /*CSV(null, "file:"),*/ KAFKA(null, "kafka:"), S3(null, "s3:"),
-    FILE(null, "file:");
+    FILE(null, "file:"), SQLITE("org.sqlite.JDBC", "jdbc:sqlite");
 
     private final String driverClass;
     private final String schemePrefix;

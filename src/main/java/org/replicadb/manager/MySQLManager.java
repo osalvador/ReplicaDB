@@ -108,7 +108,7 @@ public class MySQLManager extends SqlManager {
                         break;
                      case Types.LONGVARBINARY:
                      case Types.BLOB:
-                        colValue = blobToHex(resultSet.getBlob(i));
+                        colValue = blobToHex(getBlob(resultSet,i));
                         break;
                      default:
                         colValue = resultSet.getString(i);
@@ -222,7 +222,7 @@ public class MySQLManager extends SqlManager {
             }
          }
          // remove two last chars
-         loadDataSql.setLength(loadDataSql.length() - 2);
+         if (setPrefix.equals("")) loadDataSql.setLength(loadDataSql.length() - 2);
       }
 
       LOG.info("Loading data with this command: {}", loadDataSql);

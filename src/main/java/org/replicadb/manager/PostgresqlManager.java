@@ -2,12 +2,14 @@ package org.replicadb.manager;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 
 import org.postgresql.copy.CopyIn;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.jdbc.PgConnection;
+import org.replicadb.manager.util.BandwidthThrottling;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -72,14 +74,14 @@ public class PostgresqlManager extends SqlManager {
             StringBuilder cols = new StringBuilder();
 
             byte[] bytes;
-            String colValue;
+            String colValue = null;
 
             if (resultSet.next()) {
                 // Create Bandwidth Throttling
-                bandwidthThrottlingCreate(resultSet, rsmd);
+                BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
 
                 do {
-                    bandwidthThrottlingAcquiere();
+                    bt.acquiere();
 
                     // Get Columns values
                     for (int i = 1; i <= columnsNumber; i++) {
@@ -90,18 +92,21 @@ public class PostgresqlManager extends SqlManager {
                             case Types.CLOB:
                                 colValue = clobToString(resultSet.getClob(i));
                                 break;
-                            //case Types.BINARY:
+                            case Types.BINARY:
+                                colValue = bytesToPostgresHex(resultSet.getBytes(i));
+                                break;
                             case Types.BLOB:
-                                colValue = blobToPostgresHex(resultSet.getBlob(i));
+                                colValue = blobToPostgresHex(getBlob(resultSet,i));
                                 break;
                             default:
                                 colValue = resultSet.getString(i);
-                                if (colValue == null)
-                                    colValue = String.valueOf(nullAscii);
                                 break;
                         }
 
-                        if (!resultSet.wasNull() || colValue != null) cols.append(colValue);
+                        if (resultSet.wasNull() || colValue == null){
+                            colValue = String.valueOf(nullAscii);
+                        }
+                        cols.append(colValue);
                     }
 
                     // Escape special chars
@@ -268,7 +273,7 @@ public class PostgresqlManager extends SqlManager {
             // Delete the last comma
             sql.setLength(sql.length() - 1);
 
-            LOG.info("Merging staging table and sink table with this command: " + sql);
+            LOG.info("Merging staging table and sink table with this command: {}", sql);
             statement.executeUpdate(sql.toString());
             statement.close();
             this.getConnection().commit();
@@ -342,13 +347,7 @@ public class PostgresqlManager extends SqlManager {
             try {
                 byte[] bytes = blobData.getBytes(1, (int) blobData.length());
 
-                char[] hexChars = new char[bytes.length * 2];
-                for (int j = 0; j < bytes.length; j++) {
-                    int v = bytes[j] & 0xFF;
-                    hexChars[j * 2] = hexArray[v >>> 4];
-                    hexChars[j * 2 + 1] = hexArray[v & 0x0F];
-                }
-                returnData = "\\\\x" + new String(hexChars);
+                returnData = bytesToPostgresHex(bytes);
             } finally {
                 // The most important thing here is free the BLOB to avoid memory Leaks
                 blobData.free();
@@ -357,6 +356,19 @@ public class PostgresqlManager extends SqlManager {
 
         return returnData;
 
+    }
+
+    @NotNull
+    private String bytesToPostgresHex (byte[] bytes) {
+        if (bytes == null) return "";
+
+        char[] hexChars = new char[bytes.length * 2];
+        for (int j = 0; j < bytes.length; j++) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = hexArray[v >>> 4];
+            hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+        }
+        return  "\\\\x" + new String(hexChars);
     }
 
 
