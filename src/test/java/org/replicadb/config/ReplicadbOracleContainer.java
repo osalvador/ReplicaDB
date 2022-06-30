@@ -19,7 +19,6 @@ public class ReplicadbOracleContainer extends OracleContainer {
   private static final String IMAGE_VERSION = "gvenzl/oracle-xe:11";
   private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
   private static final String ORACLE_SINK_FILE = "/sinks/oracle-sink.sql";
-  // TODO
   private static final String ORACLE_SOURCE_FILE_GEO = "/oracle/oracle-sdo_geometry.sql";
   private static final String ORACLE_SOURCE_FILE = "/oracle/oracle-source.sql";
   private static ReplicadbOracleContainer container;

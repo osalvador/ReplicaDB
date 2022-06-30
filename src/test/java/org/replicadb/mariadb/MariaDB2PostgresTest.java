@@ -63,7 +63,6 @@ class MariaDB2PostgresTest {
         return rs.getInt(1);
     }
 
-
     @Test
     void testMariadbVersion102() throws SQLException {
         Statement stmt = mariadbConn.createStatement();
