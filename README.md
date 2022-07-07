@@ -51,8 +51,8 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
 ```bash
-$ curl -o ReplicaDB-0.12.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.12.0/ReplicaDB-0.12.0.tar.gz"
-$ tar -xvzf ReplicaDB-0.12.0.tar.gz
+$ curl -o ReplicaDB-0.12.1.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.12.1/ReplicaDB-0.12.1.tar.gz"
+$ tar -xvzf ReplicaDB-0.12.1.tar.gz
 $ ./bin/replicadb --help
 ```
 
@@ -157,9 +157,9 @@ $ replicadb --mode=complete -j=1 \
 | MariaDB          |    :heavy_check_mark:    | :heavy_check_mark: |  :heavy_check_mark:  | :heavy_check_mark: |     :heavy_check_mark:    |
 | PostgreSQL       |    :heavy_check_mark:    | :heavy_check_mark: |  :heavy_check_mark:  | :heavy_check_mark: |     :heavy_check_mark:    |
 | SQLite           |    :heavy_check_mark:    | :heavy_check_mark: |  :heavy_multiplication_x:  | :heavy_check_mark: |     :heavy_check_mark:    |
+| SQL Server       |    :heavy_check_mark:    | :heavy_check_mark: |  :heavy_check_mark:  | :heavy_check_mark: |  :heavy_multiplication_x: |
 | Denodo           |    :heavy_check_mark:    |         N/A        |          N/A         |         N/A        |            N/A            |
 | CSV              |    :heavy_check_mark:    | :heavy_check_mark: |          N/A         | :heavy_check_mark: |     :heavy_check_mark:    |
-| SQL Server       |    :heavy_check_mark:    | :heavy_check_mark: |  :heavy_check_mark:  | :heavy_check_mark: |  :heavy_multiplication_x: |
 | Kafka            | :heavy_multiplication_x: |         N/A        |          N/A         | :heavy_check_mark: |     :heavy_check_mark:    |
 | Amazon S3        | :heavy_multiplication_x: | :heavy_check_mark: |          N/A         |         N/A        |     :heavy_check_mark:    |
 

@@ -1,7 +1,9 @@
 package org.replicadb.manager;
 
+import com.google.common.io.CharSource;
 import com.mysql.cj.jdbc.JdbcPreparedStatement;
 import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.io.input.ReaderInputStream;
 import org.mariadb.jdbc.MariaDbStatement;
 
 import org.apache.logging.log4j.LogManager;
@@ -10,7 +12,6 @@ import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.util.BandwidthThrottling;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
@@ -82,7 +83,6 @@ public class MySQLManager extends SqlManager {
          StringBuilder row = new StringBuilder();
          StringBuilder cols = new StringBuilder();
 
-         byte[] bytes = "".getBytes();
          String colValue;
          int rowCounts = 0;
          int batchSize = options.getFetchSize();
@@ -132,17 +132,8 @@ public class MySQLManager extends SqlManager {
                row.append("\n");
 
                // Copy data to mysql
-               bytes = row.toString().getBytes(StandardCharsets.UTF_8);
-
                if (++rowCounts % batchSize == 0) {
-                  if (mysqlStatement != null) {
-                     mysqlStatement.setLocalInfileInputStream(new ByteArrayInputStream(bytes));
-                     mysqlStatement.executeUpdate(loadDataSql);
-                  } else {
-                     assert mariadbStatement != null;
-                     mariadbStatement.setLocalInfileInputStream(new ByteArrayInputStream(bytes));
-                     mariadbStatement.executeUpdate(loadDataSql);
-                  }
+                  copyData(loadDataSql, row, mariadbStatement, mysqlStatement);
 
                   // Clear StringBuilders
                   row.setLength(0); // set length of buffer to 0
@@ -159,14 +150,7 @@ public class MySQLManager extends SqlManager {
 
          // insert remaining records
          if (rowCounts != 0) {
-            if (mysqlStatement != null) {
-               mysqlStatement.setLocalInfileInputStream(new ByteArrayInputStream(bytes));
-               mysqlStatement.executeUpdate(loadDataSql);
-            } else {
-               assert mariadbStatement != null;
-               mariadbStatement.setLocalInfileInputStream(new ByteArrayInputStream(bytes));
-               mariadbStatement.executeUpdate(loadDataSql);
-            }
+            copyData(loadDataSql, row, mariadbStatement, mysqlStatement);
          }
 
       } catch (Exception e) {
@@ -176,6 +160,17 @@ public class MySQLManager extends SqlManager {
 
       this.getConnection().commit();
       return totalRows;
+   }
+
+   private void copyData (String loadDataSql, StringBuilder row, MariaDbStatement mariadbStatement, JdbcPreparedStatement mysqlStatement) throws IOException, SQLException {
+      if (mysqlStatement != null) {
+         mysqlStatement.setLocalInfileInputStream(new ReaderInputStream(CharSource.wrap(row).openStream(), StandardCharsets.UTF_8));
+         mysqlStatement.executeUpdate(loadDataSql);
+      } else {
+         assert mariadbStatement != null;
+         mariadbStatement.setLocalInfileInputStream(new ReaderInputStream(CharSource.wrap(row).openStream(), StandardCharsets.UTF_8));
+         mariadbStatement.executeUpdate(loadDataSql);
+      }
    }
 
    private String getLoadDataSql (String tableName, String allColumns, ResultSetMetaData rsmd) throws SQLException {
