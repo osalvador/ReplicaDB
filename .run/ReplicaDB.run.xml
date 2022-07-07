@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ReplicaDB" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="org.replicadb.ReplicaDB" />
+    <module name="ReplicaDB" />
+    <option name="PROGRAM_PARAMETERS" value="--options-file $PROJECT_DIR$/conf/mariadb2oracle.conf" />
+    <option name="VM_PARAMETERS" value="-Xmx256M -Xms256M" />
+    <extension name="software.aws.toolkits.jetbrains.core.execution.JavaAwsConnectionExtension">
+      <option name="credential" />
+      <option name="region" />
+      <option name="useCurrentConnection" value="false" />
+    </extension>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
