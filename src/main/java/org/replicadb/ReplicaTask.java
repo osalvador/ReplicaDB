@@ -8,16 +8,16 @@ import org.replicadb.manager.DataSourceType;
 import org.replicadb.manager.ManagerFactory;
 
 import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 
-final public class ReplicaTask implements Callable<Integer> {
+public final class ReplicaTask implements Callable<Integer> {
 
     private static final Logger LOG = LogManager.getLogger(ReplicaTask.class.getName());
 
-    private int taskId;
-    private String taskName;
-    private ToolOptions options;
+    private final int taskId;
+    private final ToolOptions options;
 
 
     public ReplicaTask(int id, ToolOptions options) {
@@ -28,17 +28,12 @@ final public class ReplicaTask implements Callable<Integer> {
     @Override
     public Integer call() throws Exception {
 
-        //System.out.println("Task ID :" + this.taskId + " performed by " + Thread.currentThread().getName());
-        this.taskName = "TaskId-"+this.taskId;
+        String taskName = "TaskId-" + this.taskId;
 
         Thread.currentThread().setName(taskName);
 
-        LOG.info("Starting " + Thread.currentThread().getName());
+        LOG.info("Starting  {}", Thread.currentThread().getName());
 
-        // Do stuff...
-        // Obtener una instancia del DriverManager del Source
-        // Obtener una instancia del DriverManager del Sink
-        // Mover datos de Source a Sink.
         ManagerFactory managerF = new ManagerFactory();
         ConnManager sourceDs = managerF.accept(options, DataSourceType.SOURCE);
         ConnManager sinkDs = managerF.accept(options, DataSourceType.SINK);
@@ -47,14 +42,14 @@ final public class ReplicaTask implements Callable<Integer> {
         try {
             sourceDs.getConnection();
         } catch (Exception e) {
-            LOG.error("ERROR in " + this.taskName+ " getting Source connection: " + e.getMessage());
+            LOG.error("ERROR in {} getting Source connection: {} ", taskName, e.getMessage());
             throw e;
         }
 
         try {
             sinkDs.getConnection();
         } catch (Exception e) {
-            LOG.error("ERROR in " + this.taskName + " getting Sink connection: " + e.getMessage());
+            LOG.error("ERROR in {} getting Sink connection:{} ", taskName,e.getMessage());
             throw e;
         }
 
@@ -62,7 +57,7 @@ final public class ReplicaTask implements Callable<Integer> {
         try {
             rs = sourceDs.readTable(null, null, taskId);
         } catch (Exception e) {
-            LOG.error("ERROR in " + this.taskName + " reading source table: " + e.getMessage());
+            LOG.error("ERROR in {} reading source table: {}", taskName, e.getMessage());
             throw e;
         }
 
@@ -71,7 +66,7 @@ final public class ReplicaTask implements Callable<Integer> {
             // TODO determine the total rows processed in all the managers
             LOG.info("A total of {} rows processed by task {}", processedRows,  taskId);
         } catch (Exception e) {
-            LOG.error("ERROR in " + this.taskName + " inserting data to sink table: " + e.getMessage());
+            LOG.error("ERROR in {} inserting data to sink table: {} ", taskName, getExceptionMessageChain(e));
             throw e;
         }
 
@@ -82,6 +77,15 @@ final public class ReplicaTask implements Callable<Integer> {
 
 
         return this.taskId;
+    }
+
+    public static List<String> getExceptionMessageChain(Throwable throwable) {
+        List<String> result = new ArrayList<>();
+        while (throwable != null) {
+            result.add(throwable.getMessage());
+            throwable = throwable.getCause();
+        }
+        return result;
     }
 }
 

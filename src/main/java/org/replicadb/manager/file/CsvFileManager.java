@@ -217,6 +217,7 @@ public class CsvFileManager extends FileManager {
                 throw new IllegalArgumentException("Parameter 'source.connect.parameter.columns.types' cannot be null");
 
             csvResultset.setColumnsTypes(columnsTypes);
+            csvResultset.setColumnsNames(options.getSourceColumns());
 
             csvResultset.execute();
 
