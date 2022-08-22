@@ -2,6 +2,7 @@ create table t_sink
 (
 /*exact numerics*/
     c_integer                    integer,
+    c_tinyint                    tinyint,
     c_smallint                   smallint,
     c_bigint                     bigint,
     c_numeric                   numeric(30,15),
