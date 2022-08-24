@@ -233,7 +233,7 @@ public class CsvFileManager extends FileManager {
 
     @Override
     public int writeData(OutputStream out, ResultSet resultSet, int taskId, File tempFile) throws IOException, SQLException {
-
+        int totalRows = 0;
         // Set csv format
         CSVFormat format = setCsvFormat(DataSourceType.SINK);
 
@@ -268,12 +268,13 @@ public class CsvFileManager extends FileManager {
                             printer.print(object);
                     }
                     printer.println();
+                    totalRows++;
                 } while (resultSet.next());
             }
 
         }
 
-        return 0;
+        return totalRows;
     }
 
     @Override

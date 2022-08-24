@@ -1,5 +1,6 @@
 package org.replicadb.manager;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
@@ -7,6 +8,8 @@ import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.util.BandwidthThrottling;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.sql.*;
 import java.util.Arrays;
 
@@ -98,6 +101,7 @@ public class OracleManager extends SqlManager {
     @Override
     public int insertDataToTable(ResultSet resultSet, int taskId) throws SQLException, IOException {
 
+        int totalRows = 0;
         ResultSetMetaData rsmd = resultSet.getMetaData();
         String tableName;
 
@@ -117,7 +121,7 @@ public class OracleManager extends SqlManager {
         final int batchSize = options.getFetchSize();
         int count = 0;
 
-        LOG.info("Inserting data with this command: " + sqlCdm);
+        LOG.info("Inserting data with this command: {}",sqlCdm);
 
         oracleAlterSession(true);
 
@@ -182,18 +186,21 @@ public class OracleManager extends SqlManager {
                             ps.setNString(i, resultSet.getNString(i));
                             break;
                         case Types.SQLXML:
-                            SQLXML sqlxmlData = resultSet.getSQLXML(i);
-                            ps.setSQLXML(i, sqlxmlData);
-                            if (sqlxmlData != null) sqlxmlData.free();
+                            SQLXML sqlXmlData = resultSet.getSQLXML(i);
+                            if (!resultSet.wasNull()){
+                                SQLXML sinkXmlData = this.getConnection().createSQLXML();
+                                IOUtils.copy(sqlXmlData.getBinaryStream(), sinkXmlData.setBinaryStream());
+                                ps.setSQLXML(i, sinkXmlData);
+                                sqlXmlData.free();
+                                sinkXmlData.free();
+                            } else {
+                                ps.setSQLXML(i, sqlXmlData);
+                            }
                             break;
                         case Types.ROWID:
                             ps.setRowId(i, resultSet.getRowId(i));
                             break;
-                        case Types.ARRAY:
-                            Array arrayData = resultSet.getArray(i);
-                            ps.setArray(i, arrayData);
-                            arrayData.free();
-                            break;
+                        //case Types.ARRAY: // Not supported by Oracle
                         case Types.STRUCT:
                             ps.setObject(i, resultSet.getObject(i),Types.STRUCT);
                             break;
@@ -210,6 +217,7 @@ public class OracleManager extends SqlManager {
                     this.getConnection().commit();
                 }
 
+                totalRows++;
             } while (resultSet.next());
         }
 
@@ -217,7 +225,7 @@ public class OracleManager extends SqlManager {
         ps.close();
 
         this.getConnection().commit();
-        return 0;
+        return totalRows;
     }
 
     private String getInsertSQLCommand(String tableName, String allColumns, int columnsNumber) {
@@ -262,7 +270,7 @@ public class OracleManager extends SqlManager {
 
         String sql = " CREATE TABLE " + sinkStagingTable + " NOLOGGING AS (SELECT " + allSinkColumns + " FROM " + this.getSinkTableName() + " WHERE rownum = -1 ) ";
 
-        LOG.info("Creating staging table with this command: " + sql);
+        LOG.info("Creating staging table with this command: {}", sql);
         statement.executeUpdate(sql);
         statement.close();
         this.getConnection().commit();
@@ -328,7 +336,7 @@ public class OracleManager extends SqlManager {
 
         sql.append(" ) ");
 
-        LOG.info("Merging staging table and sink table with this command: " + sql);
+        LOG.info("Merging staging table and sink table with this command: {}", sql);
         statement.executeUpdate(sql.toString());
         statement.close();
         this.getConnection().commit();
