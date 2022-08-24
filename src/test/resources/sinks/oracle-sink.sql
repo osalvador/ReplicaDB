@@ -32,8 +32,9 @@ create table t_sink
     C_INTERVAL_DAY               INTERVAL DAY TO SECOND,
     C_INTERVAL_YEAR              INTERVAL YEAR TO MONTH,
     /*Collection Types:*/
-    ARRAY                        CLOB/*not supported*/,
-    MULTISET                     CLOB /*not supported*/,
+    C_ARRAY                      CLOB/*not supported*/,
+    C_MULTIDIMENSIONAL_ARRAY     CLOB/*not supported*/,
+    C_MULTISET                   CLOB /*not supported*/,
     /*Other Types:*/
     --         ROW /*not supported*/
     C_XML                        XMLTYPE,

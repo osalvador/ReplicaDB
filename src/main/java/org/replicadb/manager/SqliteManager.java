@@ -73,7 +73,7 @@ public class SqliteManager extends SqlManager {
 
    @Override
    public int insertDataToTable (ResultSet resultSet, int taskId) throws SQLException, IOException {
-
+      int totalRows = 0;
       ResultSetMetaData rsmd = resultSet.getMetaData();
       String tableName;
 
@@ -175,7 +175,7 @@ public class SqliteManager extends SqlManager {
                ps.executeBatch();
                this.getConnection().commit();
             }
-
+            totalRows++;
          } while (resultSet.next());
       }
 
@@ -183,7 +183,7 @@ public class SqliteManager extends SqlManager {
       ps.close();
 
       this.getConnection().commit();
-      return 0;
+      return totalRows;
    }
 
    private String getInsertSQLCommand (String tableName, String allColumns, int columnsNumber) {

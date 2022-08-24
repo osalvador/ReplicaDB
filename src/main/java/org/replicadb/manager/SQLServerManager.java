@@ -107,7 +107,8 @@ public class SQLServerManager extends SqlManager {
       getAllSinkColumns(rsmd);
 
       this.getConnection().commit();
-      return 0;
+      // Return the last row number
+      return resultSet.getRow();
 
    }
 
