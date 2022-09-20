@@ -13,6 +13,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
+import java.util.stream.Collectors;
 
 public class SQLServerManager extends SqlManager {
 
@@ -165,19 +166,24 @@ public class SQLServerManager extends SqlManager {
          sql.append("src.").append(pks[i]).append("= trg.").append(pks[i]);
       }
 
-      sql.append(" ) WHEN MATCHED THEN UPDATE SET ");
-      LOG.trace("allColls: {} \n pks: {}", allColls, pks);
-      // Set all columns for UPDATE SET statement
-      for (String colName : allColls.split("\\s*,\\s*")) {
-         LOG.trace("colName: {}", colName);
-         boolean contains = Arrays.asList(pks).contains(colName);
-         boolean containsQuoted = Arrays.asList(pks).contains("\"" + colName + "\"");
-         if (!contains && !containsQuoted)
-            sql.append(" trg.").append(colName).append(" = src.").append(colName).append(" ,");
-      }
-      // Delete the last comma
-      sql.setLength(sql.length() - 1);
+       sql.append(" ) ");
+       LOG.trace("allColls: {} \n pks: {}", allColls, pks);
 
+       // Set all columns for UPDATE SET statement
+       String allColSelect = Arrays.stream(allColls.split("\\s*,\\s*"))
+           .filter(colName -> {
+               boolean contains = Arrays.asList(pks).contains(colName);
+               boolean containsQuoted = Arrays.asList(pks).contains("\"" + colName + "\"");
+               return !contains && !containsQuoted;
+           }).map(colName -> {
+               LOG.debug("colName: {}", colName);
+               return String.format("trg.%s = src.%s", colName, colName);
+           }).collect(Collectors.joining(", "));
+
+      if (allColSelect.length() > 0) {
+         sql.append(" WHEN MATCHED THEN UPDATE SET ");
+         sql.append(allColSelect);
+      }
 
       sql.append(" WHEN NOT MATCHED THEN INSERT ( ").append(allColls).
           append(" ) VALUES (");
