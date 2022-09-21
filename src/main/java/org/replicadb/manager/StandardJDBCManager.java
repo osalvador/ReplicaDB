@@ -8,13 +8,11 @@ import org.replicadb.manager.util.BandwidthThrottling;
 
 import java.io.IOException;
 import java.sql.*;
-import java.util.Arrays;
 
 
 public class StandardJDBCManager extends SqlManager {
 
    private static final Logger LOG = LogManager.getLogger(StandardJDBCManager.class.getName());
-   private static Long chunkSize = 0L;
 
    public StandardJDBCManager (ToolOptions opts, DataSourceType dsType) {
       super(opts);
@@ -23,11 +21,25 @@ public class StandardJDBCManager extends SqlManager {
 
    @Override
    public String getDriverClass () {
-      if (this.dsType.equals(DataSourceType.SOURCE)) {
-         return this.options.getSourceConnectionParams().getProperty("driver");
-      } else {
-         return this.options.getSinkConnectionParams().getProperty("driver");
+
+      // Only complete mode is available
+      if (!options.getMode().equals(ReplicationMode.COMPLETE.getModeText())){
+         throw new UnsupportedOperationException("Only the 'complete' mode is supported by Standard JDBC Manager.");
+      } else if (this.options.getJobs() > 1) {
+         throw new UnsupportedOperationException("Parallel processing is not supported in the standard JDBC Manager, jobs=1 must be set.");
       }
+      String driverClassName = "";
+      if (this.dsType.equals(DataSourceType.SOURCE)) {
+         driverClassName = this.options.getSourceConnectionParams().getProperty("driver");
+      } else {
+         driverClassName = this.options.getSinkConnectionParams().getProperty("driver");
+      }
+
+      // if driverClassName is null or empty throw exception
+      if (driverClassName == null || driverClassName.isEmpty()) {
+         throw new IllegalArgumentException("Driver class name is not defined in \'[source,sink].connect.parameter.driver\'");
+      }
+      return driverClassName;
    }
 
 
@@ -40,13 +52,12 @@ public class StandardJDBCManager extends SqlManager {
       // If columns parameter is null, get it from options
       String allColumns = this.options.getSourceColumns() == null ? "*" : this.options.getSourceColumns();
 
-      long offset = nThread * chunkSize;
       String sqlCmd;
 
       // Read table with source-query option specified
       if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
          sqlCmd = "SELECT  * FROM (" +
-             options.getSourceQuery() + ") as T1 OFFSET ? ";
+             options.getSourceQuery() + ") as T1 ";
       } else {
 
          sqlCmd = "SELECT " +
@@ -59,18 +70,9 @@ public class StandardJDBCManager extends SqlManager {
             sqlCmd = sqlCmd + " WHERE " + options.getSourceWhere();
          }
 
-         sqlCmd = sqlCmd + " OFFSET ? ";
-
       }
 
-      String limit = " LIMIT ?";
-
-      if (this.options.getJobs() == nThread + 1) {
-         return super.execute(sqlCmd, offset);
-      } else {
-         sqlCmd = sqlCmd + limit;
-         return super.execute(sqlCmd, offset, chunkSize);
-      }
+      return super.execute(sqlCmd);
 
    }
 
@@ -222,132 +224,23 @@ public class StandardJDBCManager extends SqlManager {
 
    @Override
    protected void createStagingTable () throws SQLException {
-
-      Statement statement = this.getConnection().createStatement();
-      String sinkStagingTable = getQualifiedStagingTableName();
-
-      // Get sink columns.
-      String allSinkColumns;
-      if (this.options.getSinkColumns() != null && !this.options.getSinkColumns().isEmpty()) {
-         allSinkColumns = this.options.getSinkColumns();
-      } else if (this.options.getSourceColumns() != null && !this.options.getSourceColumns().isEmpty()) {
-         allSinkColumns = this.options.getSourceColumns();
-      } else {
-         allSinkColumns = "*";
-      }
-
-      String sql = " CREATE TABLE " + sinkStagingTable + " AS SELECT " + allSinkColumns + " FROM " + this.getSinkTableName() + " WHERE 1 = 0 ";
-
-      LOG.info("Creating staging table with this command: {}", sql);
-      statement.executeUpdate(sql);
-      statement.close();
-      this.getConnection().commit();
-
+      // Not necessary
    }
-
-   @Override
-   protected void mergeStagingTable () throws SQLException {
-      this.getConnection().commit();
-
-      Statement statement = this.getConnection().createStatement();
-
-      String[] pks = this.getSinkPrimaryKeys(this.getSinkTableName());
-      // Primary key is required
-      if (pks == null || pks.length == 0) {
-         throw new IllegalArgumentException("Sink table must have at least one primary key column for incremental mode.");
-      }
-
-      // options.sinkColumns was set during the insertDataToTable
-      String allColls = getAllSinkColumns(null);
-
-      StringBuilder sql = new StringBuilder();
-      sql.append("MERGE INTO ")
-          .append(this.getSinkTableName())
-          .append(" trg USING (SELECT ")
-          .append(allColls)
-          .append(" FROM ")
-          .append(getQualifiedStagingTableName())
-          .append(" ) src ON ")
-          .append(" (");
-
-      for (int i = 0; i <= pks.length - 1; i++) {
-         if (i >= 1) sql.append(" AND ");
-         sql.append("src.").append(pks[i]).append("= trg.").append(pks[i]);
-      }
-
-      sql.append(" ) WHEN MATCHED THEN UPDATE SET ");
-
-      // Set all columns for UPDATE SET statement
-      for (String colName : allColls.split("\\s*,\\s*")) {
-
-         boolean contains = Arrays.asList(pks).contains(colName);
-         boolean containsUppercase = Arrays.asList(pks).contains(colName.toUpperCase());
-         boolean containsQuoted = Arrays.asList(pks).contains("\"" + colName.toUpperCase() + "\"");
-         if (!contains && !containsUppercase && !containsQuoted)
-            sql.append(" trg.").append(colName).append(" = src.").append(colName).append(" ,");
-      }
-      // Delete the last comma
-      sql.setLength(sql.length() - 1);
-
-
-      sql.append(" WHEN NOT MATCHED THEN INSERT ( ").append(allColls).
-          append(" ) VALUES (");
-
-      // all columns for INSERT VALUES statement
-      for (String colName : allColls.split("\\s*,\\s*")) {
-         sql.append(" src.").append(colName).append(" ,");
-      }
-      // Delete the last comma
-      sql.setLength(sql.length() - 1);
-
-      sql.append(" ) ");
-
-      LOG.info("Merging staging table and sink table with this command: {}", sql);
-      statement.executeUpdate(sql.toString());
-      statement.close();
-      this.getConnection().commit();
-   }
-
-   @Override
-   public void preSourceTasks () throws SQLException {
-      // Because chunkSize is static it's required to initialize it
-      // when the unit tests are running
-      chunkSize = 0L;
-
-      // Only calculate the chunk size when parallel execution is active
-      if (this.options.getJobs() != 1) {
-          // Calculating the chunk size for parallel job processing
-         Statement statement = this.getConnection().createStatement();
-         String sql = "SELECT " + " CEIL(count(*) / " + options.getJobs() + ") chunk_size" + ", count(*) total_rows" + " FROM ";
-
-         // Source Query
-         if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
-            sql = sql + "( " + this.options.getSourceQuery() + " ) as REPLICADB_TABLE";
-
-         } else {
-
-            sql = sql + this.options.getSourceTable();
-            // Source Where
-            if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
-               sql = sql + " WHERE " + options.getSourceWhere();
-            }
-         }
-
-         LOG.debug("Calculating the chunks size with this sql: {}", sql);
-         ResultSet rs = statement.executeQuery(sql);
-         rs.next();
-         chunkSize = rs.getLong(1);
-         long totalNumberRows = rs.getLong(2);
-         LOG.debug("chunkSize: {} totalNumberRows: {}", chunkSize, totalNumberRows);
-
-         statement.close();
-         this.getConnection().commit();
-      }
-   }
-
    @Override
    public void postSourceTasks () throws Exception {
       // Not necessary
    }
+   @Override
+   public void preSourceTasks () throws Exception {
+      // Not necessary
+   }
+   @Override
+   protected void mergeStagingTable () throws Exception {
+      // Not necessary
+   }
 
+   @Override
+   protected void truncateTable () throws SQLException {
+      super.truncateTable("DELETE ");
+   }
 }

@@ -358,6 +358,9 @@ public abstract class SqlManager extends ConnManager {
      * @throws SQLException
      */
     protected void truncateTable() throws SQLException {
+        truncateTable("TRUNCATE TABLE ");
+    }
+    protected void truncateTable(String sqlCommand) throws SQLException {
         String tableName;
         // Get table name
         if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())
@@ -366,7 +369,7 @@ public abstract class SqlManager extends ConnManager {
         } else {
             tableName = getSinkTableName();
         }
-        String sql = "TRUNCATE TABLE " + tableName;
+        String sql = sqlCommand + tableName;
         LOG.info("Truncating sink table with this command: {}", sql);
         Statement statement = this.getConnection().createStatement();
         statement.executeUpdate(sql);
