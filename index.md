@@ -11,19 +11,13 @@ homepage: true
 
 ReplicaDB is an open source tool for database replication designed for efficiently transferring bulk data between relational and NoSQL databases.
 
-ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. ReplicaDB currently works with Oracle, Postgres, SQL Server, MySQL and MariaDB, Denodo, CSV on local files or Amazon S3 and Kafka. 
+ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. ReplicaDB currently works with Oracle, Postgres, SQL Server, MySQL and MariaDB, SQLite, Denodo, CSV on local files or Amazon S3 and Kafka. Any other JDBC database is also supported with limitations. 
   
 ReplicaDB is **Cross Platform**; you can replicate data across different platforms (Windows, Linux, MacOS), with compatibility for many databases. You can use **Parallel data transfer** for faster performance and optimal system utilization.
 
 <br>
 
 ![ReplicaDB-Conceptual](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Conceptual.jpg){:class="img-responsive"}
-
-{::comment}
-TODO:
-- Benchmark con symetricDS, kettel y talend, embulk
-
-{:/comment}
 
 
 # Why another database replication software
@@ -60,14 +54,39 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
 
 ```bash
-$ curl -o ReplicaDB-0.12.1.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.12.1/ReplicaDB-0.12.1.tar.gz"
-$ tar -xvzf ReplicaDB-0.12.1.tar.gz
+$ curl -o ReplicaDB-0.13.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.13.0/ReplicaDB-0.13.0.tar.gz"
+$ tar -xvzf ReplicaDB-0.13.0.tar.gz
 $ ./bin/replicadb --help
 ```
 
+
 ### JDBC Drivers
 
-You can use ReplicaDB with any JDBC-compliant database. First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory on your client machine. Each driver `.jar` file also has a specific driver class that defines the entry-point to the driver. 
+ReplicaDB already comes with all the JDBC drivers for the [Compatible Databases](#compatible-databases). But you can use ReplicaDB with any JDBC-compliant database.
+
+First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory. Each driver `.jar` file also has a specific driver class that defines the entry-point to the driver.
+
+If your database is JDBC-compliant and not appear in the [Compatible Databases](#compatible-databases) list, you must set the driver class name in the configuration properties as [extra JDBC parameter](https://osalvador.github.io/ReplicaDB/docs/docs.html#32-connecting-to-a-database-server).
+
+For example, to replicate a DB2 database table as both source and sink
+
+```properties
+######################## ReplicadB General Options ########################
+mode=complete
+jobs=1
+############################# Soruce Options ##############################
+source.connect=jdbc:db2://localhost:50000/testdb
+source.user=${DB2USR}
+source.password=${DB2PASS}
+source.table=source_table
+source.connect.parameter.driver=com.ibm.db2.jcc.DB2Driver
+############################# Sink Options ################################
+sink.connect=jdbc:db2://localhost:50000/testdb
+sink.user=${DB2USR}
+sink.password=${DB2PASS}
+sink.table=sink_table
+sink.connect.parameter.driver=com.ibm.db2.jcc.DB2Driver
+```
 
 ## Docker
 
@@ -161,18 +180,19 @@ $ replicadb --mode=complete -j=1 \
 
 {:.table}
 
-| Persistent Store |          Source          |    Sink Complete   | Sink Complete-Atomic |  Sink Incremental  | Sink Bandwidth Throttling |
-|------------------|:------------------------:|:------------------:|:--------------------:|:------------------:|:-------------------------:|
-| Oracle           |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
-| MySQL            |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
-| MariaDB          |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
-| PostgreSQL       |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
-| SQL Server       |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-times-circle"></i> |
-| SQLite           |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |  <i class="far fa-times-circle"></i>  | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
-| CSV              |    <i class="far fa-check-circle text-success"></i>    | <i class="far fa-check-circle text-success"></i> |                      | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
-| Denodo           |    <i class="far fa-check-circle text-success"></i>    |                    |                      |                    |                           |
-| Kafka            | <i class="far fa-times-circle"></i> |                    |                      | <i class="far fa-check-circle text-success"></i> |     <i class="far fa-check-circle text-success"></i>    |
-| Amazon S3        | <i class="far fa-times-circle"></i> | <i class="far fa-check-circle text-success"></i> |                      |                    |     <i class="far fa-check-circle text-success"></i>    |
+| Persistent Store        |                      Source                       |                   Sink Complete                   |               Sink Complete-Atomic               |                 Sink Incremental                 |            Sink Bandwidth Throttling             |
+|-------------------------|:-------------------------------------------------:|:-------------------------------------------------:|:------------------------------------------------:|:------------------------------------------------:|:------------------------------------------------:|
+| Oracle                  | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
+| MySQL                   | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
+| MariaDB                 | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
+| PostgreSQL              | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
+| SQL Server              | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |       <i class="far fa-times-circle"></i>        |
+| SQLite                  | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  |       <i class="far fa-times-circle"></i>        | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
+| CSV                     | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  |                                                  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
+| Denodo                  | <i class="far fa-check-circle text-success"></i>  |                                                   |                                                  |                                                  |                                                  |
+| Kafka                   |        <i class="far fa-times-circle"></i>        |                                                   |                                                  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
+| Amazon S3               |        <i class="far fa-times-circle"></i>        | <i class="far fa-check-circle text-success"></i>  |                                                  |                                                  | <i class="far fa-check-circle text-success"></i> |
+| JDBC-Compliant database | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  |       <i class="far fa-times-circle"></i>        |       <i class="far fa-times-circle"></i>        |       <i class="far fa-times-circle"></i>        |
 
 Supported feature <i class="far fa-check-circle text-success"></i>. Unsupported feature <i class="far fa-times-circle"></i>. Not applicable feature `blank`
 
