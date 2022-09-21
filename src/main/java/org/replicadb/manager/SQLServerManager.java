@@ -176,13 +176,14 @@ public class SQLServerManager extends SqlManager {
                boolean containsQuoted = Arrays.asList(pks).contains("\"" + colName + "\"");
                return !contains && !containsQuoted;
            }).map(colName -> {
-               LOG.debug("colName: {}", colName);
                return String.format("trg.%s = src.%s", colName, colName);
            }).collect(Collectors.joining(", "));
 
       if (allColSelect.length() > 0) {
          sql.append(" WHEN MATCHED THEN UPDATE SET ");
          sql.append(allColSelect);
+      } else {
+         LOG.warn("All columns in the sink table are Primary Keys. WHEN MATCHED DO NOTHING.");
       }
 
       sql.append(" WHEN NOT MATCHED THEN INSERT ( ").append(allColls).
