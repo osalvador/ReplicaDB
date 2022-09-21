@@ -6,7 +6,6 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
-import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbDB2Container;
 import org.replicadb.config.ReplicadbPostgresqlContainer;
@@ -29,7 +28,7 @@ class Postgres2DB2Test {
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
     private static final int TOTAL_SINK_ROWS = 4097;
 
-    private Connection db2dbConn;
+    private Connection db2Conn;
     private Connection postgresConn;
 
     @Rule
@@ -44,21 +43,21 @@ class Postgres2DB2Test {
 
     @BeforeEach
     void before() throws SQLException {
-        this.db2dbConn = DriverManager.getConnection(db2.getJdbcUrl(), db2.getUsername(), db2.getPassword());
+        this.db2Conn = DriverManager.getConnection(db2.getJdbcUrl(), db2.getUsername(), db2.getPassword());
         this.postgresConn = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
     }
 
     @AfterEach
     void tearDown() throws SQLException {
         // Truncate sink table and close connections
-        db2dbConn.createStatement().execute("DELETE t_sink");
-        this.db2dbConn.close();
+        db2Conn.createStatement().execute("DELETE t_sink");
+        this.db2Conn.close();
         this.postgresConn.close();
     }
 
 
     public int countSinkRows() throws SQLException {
-        Statement stmt = db2dbConn.createStatement();
+        Statement stmt = db2Conn.createStatement();
         ResultSet rs = stmt.executeQuery("select count(*) from t_sink");
         rs.next();
         int count = rs.getInt(1);
@@ -68,15 +67,13 @@ class Postgres2DB2Test {
 
 
     @Test
-    void testDb2Connection() throws SQLException {
-        Connection db2Conn = DriverManager.getConnection(db2.getJdbcUrl(), db2.getUsername(), db2.getPassword());
+    void testDb2Connection () throws SQLException {
         Statement stmt = db2Conn.createStatement();
-        ResultSet rs = stmt.executeQuery("SELECT 1 FROM DUAL");
+        ResultSet rs = stmt.executeQuery("SELECT 1 FROM SYSIBM.SYSDUMMY1");
         rs.next();
         String version = rs.getString(1);
         LOG.info(version);
         assertTrue(version.contains("1"));
-        db2Conn.close();
     }
 
     @Test
