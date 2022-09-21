@@ -135,31 +135,33 @@ usage: replicadb [OPTIONS]
 
 {:.table}
 
-| Argument                            | Description                                                                                        | Default            |
-| ----------------------------------- |----------------------------------------------------------------------------------------------------|--------------------|
-| `--fetch-size <fetch-size>`         | Number of entries to read from database at once.                                                   | `100`              |
-| `-h`,`--help`                       | Print this help screen                                                                             |                    |
-| `-j`,`--jobs <n>`                   | Use n jobs to replicate in parallel.                                                               | `4`                |
-| `--mode <mode>`                     | Specifies the replication mode. The allowed values are `complete`, `complete-atomic` or `incremental` | `complete`         |
-| `--options-file <file-path>`        | Options file path location                                                                         |                    |
-| `--sink-columns <col,col,col...>`   | Sink database table columns to be populated                                                        | `--source-columns` |
-| `--sink-connect <jdbc-uri>`         | Sink database JDBC connect string                                                                  | required           |
-| `--sink-disable-escape`             | Escape srings before populating to the table of the sink database.                                 | `false`            |
-| `--sink-disable-truncate`           | Disable the truncation of the sink database table before populate.                                 | `false`            |
-| `--sink-password <password>`        | Sink database authentication password                                                              |                    |
-| `--sink-staging-schema <schema-name>`| Scheme name on the sink database, with right permissions for creating staging tables.              | `PUBLIC`           |
-| `--sink-staging-table <table-name>`  | Qualified name of the sink staging table. The table must exist in the sink database.               |                    |
-| `--sink-table <table-name>`         | Sink database table to populate                                                                    | `--source-table`   |
-| `--sink-user <username>`            | Sink database authentication username                                                              |                    |
-| `--source-columns <col,col,col...>` | Source database table columns to be extracted                                                      | `*`                |
-| `--source-connect <jdbc-uri>`       | Source database JDBC connect string                                                                | required           |
-| `--source-password <password>`      | Source databse authentication password                                                             |                    |
-| `--source-query <statement>`        | SQL statement to be executed in the source database                                                |                    |
-| `--source-table <table-name>`       | Source database table to read                                                                      |                    |
-| `--source-user <username>`          | Source database authentication username                                                            |                    |
-| `--source-where <where clause>`     | Source database WHERE clause to use during extraction                                              |                    |
-| `-v`,`--verbose`                    | Print more information while working                                                               |                    |
-| `--version`                         | Show implementation version and exit                                                               |                    |
+| Argument                                                | Description                                                                                              | Default            |
+|---------------------------------------------------------|----------------------------------------------------------------------------------------------------------|--------------------|
+| `--fetch-size <fetch-size>`                             | Number of entries to read from database at once.                                                         | `100`              |
+| `-h`,`--help`                                           | Print this help screen                                                                                   |                    |
+| `-j`,`--jobs <n>`                                       | Use n jobs to replicate in parallel.                                                                     | `4`                |
+| `--mode <mode>`                                         | Specifies the replication mode. The allowed values are `complete`, `complete-atomic` or `incremental`    | `complete`         |
+| `--options-file <file-path>`                            | Options file path location                                                                               |
+| `--quoted-identifiers`                                  | Should all database identifiers be quoted.                                                               | `false`            |
+| `--sink-columns <col,col,col...>`                       | Sink database table columns to be populated                                                              | `--source-columns` |
+| `--sink-connect <jdbc-uri>`                             | Sink database JDBC connect string                                                                        | required           |
+| `--sink-disable-escape`                                 | Escape srings before populating to the table of the sink database.                                       | `false`            |
+| `--sink-disable-truncate`                               | Disable the truncation of the sink database table before populate.                                       | `false`            |
+| `--sink-password <password>`                            | Sink database authentication password                                                                    |                    |
+| `--sink-staging-schema <schema-name>`                   | Scheme name on the sink database, with right permissions for creating staging tables.                    | `PUBLIC`           |
+| `--sink-staging-table <table-name>`                     | Qualified name of the sink staging table. The table must exist in the sink database.                     |                    |
+| `--sink-staging-table-alias <staging-table-name-alias>` | Alias name for the sink staging table.                                                                   |                    |
+| `--sink-table <table-name>`                             | Sink database table to populate                                                                          | `--source-table`   |
+| `--sink-user <username>`                                | Sink database authentication username                                                                    |                    |
+| `--source-columns <col,col,col...>`                     | Source database table columns to be extracted                                                            | `*`                |
+| `--source-connect <jdbc-uri>`                           | Source database JDBC connect string                                                                      | required           |
+| `--source-password <password>`                          | Source databse authentication password                                                                   |                    |
+| `--source-query <statement>`                            | SQL statement to be executed in the source database                                                      |                    |
+| `--source-table <table-name>`                           | Source database table to read                                                                            |                    |
+| `--source-user <username>`                              | Source database authentication username                                                                  |                    |
+| `--source-where <where clause>`                         | Source database WHERE clause to use during extraction                                                    |                    |
+| `-v`,`--verbose`                                        | Print more information while working                                                                     |                    |
+| `--version`                                             | Show implementation version and exit                                                                     |                    |
 
 
 <br>
