@@ -189,12 +189,19 @@ $ replicadb --mode=complete -j=1 \
 | JDBC-Compliant database |    :heavy_check_mark:    | :heavy_check_mark: | :heavy_multiplication_x:  | :heavy_multiplication_x: |     :heavy_check_mark:    |
 
 # Roadmap
-      
+
+Features: 
+- Replicate multiple tables in a single run
+- Scheduling
+- Web interface
+- Server mode with API 
+- Kubernetes compliant
+
+New Databases: 
 - MongoDB
-- IBM Db2
+- IBM DB2 (full compatibility)
 - Elasticsearch
 - Redis
-- SQLite
 - Hive
 
 
