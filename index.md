@@ -192,7 +192,7 @@ $ replicadb --mode=complete -j=1 \
 | Denodo                  | <i class="far fa-check-circle text-success"></i>  |                                                   |                                                  |                                                  |                                                  |
 | Kafka                   |        <i class="far fa-times-circle"></i>        |                                                   |                                                  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
 | Amazon S3               |        <i class="far fa-times-circle"></i>        | <i class="far fa-check-circle text-success"></i>  |                                                  |                                                  | <i class="far fa-check-circle text-success"></i> |
-| JDBC-Compliant database | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  |       <i class="far fa-times-circle"></i>        |       <i class="far fa-times-circle"></i>        |       <i class="far fa-times-circle"></i>        |
+| JDBC-Compliant database | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  |       <i class="far fa-times-circle"></i>        |       <i class="far fa-times-circle"></i>        |       <i class="far fa-check-circle text-success"></i>    |
 
 Supported feature <i class="far fa-check-circle text-success"></i>. Unsupported feature <i class="far fa-times-circle"></i>. Not applicable feature `blank`
 
