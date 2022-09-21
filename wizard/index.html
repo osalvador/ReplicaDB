@@ -152,6 +152,7 @@
                                     <option value="mysql">MySQL</option>
                                     <option value="mariadb">MariaDB</option>
                                     <option value="postgres">PostgreSQL</option>
+                                    <option value="sqlite">SQLite</option>
                                     <option value="sqlserver">SQLServer</option>
                                     <option value="denodo">Denodo</option>
                                     <option value="file">File (CSV, TSV...)</option>
@@ -194,6 +195,18 @@
                             </div>
                         </div><!-- ./CardSourceConnectionSettings -->
 
+                        <div class="card" id="CardSourceSqliteSettings">
+                            <div class="card-header">SQLite Settings</div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group col-md-12">
+                                        <label for="FormSourceSqliteFilePath">Database File Path</label>
+                                        <input type="text" class="form-control" id="FormSourceSqliteFilePath" name="sourceSqliteFilePath">
+                                    </div>
+                                </div>
+                            </div>
+                        </div> <!-- ./CardSourceSqliteSettings -->
+
                         <div id="CardSourceDataFiltering">
                             <br>
                             <div class="card">
@@ -202,8 +215,6 @@
                                 </a>
                                 </div>
                                 <div class="card-body">
-
-
                                     <!-- Nav tabs -->
                                     <ul class="nav nav-tabs" role="tablist">
                                         <li class="nav-item">
@@ -459,13 +470,11 @@
 
 
         <div class="col-xl-6">
-
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
                     <h6 class="m-0 font-weight-bold text-primary">Sink Options</h6>
                 </div>
                 <div class="card-body">
-
                     <form id="FormSink">
                         <h5>Data Source Type</h5>
                         <div class="form-group">
@@ -476,6 +485,7 @@
                                     <option value="mysql">MySQL</option>
                                     <option value="mariadb">MariaDB</option>
                                     <option value="postgres">PostgreSQL</option>
+                                    <option value="sqlite">SQLite</option>
                                     <option value="sqlserver">SQL Server</option>
                                     <!--<option value="s3">Amazon S3</option>-->
                                     <option value="file">File (CSV, TSV...)</option>
@@ -517,6 +527,18 @@
 
                             </div>
                         </div>
+
+                        <div class="card" id="CardSinkSqliteSettings">
+                            <div class="card-header">SQLite Settings</div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group col-md-12">
+                                        <label for="FormSinkSqliteFilePath">Database File Path</label>
+                                        <input type="text" class="form-control" id="FormSinkSqliteFilePath" name="sinkSqliteFilePath">
+                                    </div>
+                                </div>
+                            </div>
+                        </div> <!-- ./CardSinkSqliteSettings -->
 
                         <div id="CardSinkDataMapping">
                             <br>
@@ -947,7 +969,7 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
 
     // Create Connection Helper
     Handlebars.registerHelper("createConnect", function (dsType, options) {
-        var connectType, host, port, database, filePath, kafkaServers = "";
+        var connectType, host, port, database, sqliteFilePath, filePath, kafkaServers = "";
 
         console.log(dsType);
         if (dsType === "source") {
@@ -956,6 +978,7 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
             port = this.sourcePort;
             database = this.sourceDatabase;
             filePath = this.sourceFilePath;
+            sqliteFilePath = this.sourceSqliteFilePath;
         } else {
             connectType = this.sinkType;
             host = this.sinkHost;
@@ -963,6 +986,7 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
             database = this.sinkDatabase;
             filePath = this.sinkFilePath;
             kafkaServers = this.sinkKafkaBootstrapServers;
+            sqliteFilePath = this.sinkSqliteFilePath;
         }
 
         switch (connectType) {
@@ -977,6 +1001,9 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
                 break;
             case "postgres":
                 return "jdbc:postgresql://" + host + ":" + port + "/" + database;
+                break;
+            case "sqlite":
+                return "jdbc:sqlite:/" + sqliteFilePath;
                 break;
             case "sqlserver":
                 return "jdbc:sqlserver://" + host + ":" + port + ";database=" + database;
@@ -1111,6 +1138,10 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
                     $('#CardSourceConnectionSettings').show("slow");
                     $('#CardSourceDataFiltering').show("slow");
                     break;
+                case "sqlite":
+                    $('#CardSourceSqliteSettings').show("slow");
+                    $('#CardSourceDataFiltering').show("slow");
+                    break;
                 case "file":
                     $('#CardSourceFileSettings').show("slow");
                     $('#CardSourceFileDataParsing').show("slow");
@@ -1134,6 +1165,10 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
                     $('#CardSinkConnectionSettings').show("slow");
                     $('#CardSinkDataMapping').show("slow");
                     showStagingSettings();
+                    break;
+                case "sqlite":
+                    $('#CardSinkSqliteSettings').show("slow");
+                    $('#CardSinkDataMapping').show("slow");
                     break;
                 case "file":
                     $('#CardSinkFileSettings').show("slow");
@@ -1187,6 +1222,7 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
         $('#CardSourceDataFiltering').hide();
         $('#CardSourceFileSettings').hide();
         $('#CardSourceFileDataParsing').hide();
+        $('#CardSourceSqliteSettings').hide();
     }
 
     function hideAllSinkSettings() {
@@ -1198,6 +1234,7 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
         $('#CardSinkFileSettings').hide();
         $('#CardSinkFileDataParsing').hide();
         $('#CardSinkKafkaSettings').hide();
+        $('#CardSinkSqliteSettings').hide();
     }
 
     function showStagingSettings() {
