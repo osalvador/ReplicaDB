@@ -1,6 +1,7 @@
 package org.replicadb.cli;
 
 import org.apache.commons.cli.*;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -43,7 +44,7 @@ public class ToolOptions {
     private int bandwidthThrottling = 0;
     private Boolean help = false;
     private Boolean version = false;
-    private Boolean verbose = false;
+    private Level verboseLevel = Level.INFO;
     private Boolean quotedIdentifiers = false;
     private String optionsFile;
 
@@ -335,7 +336,7 @@ public class ToolOptions {
             }
 
             //get & set Options
-            if (line.hasOption("verbose")) setVerbose(true);
+            if (line.hasOption("verbose")) handleVerboseLevelArgument(line.getOptionValue("verbose"));
             if (line.hasOption("sink-disable-index")) setSinkDisableIndexNotNull(true);
             if (line.hasOption("sink-disable-escape")) setSinkDisableEscapeNotNull(true);
             if (line.hasOption("sink-disable-truncate")) setSinkDisableTruncateNotNull(true);
@@ -372,6 +373,22 @@ public class ToolOptions {
 
     }
 
+    private void handleVerboseLevelArgument(String verboseLevel) {
+        if (verboseLevel == null || verboseLevel.isEmpty()) {
+            setVerboseLevel(Level.INFO);
+            return;
+        } else if (Boolean.parseBoolean(verboseLevel)) {
+            setVerboseLevel(Level.DEBUG);
+            return;
+        }
+
+        try {
+            Level argumentLevel = Level.valueOf(verboseLevel);
+            setVerboseLevel(argumentLevel);
+        } catch (IllegalArgumentException e) {
+            setVerboseLevel(Level.INFO);
+        }
+    }
 
     private void printHelp() {
         String header = "\nArguments: \n";
@@ -433,7 +450,7 @@ public class ToolOptions {
         Properties prop = of.getProperties();
         setSinkAnalyze(Boolean.parseBoolean(prop.getProperty("sink.analyze")));
 
-        setVerbose(Boolean.parseBoolean(prop.getProperty("verbose")));
+        handleVerboseLevelArgument(prop.getProperty("verbose"));
         setMode(prop.getProperty("mode"));
 
         setSinkColumns(prop.getProperty("sink.columns"));
@@ -671,17 +688,12 @@ public class ToolOptions {
     }
 
 
-    public Boolean isVerbose() {
-        return verbose;
+    public Level getVerboseLevel() {
+        return verboseLevel;
     }
 
-    public void setVerbose(Boolean verbose) {
-        this.verbose = verbose;
-    }
-
-    public void setVerboseNotNull(Boolean verbose) {
-        if (verbose != null)
-            this.verbose = verbose;
+    public void setVerboseLevel(Level verboseLevel) {
+        this.verboseLevel = verboseLevel;
     }
 
     public String getOptionsFile() {
@@ -872,7 +884,7 @@ public class ToolOptions {
                 ",\n\tfetchSize=" + fetchSize +
                 ",\n\thelp=" + help +
                 ",\n\tversion=" + version +
-                ",\n\tverbose=" + verbose +
+                ",\n\tverbose=" + verboseLevel +
                 ",\n\toptionsFile='" + optionsFile + '\'' +
                 ",\n\tmode='" + mode + '\'' +
                 ",\n\tsentryDsn='" + sentryDsn + '\'' +
