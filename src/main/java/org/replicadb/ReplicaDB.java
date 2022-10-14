@@ -62,11 +62,9 @@ public class ReplicaDB {
 
         LOG.info("Running ReplicaDB version: " + options.getVersion());
 
-        if (options.isVerbose()) {
-            setLogToDebugMode();
-            LOG.info("Setting verbose mode");
-            LOG.debug(options.toString());
-        }
+        ReplicaDB.setLogToMode(options.getVerboseLevel());
+        LOG.info("Setting verbose mode " + options.getVerboseLevel());
+        LOG.debug(options.toString());
 
         if (!options.isHelp() && !options.isVersion()) {
             // Sentry
@@ -163,14 +161,12 @@ public class ReplicaDB {
     }
 
 
-    private static void setLogToDebugMode() {
-
+    private static void setLogToMode(Level level) {
         LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
         Configuration config = ctx.getConfiguration();
         LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
-        loggerConfig.setLevel(Level.valueOf("DEBUG"));
+        loggerConfig.setLevel(level);
         ctx.updateLoggers();  // This causes all Loggers to refetch information from their LoggerConfi
-
     }
 
 
