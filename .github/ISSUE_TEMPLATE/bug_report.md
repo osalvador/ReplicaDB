@@ -11,7 +11,7 @@ assignees: ''
 A clear and concise description of what the bug is, with verbose log. 
 
 **To Reproduce**
-Steps to reproduce the behavior:
+Steps to reproduce the behaviour:
 1. Source table DDL
 2. Sink table DDL
 3. ReplicaDB configuration `options-file`. 
