@@ -1,3 +1,6 @@
+<h3>What does this fork add?</h3>
+<p>This fork fixes the issue with the BIT data type being copied incorrectly between MySQL or MariaDB instances by treating them as binary variables during the insertion process</p>
+
 <img src="https://img.shields.io/github/license/osalvador/replicadb?style=for-the-badge" alt="License"> <img src="https://img.shields.io/github/v/release/osalvador/replicadb?style=for-the-badge"  alt="Last Version">
 <img src="https://img.shields.io/docker/pulls/osalvador/replicadb.svg?style=for-the-badge&logo=docker" alt="Docker Pull">
 <img src="https://img.shields.io/github/downloads/osalvador/replicadb/total?style=for-the-badge&logo=github" alt="Github Downloads">
