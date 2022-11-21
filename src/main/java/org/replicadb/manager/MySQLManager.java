@@ -185,6 +185,7 @@ public class MySQLManager extends SqlManager {
          String[] columns = allColumns.split(",");
          for (int i = 0; i < columns.length; i++) {
             switch (rsmd.getColumnType(i + 1)) {
+               case Types.BIT:
                case Types.BINARY:
                case Types.BLOB:
                case Types.VARBINARY:
@@ -204,6 +205,7 @@ public class MySQLManager extends SqlManager {
          String setPrefix = " SET ";
          for (int i = 0; i < columns.length; i++) {
             switch (rsmd.getColumnType(i + 1)) {
+               case Types.BIT:
                case Types.BINARY:
                case Types.BLOB:
                case Types.VARBINARY:
