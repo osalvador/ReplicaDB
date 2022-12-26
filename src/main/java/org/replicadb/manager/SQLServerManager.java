@@ -94,12 +94,12 @@ public class SQLServerManager extends SqlManager {
 
       LOG.info("Performing BulkCopy into {} ", tableName);
       // Write from the source to the destination.
-      //If the source ResulSet is an implementation of RowSet (e.g. csv file) cast it.
-      if (resultSet.getClass().getPackage().getName().equals("org.replicadb.rowset"))
+      // If the source ResulSet is an implementation of RowSet (e.g. csv file) cast it.
+      if (resultSet instanceof RowSet) {
          bulkCopy.writeToServer((RowSet) resultSet);
-      else
+      } else {
          bulkCopy.writeToServer(resultSet);
-
+      }
 
       bulkCopy.close();
 
