@@ -1,6 +1,5 @@
 package org.replicadb.rowset;
 
-import com.sun.rowset.CachedRowSetImpl;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
@@ -13,7 +12,7 @@ import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.sql.*;
 
-public class CsvCachedRowSetImpl extends CachedRowSetImpl {
+public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
    private static final Logger LOG = LogManager.getLogger(CsvCachedRowSetImpl.class.getName());
 
    private File sourceFile;
