@@ -288,9 +288,9 @@ public class CsvFileManager extends FileManager {
             // Rename first temporal file to the final file
             Files.move(firstTemporalFilePath, firstTemporalFilePath.resolveSibling(finalFile.getPath()), StandardCopyOption.REPLACE_EXISTING);
             tempFilesIdx = 1;
-            LOG.info("Complete mode: creating and merging all temp files into: " + finalFile.getPath());
+            LOG.info("Complete mode: creating and merging all temp files into: {}", finalFile.getPath());
         } else {
-            LOG.info("Incremental mode: appending and merging all temp files into: " + finalFile.getPath());
+            LOG.info("Incremental mode: appending and merging all temp files into: {}", finalFile.getPath());
         }
 
         // Append the rest temporal files into final file

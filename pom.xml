@@ -254,6 +254,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- MongoDB -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
+            <version>4.8.1</version>
+        </dependency>
+
 
         <!-- Debezium -->
         <dependency>

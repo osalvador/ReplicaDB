@@ -61,8 +61,6 @@ public class ManagerFactory {
                 return new OracleManager(options, dsType);
             } else if (DENODO.isTheManagerTypeOf(options, dsType)) {
                 return new DenodoManager(options, dsType);
-//            } else if (CSV.isTheManagerTypeOf(options, dsType)) {
-//                return new CsvManager(options, dsType);
             } else if (KAFKA.isTheManagerTypeOf(options, dsType)) {
                 return new KafkaManager(options, dsType);
             } else if (SQLSERVER.isTheManagerTypeOf(options, dsType)) {
@@ -75,9 +73,10 @@ public class ManagerFactory {
                 return new LocalFileManager(options, dsType);
             } else if (SQLITE.isTheManagerTypeOf(options, dsType)) {
                 return new SqliteManager(options, dsType);
+            } else if (MONGODB.isTheManagerTypeOf(options, dsType) || MONGODBSRV.isTheManagerTypeOf(options, dsType)) {
+                return new MongoDBManager(options, dsType);
             } else {
                 LOG.warn("The database with scheme {} was not found. Trying  with standard JDBC manager ", scheme);
-                //throw new IllegalArgumentException("The database with scheme "+scheme+" is not supported by ReplicaDB");
                 return new StandardJDBCManager(options, dsType);
             }
         }

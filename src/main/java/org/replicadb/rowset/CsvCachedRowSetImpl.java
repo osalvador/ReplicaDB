@@ -16,11 +16,11 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
    private static final Logger LOG = LogManager.getLogger(CsvCachedRowSetImpl.class.getName());
 
    private File sourceFile;
-   private Iterable<CSVRecord> records;
+   private transient Iterable<CSVRecord> records;
    private String[] columnsTypes;
    private String[] columnName;
    private CSVFormat csvFormat;
-   private static int lineNumer = 0;
+   private static int lineNumber = 0;
 
    public void setCsvFormat (CSVFormat csvFormat) {
       this.csvFormat = csvFormat;
@@ -157,7 +157,7 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
       CSVRecord record;
 
       for (int i = 1; i <= getFetchSize(); i++) {
-         lineNumer++;
+         lineNumber++;
          try {
 
             if (this.records.iterator().hasNext()) {
@@ -246,7 +246,7 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
                insertRow();
             }
          } catch (Exception e) {
-            LOG.error("An error has occurred reading line number {} of the CSV file", lineNumer, e);
+            LOG.error("An error has occurred reading line number {} of the CSV file", lineNumber, e);
             throw e;
          }
       }
