@@ -1,0 +1,146 @@
+[
+  {
+    "database": "test",
+    "collection": "t_source",
+    "count": 4096,
+    "content": {
+      "_id": {
+        "type": "reference",
+        "id": 1,
+        "refContent": {
+          "type": "objectId"
+        }
+      },
+      "C_INTEGER": {
+        "type": "autoincrement",
+        "autoType": "int",
+        "start": 0
+      },
+      "C_SMALLINT": {
+        "type": "int",
+        "min": 0,
+        "max": 2000
+      },
+      "C_BIGINT": {
+        "type": "long",
+        "nullPercentage": 10,
+        "min": 100,
+        "max": 200
+      },
+      "C_NUMERIC": {
+        "type": "double",
+        "min": 1.0,
+        "max": 10.0
+      },
+      "C_DECIMAL": {
+        "type": "double",
+        "min": 1.0,
+        "max": 10.0
+      },
+      "C_REAL": {
+        "type": "double",
+        "min": 1.0,
+        "max": 10.0
+      },
+      "C_DOUBLE_PRECISION": {
+        "type": "double",
+        "min": 1.0,
+        "max": 10.0
+      },
+      "C_FLOAT": {
+        "type": "double",
+        "min": 1.0,
+        "max": 10.0
+      },
+      "C_BINARY": {
+        "type": "binary",
+        "minLength": 1,
+        "maxLength": 35
+      },
+      "C_BINARY_VAR": {
+        "type": "binary",
+        "minLength": 1,
+        "maxLength": 255
+      },
+      "C_BINARY_LOB": {
+        "type": "binary",
+        "minLength": 1,
+        "maxLength": 10000
+      },
+      "C_BOOLEAN": {
+        "type": "boolean"
+      },
+      "C_CHARACTER": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 35
+      },
+      "C_CHARACTER_VAR": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 255
+      },
+      "C_CHARACTER_LOB": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 10000
+      },
+      "C_NATIONAL_CHARACTER": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 35
+      },
+      "C_NATIONAL_CHARACTER_VAR": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 255
+      },
+      "C_DATE": {
+        "type": "date",
+        "startDate": "2010-01-10T00:00:00+00:00",
+        "endDate": "2017-01-01T22:00:00+00:00"
+      },
+      "C_TIMESTAMP_WITH_TIMEZONE": {
+        "type": "date",
+        "startDate": "2010-01-10T00:00:00+01:00",
+        "endDate": "2017-01-01T22:00:00+01:00"
+      },
+      "C_ARRAY": {
+        "type": "array",
+        "minLength": 3,
+        "maxLength": 3,
+        "arrayContent": {
+          "type": "int",
+          "min": 0,
+          "max": 10
+        }
+      },
+      "C_OBJECT": {
+        "type": "object",
+        "objectContent": {
+          "k1": {
+            "type": "string",
+            "unique": true,
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "k2": {
+            "type": "int",
+            "min": -10,
+            "max": -5
+          },
+          "sub-ob": {
+            "type": "object",
+            "objectContent": {
+              "s-k": {
+                "type": "int",
+                "min": 0,
+                "max": 10
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]

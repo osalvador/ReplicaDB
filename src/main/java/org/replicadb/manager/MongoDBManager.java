@@ -177,7 +177,8 @@ public class MongoDBManager extends SqlManager {
             }
 
             findIterable.batchSize(options.getFetchSize());
-            findIterable.allowDiskUse(true);
+            // TODO: fail in mongodb 4.0.10
+            //findIterable.allowDiskUse(true);
             cursor = findIterable.cursor();
             firstDocument = findIterable.first();
 
@@ -189,6 +190,8 @@ public class MongoDBManager extends SqlManager {
 
       } catch (MongoException me) {
          LOG.error("{}: MongoDB error: {}", Thread.currentThread().getName(), me.getMessage(), me);
+         // rethrow the exception
+         throw me;
       }
       return mongoDbResultSet;
    }
