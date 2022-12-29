@@ -4,6 +4,9 @@ import com.mongodb.client.MongoCursor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bson.Document;
+import org.bson.json.Converter;
+import org.bson.json.JsonWriterSettings;
+import org.bson.json.StrictJsonWriter;
 import org.bson.types.Binary;
 
 import javax.sql.RowSetMetaData;
@@ -11,8 +14,12 @@ import javax.sql.rowset.RowSetMetaDataImpl;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -41,7 +48,7 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
       List<String> fields = new ArrayList<>();
 
       // if the sink database is mongodb, the document will be inserted as is
-      if (this.isSourceAndSinkMongo) {
+      if (Boolean.TRUE.equals(this.isSourceAndSinkMongo)) {
          rsmd.setColumnCount(1);
          rsmd.setColumnName(1, "document");
          rsmd.setColumnType(1, java.sql.Types.OTHER);
@@ -119,8 +126,10 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
          case "class org.bson.types.Binary":
             return java.sql.Types.BINARY;
          case "class java.util.List":
+         case "class java.util.ArrayList":
             return java.sql.Types.ARRAY;
          case "class org.bson.Document":
+            return Types.STRUCT;
          case "class org.bson.types.ObjectId":
          case "class java.lang.Object":
          default:
@@ -202,7 +211,7 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
                            break;
                         case Types.TIMESTAMP_WITH_TIMEZONE:
                            if (document.getDate(columnName) == null) updateNull(j + 1);
-                           // convert to offsetDateTime
+                              // convert to offsetDateTime
                            else updateObject(j + 1, document.getDate(columnName).toInstant().atOffset(ZoneOffset.UTC));
                            break;
                         case Types.BINARY:
@@ -215,19 +224,16 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
                            if (document.getBoolean(columnName) == null) updateNull(j + 1);
                            else updateBoolean(j + 1, document.getBoolean(columnName));
                            break;
-                        case Types.ARRAY:
-                           if (document.get(columnName) == null) updateNull(j + 1);
-                              // convert to java.sql.Array
-                           else updateString(j + 1, document.get(columnName).toString());
-                           break;
                         default:
-                           if (document.getString(columnName) == null) updateNull(j + 1);
-                           else updateString(j + 1, document.getString(columnName));
+                           String json = documentToJson(document.get(columnName, org.bson.Document.class));
+                           if (json == null) updateNull(j + 1);
+                           else updateString(j + 1, json);
                            break;
                      }
                   }
                }
                insertRow();
+               document.clear();
             }
          } catch (Exception e) {
             LOG.error("MongoDB error: {}", e.getMessage(), e);
@@ -239,16 +245,22 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
       beforeFirst();
    }
 
+   public static class JsonDateTimeConverter implements Converter<Long> {
+      static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ISO_INSTANT.withZone(ZoneId.of("UTC"));
+      @Override
+      public void convert (Long value, StrictJsonWriter writer) {
+         Instant instant = new Date(value).toInstant();
+         String s = DATE_TIME_FORMATTER.format(instant);
+         writer.writeString(s);
+      }
+   }
 
-   /**
-    * Checks if the value is empty or null and return a null object
-    *
-    * @param value
-    * @return
-    */
-   private String getStringOrNull (String value) {
-      if (value == null || value.isEmpty()) value = null;
-      return value;
+   private String documentToJson (Document document) {
+      if (document == null) return null;
+      return document.toJson(JsonWriterSettings
+          .builder()
+          .dateTimeConverter(new JsonDateTimeConverter())
+          .build());
    }
 
    public void setMongoCursor (MongoCursor<Document> cursor) {

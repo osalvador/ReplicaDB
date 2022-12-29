@@ -1,16 +1,16 @@
 package org.replicadb.manager;
 
-
-import com.mongodb.*;
+import com.mongodb.ConnectionString;
+import com.mongodb.MongoClientSettings;
+import com.mongodb.MongoCompressor;
+import com.mongodb.MongoException;
 import com.mongodb.client.*;
 import com.mongodb.client.model.BulkWriteOptions;
-import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.InsertOneModel;
 import com.mongodb.client.model.WriteModel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bson.BsonDocument;
-import org.bson.BsonString;
 import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.BsonArrayCodec;
@@ -22,9 +22,13 @@ import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.util.BandwidthThrottling;
 import org.replicadb.rowset.MongoDBRowSetImpl;
 
-import java.sql.*;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static org.replicadb.manager.SupportedManagers.MONGODB;
@@ -33,8 +37,6 @@ import static org.replicadb.manager.SupportedManagers.MONGODBSRV;
 public class MongoDBManager extends SqlManager {
 
    private static final Logger LOG = LogManager.getLogger(MongoDBManager.class.getName());
-   private static final String MONGO_LIMIT = "limit";
-   private static final String MONGO_SKIP = "skip";
 
    private MongoClient sourceMongoClient;
    private MongoClient sinkMongoClient;
@@ -112,6 +114,11 @@ public class MongoDBManager extends SqlManager {
    public ResultSet readTable (String tableName, String[] columns, int nThread) throws SQLException {
       // If table name parameter is null get it from options
       String collectionName = tableName == null ? this.options.getSourceTable() : tableName;
+      // if the chunk size is 0 and the current job is greater than 0, return null
+      if (chunkSize == 0 && nThread > 0) {
+         return null;
+      }
+
       long skip = nThread * chunkSize;
       mongoDbResultSet = new MongoDBRowSetImpl();
 
@@ -130,14 +137,14 @@ public class MongoDBManager extends SqlManager {
 
             if (this.options.getJobs() == nThread + 1) {
                // add skip to the pipeline
-               pipeline.add(BsonDocument.parse("{ $skip: "+skip+" }"));
+               pipeline.add(BsonDocument.parse("{ $skip: " + skip + " }"));
             } else {
                // add skip and limit to the pipeline
-               pipeline.add(BsonDocument.parse("{ $skip: "+skip+" }"));
-               pipeline.add(BsonDocument.parse("{ $limit: "+chunkSize+" }"));
+               pipeline.add(BsonDocument.parse("{ $skip: " + skip + " }"));
+               pipeline.add(BsonDocument.parse("{ $limit: " + chunkSize + " }"));
             }
 
-            LOG.info("Using this aggregation query to get data from MongoDB: {}", pipeline);
+            LOG.info("{}: Using this aggregation query to get data from MongoDB: {}",Thread.currentThread().getName(), pipeline);
             // create a MongoCursor to iterate over the results
             cursor = collection.aggregate(pipeline).allowDiskUse(true).cursor();
             firstDocument = collection.aggregate(pipeline).allowDiskUse(true).first();
@@ -149,24 +156,24 @@ public class MongoDBManager extends SqlManager {
             if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
                BsonDocument filter = BsonDocument.parse(options.getSourceWhere());
                findIterable.filter(filter);
-               LOG.info("Using this clause to filter data from MongoDB: {}", filter.toJson());
+               LOG.info("{}: Using this clause to filter data from MongoDB: {}",Thread.currentThread().getName(), filter.toJson());
             }
             // Source Fields
             if (options.getSourceColumns() != null && !options.getSourceColumns().isEmpty()) {
                BsonDocument projection = BsonDocument.parse(options.getSourceColumns());
                findIterable.projection(projection);
-               LOG.info("Using this clause to project data from MongoDB: {}", projection.toJson());
+               LOG.info("{}: Using this clause to project data from MongoDB: {}", Thread.currentThread().getName(), projection.toJson());
             }
 
             if (this.options.getJobs() == nThread + 1) {
                // add skip to the pipeline
                findIterable.skip((int) skip);
-               LOG.info("Using this clause to skip data from MongoDB: {}", skip);
+               LOG.info("{}: Skip {} data from source",Thread.currentThread().getName(), skip);
             } else {
                // add skip and limit to the pipeline
                findIterable.skip(Math.toIntExact(skip));
                findIterable.limit(Math.toIntExact(chunkSize));
-               LOG.info("Using this clause to skip and limit data from MongoDB: {} {}", skip, chunkSize);
+               LOG.info("{}: Skip {}, Limit {} data from source", Thread.currentThread().getName(), skip, chunkSize);
             }
 
             findIterable.batchSize(options.getFetchSize());
@@ -181,7 +188,7 @@ public class MongoDBManager extends SqlManager {
          mongoDbResultSet.setMongoCursor(cursor);
 
       } catch (MongoException me) {
-         LOG.error("MongoDB error: {}", me.getMessage(), me);
+         LOG.error("{}: MongoDB error: {}", Thread.currentThread().getName(), me.getMessage(), me);
       }
       return mongoDbResultSet;
    }
@@ -216,7 +223,7 @@ public class MongoDBManager extends SqlManager {
       // unordered bulk write
       BulkWriteOptions bulkWriteOptions = new BulkWriteOptions().ordered(false);
 
-      if (resultSet.next()) {
+      if (resultSet != null && resultSet.next()) {
          // Create Bandwidth Throttling
          BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
          do {
@@ -295,11 +302,9 @@ public class MongoDBManager extends SqlManager {
          }
 
          // set chunk size for each task
-         this.chunkSize =  Math.abs( totalRows / this.options.getJobs());
-         LOG.info("Total rows: {}, chunk size: {}", totalRows, this.chunkSize);
-
+         this.chunkSize = Math.abs(totalRows / this.options.getJobs());
+         LOG.info("Source collection total rows: {}, chunk size per job: {}", totalRows, this.chunkSize);
       }
-
    }
 
    @Override
@@ -385,7 +390,9 @@ public class MongoDBManager extends SqlManager {
          mongoDbResultSet.setFetchSize(0);
          mongoDbResultSet.close();
          MongoCursor<Document> cursor = mongoDbResultSet.getCursor();
-         cursor.close();
+         if (cursor != null) {
+            cursor.close();
+         }
       }
 
       // Close connection, ignore exceptions
