@@ -31,7 +31,8 @@ class Mongo2PostgresTest {
     private static final int EXPECTED_ROWS = 4096;
     private static final String SINK_COLLECTION = "t_sink";
     private static final String SOURCE_COLUMNS= "{_id:0,C_INTEGER:1,C_SMALLINT:1,C_BIGINT:1,C_NUMERIC:1,C_DECIMAL:1,C_REAL:1,C_DOUBLE_PRECISION:1,C_FLOAT:1,C_BINARY:1,C_BINARY_VAR:1,C_BINARY_LOB:1,C_BOOLEAN:1,C_CHARACTER:1,C_CHARACTER_VAR:1,C_CHARACTER_LOB:1,C_NATIONAL_CHARACTER:1,C_NATIONAL_CHARACTER_VAR:1,C_DATE:1,C_TIMESTAMP_WITH_TIMEZONE:1,C_OBJECT:1}";
-    private static final String SINK_COLUMNS= "C_REAL, C_JSON, C_FLOAT, C_DOUBLE_PRECISION, C_BIGINT, C_CHARACTER_VAR, C_CHARACTER, C_BINARY, C_NUMERIC, C_SMALLINT, C_TIMESTAMP_WITH_TIMEZONE, C_NATIONAL_CHARACTER_VAR, C_NATIONAL_CHARACTER, C_CHARACTER_LOB, C_DECIMAL, C_INTEGER, C_DATE, C_BOOLEAN, C_BINARY_LOB, C_BINARY_VAR";
+    private static final String SINK_COLUMNS= "C_INTEGER, C_SMALLINT, C_BIGINT, C_NUMERIC, C_DECIMAL, C_REAL, C_DOUBLE_PRECISION, C_FLOAT, C_BINARY, C_BINARY_VAR, C_BINARY_LOB, C_BOOLEAN, C_CHARACTER, C_CHARACTER_VAR, C_CHARACTER_LOB, C_NATIONAL_CHARACTER, C_NATIONAL_CHARACTER_VAR, C_DATE, C_TIMESTAMP_WITH_TIMEZONE, C_JSON";
+    private static final String SINK_COLUMNS_QUERY="C_REAL, C_JSON, C_FLOAT, C_DOUBLE_PRECISION, C_BIGINT, C_CHARACTER_VAR, C_CHARACTER, C_BINARY, C_NUMERIC, C_SMALLINT, C_TIMESTAMP_WITH_TIMEZONE, C_NATIONAL_CHARACTER_VAR, C_NATIONAL_CHARACTER, C_CHARACTER_LOB, C_DECIMAL, C_INTEGER, C_DATE, C_BOOLEAN, C_BINARY_LOB, C_BINARY_VAR";
 
     private MongoClient mongoClient;
     private String mongoDatabaseName;
@@ -70,18 +71,6 @@ class Mongo2PostgresTest {
         return rs.getInt(1);
     }
 
-
-    @Test
-    void testPostgresConnection() throws SQLException {
-        Statement stmt = postgresConn.createStatement();
-        ResultSet rs = stmt.executeQuery("SELECT 1");
-        rs.next();
-        String version = rs.getString(1);
-        LOG.info(version);
-        assertTrue(version.contains("1"));
-    }
-
-
     @Test
     void testMongodb2PostgresComplete() throws ParseException, IOException, SQLException {
         String[] args = {
@@ -97,24 +86,58 @@ class Mongo2PostgresTest {
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(EXPECTED_ROWS,countSinkRows());
     }
-//
-//    @Test
-//    void testMongodb2PostgresCompleteAtomic() throws ParseException, IOException, SQLException {
-//        String[] args = {
-//                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-//                "--source-connect", mongoContainer.getJdbcUrl(),
-//                "--source-user", mongoContainer.getUsername(),
-//                "--source-password", mongoContainer.getPassword(),
-//                "--sink-connect", postgres.getJdbcUrl(),
-//                "--sink-user", postgres.getUsername(),
-//                "--sink-password", postgres.getPassword(),
-//                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
-//        };
-//        ToolOptions options = new ToolOptions(args);
-//        assertEquals(0, ReplicaDB.processReplica(options));
-//        assertEquals(EXPECTED_ROWS,countSinkRows());//
-//    }
-//
+
+    @Test
+    void testMongodb2PostgresCompleteQuery() throws ParseException, IOException, SQLException {
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", mongoContainer.getReplicaSetUrl(),
+            "--sink-connect", postgres.getJdbcUrl(),
+            "--sink-user", postgres.getUsername(),
+            "--sink-password", postgres.getPassword(),
+            "--source-columns", SOURCE_COLUMNS,
+            "--sink-columns", SINK_COLUMNS_QUERY,
+            "--source-query", "[{$sort:{_id:1}},{$project: "+SOURCE_COLUMNS+"}]"
+        };
+        ToolOptions options = new ToolOptions(args);
+        Assertions.assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS,countSinkRows());
+    }
+
+    @Test
+    void testMongodb2PostgresCompleteWhere() throws ParseException, IOException, SQLException {
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", mongoContainer.getReplicaSetUrl(),
+            "--sink-connect", postgres.getJdbcUrl(),
+            "--sink-user", postgres.getUsername(),
+            "--sink-password", postgres.getPassword(),
+            "--source-columns", SOURCE_COLUMNS,
+            "--sink-columns", SINK_COLUMNS,
+            "--source-where", "{C_INTEGER:{$gt:-1}}"
+        };
+        ToolOptions options = new ToolOptions(args);
+        Assertions.assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS,countSinkRows());
+    }
+
+    @Test
+    void testMongodb2PostgresCompleteAtomic() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", mongoContainer.getReplicaSetUrl(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--source-columns", SOURCE_COLUMNS,
+                "--sink-columns", SINK_COLUMNS,
+                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS,countSinkRows());
+    }
+
     @Test
     void testMongodb2PostgresIncremental() throws ParseException, IOException, SQLException {
         String[] args = {
@@ -149,25 +172,61 @@ class Mongo2PostgresTest {
         assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(EXPECTED_ROWS,countSinkRows());
     }
-//
-//    @Test
-//    void testMongodb2PostgresCompleteAtomicParallel() throws ParseException, IOException, SQLException {
-//        String[] args = {
-//                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-//                "--source-connect", mongoContainer.getJdbcUrl(),
-//                "--source-user", mongoContainer.getUsername(),
-//                "--source-password", mongoContainer.getPassword(),
-//                "--sink-connect", postgres.getJdbcUrl(),
-//                "--sink-user", postgres.getUsername(),
-//                "--sink-password", postgres.getPassword(),
-//                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
-//                "--jobs", "4"
-//        };
-//        ToolOptions options = new ToolOptions(args);
-//        assertEquals(0, ReplicaDB.processReplica(options));
-//        assertEquals(EXPECTED_ROWS,countSinkRows());
-//    }
-//
+
+    @Test
+    void testMongodb2PostgresCompleteParallelQuery() throws ParseException, IOException, SQLException {
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", mongoContainer.getReplicaSetUrl(),
+            "--sink-connect", postgres.getJdbcUrl(),
+            "--sink-user", postgres.getUsername(),
+            "--sink-password", postgres.getPassword(),
+            "--source-columns", SOURCE_COLUMNS,
+            "--sink-columns", SINK_COLUMNS_QUERY,
+            "--source-query", "[{$sort:{_id:1}},{$project: "+SOURCE_COLUMNS+"}]",
+            "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS,countSinkRows());
+    }
+
+    @Test
+    void testMongodb2PostgresCompleteParallelWhere() throws ParseException, IOException, SQLException {
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", mongoContainer.getReplicaSetUrl(),
+            "--sink-connect", postgres.getJdbcUrl(),
+            "--sink-user", postgres.getUsername(),
+            "--sink-password", postgres.getPassword(),
+            "--source-columns", SOURCE_COLUMNS,
+            "--sink-columns", SINK_COLUMNS,
+            "--source-where", "{C_INTEGER:{$gt:-1}}",
+            "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS,countSinkRows());
+    }
+
+    @Test
+    void testMongodb2PostgresCompleteAtomicParallel() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", mongoContainer.getReplicaSetUrl(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--source-columns", SOURCE_COLUMNS,
+                "--sink-columns", SINK_COLUMNS,
+                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
+                "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS,countSinkRows());
+    }
+
     @Test
     void testMongodb2PostgresIncrementalParallel() throws ParseException, IOException, SQLException {
         String[] args = {

@@ -3,10 +3,10 @@ package org.replicadb.manager;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCompressor;
-import com.mongodb.MongoException;
 import com.mongodb.client.*;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.InsertOneModel;
+import com.mongodb.client.model.Sorts;
 import com.mongodb.client.model.WriteModel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,16 +15,18 @@ import org.bson.BsonValue;
 import org.bson.Document;
 import org.bson.codecs.BsonArrayCodec;
 import org.bson.codecs.DecoderContext;
+import org.bson.json.JsonParseException;
 import org.bson.json.JsonReader;
 import org.jetbrains.annotations.NotNull;
+import org.postgresql.util.PGobject;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.util.BandwidthThrottling;
+import org.replicadb.manager.util.BsonUtils;
 import org.replicadb.rowset.MongoDBRowSetImpl;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import javax.ws.rs.NotSupportedException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -57,6 +59,10 @@ public class MongoDBManager extends SqlManager {
    public MongoDBManager (ToolOptions opts, DataSourceType dsType) {
       super(opts);
       this.dsType = dsType;
+      // Mongodb as sink is not compatible with mode complete-atomic
+      if (dsType.equals(DataSourceType.SINK) && options.getMode().equals(ReplicationMode.COMPLETE_ATOMIC.getModeText())) {
+         throw new NotSupportedException("The complete-atomic mode is not supported in MongoDB as sink.");
+      }
    }
 
    @Override
@@ -132,11 +138,12 @@ public class MongoDBManager extends SqlManager {
 
          // if source query is specified, use it as mongodb aggregation pipeline
          if (options.getSourceQuery() != null) {
+            mongoDbResultSet.setAggregation(true);
             String queryAggregation = options.getSourceQuery();
             List<BsonDocument> pipeline = getAggregation(queryAggregation);
 
             if (this.options.getJobs() == nThread + 1) {
-               // add skip to the pipeline
+               // If it's the last job, skip the first documents
                pipeline.add(BsonDocument.parse("{ $skip: " + skip + " }"));
             } else {
                // add skip and limit to the pipeline
@@ -144,7 +151,7 @@ public class MongoDBManager extends SqlManager {
                pipeline.add(BsonDocument.parse("{ $limit: " + chunkSize + " }"));
             }
 
-            LOG.info("{}: Using this aggregation query to get data from MongoDB: {}",Thread.currentThread().getName(), pipeline);
+            LOG.info("{}: Using this aggregation query to get data from MongoDB: {}", Thread.currentThread().getName(), BsonUtils.toJsonStr(pipeline));
             // create a MongoCursor to iterate over the results
             cursor = collection.aggregate(pipeline).allowDiskUse(true).cursor();
             firstDocument = collection.aggregate(pipeline).allowDiskUse(true).first();
@@ -156,19 +163,20 @@ public class MongoDBManager extends SqlManager {
             if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
                BsonDocument filter = BsonDocument.parse(options.getSourceWhere());
                findIterable.filter(filter);
-               LOG.info("{}: Using this clause to filter data from MongoDB: {}",Thread.currentThread().getName(), filter.toJson());
+               LOG.info("{}: Using this clause to filter data from MongoDB: {}", Thread.currentThread().getName(), filter.toJson());
             }
             // Source Fields
             if (options.getSourceColumns() != null && !options.getSourceColumns().isEmpty()) {
                BsonDocument projection = BsonDocument.parse(options.getSourceColumns());
                findIterable.projection(projection);
+               mongoDbResultSet.setMongoProjection(projection);
                LOG.info("{}: Using this clause to project data from MongoDB: {}", Thread.currentThread().getName(), projection.toJson());
             }
 
             if (this.options.getJobs() == nThread + 1) {
-               // add skip to the pipeline
+               // If it's the last job, skip the first documents
                findIterable.skip((int) skip);
-               LOG.info("{}: Skip {} data from source",Thread.currentThread().getName(), skip);
+               LOG.info("{}: Skip {} data from source", Thread.currentThread().getName(), skip);
             } else {
                // add skip and limit to the pipeline
                findIterable.skip(Math.toIntExact(skip));
@@ -177,21 +185,30 @@ public class MongoDBManager extends SqlManager {
             }
 
             findIterable.batchSize(options.getFetchSize());
-            // TODO: fail in mongodb 4.0.10
-            //findIterable.allowDiskUse(true);
+            // if it is parallel processing
+            if (options.getJobs() > 1) {
+               // sort by object id
+               findIterable.sort(Sorts.ascending("_id"));
+               LOG.info("{}: Sort by _id", Thread.currentThread().getName());
+            }
             cursor = findIterable.cursor();
             firstDocument = findIterable.first();
 
          }
+
          mongoDbResultSet.setMongoFirstDocument(firstDocument);
          mongoDbResultSet.setSinkMongoDB(isSourceAndSinkMongoDB());
          mongoDbResultSet.execute();
          mongoDbResultSet.setMongoCursor(cursor);
 
-      } catch (MongoException me) {
-         LOG.error("{}: MongoDB error: {}", Thread.currentThread().getName(), me.getMessage(), me);
+      } catch (JsonParseException jpe) {
+         LOG.error("{}: Parse JSON exception in some source parameters where, query, columns: {}", Thread.currentThread().getName(), jpe.getMessage(), jpe);
          // rethrow the exception
-         throw me;
+         throw jpe;
+      } catch (Exception e) {
+         LOG.error("{}: Error: {}", Thread.currentThread().getName(), e.getMessage(), e);
+         // rethrow the exception
+         throw e;
       }
       return mongoDbResultSet;
    }
@@ -238,7 +255,54 @@ public class MongoDBManager extends SqlManager {
                // iterate columns
                Document document = new Document();
                for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
-                  document.put(resultSet.getMetaData().getColumnName(i), resultSet.getObject(i));
+                  String columnName = resultSet.getMetaData().getColumnName(i);
+                  switch (resultSet.getMetaData().getColumnType(i)) {
+                     case -104: //Oracle INTERVALDS
+                     case -103: //Oracle INTERVALYM
+                     case Types.SQLXML:
+                        document.put(columnName, resultSet.getString(i));
+                        break;
+                     case Types.TIMESTAMP:
+                     case Types.TIMESTAMP_WITH_TIMEZONE:
+                     case -101:
+                     case -102:
+                        document.put(columnName, resultSet.getTimestamp(i));
+                        break;
+                     case Types.BINARY:
+                     case Types.VARBINARY:
+                     case Types.LONGVARBINARY:
+                        document.put(columnName, resultSet.getBytes(i));
+                        break;
+                     case Types.BLOB:
+                        Blob blobData = resultSet.getBlob(i);
+                        if (blobData != null) {
+                           document.put(columnName, blobData.getBytes(1, (int) blobData.length()));
+                           blobData.free();
+                        }
+                        break;
+                     case Types.CLOB:
+                        Clob clobData = resultSet.getClob(i);
+                        document.put(columnName, clobToString(clobData));
+                        if (clobData != null) clobData.free();
+                        break;
+                     case 1111: // Postgres JSON, intervals and others
+                        Object object = resultSet.getObject(i);
+                        if (object instanceof PGobject) {
+                           PGobject pgObject = (PGobject) object;
+                           // if Document.parse fails, will be saved as a string
+                           try {
+                              document.put(columnName, Document.parse(pgObject.getValue()));
+                           } catch (Exception e) {
+                              document.put(columnName, pgObject.getValue());
+                           }
+                        } else {
+                           document.put(columnName, object);
+                        }
+                        break;
+                     default:
+                        document.put(columnName, resultSet.getObject(i));
+                        break;
+                  }
                }
 
                // Add document to bulk

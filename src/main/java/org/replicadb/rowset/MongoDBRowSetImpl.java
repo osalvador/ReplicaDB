@@ -1,26 +1,26 @@
 package org.replicadb.rowset;
 
+import com.google.gson.Gson;
 import com.mongodb.client.MongoCursor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.bson.BsonDocument;
+import org.bson.BsonValue;
 import org.bson.Document;
-import org.bson.json.Converter;
-import org.bson.json.JsonWriterSettings;
-import org.bson.json.StrictJsonWriter;
 import org.bson.types.Binary;
+import org.bson.types.ObjectId;
+import org.replicadb.manager.util.BsonUtils;
 
 import javax.sql.RowSetMetaData;
 import javax.sql.rowset.RowSetMetaDataImpl;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.time.Instant;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MongoDBRowSetImpl extends StreamingRowSetImpl {
@@ -31,6 +31,8 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
    private Boolean isSourceAndSinkMongo = false;
 
    private Document firstDocument = null;
+   private LinkedHashSet<String> mongoProjection;
+   private boolean isAggregation;
 
    public MongoDBRowSetImpl () throws SQLException {
       super();
@@ -57,18 +59,36 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
       } else {
 
          // The resultset metadata will be defined by the first document in the cursor
-         // If there is other documents with different structure, the fields will be ignored
+         // If there are other documents with different structure, the fields will be ignored
 
          if (this.firstDocument != null && this.firstDocument.size() > 0) {
             Document document = this.firstDocument;
 
-            // get column count
-            rsmd.setColumnCount(document.size());
-
             AtomicInteger i = new AtomicInteger(1);
 
-            document.keySet().forEach(key -> {
+            // if the query is an aggregation, the fields will be defined by the document keys
+            // otherwise, the fields will be defined by the projection
+            // cast to List to preserve the order
+            List<String> keys = new ArrayList<>();
+            if (this.isAggregation) {
+               keys.addAll(document.keySet());
+               // set document fields to the projection
+               this.mongoProjection = new LinkedHashSet<>(keys);
+            } else {
+               keys.addAll(this.mongoProjection);
+            }
+
+            // set column count
+            rsmd.setColumnCount(keys.size());
+
+            keys.forEach(key -> {
                Object value = document.get(key);
+               // If the value is null, the type will be set to VARCHAR
+               // log a warning
+               if (value == null) {
+                  LOG.warn("The value of the field {} is null. The type will be set to VARCHAR", key);
+               }
+
                String typeString = value == null ? "null" : value.getClass().toString();
                LOG.trace("Key: {},  Value: {} , Type: {} ", key, value, typeString);
 
@@ -80,6 +100,7 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
                   fields.add(key);
                } catch (SQLException e) {
                   LOG.error(e);
+                  throw new RuntimeException(e);
                }
                i.getAndIncrement();
             });
@@ -98,6 +119,7 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
     */
    static int getSqlType (String typeString) {
       switch (typeString) {
+         case "null":
          case "class java.lang.String":
             return java.sql.Types.VARCHAR;
          case "class java.lang.Integer":
@@ -131,6 +153,7 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
          case "class org.bson.Document":
             return Types.STRUCT;
          case "class org.bson.types.ObjectId":
+            return Types.ROWID;
          case "class java.lang.Object":
          default:
             return java.sql.Types.OTHER;
@@ -224,8 +247,19 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
                            if (document.getBoolean(columnName) == null) updateNull(j + 1);
                            else updateBoolean(j + 1, document.getBoolean(columnName));
                            break;
+                        case Types.ROWID:
+                           ObjectId oid = document.getObjectId(columnName);
+                           if (oid == null) updateNull(j + 1);
+                           else updateString(j + 1, oid.toString());
+                           break;
+                        case Types.ARRAY:
+                           List list = document.get(columnName, List.class);
+                           String jsonArr = new Gson().toJson(list );
+                           if (list == null) updateNull(j + 1);
+                           else updateString(j + 1, jsonArr);
+                           break;
                         default:
-                           String json = documentToJson(document.get(columnName, org.bson.Document.class));
+                           String json = BsonUtils.toJson(document.get(columnName, org.bson.Document.class));
                            if (json == null) updateNull(j + 1);
                            else updateString(j + 1, json);
                            break;
@@ -233,7 +267,6 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
                   }
                }
                insertRow();
-               document.clear();
             }
          } catch (Exception e) {
             LOG.error("MongoDB error: {}", e.getMessage(), e);
@@ -245,23 +278,6 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
       beforeFirst();
    }
 
-   public static class JsonDateTimeConverter implements Converter<Long> {
-      static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ISO_INSTANT.withZone(ZoneId.of("UTC"));
-      @Override
-      public void convert (Long value, StrictJsonWriter writer) {
-         Instant instant = new Date(value).toInstant();
-         String s = DATE_TIME_FORMATTER.format(instant);
-         writer.writeString(s);
-      }
-   }
-
-   private String documentToJson (Document document) {
-      if (document == null) return null;
-      return document.toJson(JsonWriterSettings
-          .builder()
-          .dateTimeConverter(new JsonDateTimeConverter())
-          .build());
-   }
 
    public void setMongoCursor (MongoCursor<Document> cursor) {
       this.cursor = cursor;
@@ -273,6 +289,21 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
 
    public void setMongoFirstDocument (Document firstDocument) {
       this.firstDocument = firstDocument;
+   }
+
+   public void setMongoProjection (BsonDocument projection) {
+      LinkedHashSet<String> fields = new LinkedHashSet<>();
+      // iterate over the projection document and add the fields to the fields list only if they are not 0
+      for (Map.Entry<String, BsonValue> entry : projection.entrySet()) {
+         if (!entry.getValue().isInt32() || entry.getValue().asInt32().getValue() != 0) {
+            fields.add(entry.getKey());
+         }
+      }
+      this.mongoProjection = fields;
+   }
+
+   public void setAggregation (boolean b) {
+      this.isAggregation = b;
    }
 }
 
