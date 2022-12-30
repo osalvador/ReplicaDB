@@ -4,6 +4,7 @@ import com.mongodb.ConnectionString;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.IndexOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bson.Document;
@@ -15,7 +16,7 @@ import java.util.List;
 
 public class ReplicadbMongodbContainer extends MongoDBContainer {
    private static final Logger LOG = LogManager.getLogger(ReplicadbMongodbContainer.class);
-   private static final String IMAGE_VERSION = "mongo:4.0.10";
+   private static final String IMAGE_VERSION = "mongo:4.2.23";
    private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
    private static final String SOURCE_FILE = "/mongo/t_source_data.json";
    private static final String T_SOURCE_COLLECTION = "t_source";
@@ -59,6 +60,9 @@ public class ReplicadbMongodbContainer extends MongoDBContainer {
             // log the first document
             LOG.info("First document: " + database.getCollection(T_SOURCE_COLLECTION).find().first().toJson());
 
+            database.createCollection("t_sink");
+            // create unique index on the sink collection on field C_INTEGER
+            database.getCollection("t_sink").createIndex(new Document("c_integer", 1), new IndexOptions().unique(true));
 
          } catch (Exception e) {
             throw new RuntimeException(e);
