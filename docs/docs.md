@@ -1003,9 +1003,10 @@ To configure the MongoDB connector, you will need to specify the following optio
 Note that `source.user`, `source.password`, `sink.user` and `sink.password` are not compatible and must be defined in the URI connection string in the `source.connect` and `sink.connect` options.
 
 The `source.connect` and `sink.connect` URI string follows the [MongoDB URI format](https://docs.mongodb.com/manual/reference/connection-string/):
-- `mongodb+srv://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]`
+- `mongodb://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]`
 - For MongoDB Atlas: `mongodb+srv://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]`
 
+> The **database name** in the URI connection string is required.
 
 #### Source Options
 
@@ -1057,4 +1058,108 @@ source.where={timestamp: {$gte: new Date()}}
 source.table=source_collection
 sink.table=sink_collection
 ```
+
+### Examples
+
+1.Replicate all documents from a collection in local MongoDB instance to a collection in remote MongoDB Atlas instance:
+
+```properties
+######################## ReplicadB General Options ########################
+mode=complete
+jobs=1
+fetch.size=100
+############################# Source Options ##############################
+source.connect=mongodb://root:password@127.0.0.1/catalog
+source.table=products
+############################# Sink Options ################################
+sink.connect=mongodb+srv://user:password@cluster0.qwertyh.mongodb.net/catalog?retryWrites=true&w=majority
+sink.table=products
+```
+
+2.Replicate a subset of documents from a collection in a local mongodb instance to a collection in a remote mongodb instance, using the `source.query` option to specify a mongodb aggregation pipeline:
+
+```properties
+######################## ReplicadB General Options ########################
+mode=complete
+jobs=1
+fetch.size=100
+############################# Source Options ##############################
+source.connect=mongodb://root:password@127.0.0.1/catalog
+source.table=products
+source.query=[{ $match : {startDate:{$gte:ISODate("2021-01-01T00:00:00.000Z")}} } \
+  ,{$sort:{startDate:1}} \
+  ,{$project: {_id:0, shopId:1, productId:1, price:1, startDate:1} } ]
+############################# Sink Options ################################
+sink.connect=mongodb+srv://user:password@cluster0.qwertyh.mongodb.net/catalog?retryWrites=true&w=majority
+sink.table=products
+```
+
+3.Replicate a table from a local Postgres database to a collection in a remote MongoDB Atlas instance:
+
+```properties
+######################## ReplicadB General Options ########################
+mode=complete
+jobs=1
+fetch.size=100
+verbose=true
+############################# Source Options ##############################
+source.connect=jdbc:postgresql://localhost:5432/postgres
+source.user=user
+source.password=password
+source.table=t_roles
+# Rename source columns to match mongodb collection sink fields
+source.columns=id as "rolId", txt_code as code, txt_role_name as "roleName" \
+  , cod_v_usuario_creacion as "createdBy", fec_dt_creacion as "createdAt" \
+  , cod_v_usuario_modificacion as "updatedBy", fec_dt_modificacion as "updatedAt"
+############################# Sink Options ################################
+sink.connect=mongodb+srv://user:password@cluster0.qwertyh.mongodb.net/catalog?retryWrites=true&w=majority
+sink.table=roles
+```
+
+4.Replicate a collection from a remote MongoDB Atlas instance to a local Postgres database.
+
+It's mandatory to specify the `source.columns` projection and  `sink.columns` options to match the source collection fields to the sink table columns.
+
+```properties
+######################## ReplicaDB General Options ########################
+mode=complete
+jobs=1
+fetch.size=100
+verbose=true
+############################# Source Options ##############################
+source.connect=mongodb+srv://user:password@cluster0.qwertyh.mongodb.net/catalog
+source.table=roles
+source.columns={_id:0,rolId:1,roleName:1,createdBy:1,createdAt:1,updatedBy:1,updatedAt:1}
+source.where={createdAt:{$gte:ISODate("2021-01-01T00:00:00.000Z")}}
+############################# Sink Options ################################
+sink.connect=jdbc:postgresql://localhost:5432/postgres
+sink.user=user
+sink.password=password
+sink.table=t_roles
+sink.columns=id, txt_role_name, cod_v_usuario_creacion, fec_dt_creacion, cod_v_usuario_modificacion, fec_dt_modificacion
+```
+
+5.Replicate a collection from a remote MongoDB Atlas instance to a local Postgres database using the Postgres `jsonb` data type and projection some fields from the source collection.
+
+It's mandatory to specify the `source.columns` projection and  `sink.columns` options to match the source collection fields to the sink table columns.
+
+```properties
+######################## ReplicaDB General Options ########################
+mode=complete
+jobs=1
+fetch.size=100
+verbose=true
+############################# Source Options ##############################
+source.connect=mongodb+srv://user:password@cluster0.qwertyh.mongodb.net/catalog
+source.table=products
+source.columns={_id:0,sku:1, document:'$$ROOT'}
+############################# Sink Options ################################
+sink.connect=jdbc:postgresql://localhost:5432/postgres
+sink.user=user
+sink.password=password
+sink.table=products_jsonb
+sink.columns=sku, document
+```
+
+You can also replicate from Postgres jsonb to MongoDB using the `jsonb` data type. ReplicaDB will automatically convert the jsonb data type to a MongoDB document.
 
