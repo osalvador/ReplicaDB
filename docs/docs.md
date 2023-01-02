@@ -990,3 +990,71 @@ sink.table=main.t_sink
 sink.staging.schema=main
 
 ```
+
+<br>
+
+## 4.9 MongoDB Connector
+
+The MongoDB connector in ReplicaDB allows you to replicate data between MongoDB databases and other databases supported by ReplicaDB. The MongoDB connector uses the [MongoDB Bulk API](https://docs.mongodb.com/manual/reference/method/Bulk.html) to perform the replication.
+
+### Configuration
+To configure the MongoDB connector, you will need to specify the following options in your ReplicaDB configuration file. 
+
+Note that `source.user`, `source.password`, `sink.user` and `sink.password` are not compatible and must be defined in the URI connection string in the `source.connect` and `sink.connect` options.
+
+The `source.connect` and `sink.connect` URI string follows the [MongoDB URI format](https://docs.mongodb.com/manual/reference/connection-string/):
+- `mongodb+srv://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]`
+- For MongoDB Atlas: `mongodb+srv://[username:password@]host1[:port1][,host2[:port2],...[,hostN[:portN]]][/[database][?options]]`
+
+
+#### Source Options
+
+| Parameter        | Description                                                                                         | 
+|------------------|-----------------------------------------------------------------------------------------------------|
+| `source.connect` | The MongoDB connection string with username and password. Compatible with MongoDB Atlas `mongodb+srv` |
+| `source.user`    | Not compatible                                                                                      | 
+| `source.password`| Not compatible                                                                                      |
+| `source.table`   | The name of the collection in the source database to replicate from                                 | 
+| `source.columns` | The list of columns to replicate from the source collection (`$projection`). In JSON format         |
+| `source.where` | A query filter to apply to the source collection. in JSON format                                    |
+| `source.query` | An aggregation pipeline (`aggregate`) to execute on the source collection. In Array JSON format     |
+
+#### Sink Options
+
+| Parameter        | Description                |
+|------------------|----------------------------|
+| `sink.connect`   | The MongoDB connection string with username and password. Compatible with MongoDB Atlas `mongodb+srv` |
+| `sink.user`      | Not compatible             |
+| `sink.password`  | Not compatible             |
+| `sink.table`     | The name of the collection in the sink database to replicate to |
+
+
+
+### Incremental Replication
+
+The MongoDB connector supports incremental replication using the `source.query` or `source.where` options. To enable incremental replication, you will need to specify a `source.query` aggregation pipeline that includes a `$match` stage to filter the documents to be replicated or a `source.where` query filter.
+
+The incremental mode for MongoDB as sink database uses the `$merge` statement to update the documents in the sink collection. The `$merge` statement requires a unique index on some field of the sink collection. If the sink collection does not have a unique index, ReplicaDB will throw an exception.   
+
+Note that the `$merge` stage is supported since MongoDB 4.2 and later.
+
+For example, to replicate all documents in the `source_collection` with a timestamp field greater than or equal to the current time, you could use the following configuration:
+
+#### Using `source.query`
+
+```properties
+mode=incremental
+source.query=[{$match: {timestamp: {$gte: new Date()}}},{$sort: {timestamp: 1}}]
+source.table=source_collection
+sink.table=sink_collection
+```
+
+#### Using `source.where`
+
+```properties
+mode=incremental
+source.where={timestamp: {$gte: new Date()}}
+source.table=source_collection
+sink.table=sink_collection
+```
+
