@@ -1025,6 +1025,8 @@ The `source.connect` and `sink.connect` URI string follows the [MongoDB URI form
 
 **Sink Options**
 
+{:.table}
+
 | Parameter        | Description                |
 |------------------|----------------------------|
 | `sink.connect`   | The MongoDB connection string with username and password. Compatible with MongoDB Atlas `mongodb+srv` |
