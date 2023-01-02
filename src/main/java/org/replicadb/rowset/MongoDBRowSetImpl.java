@@ -49,64 +49,69 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
       RowSetMetaData rsmd = new RowSetMetaDataImpl();
       List<String> fields = new ArrayList<>();
 
+      // it the first document is null, it means that the cursor is empty
+      if (this.firstDocument != null && this.firstDocument.size() == 0) {
+         // log warning
+         LOG.warn("No documents found in the source collection");
+         setMetaData(rsmd);
+         return;
+      }
+
       // if the sink database is mongodb, the document will be inserted as is
       if (Boolean.TRUE.equals(this.isSourceAndSinkMongo)) {
          rsmd.setColumnCount(1);
          rsmd.setColumnName(1, "document");
          rsmd.setColumnType(1, java.sql.Types.OTHER);
-         setMetaData(rsmd);
          fields.add("document");
       } else {
 
          // The resultset metadata will be defined by the first document in the cursor
          // If there are other documents with different structure, the fields will be ignored
+         Document document = this.firstDocument;
 
-         if (this.firstDocument != null && this.firstDocument.size() > 0) {
-            Document document = this.firstDocument;
+         AtomicInteger i = new AtomicInteger(1);
 
-            AtomicInteger i = new AtomicInteger(1);
+         // if the query is an aggregation, the fields will be defined by the document keys
+         // otherwise, the fields will be defined by the projection
+         // cast to List to preserve the order
+         List<String> keys = new ArrayList<>();
+         if (this.isAggregation) {
+            keys.addAll(document.keySet());
+            // set document fields to the projection
+            this.mongoProjection = new LinkedHashSet<>(keys);
+         } else {
+            keys.addAll(this.mongoProjection);
+         }
 
-            // if the query is an aggregation, the fields will be defined by the document keys
-            // otherwise, the fields will be defined by the projection
-            // cast to List to preserve the order
-            List<String> keys = new ArrayList<>();
-            if (this.isAggregation) {
-               keys.addAll(document.keySet());
-               // set document fields to the projection
-               this.mongoProjection = new LinkedHashSet<>(keys);
-            } else {
-               keys.addAll(this.mongoProjection);
+         // set column count
+         rsmd.setColumnCount(keys.size());
+
+         keys.forEach(key -> {
+            Object value = document.get(key);
+            // If the value is null, the type will be set to VARCHAR
+            // log a warning
+            if (value == null) {
+               LOG.warn("The value of the field {} is null. The type will be set to VARCHAR", key);
             }
 
-            // set column count
-            rsmd.setColumnCount(keys.size());
+            String typeString = value == null ? "null" : value.getClass().toString();
+            LOG.trace("Key: {},  Value: {} , Type: {} ", key, value, typeString);
 
-            keys.forEach(key -> {
-               Object value = document.get(key);
-               // If the value is null, the type will be set to VARCHAR
-               // log a warning
-               if (value == null) {
-                  LOG.warn("The value of the field {} is null. The type will be set to VARCHAR", key);
-               }
+            // define java.sql.Types from the type of the value
+            int type = getSqlType(typeString);
+            try {
+               rsmd.setColumnName(i.get(), key);
+               rsmd.setColumnType(i.get(), type);
+               fields.add(key);
+            } catch (SQLException e) {
+               LOG.error(e);
+               throw new RuntimeException(e);
+            }
+            i.getAndIncrement();
+         });
 
-               String typeString = value == null ? "null" : value.getClass().toString();
-               LOG.trace("Key: {},  Value: {} , Type: {} ", key, value, typeString);
-
-               // define java.sql.Types from the type of the value
-               int type = getSqlType(typeString);
-               try {
-                  rsmd.setColumnName(i.get(), key);
-                  rsmd.setColumnType(i.get(), type);
-                  fields.add(key);
-               } catch (SQLException e) {
-                  LOG.error(e);
-                  throw new RuntimeException(e);
-               }
-               i.getAndIncrement();
-            });
-         }
-         setMetaData(rsmd);
       }
+      setMetaData(rsmd);
       // Log fields in order
       LOG.warn("The source columns/fields names are be defined by the first document returned by the cursor in this order: {}", fields);
    }
@@ -172,6 +177,11 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
       boolean ret = this.internalNext();
       notifyCursorMoved();
 
+      // it the first document size is 0, it means that the cursor is empty
+      if (this.firstDocument != null && this.firstDocument.size() == 0) {
+         return false;
+      }
+
       if (!ret) {
          ret = this.cursor.hasNext();
          if (ret) {
@@ -193,6 +203,7 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
 
       Document document;
 
+      // load fetch size documents into the rowset
       for (int i = 1; i <= getFetchSize(); i++) {
 
          try {
@@ -254,7 +265,7 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
                            break;
                         case Types.ARRAY:
                            List list = document.get(columnName, List.class);
-                           String jsonArr = new Gson().toJson(list );
+                           String jsonArr = new Gson().toJson(list);
                            if (list == null) updateNull(j + 1);
                            else updateString(j + 1, jsonArr);
                            break;

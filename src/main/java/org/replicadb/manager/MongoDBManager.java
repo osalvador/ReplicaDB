@@ -153,7 +153,7 @@ public class MongoDBManager extends SqlManager {
 
             LOG.info("{}: Using this aggregation query to get data from MongoDB: {}", Thread.currentThread().getName(), BsonUtils.toJsonStr(pipeline));
             // create a MongoCursor to iterate over the results
-            cursor = collection.aggregate(pipeline).allowDiskUse(true).cursor();
+            cursor = collection.aggregate(pipeline).batchSize(options.getFetchSize()).allowDiskUse(true).cursor();
             firstDocument = collection.aggregate(pipeline).allowDiskUse(true).first();
          } else {
             // create a MongoCursor to iterate over the results
@@ -184,16 +184,18 @@ public class MongoDBManager extends SqlManager {
                LOG.info("{}: Skip {}, Limit {} data from source", Thread.currentThread().getName(), skip, chunkSize);
             }
 
-            findIterable.batchSize(options.getFetchSize());
             // if it is parallel processing
             if (options.getJobs() > 1) {
                // sort by object id
                findIterable.sort(Sorts.ascending("_id"));
                LOG.info("{}: Sort by _id", Thread.currentThread().getName());
+               // not compatible with 4.x version
+               // findIterable.allowDiskUse(true);
             }
+
+            findIterable.batchSize(options.getFetchSize());
             cursor = findIterable.cursor();
             firstDocument = findIterable.first();
-
          }
 
          mongoDbResultSet.setMongoFirstDocument(firstDocument);
