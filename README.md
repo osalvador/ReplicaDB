@@ -8,7 +8,7 @@
 
 ReplicaDB is an open source tool for database replication designed for efficiently transferring bulk data between relational and NoSQL databases.
 
-ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. ReplicaDB currently works with Oracle, Postgres, SQL Server, MySQL and MariaDB, SQLite, Denodo, CSV on local files or Amazon S3 and Kafka. Any other JDBC database is also supported with limitations.
+ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. ReplicaDB currently works with Oracle, Postgres, SQL Server, MySQL and MariaDB, SQLite, MongoDB, Denodo, CSV on local files or Amazon S3 and Kafka. Any other JDBC database is also supported with limitations.
 
 ReplicaDB is **Cross Platform**; you can replicate data across different platforms (Windows, Linux, MacOS), with compatibility for many databases. You can use **Parallel data transfer** for faster performance and optimal system utilization.
 
@@ -182,6 +182,7 @@ $ replicadb --mode=complete -j=1 \
 | PostgreSQL              |    :heavy_check_mark:    | :heavy_check_mark: |    :heavy_check_mark:     |    :heavy_check_mark:    |     :heavy_check_mark:    |
 | SQLite                  |    :heavy_check_mark:    | :heavy_check_mark: | :heavy_multiplication_x:  |    :heavy_check_mark:    |     :heavy_check_mark:    |
 | SQL Server              |    :heavy_check_mark:    | :heavy_check_mark: |    :heavy_check_mark:     |    :heavy_check_mark:    |  :heavy_multiplication_x: |
+| MongoDB                 |    :heavy_check_mark:    | :heavy_check_mark: | :heavy_multiplication_x:  |    :heavy_check_mark:    |     :heavy_check_mark:    |
 | Denodo                  |    :heavy_check_mark:    |         N/A        |            N/A            |           N/A            |            N/A            |
 | CSV                     |    :heavy_check_mark:    | :heavy_check_mark: |            N/A            |    :heavy_check_mark:    |     :heavy_check_mark:    |
 | Kafka                   | :heavy_multiplication_x: |         N/A        |            N/A            |    :heavy_check_mark:    |     :heavy_check_mark:    |
@@ -198,12 +199,11 @@ Features:
 - Kubernetes compliant
 
 New Databases: 
-- MongoDB
-- IBM DB2 (full compatibility)
 - Elasticsearch
 - Redis
-- Hive
-
+- IBM DB2 (full compatibility)
+- GCP BigQuery
+- Azure Synapse
 
 # Contributing
   
