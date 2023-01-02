@@ -45,6 +45,7 @@ class MySQL2PostgresTest {
     void before() throws SQLException {
         this.mysqlConn = DriverManager.getConnection(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword());
         this.postgresConn = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+        postgresConn.createStatement().execute("TRUNCATE TABLE T_SINK");
     }
 
     @AfterEach
