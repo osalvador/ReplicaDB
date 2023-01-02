@@ -11,7 +11,7 @@ homepage: true
 
 ReplicaDB is an open source tool for database replication designed for efficiently transferring bulk data between relational and NoSQL databases.
 
-ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. ReplicaDB currently works with Oracle, Postgres, SQL Server, MySQL and MariaDB, SQLite, Denodo, CSV on local files or Amazon S3 and Kafka. Any other JDBC database is also supported with limitations. 
+ReplicaDB helps offload certain tasks, such as ETL or ELT processing, for efficient execution at a much lower cost. ReplicaDB currently works with Oracle, Postgres, SQL Server, MySQL and MariaDB, SQLite, MongoDB, Denodo, CSV on local files or Amazon S3 and Kafka. Any other JDBC database is also supported with limitations. 
   
 ReplicaDB is **Cross Platform**; you can replicate data across different platforms (Windows, Linux, MacOS), with compatibility for many databases. You can use **Parallel data transfer** for faster performance and optimal system utilization.
 
@@ -188,6 +188,7 @@ $ replicadb --mode=complete -j=1 \
 | PostgreSQL              | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
 | SQL Server              | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |       <i class="far fa-times-circle"></i>        |
 | SQLite                  | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  |       <i class="far fa-times-circle"></i>        | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
+| MongoDB                 | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  |       <i class="far fa-times-circle"></i>        | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
 | CSV                     | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  |                                                  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
 | Denodo                  | <i class="far fa-check-circle text-success"></i>  |                                                   |                                                  |                                                  |                                                  |
 | Kafka                   |        <i class="far fa-times-circle"></i>        |                                                   |                                                  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
