@@ -1040,7 +1040,7 @@ The `source.connect` and `sink.connect` URI string follows the [MongoDB URI form
 
 The MongoDB connector supports incremental replication using the `source.query` or `source.where` options. To enable incremental replication, you will need to specify a `source.query` aggregation pipeline that includes a `$match` stage to filter the documents to be replicated or a `source.where` query filter.
 
-The incremental mode for MongoDB as sink database uses the `$merge` statement to update the documents in the sink collection. The `$merge` statement requires a unique index on some field of the sink collection. If the sink collection does not have a unique index, ReplicaDB will throw an exception.   
+The incremental mode for MongoDB as sink database uses the `$merge` statement to update the documents in the sink collection. The `$merge` statement requires a unique index on some field in the sink collection. If the sink collection does not have a unique index, ReplicaDB will throw an exception.   
 
 Note that the `$merge` stage is supported since MongoDB 4.2 and later.
 
