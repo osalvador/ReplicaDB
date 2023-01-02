@@ -36,6 +36,7 @@ layout: page
   - [4.6 MySQL and MariaDB Connector](#46-mysql-and-mariadb-connector)
   - [4.7 MSSQL Server Connector](#47-mssql-server-connector)
   - [4.8 SQLite Connector](#48-sqlite-connector)
+  - [4.9 MongoDB Connector](#49-mongodb-connector)
 
 {::comment}
     3.7. Controlling transaction isolation
