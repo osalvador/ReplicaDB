@@ -6,7 +6,7 @@
 
     <groupId>org.replicadb</groupId>
     <artifactId>ReplicaDB</artifactId>
-    <version>0.13.0</version>
+    <version>0.14.0</version>
 
     <name>ReplicaDB</name>
     <url>https://github.com/osalvador/ReplicaDB</url>
