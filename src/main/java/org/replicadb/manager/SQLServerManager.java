@@ -2,17 +2,19 @@ package org.replicadb.manager;
 
 import com.microsoft.sqlserver.jdbc.SQLServerBulkCopy;
 import com.microsoft.sqlserver.jdbc.SQLServerBulkCopyOptions;
+import microsoft.sql.Types;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 
 import javax.sql.RowSet;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.lang.reflect.Field;
+import java.sql.*;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class SQLServerManager extends SqlManager {
@@ -71,6 +73,7 @@ public class SQLServerManager extends SqlManager {
       // BulkCopy Options
       SQLServerBulkCopyOptions copyOptions = new SQLServerBulkCopyOptions();
       copyOptions.setBulkCopyTimeout(0);
+      copyOptions.setBatchSize(options.getFetchSize());
       bulkCopy.setBulkCopyOptions(copyOptions);
 
       bulkCopy.setDestinationTableName(tableName);
@@ -93,12 +96,22 @@ public class SQLServerManager extends SqlManager {
       }
 
       LOG.debug("Performing BulkCopy into {} ", tableName);
-      // Write from the source to the destination.
-      // If the source ResulSet is an implementation of RowSet (e.g. csv file) cast it.
-      if (resultSet instanceof RowSet) {
-         bulkCopy.writeToServer((RowSet) resultSet);
-      } else {
-         bulkCopy.writeToServer(resultSet);
+      try {
+         // Write from the source to the destination.
+         // If the source ResulSet is an implementation of RowSet (e.g. csv file) cast it.
+         if (resultSet instanceof RowSet) {
+            bulkCopy.writeToServer((RowSet) resultSet);
+         } else {
+            bulkCopy.writeToServer(resultSet);
+         }
+
+
+      } catch (SQLException ex) {
+         LOG.error("Error while performing BulkCopy into {} ", tableName, ex);
+         // log the error
+         logColumnLengthError(bulkCopy, ex);
+
+         throw ex;
       }
 
       bulkCopy.close();
@@ -111,6 +124,109 @@ public class SQLServerManager extends SqlManager {
       // Return the last row number
       return resultSet.getRow();
 
+   }
+
+   /**
+    * Log the error message and the column name and length that caused the error using reflection.
+    *
+    * @param bulkCopy the SQLServerBulkCopy object
+    * @param ex       the SQLException
+    */
+   private static void logColumnLengthError (SQLServerBulkCopy bulkCopy, SQLException ex) {
+      if (ex.getMessage().contains("Received an invalid column length from the bcp client for colid")) {
+         try {
+            String pattern = "\\d+";
+            Pattern r = Pattern.compile(pattern);
+            Matcher m = r.matcher(ex.getMessage());
+            if (m.find()) {
+               // get source column metadata
+               Field fi = SQLServerBulkCopy.class.getDeclaredField("srcColumnMetadata");
+               fi.setAccessible(true);
+               HashMap<Integer, Object> srcColumnsMetadata = (HashMap<Integer, Object>) fi.get(bulkCopy);
+               // get destination column metadata
+               fi = SQLServerBulkCopy.class.getDeclaredField("destColumnMetadata");
+               fi.setAccessible(true);
+               HashMap<Integer, Object> destColumnsMetadata = (HashMap<Integer, Object>) fi.get(bulkCopy);
+
+               // iterate over the HashMap and log the columns metadata and mapping
+               for (Integer key : destColumnsMetadata.keySet()) {
+
+                  // get source column metadata
+                  Object srcColumnMetadata = srcColumnsMetadata.get(key);
+                  // get source column name
+                  fi = srcColumnMetadata.getClass().getDeclaredField("columnName");
+                  fi.setAccessible(true);
+                  String srcColumnName = (String) fi.get(srcColumnMetadata);
+                  // get source column precision
+                  fi = srcColumnMetadata.getClass().getDeclaredField("precision");
+                  fi.setAccessible(true);
+                  int srcColumnPrecision = (int) fi.get(srcColumnMetadata);
+                  // get source column scale
+                  fi = srcColumnMetadata.getClass().getDeclaredField("scale");
+                  fi.setAccessible(true);
+                  int srcColumnScale = (int) fi.get(srcColumnMetadata);
+                  // get source column type
+                  fi = srcColumnMetadata.getClass().getDeclaredField("jdbcType");
+                  fi.setAccessible(true);
+                  int srcColumnType = (int) fi.get(srcColumnMetadata);
+                  String srcType = getJdbcTypeName(srcColumnType);
+
+
+                  // get destination column metadata
+                  Object destColumnMeta = destColumnsMetadata.get(key);
+                  // get the column Name
+                  fi = destColumnMeta.getClass().getDeclaredField("columnName");
+                  fi.setAccessible(true);
+                  String destColumnName = (String) fi.get(destColumnMeta);
+                  // get the precision
+                  fi = destColumnMeta.getClass().getDeclaredField("precision");
+                  fi.setAccessible(true);
+                  int destPrecision = (int) fi.get(destColumnMeta);
+                  // get the scale
+                  fi = destColumnMeta.getClass().getDeclaredField("scale");
+                  fi.setAccessible(true);
+                  int destScale = (int) fi.get(destColumnMeta);
+                  // get the type
+                  fi =  destColumnMeta.getClass().getDeclaredField("jdbcType");
+                  fi.setAccessible(true);
+                  int destJdbcType = (int) fi.get(destColumnMeta);
+                  // convert to string the type
+                  String destType = "";
+                  destType = getJdbcTypeName(destJdbcType);
+
+                  // Log source column mapped to sink column with metadata
+                  LOG.debug("colid {} : Source column {} ({}:(precision:{},scale:{})) mapped to sink column {} ({}:(precision:{},scale:{}))", key, srcColumnName, srcType, srcColumnPrecision, srcColumnScale, destColumnName, destType, destPrecision, destScale);
+
+               }
+            }
+         } catch (NoSuchFieldException | IllegalAccessException e) {
+            // ignore exception
+         }
+      }
+   }
+
+   private static String getJdbcTypeName (int destJdbcType) {
+      String destType = "";
+      try {
+         destType = JDBCType.valueOf(destJdbcType).getName();
+      } catch (IllegalArgumentException e) {
+         // try to get the name of the type from Types class based on its value
+         Field[] fields = Types.class.getFields();
+         for (Field field : fields) {
+            if (field.getType().equals(int.class)) {
+               try {
+                  if (field.getInt(null) == destJdbcType) {
+                     destType = field.getName();
+                     break;
+                  }
+               } catch (IllegalAccessException e1) {
+                  LOG.error("Error while getting the name of the type from Types class based on its value", e1);
+               }
+            }
+         }
+
+      }
+      return destType;
    }
 
    @Override
@@ -166,18 +282,18 @@ public class SQLServerManager extends SqlManager {
          sql.append("src.").append(pks[i]).append("= trg.").append(pks[i]);
       }
 
-       sql.append(" ) ");
-       LOG.trace("allColls: {} \n pks: {}", allColls, pks);
+      sql.append(" ) ");
+      LOG.trace("allColls: {} \n pks: {}", allColls, pks);
 
-       // Set all columns for UPDATE SET statement
-       String allColSelect = Arrays.stream(allColls.split("\\s*,\\s*"))
-           .filter(colName -> {
-               boolean contains = Arrays.asList(pks).contains(colName);
-               boolean containsQuoted = Arrays.asList(pks).contains("\"" + colName + "\"");
-               return !contains && !containsQuoted;
-           }).map(colName -> {
-               return String.format("trg.%s = src.%s", colName, colName);
-           }).collect(Collectors.joining(", "));
+      // Set all columns for UPDATE SET statement
+      String allColSelect = Arrays.stream(allColls.split("\\s*,\\s*"))
+          .filter(colName -> {
+             boolean contains = Arrays.asList(pks).contains(colName);
+             boolean containsQuoted = Arrays.asList(pks).contains("\"" + colName + "\"");
+             return !contains && !containsQuoted;
+          }).map(colName -> {
+             return String.format("trg.%s = src.%s", colName, colName);
+          }).collect(Collectors.joining(", "));
 
       if (allColSelect.length() > 0) {
          sql.append(" WHEN MATCHED THEN UPDATE SET ");
