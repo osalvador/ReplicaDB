@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.replicadb.manager.SupportedManagers.MONGODB;
@@ -154,7 +155,7 @@ public class MongoDBManager extends SqlManager {
             LOG.info("{}: Using this aggregation query to get data from MongoDB: {}", Thread.currentThread().getName(), BsonUtils.toJsonStr(pipeline));
             // create a MongoCursor to iterate over the results
             cursor = collection.aggregate(pipeline).batchSize(options.getFetchSize()).allowDiskUse(true).cursor();
-            firstDocument = collection.aggregate(pipeline).allowDiskUse(true).first();
+            firstDocument = collection.aggregate(pipeline).allowDiskUse(true).maxAwaitTime(100, TimeUnit.MINUTES).first();
          } else {
             // create a MongoCursor to iterate over the results
             FindIterable<Document> findIterable = collection.find();
@@ -360,7 +361,13 @@ public class MongoDBManager extends SqlManager {
             List<BsonDocument> pipeline = getAggregation(queryAggregation);
             // add count
             pipeline.add(BsonDocument.parse("{ $count: \"count\" }"));
-            totalRows = (long) collection.aggregate(pipeline).first().getInteger("count");
+            LOG.info("Using this aggregation to count the total number of rows from the MongoDB source: {}", BsonUtils.toJsonStr(pipeline));
+            // get the first document from the aggregation with 100 minutes timeout
+            Document countDocument = collection.aggregate(pipeline).maxAwaitTime(100, TimeUnit.MINUTES).allowDiskUse(true).first();
+            if (countDocument != null) {
+               // get integer and cast to long
+               totalRows = countDocument.getInteger("count",0);
+            }
          } else {
             BsonDocument where = new BsonDocument();
             // Source Where
@@ -441,7 +448,7 @@ public class MongoDBManager extends SqlManager {
          // merge collections
          LOG.info("Merging staging collection with sink collection using aggregation query: {}", aggregationQuery);
          List<BsonDocument> pipeline = getAggregation(aggregationQuery);
-         sinkStagingCollection.aggregate(pipeline).allowDiskUse(true).first();
+         sinkStagingCollection.aggregate(pipeline).allowDiskUse(true).maxAwaitTime(100, TimeUnit.MINUTES).first();
 
 
       } catch (Exception e) {
