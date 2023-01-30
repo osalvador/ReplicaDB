@@ -232,7 +232,7 @@
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
-            <version>7.2.2.jre8</version>
+            <version>11.2.3.jre8</version>
         </dependency>
 
         <!-- Amazon S3 -->
