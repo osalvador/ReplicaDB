@@ -30,4 +30,7 @@ call "%bin%\configure-replicadb.cmd" "%bin%"
 
 call %_RUNJAVA% -cp %REPLICADB_CLASSPATH% -Xmx256M -Xms256M -Dfile.encoding=UTF-8 -server -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:+ExplicitGCInvokesConcurrent -Djava.awt.headless=true -Djavax.xml.parsers.DocumentBuilderFactory=org.apache.xerces.jaxp.DocumentBuilderFactoryImpl org.replicadb.ReplicaDB %*
 
+:: create exit code from java process
+set /a exitCode=%errorlevel%
 endlocal
+exit /b %exitCode%
