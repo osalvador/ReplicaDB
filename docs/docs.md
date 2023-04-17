@@ -525,7 +525,7 @@ Settings are:
     escape=\\
     ignoreEmptyLines=false    
     quote="
-    nullString=""
+    nullString=\N
     trim=true    
     quoteMode=MINIMAL
 ```
