@@ -2,6 +2,7 @@ package org.replicadb.manager;
 
 import com.microsoft.sqlserver.jdbc.SQLServerBulkCopy;
 import com.microsoft.sqlserver.jdbc.SQLServerBulkCopyOptions;
+import com.microsoft.sqlserver.jdbc.SQLServerResultSet;
 import microsoft.sql.Types;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -119,11 +120,29 @@ public class SQLServerManager extends SqlManager {
       // TODO: getAllSinkColumns should not update the sinkColumns property. Change it in Oracle and check it in Postgres
       // Set Sink columns
       getAllSinkColumns(rsmd);
-
+      
       this.getConnection().commit();
-      // Return the last row number
-      return resultSet.getRow();
+      return getNumFetchedRows(resultSet);
+   }
 
+   /**
+    * Get the number of rows fetched from the ResultSet using reflection.
+    *
+    * @param resultSet the ResultSet
+    * @return the number of rows fetched
+    */
+   private static int getNumFetchedRows(ResultSet resultSet) {             
+      Field fi = null;
+      int numFetchedRows;
+      try {         
+         fi = SQLServerResultSet.class.getDeclaredField("numFetchedRows");
+         fi.setAccessible(true);         
+         numFetchedRows = (int) fi.get(resultSet);
+      } catch (NoSuchFieldException | IllegalAccessException e) {
+         // ignore exception
+         numFetchedRows = 0;
+      }
+      return numFetchedRows;
    }
 
    /**
