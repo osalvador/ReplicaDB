@@ -8,6 +8,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.rowset.CsvCachedRowSetImpl;
+import org.replicadb.rowset.MongoDBRowSetImpl;
 
 import javax.sql.RowSet;
 import java.lang.reflect.Field;
@@ -131,17 +133,25 @@ public class SQLServerManager extends SqlManager {
     * @param resultSet the ResultSet
     * @return the number of rows fetched
     */
-   private static int getNumFetchedRows(ResultSet resultSet) {             
+   private static int getNumFetchedRows(ResultSet resultSet) {
+      int numFetchedRows = 0;
       Field fi = null;
-      int numFetchedRows;
-      try {         
-         fi = SQLServerResultSet.class.getDeclaredField("numFetchedRows");
-         fi.setAccessible(true);         
-         numFetchedRows = (int) fi.get(resultSet);
-      } catch (NoSuchFieldException | IllegalAccessException e) {
-         // ignore exception
-         numFetchedRows = 0;
+
+      if (resultSet instanceof SQLServerResultSet) {
+         try {
+            fi = SQLServerResultSet.class.getDeclaredField("rowCount");
+            fi.setAccessible(true);
+            numFetchedRows = (int) fi.get(resultSet);
+         } catch (Exception e) {
+            // ignore exception
+            numFetchedRows = 0;
+         }
+      } else if (resultSet instanceof CsvCachedRowSetImpl) {
+         numFetchedRows = ((CsvCachedRowSetImpl) resultSet).getRowCount();         
+      } else if (resultSet instanceof MongoDBRowSetImpl) {         
+         numFetchedRows = ((MongoDBRowSetImpl) resultSet).getRowCount();
       }
+
       return numFetchedRows;
    }
 

@@ -33,6 +33,7 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
    private Document firstDocument = null;
    private LinkedHashSet<String> mongoProjection;
    private boolean isAggregation;
+   private int rowCount = 0;
 
    public MongoDBRowSetImpl () throws SQLException {
       super();
@@ -42,7 +43,15 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
    public MongoCursor<Document> getCursor () {
       return this.cursor;
    }
-
+   
+   public void incrementRowCount () {
+      this.rowCount += 1;
+   }
+   public int getRowCount () {
+      return rowCount;
+   }
+   
+   
    @Override
    public void execute () throws SQLException {
 
@@ -278,6 +287,7 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
                   }
                }
                insertRow();
+               incrementRowCount();
             }
          } catch (Exception e) {
             LOG.error("MongoDB error: {}", e.getMessage(), e);
