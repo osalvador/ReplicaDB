@@ -21,6 +21,7 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
    private String[] columnName;
    private CSVFormat csvFormat;
    private static int lineNumber = 0;
+   private int rowCount = 0;
 
    public void setCsvFormat (CSVFormat csvFormat) {
       this.csvFormat = csvFormat;
@@ -41,6 +42,13 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
       if (columnsNames == null) return;
       this.columnName = columnsNames.trim().replace(" ", "").toUpperCase().split(",");
    }
+   
+   public void incrementRowCount () {
+      this.rowCount += 1;
+   }   
+    public int getRowCount () {
+        return rowCount;
+    }
 
 
    @Override
@@ -244,6 +252,7 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
                }
 
                insertRow();
+               incrementRowCount();
             }
          } catch (Exception e) {
             LOG.error("An error has occurred reading line number {} of the CSV file", lineNumber, e);
@@ -252,7 +261,7 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
       }
 
       moveToCurrentRow();
-      beforeFirst();
+      beforeFirst();      
    }
 
    /**
