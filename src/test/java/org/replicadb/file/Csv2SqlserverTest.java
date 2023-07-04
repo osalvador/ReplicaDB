@@ -74,7 +74,7 @@ class Csv2SqlserverTest {
    }
 
    @Test
-   void testCsv2PostgresComplete () throws ParseException, IOException, SQLException {
+   void testCsv2SqlserverComplete () throws ParseException, IOException, SQLException {
       String[] args = {
           "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
           "--source-connect", "file://" + RESOURCE_DIR + CSV_SOURCE_FILE,

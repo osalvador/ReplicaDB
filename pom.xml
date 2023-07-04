@@ -16,7 +16,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <version.debezium>1.5.2.Final</version.debezium>
-        <version.testContainers>1.17.6</version.testContainers>
+        <version.testContainers>1.18.3</version.testContainers>
     </properties>
 
 

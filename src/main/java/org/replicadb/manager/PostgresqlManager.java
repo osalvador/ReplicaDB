@@ -14,8 +14,13 @@ import org.replicadb.manager.util.BandwidthThrottling;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+
+import static org.replicadb.manager.SupportedManagers.MARIADB;
+import static org.replicadb.manager.SupportedManagers.MYSQL;
 
 public class PostgresqlManager extends SqlManager {
 
@@ -76,6 +81,10 @@ public class PostgresqlManager extends SqlManager {
             byte[] bytes;
             String colValue = null;
 
+            // determine if the source database is MySQL or MariaDB
+            boolean isMySQL = MYSQL.isTheManagerTypeOf(options, DataSourceType.SOURCE) || MARIADB.isTheManagerTypeOf(options, DataSourceType.SOURCE);
+
+
             if (resultSet.next()) {
                 // Create Bandwidth Throttling
                 BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
@@ -95,11 +104,23 @@ public class PostgresqlManager extends SqlManager {
                             case Types.BINARY:
                                 colValue = bytesToPostgresHex(resultSet.getBytes(i));
                                 break;
-                            case Types.BLOB:
+                            case Types.BLOB:                            
                                 colValue = blobToPostgresHex(getBlob(resultSet,i));
                                 break;
                             default:
-                                colValue = resultSet.getString(i);
+                                if (isMySQL) {
+                                    // MySQL and MariaDB have a different way to handle Binary type
+                                    List<Integer> binaryTypes = Arrays.asList(-3,-4);
+                                    if (binaryTypes.contains(rsmd.getColumnType(i))) {
+                                        colValue = blobToPostgresHex(getBlob(resultSet,i));
+                                    } else {
+                                        // Any other type is converted to String
+                                        colValue = resultSet.getString(i);
+                                    }
+                                } else {
+                                    // Any other type is converted to String
+                                    colValue = resultSet.getString(i);
+                                }                                
                                 break;
                         }
 
