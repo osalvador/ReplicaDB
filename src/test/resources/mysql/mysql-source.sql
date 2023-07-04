@@ -28,7 +28,7 @@ create table t_source (
     /*Binary Strings:*/
     C_BINARY BINARY(35),
     C_BINARY_VAR VARBINARY(255),
-    C_BINARY_LOB BLOB,
+    C_BINARY_LOB LONGBLOB,
     /*Boolean:*/
     C_BOOLEAN BOOLEAN,
     /*Character Strings:*/
