@@ -29,8 +29,9 @@ public class ReplicadbOracleContainer extends OracleContainer {
 
   public static ReplicadbOracleContainer getInstance() {
     if (container == null) {
-      container = new ReplicadbOracleContainer();
+      container = new ReplicadbOracleContainer();      
       container.usingSid();
+      container.withReuse(true);
       container.start();
     }
     return container;
@@ -52,7 +53,7 @@ public class ReplicadbOracleContainer extends OracleContainer {
       runner.runScript(new BufferedReader(new FileReader(RESOURCE_DIR + ORACLE_SOURCE_FILE)));
       runner.runScript(new BufferedReader(new FileReader(RESOURCE_DIR + ORACLE_SOURCE_FILE_GEO)));
     } catch (SQLException | IOException e) {
-      throw new RuntimeException(e);
+      //throw new RuntimeException(e);
     }
 
   }

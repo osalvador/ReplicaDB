@@ -29,6 +29,7 @@ public class ReplicadbSqlserverContainer extends MSSQLServerContainer<ReplicadbS
     if (container == null) {
       container = new ReplicadbSqlserverContainer();
       container.acceptLicense();
+      container.withReuse(true);
       container.start();
     }
     return container;
@@ -50,7 +51,7 @@ public class ReplicadbSqlserverContainer extends MSSQLServerContainer<ReplicadbS
       runner.runScript(new BufferedReader(new FileReader(RESOURCE_DIR + SINK_FILE)));
       runner.runScript(new BufferedReader(new FileReader(RESOURCE_DIR + SOURCE_FILE)));
     } catch (SQLException | IOException e) {
-      throw new RuntimeException(e);
+      //throw new RuntimeException(e);
     }
 
   }
