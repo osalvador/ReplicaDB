@@ -23,7 +23,7 @@ public class FileManagerFactory {
         if (dsType == DataSourceType.SOURCE) {
             fileFormat = options.getSourceFileFormat();
         } else if (dsType == DataSourceType.SINK) {
-            fileFormat = options.getSinkFileformat();
+            fileFormat = options.getSinkFileFormat();
         } else {
             LOG.error("DataSourceType must be Source or Sink");
         }

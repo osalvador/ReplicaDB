@@ -22,6 +22,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
 import java.util.HashMap;
+import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -90,6 +91,10 @@ class Postgres2CsvFileTest {
       };
       ToolOptions options = new ToolOptions(args);
 
+      Properties sinkConnectionParams = new Properties();
+      sinkConnectionParams.setProperty("format", "EXCEL");
+      options.setSinkConnectionParams(sinkConnectionParams);
+      
       Assertions.assertEquals(0, ReplicaDB.processReplica(options));
       assertEquals(TOTAL_SINK_ROWS, countSinkRows());
    }
