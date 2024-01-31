@@ -54,7 +54,7 @@ public class Sentry {
             scope.setTag("source.connect", options.getSourceConnect());
             scope.setTag("sink.connect", options.getSinkConnect());
             if (options.getVersion() != null) scope.setTag("release.version", options.getVersion());
-            if (options.getSinkFileformat() != null) scope.setTag("sink.file_format", options.getSinkFileformat());
+            if (options.getSinkFileFormat() != null) scope.setTag("sink.file_format", options.getSinkFileFormat());
             if (options.getSourceFileFormat() != null)
                 scope.setTag("source.file_format", options.getSourceFileFormat());
         });
