@@ -96,12 +96,12 @@ Visit the [project homepage on Docker Hub](https://hub.docker.com/r/osalvador/re
 
 ## Podman 
 
-Based on Red Hat UBI 8
+Based on Red Hat UBI 9
 
 ```bash
 $ podman run \
     -v /tmp/replicadb.conf:/home/replicadb/conf/replicadb.conf:Z \
-    osalvador/replicadb:ubi8-latest
+    osalvador/replicadb:ubi9-latest
 ```
 
 # Full Documentation
