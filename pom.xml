@@ -166,7 +166,7 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <version>42.3.7</version>
+            <version>42.7.2</version>
         </dependency>
 
         <dependency>
@@ -313,7 +313,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>[30.0-jre,)</version>
+            <version>32.1.3-jre</version>
         </dependency>
 
 <!--        <dependency>-->

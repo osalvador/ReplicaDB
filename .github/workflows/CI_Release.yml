@@ -92,7 +92,7 @@ jobs:
           context: .
           file: Containerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: osalvador/replicadb:ubi8-${{ env.version }}, osalvador/replicadb:ubi8-latest
+          tags: osalvador/replicadb:ubi9-${{ env.version }}, osalvador/replicadb:ubi9-latest
           build-args: REPLICADB_RELEASE_VERSION=${{ env.version }}
 
 

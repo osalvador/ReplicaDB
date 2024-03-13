@@ -32,7 +32,7 @@ public class ToolOptions {
     private String sinkStagingTableAlias;
     private String sinkStagingSchema;
     private String sinkColumns;
-    private String sinkFileformat;
+    private String sinkFileFormat;
     private Boolean sinkDisableEscape = false;
     private Boolean sinkDisableIndex = false;
     private Boolean sinkDisableTruncate = false;
@@ -476,7 +476,7 @@ public class ToolOptions {
         setBandwidthThrottling(prop.getProperty("bandwidth.throttling"));
         setQuotedIdentifiers(Boolean.parseBoolean(prop.getProperty("quoted.identifiers")));
         setSourceFileFormat(prop.getProperty("source.file.format"));
-        setSinkFileformat(prop.getProperty("sink.file.format"));
+        setSinkFileFormat(prop.getProperty("sink.file.format"));
         setSentryDsn(prop.getProperty("sentry.dsn"));
 
         // Connection params
@@ -891,7 +891,7 @@ public class ToolOptions {
                 ",\n\tsourceConnectionParams=" + sourceConnectionParams +
                 ",\n\tsinkConnectionParams=" + sinkConnectionParams +
                 ",\n\tsourceFileFormat='" + sourceFileFormat + '\'' +
-                ",\n\tsinkFileformat='" + sinkFileformat + '\'' +
+                ",\n\tsinkFileformat='" + sinkFileFormat + '\'' +
                 '}';
     }
 
@@ -938,17 +938,17 @@ public class ToolOptions {
             this.sourceFileFormat = fileFormat;
     }
 
-    public String getSinkFileformat() {
-        return sinkFileformat;
+    public String getSinkFileFormat() {
+        return sinkFileFormat;
     }
 
-    public void setSinkFileformat(String sinkFileformat) {
-        this.sinkFileformat = sinkFileformat;
+    public void setSinkFileFormat(String sinkFileFormat) {
+        this.sinkFileFormat = sinkFileFormat;
     }
 
     private void setSinkFileFormatNotNull(String fileFormat) {
         if (fileFormat != null && !fileFormat.isEmpty())
-            this.sinkFileformat = fileFormat;
+            this.sinkFileFormat = fileFormat;
     }
 
     public String getSentryDsn() {

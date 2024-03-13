@@ -24,6 +24,11 @@ package org.replicadb.rowset;
  * questions.
  */
 
+import org.replicadb.rowset.sun.rowset.internal.BaseRow;
+import org.replicadb.rowset.sun.rowset.internal.CachedRowSetReader;
+import org.replicadb.rowset.sun.rowset.internal.InsertRow;
+import org.replicadb.rowset.sun.rowset.internal.Row;
+
 import java.sql.*;
 import javax.sql.*;
 import java.io.*;
@@ -35,8 +40,8 @@ import javax.sql.rowset.*;
 import javax.sql.rowset.spi.*;
 import javax.sql.rowset.serial.*;
 
-import com.sun.rowset.internal.*;
-import com.sun.rowset.providers.*;
+//import com.sun.rowset.internal.*;
+//import com.sun.rowset.providers.*;
 
 /**
  * The standard implementation of the <code>CachedRowSet</code> interface.
@@ -343,9 +348,9 @@ public class StreamingRowSetImpl extends BaseRowSet implements RowSet, RowSetInt
       // set the Reader, this maybe overridden latter
       provider = crs.getSyncProvider();
 
-      if (!(provider instanceof RIOptimisticProvider)) {
+     /* if (!(provider instanceof RIOptimisticProvider)) {
          throw new SQLException(resBundle.handleGetObject("cachedrowsetimpl.invalidp").toString());
-      }
+      }*/
 
       rowSetReader = provider.getRowSetReader();
       rowSetWriter = provider.getRowSetWriter();
