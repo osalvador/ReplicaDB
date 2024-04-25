@@ -105,7 +105,7 @@ fi
 
 # Set default initial memory allocation and maximum memory allocation
 if [[ -z "$JAVA_OPTS" ]]; then
-  JAVA_OPTS="-Xmx256M -Xms256M"
+  JAVA_OPTS="-Xmx6g -Xms2g"
 fi
 
 if [[ -z "$JVM_PERFORMANCE_OPTS" ]]; then
