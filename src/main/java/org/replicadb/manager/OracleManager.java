@@ -324,7 +324,7 @@ public class OracleManager extends SqlManager {
             boolean containsUppercase = Arrays.asList(pks).contains(colName.toUpperCase());
             boolean containsQuoted = Arrays.asList(pks).contains("\""+colName.toUpperCase()+"\"");
             if (!contains && !containsUppercase && !containsQuoted)
-                sql.append(" trg.").append(colName).append(" = src.").append(colName).append(" ,");
+                sql.append(" trg.").append(colName).append(" = trg.").append(colName).append(" ,");
         }
         // Delete the last comma
         sql.setLength(sql.length() - 1);
