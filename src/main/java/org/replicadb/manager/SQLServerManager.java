@@ -380,7 +380,7 @@ public class SQLServerManager extends SqlManager {
          if (options.getJobs() == 1)
             sqlCmd = sqlCmd + " where " + options.getSourceWhere() + " AND 0 = ?";
          else
-            sqlCmd = sqlCmd + " where " + options.getSourceWhere() + " ABS(CHECKSUM(%% physloc %%)) % " + (options.getJobs()) + " = ?";
+            sqlCmd = sqlCmd + " where " + options.getSourceWhere() + " AND ABS(CHECKSUM(%% physloc %%)) % " + (options.getJobs()) + " = ?";
 
       } else {
          // Full table read. Force NO_IDEX and table scan
