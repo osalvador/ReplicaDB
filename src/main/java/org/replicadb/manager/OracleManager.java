@@ -177,13 +177,14 @@ public class OracleManager extends SqlManager {
                             break;
                         case Types.CLOB:
                             Clob clobData = resultSet.getClob(i);
-                            //ps.setClob(i, clobData);
                             if (clobData != null) 
                             {                            	
                             	//Se establece los datos del campo CLOB como un objeto java.io.Reader
                             	ps.setClob(i, clobData.getCharacterStream());
                             	clobData.free();
                             }
+                            else//si el dato es null en el campo CLOB, se setea directamente el clobData
+                            	ps.setClob(i, clobData);
                             break;
                         case Types.BOOLEAN:
                             ps.setBoolean(i, resultSet.getBoolean(i));
