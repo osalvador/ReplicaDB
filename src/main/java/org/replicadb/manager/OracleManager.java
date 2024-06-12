@@ -212,7 +212,7 @@ public class OracleManager extends SqlManager {
                             ps.setObject(i, resultSet.getObject(i),Types.STRUCT);
                             break;
                         default:
-                            ps.setString(i, resultSet.getString(i));
+                            ps.setObject(i, resultSet.getObject(i));//Cambiar getString por getObject para los tipos de dato ANYDATA
                             break;
                     }
                 }
