@@ -177,15 +177,38 @@ public class OracleManager extends SqlManager {
                             break;
                         case Types.CLOB:
                             Clob clobData = resultSet.getClob(i);
+                            if (clobData != null) {
+                                // Obtiene la longitud del CLOB
+                                long clobLength = clobData.length();
+
+                                // Asegúrate de que el tamaño no sea cero antes de intentar establecer el stream
+                                if (clobLength > 0) {
+                                    // Establece el CharacterStream con la longitud exacta
+                                    ps.setCharacterStream(i, clobData.getCharacterStream(), (int) clobLength);
+                                } else {
+                                    // Si el CLOB está vacío, establece el campo como NULL
+                                    ps.setNull(i, Types.CLOB);
+                                }
+
+                                // Libera el objeto CLOB después de usarlo
+                                clobData.free();
+                            } else {
+                                // Si el dato es null en el campo CLOB, se setea directamente como NULL
+                                ps.setNull(i, Types.CLOB);
+                            }
+                            break;
+
+                        /*case Types.CLOB:
+                            Clob clobData = resultSet.getClob(i);
                             if (clobData != null) 
                             {                            	
                             	//Se establece los datos del campo CLOB como un objeto java.io.Reader
-                            	ps.setClob(i, clobData.getCharacterStream());
+                            	ps.setCharacterStream(i, clobData.getCharacterStream());
                             	clobData.free();
                             }
                             else//si el dato es null en el campo CLOB, se setea directamente el clobData
-                            	ps.setClob(i, clobData);
-                            break;
+                            	ps.setClob(i, clobData);                            
+                            break;*/
                         case Types.BOOLEAN:
                             ps.setBoolean(i, resultSet.getBoolean(i));
                             break;

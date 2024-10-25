@@ -20,3 +20,4 @@ data/*
 create_db.log
 create_db_error.log
 .DS_Store
+/target/
