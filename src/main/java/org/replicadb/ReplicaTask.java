@@ -88,4 +88,3 @@ public final class ReplicaTask implements Callable<Integer> {
         return result;
     }
 }
-
