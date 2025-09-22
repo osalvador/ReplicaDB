@@ -27,7 +27,6 @@ The tool was created because existing solutions didn't meet specific enterprise 
 - **Schema-aware replication** preserving data types and constraints
 - **Parallel processing** for large datasets (configurable job count)
 - **Incremental replication** using timestamp or sequential columns
-- **Change Data Capture (CDC)** for SQL Server and Oracle
 - **Bandwidth throttling** for network-constrained environments
 
 ### What ReplicaDB Does NOT Do
@@ -59,12 +58,6 @@ The tool was created because existing solutions didn't meet specific enterprise 
 - Handles large BLOB/CLOB fields appropriately
 - Integrates with existing backup and retention policies
 
-### 4. Real-Time Change Replication (CDC)
-**Scenario**: Maintaining read replicas for high-availability systems
-- CDC mode captures changes from database transaction logs
-- Continuously streams changes to target systems
-- Enables near-real-time reporting without impacting production
-
 ## Business Rules and Constraints
 
 ### Data Type Compatibility Rules
@@ -77,7 +70,6 @@ The tool was created because existing solutions didn't meet specific enterprise 
 - **Complete mode**: All-or-nothing replication within job boundaries
 - **Complete-atomic mode**: Single transaction for entire table (memory constraints apply)
 - **Incremental mode**: Each batch commits independently
-- **CDC mode**: Maintains source transaction boundaries where possible
 
 ### Performance Constraints
 - **Memory limits**: Large ResultSets use streaming to avoid OutOfMemory errors
@@ -135,7 +127,7 @@ The tool was created because existing solutions didn't meet specific enterprise 
 **Rationale**: Broad compatibility with focused performance tuning where it matters most
 
 ### Real-time vs. Batch Processing
-**Decision**: Batch-first design with CDC for specific databases
+**Decision**: Batch-first design focused on scheduled replication
 **Rationale**: Most enterprise use cases are scheduled/periodic, not streaming
 
 ## User Scenarios and Actors

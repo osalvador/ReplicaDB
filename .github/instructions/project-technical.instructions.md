@@ -56,7 +56,6 @@ org.replicadb/
 ├── cli/                    # Command-line interface and option parsing
 ├── config/                 # Configuration management and validation
 ├── manager/                # Database connection managers
-│   ├── cdc/               # Change Data Capture implementations
 │   ├── file/              # File system managers (CSV, ORC)
 │   └── [database]/        # Database-specific managers
 ├── rowset/                # Custom ResultSet implementations
@@ -277,18 +276,6 @@ public String getInsertSQLCommand(String tableName, String allColumns, int colum
 ```
 
 ## Integration Patterns
-
-### CDC Implementation Pattern
-```java
-// Debezium integration for change data capture
-public Properties getDebeziumProps() {
-    Properties props = new Properties();
-    props.setProperty("connector.class", "io.debezium.connector.oracle.OracleConnector");
-    props.setProperty("database.hostname", options.getSourceHost());
-    // CDC-specific configuration
-    return props;
-}
-```
 
 ### File System Integration
 ```java
