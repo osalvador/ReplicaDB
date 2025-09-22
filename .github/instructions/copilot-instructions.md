@@ -6,7 +6,7 @@ applyTo: '**'
 
 ## Business Purpose
 
-ReplicaDB solves the critical business problem of **efficient bulk data transfer between heterogeneous databases and data stores**. Unlike complex ETL tools or intrusive CDC systems, ReplicaDB provides a lightweight, cross-platform solution for organizations that need:
+ReplicaDB solves the critical business problem of **efficient bulk data transfer between heterogeneous databases and data stores**. Unlike complex ETL tools, ReplicaDB provides a lightweight, cross-platform solution for organizations that need:
 
 - **High-performance data migration** without streaming replication complexity
 - **Multi-database compatibility** across SQL, NoSQL, and file systems
@@ -49,7 +49,7 @@ ReplicaDB is built on **Java 8+ with Maven** for several strategic reasons:
 - **Maintain connection abstraction**: Override abstract methods in ConnManager hierarchy
 
 ### When modifying replication logic:
-- **Preserve mode compatibility**: Support complete, complete-atomic, incremental, and CDC modes
+- **Preserve mode compatibility**: Support complete, complete-atomic, and incremental modes
 - **Consider parallel processing**: Ensure thread safety in multi-job scenarios
 - **Handle bandwidth throttling**: Respect existing performance controls
 
