@@ -514,7 +514,7 @@ public abstract class SqlManager extends ConnManager {
     @Override
     public void cleanUp() throws Exception {
 
-        // Not Complete or CDC mode
+        // Complete-atomic and incremental modes
         if (options.getMode().equals(ReplicationMode.COMPLETE_ATOMIC.getModeText())
                 || options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
 

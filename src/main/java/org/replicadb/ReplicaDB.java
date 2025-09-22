@@ -10,7 +10,6 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
-import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.ConnManager;
 import org.replicadb.manager.DataSourceType;
@@ -77,17 +76,8 @@ public class ReplicaDB {
                 sourceDs = managerF.accept(options, DataSourceType.SOURCE);
                 sinkDs = managerF.accept(options, DataSourceType.SINK);
 
-                if (options.getMode().equals(ReplicationMode.CDC.getModeText())) {
-                    // ReplicaDB in CDC mode is running forever
-                    LOG.info("Running ReplicaDB in CDC mode");
-
-                    ReplicaDBCDC cdc = new ReplicaDBCDC(sourceDs, sinkDs);
-                    cdc.run();
-
-                } else {
-
-                    // Executor Service for atomic complet refresh replication
-                    preSinkTasksExecutor = Executors.newSingleThreadExecutor();
+                // Executor Service for atomic complet refresh replication
+                preSinkTasksExecutor = Executors.newSingleThreadExecutor();
 
                     // Pre tasks
                     sourceDs.preSourceTasks();
@@ -128,7 +118,6 @@ public class ReplicaDB {
                     // Shutdown Executor Services
                     preSinkTasksExecutor.shutdown();
                     replicaTasksService.shutdown();
-                }
 
             } catch (Exception e) {
                 LOG.error("Got exception running ReplicaDB:", e);

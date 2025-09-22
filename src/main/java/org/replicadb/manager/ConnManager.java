@@ -267,13 +267,4 @@ public abstract class ConnManager {
      */
     public abstract String[] getSinkPrimaryKeys(String tableName);
 
-
-    /**
-     * @return the debezium connector properties
-     */
-    public Properties getDebeziumProps(){
-        return null;
-    };
 }
-
-

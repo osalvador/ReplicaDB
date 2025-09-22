@@ -2,10 +2,7 @@ package org.replicadb.manager;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
-import org.replicadb.manager.cdc.OracleManagerCDC;
-import org.replicadb.manager.cdc.SQLServerManagerCDC;
 
 import static org.replicadb.manager.SupportedManagers.*;
 
@@ -43,19 +40,7 @@ public class ManagerFactory {
 
         LOG.trace("Trying with scheme: {}", scheme);
 
-        if (options.getMode().equals(ReplicationMode.CDC.getModeText())) {
-            LOG.debug("CDC Managers");
-
-            if (SQLSERVER.isTheManagerTypeOf(options, dsType)) {
-                return new SQLServerManagerCDC(options, dsType);
-            } else if (ORACLE.isTheManagerTypeOf(options, dsType)) {
-                return new OracleManagerCDC(options, dsType);
-            }else {
-                throw new IllegalArgumentException("The database with scheme "+scheme+" is not supported in CDC mode");
-            }
-
-        } else {
-            if (POSTGRES.isTheManagerTypeOf(options, dsType)) {
+        if (POSTGRES.isTheManagerTypeOf(options, dsType)) {
                 return new PostgresqlManager(options, dsType);
             } else if (ORACLE.isTheManagerTypeOf(options, dsType)) {
                 return new OracleManager(options, dsType);
@@ -79,7 +64,6 @@ public class ManagerFactory {
                 LOG.warn("The database with scheme {} was not found. Trying  with standard JDBC manager ", scheme);
                 return new StandardJDBCManager(options, dsType);
             }
-        }
 
     }
 

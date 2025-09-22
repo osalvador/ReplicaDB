@@ -264,7 +264,7 @@ public class ToolOptions {
         options.addOption(
                 Option.builder()
                         .longOpt("mode")
-                        .desc("Specifies the replication mode. The allowed values are complete, complete-atomic, incremental or cdc.")
+                        .desc("Specifies the replication mode. The allowed values are complete, complete-atomic or incremental.")
                         //.required()
                         .hasArg()
                         .argName("mode")
@@ -714,16 +714,14 @@ public class ToolOptions {
             if (!mode.toLowerCase().equals(ReplicationMode.COMPLETE.getModeText())
                     && !mode.toLowerCase().equals(ReplicationMode.INCREMENTAL.getModeText())
                     && !mode.toLowerCase().equals(ReplicationMode.COMPLETE_ATOMIC.getModeText())
-                    && !mode.toLowerCase().equals(ReplicationMode.CDC.getModeText())
             )
                 throw new IllegalArgumentException("mode option must be "
                         + ReplicationMode.COMPLETE.getModeText()
                         + ", "
                         + ReplicationMode.COMPLETE_ATOMIC.getModeText()
-                        + ", "
-                        + ReplicationMode.INCREMENTAL.getModeText()
                         + " or "
-                        + ReplicationMode.CDC.getModeText()
+                        + ReplicationMode.INCREMENTAL.getModeText()
+                        + ". CDC mode is no longer supported."
                 );
         } else {
             // Default mode
