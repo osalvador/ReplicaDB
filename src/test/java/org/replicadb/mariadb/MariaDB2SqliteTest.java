@@ -89,8 +89,8 @@ class MariaDB2SqliteTest {
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
+        // SQLite doesn't support complete-atomic mode, should return error code 1
         assertEquals(1, ReplicaDB.processReplica(options));
-
     }
 
     @Test
@@ -137,6 +137,7 @@ class MariaDB2SqliteTest {
                 "--jobs", "4"
         };
         ToolOptions options = new ToolOptions(args);
+        // SQLite doesn't support complete-atomic mode, should return error code 1
         assertEquals(1, ReplicaDB.processReplica(options));
     }
 
