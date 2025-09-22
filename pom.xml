@@ -15,7 +15,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <version.debezium>1.5.2.Final</version.debezium>
         <version.testContainers>1.18.3</version.testContainers>
     </properties>
 
@@ -268,23 +267,6 @@
             <version>4.8.1</version>
         </dependency>
 
-
-        <!-- Debezium -->
-        <dependency>
-            <groupId>io.debezium</groupId>
-            <artifactId>debezium-api</artifactId>
-            <version>${version.debezium}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.debezium</groupId>
-            <artifactId>debezium-embedded</artifactId>
-            <version>${version.debezium}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.debezium</groupId>
-            <artifactId>debezium-connector-sqlserver</artifactId>
-            <version>${version.debezium}</version>
-        </dependency>
 
         <dependency>
             <groupId>org.apache.orc</groupId>

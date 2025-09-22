@@ -25,7 +25,6 @@ import org.replicadb.manager.util.BandwidthThrottling;
 import org.replicadb.manager.util.BsonUtils;
 import org.replicadb.rowset.MongoDBRowSetImpl;
 
-import javax.ws.rs.NotSupportedException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -62,7 +61,7 @@ public class MongoDBManager extends SqlManager {
       this.dsType = dsType;
       // Mongodb as sink is not compatible with mode complete-atomic
       if (dsType.equals(DataSourceType.SINK) && options.getMode().equals(ReplicationMode.COMPLETE_ATOMIC.getModeText())) {
-         throw new NotSupportedException("The complete-atomic mode is not supported in MongoDB as sink.");
+         throw new UnsupportedOperationException("The complete-atomic mode is not supported in MongoDB as sink.");
       }
    }
 
