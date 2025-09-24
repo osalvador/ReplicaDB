@@ -199,6 +199,18 @@
             <artifactId>xdb</artifactId>
             <version>23.3.0.23.09</version>
         </dependency>
+        <!-- Oracle XML parser for XMLParseException and related classes -->
+        <dependency>
+            <groupId>com.oracle.database.xml</groupId>
+            <artifactId>xmlparserv2</artifactId>
+            <version>23.3.0.23.09</version>
+        </dependency>
+        <!-- Oracle XML DB support for XMLType processing -->
+        <dependency>
+            <groupId>com.oracle.database.xml</groupId>
+            <artifactId>xmlparserv2_sans_jaxp_services</artifactId>
+            <version>23.3.0.23.09</version>
+        </dependency>
 
 
         <!-- MariaDB -->
