@@ -14,7 +14,7 @@ CREATE OR REPLACE VIEW generate_series_4k
 AS SELECT ( ( hi.generate_series << 8 ) | lo.generate_series ) AS generate_series
    FROM generate_series_256 lo, generate_series_16 hi;
 
-create table t_source
+create table if not exists t_source
 (
     /*Exact Numerics*/
     C_INTEGER                    serial,
@@ -56,6 +56,8 @@ create table t_source
     C_JSON                       jsonb,
     PRIMARY KEY (C_INTEGER)
 );
+
+truncate table t_source;;
 
 insert into t_source (
     /*C_INTEGER, auto incremented*/
