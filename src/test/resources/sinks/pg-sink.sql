@@ -1,4 +1,4 @@
-create table t_sink
+create table if not exists t_sink
 (
     /*Exact Numerics*/
     C_INTEGER                    integer,
