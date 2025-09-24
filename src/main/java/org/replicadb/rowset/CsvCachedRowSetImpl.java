@@ -11,17 +11,22 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
    private static final Logger LOG = LogManager.getLogger(CsvCachedRowSetImpl.class.getName());
 
    private File sourceFile;
    private transient Iterable<CSVRecord> records;
+   private transient List<CSVRecord> recordList; // Store records in a list for multiple iterations
    private String[] columnsTypes;
    private String[] columnName;
    private CSVFormat csvFormat;
    private static int lineNumber = 0;
    private int rowCount = 0;
+   private int currentRecordIndex = 0; // Track current position in record list
+   private int fetchSize = 100; // Default fetch size, like MongoDB
 
    public void setCsvFormat (CSVFormat csvFormat) {
       this.csvFormat = csvFormat;
@@ -43,14 +48,46 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
       this.columnName = columnsNames.trim().replace(" ", "").toUpperCase().split(",");
    }
    
+   /**
+    * Override moveToInsertRow to handle CSV file reading properly.
+    * This method bypasses the CONCUR_READ_ONLY check by calling the parent
+    * method only when necessary, or providing a no-op implementation.
+    */
+   @Override
+   public void moveToInsertRow() throws SQLException {
+      // For CSV reading, we don't actually need to insert rows in the traditional sense
+      // This method is called during CSV parsing but we can make it a no-op
+      // or handle it gracefully without throwing the CONCUR_READ_ONLY exception
+      
+      // Simply return without doing anything - CSV data is read-only anyway
+      // and we're just processing the data, not actually inserting into the rowset
+   }
+
    public void incrementRowCount () {
       this.rowCount += 1;
    }   
-    public int getRowCount () {
-        return rowCount;
-    }
+   public int getRowCount() {
+      return this.rowCount;
+   }
 
+   /**
+    * Override getFetchSize to return the stored fetch size instead of 0.
+    */
+   @Override
+   public int getFetchSize() throws SQLException {
+      return this.fetchSize;
+   }
 
+   /**
+    * Override setFetchSize to actually store the fetch size value.
+    */
+   @Override
+   public void setFetchSize(int rows) throws SQLException {
+      if (rows < 0) {
+         throw new SQLException("Fetch size must be >= 0");
+      }
+      this.fetchSize = rows;
+   }
    @Override
    public void execute () throws SQLException {
 
@@ -123,8 +160,23 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
       try {
          reader = Files.newBufferedReader(sourceFile.toPath());
          this.records = csvFormat.parse(reader);
+         // Convert to list for multiple iterations
+         this.recordList = new ArrayList<>();
+         for (CSVRecord record : this.records) {
+            this.recordList.add(record);
+         }
+         this.currentRecordIndex = 0;
+         LOG.debug("Loaded {} CSV records", this.recordList.size());
       } catch (IOException e) {
          throw new SQLException(e);
+      } finally {
+         if (reader != null) {
+            try {
+               reader.close();
+            } catch (IOException e) {
+               LOG.warn("Error closing CSV reader", e);
+            }
+         }
       }
    }
 
@@ -135,41 +187,60 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
        * positioned in the rowset or before first (0) or
        * after last (numRows + 1)
        */
-    /*if (this.cursorPos < 0 || cursorPos >= numRows + 1) {
-        throw new SQLException(resBundle.handleGetObject("cachedrowsetimpl.invalidcp").toString());
-    }*/
+
+      // If no data loaded yet, try to load first batch (following MongoDB pattern)
+      if (size() == 0 && recordList != null && !recordList.isEmpty()) {
+         readData();
+         // After loading data, move to first row (readData positioned us before first)
+         if (size() > 0) {
+            boolean moved = internalNext(); // Move from before-first to first
+            notifyCursorMoved();
+            return moved;
+         }
+         return false;
+      }
 
       // now move and notify
       boolean ret = this.internalNext();
       notifyCursorMoved();
 
+      // If we don't have more rows in current batch, try to load next batch
       if (!ret) {
-         ret = this.records.iterator().hasNext();
+         ret = hasMoreRecords();
          if (ret) {
             readData();
-            internalFirst();
+            // After loading new batch, move from before-first to first
+            ret = this.internalNext();
+            notifyCursorMoved();
          }
       }
       return ret;
    }
 
+   private boolean hasMoreRecords() {
+      return recordList != null && currentRecordIndex < recordList.size();
+   }
+
    private void readData () throws SQLException {
 
-      // Close current cursor and reaopen.
+      // Close current cursor and reopen, similar to MongoDB implementation
       int currentFetchSize = getFetchSize();
       setFetchSize(0);
       close();
       setFetchSize(currentFetchSize);
-      moveToInsertRow();
 
       CSVRecord record;
 
-      for (int i = 1; i <= getFetchSize(); i++) {
+      // Load CSV records into the rowset using direct row appending (like MongoDB)
+      int loadedCount = 0;
+      for (int i = 1; i <= currentFetchSize && hasMoreRecords(); i++) {
          lineNumber++;
          try {
+            record = recordList.get(currentRecordIndex);
+            currentRecordIndex++;
 
-            if (this.records.iterator().hasNext()) {
-               record = this.records.iterator().next();
+               // Build row array directly (following MongoDB pattern)
+               Object[] rowData = new Object[this.columnsTypes.length];
 
                for (int j = 0; j <= this.columnsTypes.length - 1; j++) {
 
@@ -177,91 +248,68 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
                      case "VARCHAR":
                      case "CHAR":
                      case "LONGVARCHAR":
-                        if (getStringOrNull(record.get(j)) == null) updateNull(j + 1);
-                        else updateString(j + 1, record.get(j));
+                        rowData[j] = getStringOrNull(record.get(j));
                         break;
                      case "INTEGER":
-                        if (getStringOrNull(record.get(j)) == null) updateNull(j + 1);
-                        else updateInt(j + 1, Integer.parseInt(record.get(j)));
+                        rowData[j] = getStringOrNull(record.get(j)) == null ? null : Integer.parseInt(record.get(j));
                         break;
                      case "TINYINT":
-                        if (getStringOrNull(record.get(j)) == null) updateNull(j + 1);
-                        else updateByte(j + 1, Byte.parseByte(record.get(j)));
+                        rowData[j] = getStringOrNull(record.get(j)) == null ? null : Byte.parseByte(record.get(j));
                         break;
                      case "SMALLINT":
-                        if (getStringOrNull(record.get(j)) == null) updateNull(j + 1);
-                        else updateShort(j + 1, Short.parseShort(record.get(j)));
+                        rowData[j] = getStringOrNull(record.get(j)) == null ? null : Short.parseShort(record.get(j));
                         break;
                      case "BIGINT":
-                        if (getStringOrNull(record.get(j)) == null) updateNull(j + 1);
-                        else updateLong(j + 1, Long.parseLong(record.get(j)));
+                        rowData[j] = getStringOrNull(record.get(j)) == null ? null : Long.parseLong(record.get(j));
                         break;
                      case "NUMERIC":
                      case "DECIMAL":
-                        /*
-                         * "0"            [0,0]
-                         * "0.00"         [0,2]
-                         * "123"          [123,0]
-                         * "-123"         [-123,0]
-                         * "1.23E3"       [123,-1]
-                         * "1.23E+3"      [123,-1]
-                         * "12.3E+7"      [123,-6]
-                         * "12.0"         [120,1]
-                         * "12.3"         [123,1]
-                         * "0.00123"      [123,5]
-                         * "-1.23E-12"    [-123,14]
-                         * "1234.5E-4"    [12345,5]
-                         * "0E+7"         [0,-7]
-                         * "-0"           [0,0]
-                         */
-                        if (getStringOrNull(record.get(j)) == null) updateNull(j + 1);
-                        else updateBigDecimal(j + 1, new BigDecimal(record.get(j)));
+                        rowData[j] = getStringOrNull(record.get(j)) == null ? null : new BigDecimal(record.get(j));
                         break;
                      case "DOUBLE":
-                        if (getStringOrNull(record.get(j)) == null) updateNull(j + 1);
-                        else updateDouble(j + 1, Double.parseDouble(record.get(j)));
+                        rowData[j] = getStringOrNull(record.get(j)) == null ? null : Double.parseDouble(record.get(j));
                         break;
                      case "FLOAT":
-                        if (getStringOrNull(record.get(j)) == null) updateNull(j + 1);
-                        else updateFloat(j + 1, Float.parseFloat(record.get(j)));
+                        rowData[j] = getStringOrNull(record.get(j)) == null ? null : Float.parseFloat(record.get(j));
                         break;
                      case "DATE":
                         // yyyy-[m]m-[d]d
-                        if (getStringOrNull(record.get(j)) == null) updateNull(j + 1);
-                        else updateDate(j + 1, Date.valueOf(record.get(j)));
+                        rowData[j] = getStringOrNull(record.get(j)) == null ? null : Date.valueOf(record.get(j));
                         break;
                      case "TIMESTAMP":
                         // yyyy-[m]m-[d]d hh:mm:ss[.f...]
-                        if (getStringOrNull(record.get(j)) == null) updateNull(j + 1);
-                        else updateTimestamp(j + 1, Timestamp.valueOf(record.get(j)));
+                        rowData[j] = getStringOrNull(record.get(j)) == null ? null : Timestamp.valueOf(record.get(j));
                         break;
                      case "TIME":
                         // hh:mm:ss
-                        if (getStringOrNull(record.get(j)) == null) updateNull(j + 1);
-                        else updateTime(j + 1, Time.valueOf(record.get(j)));
+                        rowData[j] = getStringOrNull(record.get(j)) == null ? null : Time.valueOf(record.get(j));
                         break;
                      case "BOOLEAN":
-                        if (getStringOrNull(record.get(j)) == null) updateNull(j + 1);
-                        else updateBoolean(j + 1, convertToBoolean(record.get(j)));
+                        rowData[j] = getStringOrNull(record.get(j)) == null ? null : Boolean.parseBoolean(record.get(j));
                         break;
                      default:
-                        if (getStringOrNull(record.get(j)) == null) updateNull(j + 1);
-                        else updateString(j + 1, record.get(j));
+                        rowData[j] = getStringOrNull(record.get(j));
                         break;
                   }
                }
 
-               insertRow();
-               incrementRowCount();
-            }
+               // Add row to the RowSet (this is the key fix!)
+               this.appendRow(rowData);
+               this.incrementRowCount();
+               loadedCount++;
          } catch (Exception e) {
-            LOG.error("An error has occurred reading line number {} of the CSV file", lineNumber, e);
-            throw e;
+            LOG.error("CSV error processing record {}: {}", lineNumber, e.getMessage(), e);
+            throw new SQLException(e);
          }
       }
 
-      moveToCurrentRow();
-      beforeFirst();      
+      // Position cursor BEFORE first row so that when PostgresqlManager calls next(), 
+      // it will move to the actual first row instead of skipping it (following MongoDB pattern)
+      if (this.size() > 0) {
+         this.beforeFirst(); // Position BEFORE first row for proper next() behavior
+      } else {
+         this.beforeFirst(); // No data, position before first
+      }
    }
 
    /**
