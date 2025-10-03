@@ -16,6 +16,53 @@ Please note we have a code of conduct, please follow it in all your interactions
 4. You may merge the Pull Request in once you have the sign-off of two other developers, or if you 
    do not have permission to do that, you may request the second reviewer to merge it for you.
 
+## Testing Guidelines
+
+### Oracle Database Testing
+
+The project uses Oracle Free edition for testing via Docker containers. However, Oracle Free edition has limitations:
+
+- **SDO_GEOMETRY spatial data types are not supported** - Tests for spatial functionality (`Oracle2OracleSdoGeomTest`) will be automatically skipped
+- **XMLType columns may have limited support** - Tests automatically adapt by excluding XML columns when XML support is not available
+- **Advanced features** may be limited compared to Oracle Enterprise/Standard editions
+
+#### Dependencies Fixed
+
+Oracle XML support requires additional dependencies that have been added to `pom.xml`:
+- `com.oracle.database.xml:xmlparserv2` - for XML parser classes
+- `com.oracle.database.xml:xmlparserv2_sans_jaxp_services` - for enhanced XML support
+
+These fix the `java.lang.NoClassDefFoundError: oracle.xml.parser.v2.XMLParseException` error when processing XMLType columns.
+
+#### Running Oracle Spatial Tests
+
+To run the full Oracle spatial data type tests, you need access to Oracle Enterprise or Standard edition:
+
+1. Update the Docker image in `ReplicadbOracleContainer.java` to use an Enterprise/Standard edition image
+2. Ensure you have proper Oracle licensing for testing
+3. Tests will automatically detect geometry support and run all spatial tests
+
+#### Skipping Oracle Spatial Tests
+
+Tests are automatically skipped when:
+- Oracle Free edition is detected
+- SDO_GEOMETRY tables cannot be created
+- Oracle container fails to start
+
+You can also manually disable spatial tests by setting the system property:
+```bash
+mvn test -Dreplicadb.test.oracle.geometry.disable=true
+```
+
+### TestContainers Requirements
+
+The project uses TestContainers for integration testing, which requires:
+- Docker installed and running
+- Sufficient memory for database containers
+- Network connectivity to pull container images
+
+If containers cannot be started, affected tests will be skipped automatically.
+
 ## Code of Conduct
 
 ### Our Pledge
