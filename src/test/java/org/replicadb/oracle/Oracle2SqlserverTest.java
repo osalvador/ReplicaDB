@@ -4,6 +4,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Disabled;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
@@ -88,6 +89,7 @@ class Oracle2SqlserverTest {
 		assertEquals(EXPECTED_ROWS, count);
 	}
 
+	@Disabled("Oracle BLOB types are not supported by SQL Server BulkCopy")
 	@Test
 	void testOracle2SqlserverComplete() throws ParseException, IOException, SQLException {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
@@ -99,6 +101,7 @@ class Oracle2SqlserverTest {
 		assertEquals(EXPECTED_ROWS, this.countSinkRows());
 	}
 
+	@Disabled("Oracle BLOB types are not supported by SQL Server BulkCopy")
 	@Test
 	void testOracle2SqlserverCompleteAtomic() throws ParseException, IOException, SQLException {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
@@ -111,6 +114,7 @@ class Oracle2SqlserverTest {
 		assertEquals(EXPECTED_ROWS, this.countSinkRows());
 	}
 
+	@Disabled("Oracle BLOB types are not supported by SQL Server BulkCopy")
 	@Test
 	void testOracle2SqlserverIncremental() throws ParseException, IOException, SQLException {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
@@ -123,6 +127,7 @@ class Oracle2SqlserverTest {
 		assertEquals(EXPECTED_ROWS, this.countSinkRows());
 	}
 
+	@Disabled("Oracle BLOB types are not supported by SQL Server BulkCopy")
 	@Test
 	void testOracle2SqlserverCompleteParallel() throws ParseException, IOException, SQLException {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
@@ -134,6 +139,7 @@ class Oracle2SqlserverTest {
 		assertEquals(EXPECTED_ROWS, this.countSinkRows());
 	}
 
+	@Disabled("Oracle BLOB types are not supported by SQL Server BulkCopy")
 	@Test
 	void testOracle2SqlserverCompleteAtomicParallel() throws ParseException, IOException, SQLException {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
@@ -146,6 +152,7 @@ class Oracle2SqlserverTest {
 		assertEquals(EXPECTED_ROWS, this.countSinkRows());
 	}
 
+	@Disabled("Oracle BLOB types are not supported by SQL Server BulkCopy")
 	@Test
 	void testOracle2SqlserverIncrementalParallel() throws ParseException, IOException, SQLException {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
