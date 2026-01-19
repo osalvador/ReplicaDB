@@ -70,7 +70,7 @@ For example, to replicate a DB2 database table as both source and sink
 ######################## ReplicadB General Options ########################
 mode=complete
 jobs=1
-############################# Soruce Options ##############################
+############################# Source Options ##############################
 source.connect=jdbc:db2://localhost:50000/testdb
 source.user=${DB2USR}
 source.password=${DB2PASS}
