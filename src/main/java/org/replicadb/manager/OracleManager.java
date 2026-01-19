@@ -177,12 +177,16 @@ public class OracleManager extends SqlManager {
                             break;
                         case Types.CLOB:
                             Clob clobData = resultSet.getClob(i);
-                            //ps.setClob(i, clobData);
-                            if (clobData != null) 
-                            {                            	
-                            	//Se establece los datos del campo CLOB como un objeto java.io.Reader
-                            	ps.setClob(i, clobData.getCharacterStream());
-                            	clobData.free();
+                            if (clobData != null) {
+                                long clobLength = clobData.length();
+                                if (clobLength > 0) {
+                                    ps.setCharacterStream(i, clobData.getCharacterStream(), clobLength);
+                                } else {
+                                    ps.setNull(i, Types.CLOB);
+                                }
+                                clobData.free();
+                            } else {
+                                ps.setNull(i, Types.CLOB);
                             }
                             break;
                         case Types.BOOLEAN:
@@ -211,7 +215,8 @@ public class OracleManager extends SqlManager {
                             ps.setObject(i, resultSet.getObject(i),Types.STRUCT);
                             break;
                         default:
-                            ps.setString(i, resultSet.getString(i));
+                            // Use getObject for ANYDATA and other complex Oracle types
+                            ps.setObject(i, resultSet.getObject(i));
                             break;
                     }
                 }
