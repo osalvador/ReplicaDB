@@ -4,10 +4,7 @@ import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCompressor;
 import com.mongodb.client.*;
-import com.mongodb.client.model.BulkWriteOptions;
-import com.mongodb.client.model.InsertOneModel;
-import com.mongodb.client.model.Sorts;
-import com.mongodb.client.model.WriteModel;
+import com.mongodb.client.model.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.bson.BsonDocument;
@@ -506,6 +503,108 @@ public class MongoDBManager extends SqlManager {
 		this.primaryKeys = primaryKeys;
 	}
 
+	/**
+	 * Validates that a unique index exists on the sink collection for the specified
+	 * fields. MongoDB's $merge operation requires a unique index on the target
+	 * collection for the fields specified in the 'on' parameter.
+	 *
+	 * @param collection
+	 *            the MongoDB collection to validate
+	 * @param fields
+	 *            the list of fields that should have a unique index
+	 * @return true if a matching unique index exists, false otherwise
+	 */
+	private boolean hasUniqueIndexForFields(MongoCollection<Document> collection, List<String> fields) {
+		try {
+			for (final Document index : collection.listIndexes()) {
+				// Check if this is a unique index
+				final Object uniqueValue = index.get("unique");
+				boolean isUnique = uniqueValue instanceof Boolean && (Boolean) uniqueValue;
+
+				// _id index is always unique
+				final String indexName = index.getString("name");
+				if ("_id_".equals(indexName)) {
+					isUnique = true;
+				}
+
+				if (!isUnique) {
+					continue;
+				}
+
+				// Check if the index key matches the required fields
+				final Object keyObj = index.get("key");
+				if (!(keyObj instanceof Document)) {
+					continue;
+				}
+				final Document key = (Document) keyObj;
+				final List<String> indexFields = new ArrayList<>(key.keySet());
+
+				// Check if the index fields match the required fields (order matters for
+				// compound indexes)
+				if (indexFields.equals(fields)) {
+					LOG.info("Found matching unique index '{}' for fields {} on collection {}", indexName, fields,
+							collection.getNamespace().getCollectionName());
+					return true;
+				}
+			}
+		} catch (final Exception e) {
+			LOG.warn("Error checking for unique index on collection {}: {}",
+					collection.getNamespace().getCollectionName(), e.getMessage());
+		}
+		return false;
+	}
+
+	/**
+	 * Ensures that the sink collection has a unique index for the specified fields.
+	 * Creates the index if it doesn't exist. This is required for MongoDB's $merge
+	 * operation.
+	 *
+	 * @param collection
+	 *            the MongoDB collection
+	 * @param fields
+	 *            the list of fields that need a unique index
+	 */
+	private void ensureUniqueIndexExists(MongoCollection<Document> collection, List<String> fields) {
+		// Skip if it's just _id field (always has unique index by default)
+		if (fields.size() == 1 && "_id".equals(fields.get(0))) {
+			LOG.info("Using default _id unique index for collection {}", collection.getNamespace().getCollectionName());
+			return;
+		}
+
+		// Check if unique index already exists
+		if (this.hasUniqueIndexForFields(collection, fields)) {
+			return;
+		}
+
+		// Create unique index for the specified fields
+		try {
+			LOG.info("Creating unique index for fields {} on collection {}", fields,
+					collection.getNamespace().getCollectionName());
+
+			// Build compound index if multiple fields, or single field index
+			final IndexOptions indexOptions = new IndexOptions().unique(true);
+			final String indexName;
+
+			if (fields.size() == 1) {
+				collection.createIndex(Indexes.ascending(fields.get(0)), indexOptions);
+				indexName = fields.get(0) + "_1";
+			} else {
+				// Create compound index for multiple fields
+				collection.createIndex(Indexes.ascending(fields), indexOptions);
+				indexName = String.join("_", fields) + "_1";
+			}
+
+			LOG.info("Successfully created unique index '{}' for fields {} on collection {}", indexName, fields,
+					collection.getNamespace().getCollectionName());
+
+		} catch (final Exception e) {
+			LOG.error("Failed to create unique index for fields {} on collection {}: {}", fields,
+					collection.getNamespace().getCollectionName(), e.getMessage(), e);
+			throw new RuntimeException("Cannot create unique index required for $merge operation. "
+					+ "Please create a unique index manually on fields: " + fields, e);
+		}
+	}
+
 	@Override
 	protected void mergeStagingTable() throws Exception {
 
@@ -513,8 +612,15 @@ public class MongoDBManager extends SqlManager {
 
 		// merge staging table with sink table
 		try {
+			final MongoCollection<Document> sinkCollection = this.sinkDatabase.getCollection(this.getSinkTableName());
 			final MongoCollection<Document> sinkStagingCollection = this.sinkDatabase
 					.getCollection(this.getQualifiedStagingTableName());
+
+			// Ensure the sink collection has a unique index for the merge operation
+			// MongoDB's $merge requires a unique index on the target collection for the
+			// 'on' fields
+			LOG.info("Validating unique index on sink collection for merge operation");
+			this.ensureUniqueIndexExists(sinkCollection, this.primaryKeys);
 
 			String aggregationQuery = "[ {$project: {_id:0}},{$merge:{ into:\"${SINK_COLLECTION}\", on:[${PRIMARY_KEYS}], whenMatched: \"replace\", whenNotMatched: \"insert\" }} ]";
 			aggregationQuery = aggregationQuery.replace("${SINK_COLLECTION}", this.getSinkTableName());
