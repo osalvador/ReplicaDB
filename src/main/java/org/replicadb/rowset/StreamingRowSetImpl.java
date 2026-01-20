@@ -1789,8 +1789,25 @@ public class StreamingRowSetImpl extends ReplicaRowSetBase implements RowSetInte
 			case java.sql.Types.VARCHAR :
 			case java.sql.Types.LONGVARCHAR : {
 				try {
+					String strValue = value.toString().trim();
+					// Try ISO 8601 format first (e.g., "2016-06-08T15:45:14Z" from MongoDB)
+					if (strValue.endsWith("Z") || strValue.contains("T")) {
+						try {
+							java.time.Instant instant = java.time.Instant.parse(strValue);
+							return java.sql.Timestamp.from(instant);
+						} catch (java.time.format.DateTimeParseException e) {
+							// Try with offset format like "2016-06-08T15:45:14+00:00"
+							try {
+								java.time.OffsetDateTime odt = java.time.OffsetDateTime.parse(strValue);
+								return java.sql.Timestamp.from(odt.toInstant());
+							} catch (java.time.format.DateTimeParseException e2) {
+								// Fall through to standard parsing
+							}
+						}
+					}
+					// Fallback to standard time parsing
 					final DateFormat tf = DateFormat.getTimeInstance();
-					return ((java.sql.Timestamp) (tf.parse(value.toString())));
+					return ((java.sql.Timestamp) (tf.parse(strValue)));
 				} catch (final ParseException ex) {
 					throw new SQLException(
 							MessageFormat.format(this.resBundle.handleGetObject("cachedrowsetimpl.timefail").toString(),
