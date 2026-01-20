@@ -30,9 +30,6 @@ class Oracle2CsvFileTest {
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
     private static final int EXPECTED_ROWS = 4096;
 
-    private static final String SINK_FILE_PATH = "file:///tmp/oracle2csv_sink.csv";
-    private static final String SINK_FILE_URI_PATH = "file:///tmp/oracle2csv_sink.csv";
-
     private Connection oracleConn;
     private static ReplicadbOracleContainer oracle;
 
@@ -44,62 +41,47 @@ class Oracle2CsvFileTest {
     @BeforeEach
     void before() throws SQLException {
         this.oracleConn = DriverManager.getConnection(oracle.getJdbcUrl(), oracle.getUsername(), oracle.getPassword());
-        // Reset static temp files map FIRST to avoid stale references
+        // Reset static temp files map to avoid stale references between tests
         FileManager.setTempFilesPath(new HashMap<>());
-        
-        // Ensure file and temp files are deleted before test
-        File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
-        if (sinkFile.exists()) {
-            boolean deleted = sinkFile.delete();
-            LOG.info("Deleting existing sink file before test: {} - success: {}", sinkFile.getAbsolutePath(), deleted);
-            if (!deleted) {
-                // Force delete if normal delete fails
-                try {
-                    Files.deleteIfExists(sinkFile.toPath());
-                    LOG.info("Force deleted sink file");
-                } catch (IOException e) {
-                    LOG.error("Failed to force delete sink file", e);
-                }
-            }
-        }
-        // Verify file is really gone
-        if (sinkFile.exists()) {
-            LOG.error("SINK FILE STILL EXISTS AFTER DELETE ATTEMPT!");
-        }
-        
-        // Clean up any temp files from previous runs
-        File tmpDir = new File("/tmp");
-        File[] tempFiles = tmpDir.listFiles((dir, name) -> name.startsWith("oracle2csv_sink.csv.repdb."));
-        if (tempFiles != null) {
-            for (File f : tempFiles) {
-                LOG.info("Deleting temp file: {} - {}", f.getName(), f.delete());
-            }
-        }
     }
 
     @AfterEach
     void tearDown() throws SQLException {
         // Reset static temp files map
         FileManager.setTempFilesPath(new HashMap<>());
-        
-        // Delete sink file
-        File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
-        LOG.info("Deleted sink file: {}", sinkFile.delete());
-        
-        // Clean up any temp files
-        File tmpDir = new File("/tmp");
-        File[] tempFiles = tmpDir.listFiles((dir, name) -> name.startsWith("oracle2csv_sink.csv.repdb."));
-        if (tempFiles != null) {
-            for (File f : tempFiles) {
-                LOG.info("Deleting temp file in tearDown: {} - {}", f.getName(), f.delete());
-            }
-        }
-        
         this.oracleConn.close();
     }
 
-    public int countSinkRows() throws IOException {
-        Path path = Paths.get(URI.create(SINK_FILE_URI_PATH));
+    /**
+     * Delete a sink file and its associated temp files
+     */
+    private void cleanupFile(String fileUriPath, String tempFilePrefix) {
+        try {
+            File sinkFile = new File(URI.create(fileUriPath));
+            if (sinkFile.exists()) {
+                Files.deleteIfExists(sinkFile.toPath());
+                LOG.info("Deleted sink file: {}", sinkFile.getAbsolutePath());
+            }
+            
+            // Clean up any temp files
+            File tmpDir = new File("/tmp");
+            File[] tempFiles = tmpDir.listFiles((dir, name) -> name.startsWith(tempFilePrefix));
+            if (tempFiles != null) {
+                for (File f : tempFiles) {
+                    f.delete();
+                    LOG.info("Deleted temp file: {}", f.getName());
+                }
+            }
+        } catch (IOException e) {
+            LOG.error("Error cleaning up files", e);
+        }
+    }
+
+    /**
+     * Count rows in a CSV file
+     */
+    private int countRows(String fileUriPath) throws IOException {
+        Path path = Paths.get(URI.create(fileUriPath));
         try (var lines = Files.lines(path)) {
             int count = (int) lines.count();
             LOG.info("File total Rows: {}", count);
@@ -128,32 +110,58 @@ class Oracle2CsvFileTest {
 
     @Test
     void testOracle2CsvFileComplete() throws ParseException, IOException {
-        String[] args = {
-                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", oracle.getJdbcUrl(),
-                "--source-user", oracle.getUsername(),
-                "--source-password", oracle.getPassword(),
-                "--sink-connect", SINK_FILE_PATH,
-                "--sink-file-format", FileFormats.CSV.getType()
-        };
-        ToolOptions options = new ToolOptions(args);
-        assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS, countSinkRows());
+        // Use unique file name for this test
+        String sinkFilePath = "file:///tmp/oracle2csv_complete_" + System.nanoTime() + ".csv";
+        String tempFilePrefix = sinkFilePath.substring(sinkFilePath.lastIndexOf('/') + 1) + ".repdb.";
+        
+        // Clean before test
+        cleanupFile(sinkFilePath, tempFilePrefix);
+        FileManager.setTempFilesPath(new HashMap<>());
+        
+        try {
+            String[] args = {
+                    "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                    "--source-connect", oracle.getJdbcUrl(),
+                    "--source-user", oracle.getUsername(),
+                    "--source-password", oracle.getPassword(),
+                    "--sink-connect", sinkFilePath,
+                    "--sink-file-format", FileFormats.CSV.getType()
+            };
+            ToolOptions options = new ToolOptions(args);
+            assertEquals(0, ReplicaDB.processReplica(options));
+            assertEquals(EXPECTED_ROWS, countRows(sinkFilePath));
+        } finally {
+            // Clean after test
+            cleanupFile(sinkFilePath, tempFilePrefix);
+        }
     }
 
     @Test
     void testOracle2CsvFileCompleteParallel() throws ParseException, IOException {
-        String[] args = {
-                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-                "--source-connect", oracle.getJdbcUrl(),
-                "--source-user", oracle.getUsername(),
-                "--source-password", oracle.getPassword(),
-                "--sink-connect", SINK_FILE_PATH,
-                "--sink-file-format", FileFormats.CSV.getType(),
-                "--jobs", "4"
-        };
-        ToolOptions options = new ToolOptions(args);
-        assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS, countSinkRows());
+        // Use unique file name for this test
+        String sinkFilePath = "file:///tmp/oracle2csv_parallel_" + System.nanoTime() + ".csv";
+        String tempFilePrefix = sinkFilePath.substring(sinkFilePath.lastIndexOf('/') + 1) + ".repdb.";
+        
+        // Clean before test
+        cleanupFile(sinkFilePath, tempFilePrefix);
+        FileManager.setTempFilesPath(new HashMap<>());
+        
+        try {
+            String[] args = {
+                    "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                    "--source-connect", oracle.getJdbcUrl(),
+                    "--source-user", oracle.getUsername(),
+                    "--source-password", oracle.getPassword(),
+                    "--sink-connect", sinkFilePath,
+                    "--sink-file-format", FileFormats.CSV.getType(),
+                    "--jobs", "4"
+            };
+            ToolOptions options = new ToolOptions(args);
+            assertEquals(0, ReplicaDB.processReplica(options));
+            assertEquals(EXPECTED_ROWS, countRows(sinkFilePath));
+        } finally {
+            // Clean after test
+            cleanupFile(sinkFilePath, tempFilePrefix);
+        }
     }
 }
