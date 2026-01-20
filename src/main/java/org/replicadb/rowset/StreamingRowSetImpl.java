@@ -1720,8 +1720,23 @@ public class StreamingRowSetImpl extends ReplicaRowSetBase implements RowSetInte
 			case java.sql.Types.VARCHAR :
 			case java.sql.Types.LONGVARCHAR : {
 				try {
+					String strValue = value.toString().trim();
+					// Try ISO 8601 format first (e.g., "2016-06-08T15:45:14Z" from MongoDB)
+					if (strValue.endsWith("Z") || strValue.contains("T")) {
+						try {
+							java.time.Instant instant = java.time.Instant.parse(strValue);
+							return new java.sql.Time(instant.toEpochMilli());
+						} catch (java.time.format.DateTimeParseException e) {
+							try {
+								java.time.OffsetDateTime odt = java.time.OffsetDateTime.parse(strValue);
+								return new java.sql.Time(odt.toInstant().toEpochMilli());
+							} catch (java.time.format.DateTimeParseException e2) {
+								// Fall through to standard parsing
+							}
+						}
+					}
 					final DateFormat tf = DateFormat.getTimeInstance();
-					return ((java.sql.Time) (tf.parse(value.toString())));
+					return ((java.sql.Time) (tf.parse(strValue)));
 				} catch (final ParseException ex) {
 					throw new SQLException(
 							MessageFormat.format(this.resBundle.handleGetObject("cachedrowsetimpl.timefail").toString(),
@@ -1729,6 +1744,21 @@ public class StreamingRowSetImpl extends ReplicaRowSetBase implements RowSetInte
 				}
 			}
 			default : {
+				// Try to handle ISO 8601 strings that may come with OTHER or unknown types
+				String strValue = value.toString().trim();
+				if (strValue.endsWith("Z") || strValue.contains("T")) {
+					try {
+						java.time.Instant instant = java.time.Instant.parse(strValue);
+						return new java.sql.Time(instant.toEpochMilli());
+					} catch (java.time.format.DateTimeParseException e) {
+						try {
+							java.time.OffsetDateTime odt = java.time.OffsetDateTime.parse(strValue);
+							return new java.sql.Time(odt.toInstant().toEpochMilli());
+						} catch (java.time.format.DateTimeParseException e2) {
+							// Fall through to error
+						}
+					}
+				}
 				throw new SQLException(
 						MessageFormat.format(this.resBundle.handleGetObject("cachedrowsetimpl.timefail").toString(),
 								value.toString().trim(), columnIndex));
@@ -1815,6 +1845,21 @@ public class StreamingRowSetImpl extends ReplicaRowSetBase implements RowSetInte
 				}
 			}
 			default : {
+				// Try to handle ISO 8601 strings that may come with OTHER or unknown types
+				String strValue = value.toString().trim();
+				if (strValue.endsWith("Z") || strValue.contains("T")) {
+					try {
+						java.time.Instant instant = java.time.Instant.parse(strValue);
+						return java.sql.Timestamp.from(instant);
+					} catch (java.time.format.DateTimeParseException e) {
+						try {
+							java.time.OffsetDateTime odt = java.time.OffsetDateTime.parse(strValue);
+							return java.sql.Timestamp.from(odt.toInstant());
+						} catch (java.time.format.DateTimeParseException e2) {
+							// Fall through to error
+						}
+					}
+				}
 				throw new SQLException(
 						MessageFormat.format(this.resBundle.handleGetObject("cachedrowsetimpl.timefail").toString(),
 								value.toString().trim(), columnIndex));
