@@ -250,10 +250,11 @@ public class OrcFileManager extends FileManager {
                     case Types.INTEGER:
                     case Types.TINYINT:
                     case Types.SMALLINT:
-                        ((LongColumnVector) batch.cols[batchColIndex]).vector[rowInBatch] = (int) field;
+                        // Use Number.intValue() to handle Short, Integer, and other numeric types
+                        ((LongColumnVector) batch.cols[batchColIndex]).vector[rowInBatch] = ((Number) field).intValue();
                         break;
                     case Types.BIGINT:
-                        ((LongColumnVector) batch.cols[batchColIndex]).vector[rowInBatch] = (long) field;
+                        ((LongColumnVector) batch.cols[batchColIndex]).vector[rowInBatch] = ((Number) field).longValue();
                         break;
                     case Types.NUMERIC:
                     case Types.DECIMAL:

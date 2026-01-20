@@ -44,11 +44,21 @@ class Oracle2CsvFileTest {
     @BeforeEach
     void before() throws SQLException {
         this.oracleConn = DriverManager.getConnection(oracle.getJdbcUrl(), oracle.getUsername(), oracle.getPassword());
-        // Ensure file is deleted before test
+        // Ensure file and temp files are deleted before test
         File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
         if (sinkFile.exists()) {
             sinkFile.delete();
         }
+        // Clean up any temp files from previous runs
+        File tmpDir = new File("/tmp");
+        File[] tempFiles = tmpDir.listFiles((dir, name) -> name.startsWith("oracle2csv_sink.csv.repdb."));
+        if (tempFiles != null) {
+            for (File f : tempFiles) {
+                f.delete();
+            }
+        }
+        // Reset static temp files map
+        FileManager.setTempFilesPath(new HashMap<>());
     }
 
     @AfterEach

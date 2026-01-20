@@ -115,6 +115,7 @@ class Sqlserver2MySQLTest {
                 "--sink-connect", mysql.getJdbcUrl(),
                 "--sink-user", mysql.getUsername(),
                 "--sink-password", mysql.getPassword(),
+                "--sink-staging-schema", "test",
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
         };
         ToolOptions options = new ToolOptions(args);

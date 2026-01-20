@@ -115,6 +115,7 @@ class Sqlserver2MariaDBTest {
                 "--sink-connect", mariadb.getJdbcUrl(),
                 "--sink-user", mariadb.getUsername(),
                 "--sink-password", mariadb.getPassword(),
+                "--sink-staging-schema", "test",
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
         };
         ToolOptions options = new ToolOptions(args);

@@ -154,6 +154,15 @@ public class SqliteManager extends SqlManager {
 						case Types.NVARCHAR :
 							ps.setNString(i, resultSet.getNString(i));
 							break;
+						case Types.SQLXML :
+							final SQLXML sqlxmlData = resultSet.getSQLXML(i);
+							if (sqlxmlData != null) {
+								ps.setString(i, sqlxmlData.getString());
+								sqlxmlData.free();
+							} else {
+								ps.setNull(i, Types.VARCHAR);
+							}
+							break;
 						case Types.ROWID :
 							ps.setRowId(i, resultSet.getRowId(i));
 							break;
