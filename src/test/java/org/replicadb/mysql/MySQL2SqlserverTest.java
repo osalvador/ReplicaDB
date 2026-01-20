@@ -95,6 +95,11 @@ class MySQL2SqlserverTest {
 
     @Test
     void testMySQL2SqlserverComplete() throws ParseException, IOException, SQLException {
+        // Exclude C_NUMERIC and C_DECIMAL columns - MySQL DECIMAL(65,30) exceeds SQL Server max precision 38
+        String sourceColumns = "C_INTEGER,C_SMALLINT,C_BIGINT,C_REAL,C_DOUBLE_PRECISION,C_FLOAT," +
+                "C_BINARY,C_BINARY_VAR,C_BINARY_LOB,C_BOOLEAN,C_CHARACTER,C_CHARACTER_VAR," +
+                "C_CHARACTER_LOB,C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR,C_DATE," +
+                "C_TIME_WITHOUT_TIMEZONE,C_TIMESTAMP_WITHOUT_TIMEZONE,C_TIME_WITH_TIMEZONE,C_TIMESTAMP_WITH_TIMEZONE";
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
@@ -102,7 +107,8 @@ class MySQL2SqlserverTest {
                 "--source-password", mysql.getPassword(),
                 "--sink-connect", sqlserver.getJdbcUrl(),
                 "--sink-user", sqlserver.getUsername(),
-                "--sink-password", sqlserver.getPassword()
+                "--sink-password", sqlserver.getPassword(),
+                "--source-columns", sourceColumns
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
@@ -149,6 +155,11 @@ class MySQL2SqlserverTest {
 
     @Test
     void testMySQL2SqlserverCompleteParallel() throws ParseException, IOException, SQLException {
+        // Exclude C_NUMERIC and C_DECIMAL columns - MySQL DECIMAL(65,30) exceeds SQL Server max precision 38
+        String sourceColumns = "C_INTEGER,C_SMALLINT,C_BIGINT,C_REAL,C_DOUBLE_PRECISION,C_FLOAT," +
+                "C_BINARY,C_BINARY_VAR,C_BINARY_LOB,C_BOOLEAN,C_CHARACTER,C_CHARACTER_VAR," +
+                "C_CHARACTER_LOB,C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR,C_DATE," +
+                "C_TIME_WITHOUT_TIMEZONE,C_TIMESTAMP_WITHOUT_TIMEZONE,C_TIME_WITH_TIMEZONE,C_TIMESTAMP_WITH_TIMEZONE";
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
@@ -157,6 +168,7 @@ class MySQL2SqlserverTest {
                 "--sink-connect", sqlserver.getJdbcUrl(),
                 "--sink-user", sqlserver.getUsername(),
                 "--sink-password", sqlserver.getPassword(),
+                "--source-columns", sourceColumns,
                 "--jobs", "4"
         };
         ToolOptions options = new ToolOptions(args);
