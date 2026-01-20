@@ -118,6 +118,9 @@ class Oracle2CsvFileTest {
         cleanupFile(sinkFilePath, tempFilePrefix);
         FileManager.setTempFilesPath(new HashMap<>());
         
+        // Verify temp files map is empty
+        assertEquals(0, FileManager.getTempFilesPath().size(), "Temp files map should be empty before test");
+        
         try {
             String[] args = {
                     "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
@@ -145,6 +148,9 @@ class Oracle2CsvFileTest {
         // Clean before test
         cleanupFile(sinkFilePath, tempFilePrefix);
         FileManager.setTempFilesPath(new HashMap<>());
+        
+        // Verify temp files map is empty
+        assertEquals(0, FileManager.getTempFilesPath().size(), "Temp files map should be empty before test");
         
         try {
             String[] args = {

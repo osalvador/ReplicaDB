@@ -283,31 +283,39 @@ public class CsvFileManager extends FileManager {
         File firstTemporalFile = getFileFromPathString(getTempFilePath(0));
         Path firstTemporalFilePath = Paths.get(firstTemporalFile.getPath());
 
+        LOG.debug("mergeFiles: finalFile={}, firstTempFile={}, tempFilesCount={}", 
+                  finalFile.getPath(), firstTemporalFile.getPath(), getTempFilePathSize());
+
         int tempFilesIdx = 0;
         if (!options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
             // Rename first temporal file to the final file
-            Files.move(firstTemporalFilePath, firstTemporalFilePath.resolveSibling(finalFile.getPath()), StandardCopyOption.REPLACE_EXISTING);
+            Path targetPath = Paths.get(finalFile.getPath());
+            LOG.debug("Complete mode: moving {} to {}", firstTemporalFilePath, targetPath);
+            Files.move(firstTemporalFilePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
             tempFilesIdx = 1;
             LOG.info("Complete mode: creating and merging all temp files into: {}", finalFile.getPath());
         } else {
             LOG.info("Incremental mode: appending and merging all temp files into: {}", finalFile.getPath());
         }
 
-        // Append the rest temporal files into final file
-        try (FileChannel finalFileChannel = new FileOutputStream(finalFile, true).getChannel()) {
-
-            // Starts with 1 because the first temp file was renamed.
-            for (int i = tempFilesIdx; i <= getTempFilePathSize() - 1; i++) {
-                // Temp file channel
-                FileChannel tempFileChannel = new FileInputStream(getFileFromPathString(getTempFilePath(i))).getChannel();
-                // Append temp file to final file
-                finalFileChannel.transferFrom(tempFileChannel, finalFileChannel.size(), tempFileChannel.size());
-                tempFileChannel.close();
-                // Delete temp file
-                getFileFromPathString(getTempFilePath(i)).delete();
+        // Only append if there are more temp files to merge
+        if (tempFilesIdx < getTempFilePathSize()) {
+            // Append the rest temporal files into final file
+            try (FileChannel finalFileChannel = new FileOutputStream(finalFile, true).getChannel()) {
+                // Starts with 1 because the first temp file was renamed.
+                for (int i = tempFilesIdx; i <= getTempFilePathSize() - 1; i++) {
+                    // Temp file channel
+                    File tempFile = getFileFromPathString(getTempFilePath(i));
+                    LOG.debug("Appending temp file {} to final file", tempFile.getPath());
+                    FileChannel tempFileChannel = new FileInputStream(tempFile).getChannel();
+                    // Append temp file to final file
+                    finalFileChannel.transferFrom(tempFileChannel, finalFileChannel.size(), tempFileChannel.size());
+                    tempFileChannel.close();
+                    // Delete temp file
+                    tempFile.delete();
+                }
             }
         }
-
     }
 
     @Override
