@@ -44,30 +44,43 @@ class Oracle2CsvFileTest {
     @BeforeEach
     void before() throws SQLException {
         this.oracleConn = DriverManager.getConnection(oracle.getJdbcUrl(), oracle.getUsername(), oracle.getPassword());
+        // Reset static temp files map FIRST to avoid stale references
+        FileManager.setTempFilesPath(new HashMap<>());
+        
         // Ensure file and temp files are deleted before test
         File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
         if (sinkFile.exists()) {
-            sinkFile.delete();
+            LOG.info("Deleting existing sink file before test: {}", sinkFile.delete());
         }
         // Clean up any temp files from previous runs
         File tmpDir = new File("/tmp");
         File[] tempFiles = tmpDir.listFiles((dir, name) -> name.startsWith("oracle2csv_sink.csv.repdb."));
         if (tempFiles != null) {
             for (File f : tempFiles) {
-                f.delete();
+                LOG.info("Deleting temp file: {} - {}", f.getName(), f.delete());
             }
         }
-        // Reset static temp files map
-        FileManager.setTempFilesPath(new HashMap<>());
     }
 
     @AfterEach
     void tearDown() throws SQLException {
-        File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
-        LOG.info("Deleted file: {}", sinkFile.delete());
-        this.oracleConn.close();
-
+        // Reset static temp files map
         FileManager.setTempFilesPath(new HashMap<>());
+        
+        // Delete sink file
+        File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
+        LOG.info("Deleted sink file: {}", sinkFile.delete());
+        
+        // Clean up any temp files
+        File tmpDir = new File("/tmp");
+        File[] tempFiles = tmpDir.listFiles((dir, name) -> name.startsWith("oracle2csv_sink.csv.repdb."));
+        if (tempFiles != null) {
+            for (File f : tempFiles) {
+                LOG.info("Deleting temp file in tearDown: {} - {}", f.getName(), f.delete());
+            }
+        }
+        
+        this.oracleConn.close();
     }
 
     public int countSinkRows() throws IOException {

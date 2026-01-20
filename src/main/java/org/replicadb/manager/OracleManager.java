@@ -257,6 +257,16 @@ public class OracleManager extends SqlManager {
                                 ps.setNull(i, Types.VARCHAR);
                             }
                             break;
+                        // Oracle INTERVAL types (not in standard java.sql.Types)
+                        case -104: // INTERVALDS (INTERVAL DAY TO SECOND)
+                        case -103: // INTERVALYM (INTERVAL YEAR TO MONTH)
+                            Object intervalData = resultSet.getObject(i);
+                            if (intervalData != null) {
+                                ps.setObject(i, intervalData);
+                            } else {
+                                ps.setNull(i, Types.VARCHAR);
+                            }
+                            break;
                         default:
                             // Fallback: convert to string to avoid ORA-17004
                             Object defaultData = resultSet.getObject(i);

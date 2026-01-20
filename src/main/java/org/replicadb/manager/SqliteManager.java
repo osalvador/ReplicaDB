@@ -125,6 +125,15 @@ public class SqliteManager extends SqlManager {
 						case Types.DATE :
 							ps.setDate(i, resultSet.getDate(i));
 							break;
+						case Types.TIME :
+						case Types.TIME_WITH_TIMEZONE :
+							final Time timeData = resultSet.getTime(i);
+							if (timeData != null) {
+								ps.setString(i, timeData.toString());
+							} else {
+								ps.setNull(i, Types.VARCHAR);
+							}
+							break;
 						case Types.TIMESTAMP :
 						case Types.TIMESTAMP_WITH_TIMEZONE :
 						case -101 :
