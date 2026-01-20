@@ -97,9 +97,13 @@ class MySQL2SqlserverTest {
     void testMySQL2SqlserverComplete() throws ParseException, IOException, SQLException {
         // Exclude C_NUMERIC and C_DECIMAL (precision 65 > SQL Server max 38)
         // Must specify both source and sink columns for correct positional mapping
-        String columns = "C_INTEGER,C_SMALLINT,C_BIGINT,C_REAL,C_DOUBLE_PRECISION,C_FLOAT," +
+        // SQL Server sink uses lowercase column names
+        String sourceColumns = "C_INTEGER,C_SMALLINT,C_BIGINT,C_REAL,C_DOUBLE_PRECISION,C_FLOAT," +
                 "C_BOOLEAN,C_CHARACTER,C_CHARACTER_VAR,C_CHARACTER_LOB,C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR," +
                 "C_DATE,C_TIME_WITHOUT_TIMEZONE,C_TIMESTAMP_WITHOUT_TIMEZONE";
+        String sinkColumns = "c_integer,c_smallint,c_bigint,c_real,c_double_precision,c_float," +
+                "c_boolean,c_character,c_character_var,c_character_lob,c_national_character,c_national_character_var," +
+                "c_date,c_time_without_timezone,c_timestamp_without_timezone";
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
@@ -108,8 +112,8 @@ class MySQL2SqlserverTest {
                 "--sink-connect", sqlserver.getJdbcUrl(),
                 "--sink-user", sqlserver.getUsername(),
                 "--sink-password", sqlserver.getPassword(),
-                "--source-columns", columns,
-                "--sink-columns", columns
+                "--source-columns", sourceColumns,
+                "--sink-columns", sinkColumns
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
@@ -158,9 +162,13 @@ class MySQL2SqlserverTest {
     void testMySQL2SqlserverCompleteParallel() throws ParseException, IOException, SQLException {
         // Exclude C_NUMERIC and C_DECIMAL (precision 65 > SQL Server max 38)
         // Must specify both source and sink columns for correct positional mapping
-        String columns = "C_INTEGER,C_SMALLINT,C_BIGINT,C_REAL,C_DOUBLE_PRECISION,C_FLOAT," +
+        // SQL Server sink uses lowercase column names
+        String sourceColumns = "C_INTEGER,C_SMALLINT,C_BIGINT,C_REAL,C_DOUBLE_PRECISION,C_FLOAT," +
                 "C_BOOLEAN,C_CHARACTER,C_CHARACTER_VAR,C_CHARACTER_LOB,C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR," +
                 "C_DATE,C_TIME_WITHOUT_TIMEZONE,C_TIMESTAMP_WITHOUT_TIMEZONE";
+        String sinkColumns = "c_integer,c_smallint,c_bigint,c_real,c_double_precision,c_float," +
+                "c_boolean,c_character,c_character_var,c_character_lob,c_national_character,c_national_character_var," +
+                "c_date,c_time_without_timezone,c_timestamp_without_timezone";
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mysql.getJdbcUrl(),
@@ -169,8 +177,8 @@ class MySQL2SqlserverTest {
                 "--sink-connect", sqlserver.getJdbcUrl(),
                 "--sink-user", sqlserver.getUsername(),
                 "--sink-password", sqlserver.getPassword(),
-                "--source-columns", columns,
-                "--sink-columns", columns,
+                "--source-columns", sourceColumns,
+                "--sink-columns", sinkColumns,
                 "--jobs", "4"
         };
         ToolOptions options = new ToolOptions(args);
