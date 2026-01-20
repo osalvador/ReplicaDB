@@ -86,11 +86,12 @@ public class SQLServerManager extends SqlManager {
          String sinkColumns = getAllSinkColumns(rsmd);
          // Remove quotes from column names, which are not supported by SQLServerBulkCopy
          String[] sinkColumnsArray = sinkColumns.replace("\"", "").split(",");
-         LOG.trace("Mapping columns: source --> sink");
+         LOG.trace("Mapping columns: source index --> sink column name");
          for (int i = 1; i <= sinkColumnsArray.length; i++) {
             String sinkCol = sinkColumnsArray[i - 1].trim(); // Trim whitespace from column names
-            bulkCopy.addColumnMapping(rsmd.getColumnName(i), sinkCol);
-            LOG.trace("{} --> {}", rsmd.getColumnName(i), sinkCol);
+            // Use column index for source (1-based) to avoid case sensitivity issues with MongoDB
+            bulkCopy.addColumnMapping(i, sinkCol);
+            LOG.trace("{} (index {}) --> {}", rsmd.getColumnName(i), i, sinkCol);
          }
       } else {
          for (int i = 1; i <= columnCount; i++) {
