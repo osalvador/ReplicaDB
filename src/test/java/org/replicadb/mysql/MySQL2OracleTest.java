@@ -9,6 +9,7 @@ import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbMysqlContainer;
 import org.replicadb.config.ReplicadbOracleContainer;
+import org.replicadb.utils.OracleTestUtils;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.IOException;
@@ -45,8 +46,8 @@ class MySQL2OracleTest {
 
 	@AfterEach
 	void tearDown() throws SQLException {
-		// Truncate sink table and close connections
-		this.oracleConn.createStatement().execute("TRUNCATE TABLE t_sink");
+		// Truncate sink table with retry logic for ORA-00054 lock errors
+		OracleTestUtils.truncateTableWithRetry(this.oracleConn, "t_sink");
 		this.mysqlConn.close();
 		this.oracleConn.close();
 	}

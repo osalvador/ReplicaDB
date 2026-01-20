@@ -9,6 +9,7 @@ import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbOracleContainer;
 import org.replicadb.config.ReplicadbPostgresqlContainer;
+import org.replicadb.utils.OracleTestUtils;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.IOException;
@@ -47,8 +48,8 @@ class Postgres2OracleTest {
 
 	@AfterEach
 	void tearDown() throws SQLException {
-		// Truncate sink table and close connections
-		this.oracledbConn.createStatement().execute("TRUNCATE TABLE t_sink");
+		// Truncate sink table with retry logic for ORA-00054 lock errors
+		OracleTestUtils.truncateTableWithRetry(this.oracledbConn, "t_sink");
 		this.oracledbConn.close();
 		this.postgresConn.close();
 	}
