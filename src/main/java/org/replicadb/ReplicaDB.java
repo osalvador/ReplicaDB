@@ -14,12 +14,14 @@ import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.ConnManager;
 import org.replicadb.manager.DataSourceType;
 import org.replicadb.manager.ManagerFactory;
+import org.replicadb.manager.file.FileManager;
 
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.*;
 
@@ -141,6 +143,9 @@ public class ReplicaDB {
 		ConnManager sinkDs = null;
 		ExecutorService preSinkTasksExecutor = null;
 		ExecutorService replicaTasksService = null;
+
+		// Reset static temp files map to avoid stale references between replication runs
+		FileManager.setTempFilesPath(new HashMap<>());
 
 		// Sentry
 		SentryInit(options);
