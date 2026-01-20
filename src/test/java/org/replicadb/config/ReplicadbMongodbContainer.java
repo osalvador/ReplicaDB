@@ -105,10 +105,10 @@ public class ReplicadbMongodbContainer extends MongoDBContainer {
 		final String collectionName = "t_sink";
 
 		try {
-			// Create unique index with proper field name
+			// Create unique sparse index - sparse allows multiple NULL values
 			database.getCollection(collectionName).createIndex(new Document(indexFieldName, 1),
-					new IndexOptions().unique(true).name("idx_unique_c_integer"));
-			LOG.info("Created unique index 'idx_unique_c_integer' on field '{}'", indexFieldName);
+					new IndexOptions().unique(true).sparse(true).name("idx_unique_c_integer"));
+			LOG.info("Created unique sparse index 'idx_unique_c_integer' on field '{}'", indexFieldName);
 
 			// Validate the index was created successfully
 			if (this.validateUniqueIndexExists(database, collectionName, indexFieldName)) {
