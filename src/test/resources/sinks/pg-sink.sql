@@ -33,6 +33,7 @@ create table if not exists t_sink
     C_INTERVAL_YEAR              INTERVAL,
     /*Collection Types:*/
     C_ARRAY                      text[],
+    C_MULTIDIMENSIONAL_ARRAY     int[][],
     C_MULTISET                   text/*not supported*/,
     /*Other Types:*/
     --         ROW /*not supported*/
