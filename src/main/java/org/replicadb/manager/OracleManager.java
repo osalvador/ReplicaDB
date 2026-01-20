@@ -156,6 +156,7 @@ public class OracleManager extends SqlManager {
                             ps.setDouble(i, resultSet.getDouble(i));
                             break;
                         case Types.FLOAT:
+                        case Types.REAL:
                             ps.setFloat(i, resultSet.getFloat(i));
                             break;
                         case Types.DATE:
@@ -168,7 +169,9 @@ public class OracleManager extends SqlManager {
                             ps.setTimestamp(i, resultSet.getTimestamp(i));
                             break;
                         case Types.BINARY:
-                            ps.setBytes(i,resultSet.getBytes(i));
+                        case Types.VARBINARY:
+                        case Types.LONGVARBINARY:
+                            ps.setBytes(i, resultSet.getBytes(i));
                             break;
                         case Types.BLOB:
                             Blob blobData = getBlob(resultSet,i);
@@ -190,9 +193,18 @@ public class OracleManager extends SqlManager {
                             }
                             break;
                         case Types.BOOLEAN:
-                            ps.setBoolean(i, resultSet.getBoolean(i));
+                        case Types.BIT:
+                            // Oracle doesn't have native BOOLEAN, convert to string "true"/"false"
+                            Boolean boolValue = resultSet.getBoolean(i);
+                            if (resultSet.wasNull()) {
+                                ps.setNull(i, Types.VARCHAR);
+                            } else {
+                                ps.setString(i, boolValue.toString());
+                            }
                             break;
                         case Types.NVARCHAR:
+                        case Types.NCHAR:
+                        case Types.LONGNVARCHAR:
                             ps.setNString(i, resultSet.getNString(i));
                             break;
                         case Types.SQLXML:
