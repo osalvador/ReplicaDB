@@ -67,8 +67,8 @@ public class LocalFileManager extends SqlManager {
     @Override
     public int insertDataToTable(ResultSet resultSet, int taskId) throws Exception {
 
-        // Temporal file name
-        String randomFileUrl = options.getSinkConnect() + ".repdb." + (new Random().nextInt(9000) + 1000);
+        // Temporal file name - use taskId to guarantee uniqueness across parallel jobs
+        String randomFileUrl = options.getSinkConnect() + ".repdb." + taskId + "." + System.nanoTime();
         LOG.info("Temporal file path: {}",randomFileUrl);
 
         // Save the path of temp file

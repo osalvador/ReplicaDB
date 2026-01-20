@@ -44,6 +44,11 @@ class Oracle2CsvFileTest {
     @BeforeEach
     void before() throws SQLException {
         this.oracleConn = DriverManager.getConnection(oracle.getJdbcUrl(), oracle.getUsername(), oracle.getPassword());
+        // Ensure file is deleted before test
+        File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
+        if (sinkFile.exists()) {
+            sinkFile.delete();
+        }
     }
 
     @AfterEach

@@ -99,6 +99,7 @@ class Oracle2OracleTest {
                 "--sink-connect", oracle.getJdbcUrl(),
                 "--sink-user", oracle.getUsername(),
                 "--sink-password", oracle.getPassword(),
+                "--sink-staging-schema", oracle.getUsername(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
         };
         ToolOptions options = new ToolOptions(args);

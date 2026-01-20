@@ -47,6 +47,11 @@ class MariaDB2CsvFileTest {
     @BeforeEach
     void before() throws SQLException {
         this.mariadbConn = DriverManager.getConnection(mariadb.getJdbcUrl(), mariadb.getUsername(), mariadb.getPassword());
+        // Ensure file is deleted before test
+        File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
+        if (sinkFile.exists()) {
+            sinkFile.delete();
+        }
     }
 
     @AfterEach
