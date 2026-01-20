@@ -361,8 +361,25 @@ public class OracleManager extends SqlManager {
 
     @Override
     public void dropStagingTable() throws SQLException {
-        // Disable Oracle RECYCLEBIN
-        oracleAlterSession(false);
+        Statement stmt = null;
+        try {
+            // Commit any pending transaction before ALTER SESSION
+            if (!this.getConnection().getAutoCommit()) {
+                this.getConnection().commit();
+            }
+            // Disable Oracle RECYCLEBIN for DROP operation
+            stmt = this.getConnection().createStatement();
+            DatabaseMetaData meta = this.getConnection().getMetaData();
+            if (meta.getDatabaseMajorVersion() >= 10) {
+                stmt.executeUpdate("ALTER SESSION SET recyclebin = OFF");
+            }
+        } catch (SQLException e) {
+            LOG.warn("Could not disable recyclebin: {}", e.getMessage());
+        } finally {
+            if (stmt != null) {
+                try { stmt.close(); } catch (SQLException ignored) {}
+            }
+        }
         super.dropStagingTable();
     }
 }
