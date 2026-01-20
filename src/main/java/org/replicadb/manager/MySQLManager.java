@@ -184,16 +184,17 @@ public class MySQLManager extends SqlManager {
          loadDataSql.append(" (");
          String[] columns = allColumns.split(",");
          for (int i = 0; i < columns.length; i++) {
+            String col = columns[i].trim(); // Trim whitespace from column names
             switch (rsmd.getColumnType(i + 1)) {
                case Types.BIT:
                case Types.BINARY:
                case Types.BLOB:
                case Types.VARBINARY:
                case Types.LONGVARBINARY:
-                  loadDataSql.append("@").append(columns[i]).append(", ");
+                  loadDataSql.append("@").append(col).append(", ");
                   break;
                default:
-                  loadDataSql.append(columns[i]).append(", ");
+                  loadDataSql.append(col).append(", ");
                   break;
             }
          }
@@ -204,13 +205,14 @@ public class MySQLManager extends SqlManager {
          // SET variables with UNHEX
          String setPrefix = " SET ";
          for (int i = 0; i < columns.length; i++) {
+            String col = columns[i].trim(); // Trim whitespace from column names
             switch (rsmd.getColumnType(i + 1)) {
                case Types.BIT:
                case Types.BINARY:
                case Types.BLOB:
                case Types.VARBINARY:
                case Types.LONGVARBINARY:
-                  loadDataSql.append(setPrefix).append(columns[i]).append("=UNHEX(@").append(columns[i]).append(") ");
+                  loadDataSql.append(setPrefix).append(col).append("=UNHEX(@").append(col).append(") ");
                   loadDataSql.append(", ");
                   setPrefix = "";
                   break;
