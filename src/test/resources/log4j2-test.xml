@@ -6,25 +6,30 @@
         </Console>
     </Appenders>
     <Loggers>
-        <!-- Silence noisy libraries during tests -->
+        <!-- ReplicaDB application logger -->
+        <Logger name="org.replicadb" level="info" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+        
+        <!-- Silence noisy external libraries during tests -->
         <Logger name="org.apache.http" level="error"/>
         <Logger name="org.apache.http.wire" level="off"/>
         <Logger name="org.apache.http.headers" level="error"/>
+        <Logger name="org.apache.orc" level="warn"/>
+        <Logger name="org.apache.hadoop" level="warn"/>
+        <Logger name="org.mongodb" level="warn"/>
+        <Logger name="com.mongodb" level="warn"/>
         <Logger name="com.github.dockerjava" level="warn"/>
         <Logger name="com.github.dockerjava.zerodep.shaded" level="off"/>
         <Logger name="org.testcontainers" level="info"/>
         <Logger name="org.testcontainers.shaded" level="warn"/>
         <Logger name="org.testcontainers.utility" level="warn"/>
-        <Logger name="🐳" level="info"/>
-        <Logger name="tc" level="info"/>
+        <Logger name="io.debezium" level="warn"/>
         
         <!-- Database drivers -->
         <Logger name="com.microsoft.sqlserver" level="warn"/>
         <Logger name="oracle" level="warn"/>
         <Logger name="com.zaxxer.hikari" level="warn"/>
-        
-        <!-- Application loggers -->
-        <Logger name="org.replicadb" level="info"/>
         
         <Root level="info">
             <AppenderRef ref="console"/>

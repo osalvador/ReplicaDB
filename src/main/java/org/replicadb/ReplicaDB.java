@@ -342,8 +342,9 @@ public class ReplicaDB {
 	 * Sets the logging level for the application.
 	 *
 	 * <p>
-	 * Dynamically updates the Log4j2 configuration to change the root logger level
-	 * based on the verbose level specified in the command line options.
+	 * Dynamically updates the Log4j2 configuration to change the logging level
+	 * for ReplicaDB classes only, keeping external libraries at INFO/WARN level
+	 * to avoid excessive debug output from ORC, MongoDB, HTTP clients, etc.
 	 * </p>
 	 *
 	 * @param level
@@ -352,9 +353,31 @@ public class ReplicaDB {
 	private static void setLogToMode(Level level) {
 		final LoggerContext ctx = (LoggerContext) LogManager.getContext(false);
 		final Configuration config = ctx.getConfiguration();
-		final LoggerConfig loggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
-		loggerConfig.setLevel(level);
-		ctx.updateLoggers(); // This causes all Loggers to refetch information from their LoggerConfig
+		
+		// Set ReplicaDB package to the requested level
+		LoggerConfig replicadbLoggerConfig = config.getLoggerConfig("org.replicadb");
+		if (replicadbLoggerConfig.getName().equals(LogManager.ROOT_LOGGER_NAME)) {
+			// Logger doesn't exist, create it
+			replicadbLoggerConfig = new LoggerConfig("org.replicadb", level, true);
+			config.addLogger("org.replicadb", replicadbLoggerConfig);
+		} else {
+			replicadbLoggerConfig.setLevel(level);
+		}
+		
+		// Set root logger level for external libraries:
+		// TRACE -> external libs at DEBUG
+		// DEBUG -> external libs at INFO
+		// Other -> external libs at same level
+		final LoggerConfig rootLoggerConfig = config.getLoggerConfig(LogManager.ROOT_LOGGER_NAME);
+		if (level == Level.TRACE) {
+			rootLoggerConfig.setLevel(Level.DEBUG);
+		} else if (level == Level.DEBUG) {
+			rootLoggerConfig.setLevel(Level.INFO);
+		} else {
+			rootLoggerConfig.setLevel(level);
+		}
+		
+		ctx.updateLoggers();
 	}
 
 	/**

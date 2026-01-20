@@ -1,19 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration>
+<Configuration status="WARN">
     <Appenders>
         <Console name="console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{DEFAULT} %-5p %c{1}:%L %m%n"/>
         </Console>
     </Appenders>
     <Loggers>
-        <!-- Silence noisy libraries -->
+        <!-- ReplicaDB application logger - controlled by --verbose option -->
+        <Logger name="org.replicadb" level="info" additivity="false">
+            <AppenderRef ref="console"/>
+        </Logger>
+        
+        <!-- Silence noisy external libraries -->
         <Logger name="org.apache.http" level="warn"/>
         <Logger name="org.apache.http.wire" level="error"/>
         <Logger name="org.apache.http.headers" level="warn"/>
+        <Logger name="org.apache.orc" level="warn"/>
+        <Logger name="org.apache.hadoop" level="warn"/>
+        <Logger name="org.mongodb" level="warn"/>
+        <Logger name="com.mongodb" level="warn"/>
         <Logger name="com.github.dockerjava" level="warn"/>
-        <Logger name="org.testcontainers" level="info"/>
         <Logger name="com.github.dockerjava.zerodep.shaded" level="error"/>
-        <Logger name="org.apache.log4j.xml" level="info"/>
+        <Logger name="org.testcontainers" level="info"/>
+        <Logger name="io.debezium" level="warn"/>
+        
         <Root level="info">
             <AppenderRef ref="console"/>
         </Root>
