@@ -50,8 +50,23 @@ class Oracle2CsvFileTest {
         // Ensure file and temp files are deleted before test
         File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
         if (sinkFile.exists()) {
-            LOG.info("Deleting existing sink file before test: {}", sinkFile.delete());
+            boolean deleted = sinkFile.delete();
+            LOG.info("Deleting existing sink file before test: {} - success: {}", sinkFile.getAbsolutePath(), deleted);
+            if (!deleted) {
+                // Force delete if normal delete fails
+                try {
+                    Files.deleteIfExists(sinkFile.toPath());
+                    LOG.info("Force deleted sink file");
+                } catch (IOException e) {
+                    LOG.error("Failed to force delete sink file", e);
+                }
+            }
         }
+        // Verify file is really gone
+        if (sinkFile.exists()) {
+            LOG.error("SINK FILE STILL EXISTS AFTER DELETE ATTEMPT!");
+        }
+        
         // Clean up any temp files from previous runs
         File tmpDir = new File("/tmp");
         File[] tempFiles = tmpDir.listFiles((dir, name) -> name.startsWith("oracle2csv_sink.csv.repdb."));

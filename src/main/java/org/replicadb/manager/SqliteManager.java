@@ -161,7 +161,10 @@ public class SqliteManager extends SqlManager {
 							ps.setBoolean(i, resultSet.getBoolean(i));
 							break;
 						case Types.NVARCHAR :
-							ps.setNString(i, resultSet.getNString(i));
+						case Types.NCHAR :
+						case Types.LONGNVARCHAR :
+							// SQLite doesn't support setNString, use setString instead
+							ps.setString(i, resultSet.getString(i));
 							break;
 						case Types.SQLXML :
 							final SQLXML sqlxmlData = resultSet.getSQLXML(i);
@@ -173,10 +176,22 @@ public class SqliteManager extends SqlManager {
 							}
 							break;
 						case Types.ROWID :
-							ps.setRowId(i, resultSet.getRowId(i));
+							// SQLite doesn't support setRowId, convert to string
+							final RowId rowIdData = resultSet.getRowId(i);
+							if (rowIdData != null) {
+								ps.setString(i, rowIdData.toString());
+							} else {
+								ps.setNull(i, Types.VARCHAR);
+							}
 							break;
 						case Types.STRUCT :
-							ps.setObject(i, resultSet.getObject(i), Types.STRUCT);
+							// SQLite doesn't support STRUCT, convert to string
+							final Object structData = resultSet.getObject(i);
+							if (structData != null) {
+								ps.setString(i, structData.toString());
+							} else {
+								ps.setNull(i, Types.VARCHAR);
+							}
 							break;
 						default :
 							ps.setString(i, resultSet.getString(i));
