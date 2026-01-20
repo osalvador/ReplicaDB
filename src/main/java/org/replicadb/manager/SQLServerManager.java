@@ -88,8 +88,9 @@ public class SQLServerManager extends SqlManager {
          String[] sinkColumnsArray = sinkColumns.replace("\"", "").split(",");
          LOG.trace("Mapping columns: source --> sink");
          for (int i = 1; i <= sinkColumnsArray.length; i++) {
-            bulkCopy.addColumnMapping(rsmd.getColumnName(i), sinkColumnsArray[i - 1]);
-            LOG.trace("{} --> {}", rsmd.getColumnName(i), sinkColumnsArray[i - 1]);
+            String sinkCol = sinkColumnsArray[i - 1].trim(); // Trim whitespace from column names
+            bulkCopy.addColumnMapping(rsmd.getColumnName(i), sinkCol);
+            LOG.trace("{} --> {}", rsmd.getColumnName(i), sinkCol);
          }
       } else {
          for (int i = 1; i <= columnCount; i++) {
