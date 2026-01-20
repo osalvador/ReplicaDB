@@ -222,13 +222,56 @@ public class OracleManager extends SqlManager {
                         case Types.ROWID:
                             ps.setRowId(i, resultSet.getRowId(i));
                             break;
-                        //case Types.ARRAY: // Not supported by Oracle
+                        case Types.ARRAY:
+                            // Convert array to string representation for Oracle
+                            java.sql.Array arrayData = resultSet.getArray(i);
+                            if (arrayData != null) {
+                                ps.setString(i, arrayData.toString());
+                            } else {
+                                ps.setNull(i, Types.VARCHAR);
+                            }
+                            break;
                         case Types.STRUCT:
-                            ps.setObject(i, resultSet.getObject(i),Types.STRUCT);
+                            ps.setObject(i, resultSet.getObject(i), Types.STRUCT);
+                            break;
+                        case Types.OTHER:
+                            // PostgreSQL specific types (bytea, json, xml, etc.) - convert to string
+                            Object otherData = resultSet.getObject(i);
+                            if (otherData != null) {
+                                if (otherData instanceof byte[]) {
+                                    ps.setBytes(i, (byte[]) otherData);
+                                } else {
+                                    ps.setString(i, otherData.toString());
+                                }
+                            } else {
+                                ps.setNull(i, Types.VARCHAR);
+                            }
+                            break;
+                        case Types.TIME:
+                        case Types.TIME_WITH_TIMEZONE:
+                            // Oracle doesn't have TIME type, store as string
+                            java.sql.Time timeData = resultSet.getTime(i);
+                            if (timeData != null) {
+                                ps.setString(i, timeData.toString());
+                            } else {
+                                ps.setNull(i, Types.VARCHAR);
+                            }
                             break;
                         default:
-                            // Use getObject for ANYDATA and other complex Oracle types
-                            ps.setObject(i, resultSet.getObject(i));
+                            // Fallback: convert to string to avoid ORA-17004
+                            Object defaultData = resultSet.getObject(i);
+                            if (defaultData != null) {
+                                if (defaultData instanceof byte[]) {
+                                    ps.setBytes(i, (byte[]) defaultData);
+                                } else if (defaultData instanceof Number) {
+                                    ps.setBigDecimal(i, new java.math.BigDecimal(defaultData.toString()));
+                                } else {
+                                    ps.setString(i, defaultData.toString());
+                                }
+                            } else {
+                                ps.setNull(i, Types.VARCHAR);
+                            }
+                            LOG.debug("Column {} has unhandled JDBC type {}, converted to string", i, rsmd.getColumnType(i));
                             break;
                     }
                 }
