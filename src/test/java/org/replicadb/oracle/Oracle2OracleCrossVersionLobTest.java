@@ -271,6 +271,238 @@ class Oracle2OracleCrossVersionLobTest {
             String.format("All LOB rows should be replicated. Expected: %d, Actual: %d", sourceRows, sinkRows));
     }
 
+    @Test
+    @DisplayName("Cross-version LOB replication with large LOBs (200MB+)")
+    void testCrossVersionLargeLobReplication() throws ParseException, IOException, SQLException {
+        Assumptions.assumeTrue(containersAvailable, "Containers not available");
+        
+        LOG.info("=== Cross-version Large LOB Replication Test (200MB+) ===");
+        LOG.info("Creating large LOBs (BLOB: 200MB, CLOB: 200MB, XMLTYPE: 50MB)...");
+        
+        long blobSize = 200 * 1024 * 1024; // 200MB
+        long clobSize = 200 * 1024 * 1024; // 200MB (characters)
+        long xmlSize = 50 * 1024 * 1024;   // 50MB
+        
+        // Create table with large LOB support
+        createLargeLobTable(sourceConn, "t_large_lob_source");
+        createLargeLobTable(sinkConn, "t_large_lob_sink");
+        
+        // Insert large LOB data
+        LOG.info("Inserting large LOB data: BLOB={}MB, CLOB={}MB, XML={}MB", 
+            blobSize / (1024*1024), clobSize / (1024*1024), xmlSize / (1024*1024));
+        insertLargeLobData(sourceConn, blobSize, clobSize, xmlSize);
+        
+        int sourceRows = countRows(sourceConn, "t_large_lob_source");
+        LOG.info("Large LOB source rows: {}", sourceRows);
+        
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", sourceOracle.getJdbcUrl(),
+                "--source-user", sourceOracle.getUsername(),
+                "--source-password", sourceOracle.getPassword(),
+                "--source-table", "t_large_lob_source",
+                "--sink-connect", sinkOracle.getJdbcUrl(),
+                "--sink-user", sinkOracle.getUsername(),
+                "--sink-password", sinkOracle.getPassword(),
+                "--sink-table", "t_large_lob_sink",
+                "--mode", ReplicationMode.COMPLETE.getModeText(),
+                "--fetch-size", "10"  // Smaller fetch size for large LOBs
+        };
+        
+        long startTime = System.currentTimeMillis();
+        ToolOptions options = new ToolOptions(args);
+        int result = ReplicaDB.processReplica(options);
+        long duration = (System.currentTimeMillis() - startTime) / 1000;
+        
+        int sinkRows = countRows(sinkConn, "t_large_lob_sink");
+        LOG.info("Large LOB replication completed in {} seconds. Rows in sink: {}", duration, sinkRows);
+        
+        assertEquals(0, result, "Large LOB replication should succeed without ORA-64219");
+        assertEquals(sourceRows, sinkRows, "All large LOB rows should be replicated");
+        
+        // Verify large LOB integrity
+        verifyLargeLobIntegrity(blobSize, clobSize, xmlSize);
+        LOG.info("Large LOB data integrity verified successfully");
+        
+        // Cleanup large LOB tables
+        dropTable(sourceConn, "t_large_lob_source");
+        dropTable(sinkConn, "t_large_lob_sink");
+    }
+
+    private void createLargeLobTable(Connection conn, String tableName) throws SQLException {
+        String createSql = "CREATE TABLE " + tableName + " (" +
+                "id NUMBER PRIMARY KEY, " +
+                "blob_col BLOB, " +
+                "clob_col CLOB, " +
+                "xml_col XMLTYPE, " +
+                "blob_size NUMBER, " +
+                "clob_size NUMBER, " +
+                "xml_size NUMBER, " +
+                "created_at TIMESTAMP DEFAULT SYSTIMESTAMP)";
+        
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(createSql);
+            LOG.info("Created large LOB table: {}", tableName);
+        } catch (SQLException e) {
+            if (e.getErrorCode() == 955) { // ORA-00955: name already exists
+                LOG.debug("Table {} already exists, truncating", tableName);
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.execute("TRUNCATE TABLE " + tableName);
+                }
+            } else {
+                throw e;
+            }
+        }
+    }
+
+    private void insertLargeLobData(Connection conn, long blobSize, long clobSize, long xmlSize) throws SQLException {
+        String insertSql = "INSERT INTO t_large_lob_source " +
+                "(id, blob_col, clob_col, xml_col, blob_size, clob_size, xml_size) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        
+        conn.setAutoCommit(false);
+        
+        try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
+            // Create large BLOB (200MB)
+            LOG.info("Creating 200MB BLOB...");
+            byte[] blobChunk = new byte[1024 * 1024]; // 1MB chunks
+            for (int i = 0; i < blobChunk.length; i++) {
+                blobChunk[i] = (byte) ('A' + (i % 26));
+            }
+            
+            Blob blob = conn.createBlob();
+            long position = 1;
+            for (long written = 0; written < blobSize; written += blobChunk.length) {
+                int chunkSize = (int) Math.min(blobChunk.length, blobSize - written);
+                blob.setBytes(position, blobChunk, 0, chunkSize);
+                position += chunkSize;
+                if (written % (50 * 1024 * 1024) == 0) {
+                    LOG.debug("BLOB progress: {}MB / {}MB", written / (1024*1024), blobSize / (1024*1024));
+                }
+            }
+            
+            // Create large CLOB (200MB)
+            LOG.info("Creating 200MB CLOB...");
+            char[] clobChunk = new char[1024 * 1024]; // 1MB chunks
+            for (int i = 0; i < clobChunk.length; i++) {
+                clobChunk[i] = (char) ('A' + (i % 26));
+            }
+            
+            Clob clob = conn.createClob();
+            position = 1;
+            for (long written = 0; written < clobSize; written += clobChunk.length) {
+                int chunkSize = (int) Math.min(clobChunk.length, clobSize - written);
+                clob.setString(position, new String(clobChunk, 0, chunkSize));
+                position += chunkSize;
+                if (written % (50 * 1024 * 1024) == 0) {
+                    LOG.debug("CLOB progress: {}MB / {}MB", written / (1024*1024), clobSize / (1024*1024));
+                }
+            }
+            
+            // Create large XMLTYPE (50MB)
+            LOG.info("Creating 50MB XMLTYPE...");
+            StringBuilder xmlBuilder = new StringBuilder();
+            xmlBuilder.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+            xmlBuilder.append("<root>");
+            long currentSize = xmlBuilder.length();
+            int itemCount = 0;
+            while (currentSize < xmlSize) {
+                String item = "<item id=\"" + itemCount + "\"><data>" + 
+                        "X".repeat(1000) + "</data></item>";
+                xmlBuilder.append(item);
+                currentSize += item.length();
+                itemCount++;
+                if (itemCount % 10000 == 0) {
+                    LOG.debug("XML progress: {}MB / {}MB", currentSize / (1024*1024), xmlSize / (1024*1024));
+                }
+            }
+            xmlBuilder.append("</root>");
+            
+            SQLXML sqlxml = conn.createSQLXML();
+            sqlxml.setString(xmlBuilder.toString());
+            
+            // Insert the large LOBs
+            pstmt.setInt(1, 1);
+            pstmt.setBlob(2, blob);
+            pstmt.setClob(3, clob);
+            pstmt.setSQLXML(4, sqlxml);
+            pstmt.setLong(5, blobSize);
+            pstmt.setLong(6, clobSize);
+            pstmt.setLong(7, xmlBuilder.length());
+            pstmt.executeUpdate();
+            
+            conn.commit();
+            LOG.info("Large LOB data inserted successfully");
+            
+            // Free resources
+            blob.free();
+            clob.free();
+            sqlxml.free();
+        } catch (SQLException e) {
+            conn.rollback();
+            LOG.error("Failed to insert large LOB data", e);
+            throw e;
+        }
+    }
+
+    private void verifyLargeLobIntegrity(long expectedBlobSize, long expectedClobSize, long expectedXmlSize) throws SQLException {
+        Statement sourceStmt = sourceConn.createStatement();
+        Statement sinkStmt = sinkConn.createStatement();
+        
+        ResultSet sourceRs = sourceStmt.executeQuery(
+            "SELECT id, " +
+            "NVL(DBMS_LOB.GETLENGTH(blob_col), 0) as blob_len, " +
+            "NVL(DBMS_LOB.GETLENGTH(clob_col), 0) as clob_len, " +
+            "NVL(LENGTH(XMLSERIALIZE(CONTENT xml_col AS CLOB)), 0) as xml_len " +
+            "FROM t_large_lob_source ORDER BY id");
+        ResultSet sinkRs = sinkStmt.executeQuery(
+            "SELECT id, " +
+            "NVL(DBMS_LOB.GETLENGTH(blob_col), 0) as blob_len, " +
+            "NVL(DBMS_LOB.GETLENGTH(clob_col), 0) as clob_len, " +
+            "NVL(LENGTH(XMLSERIALIZE(CONTENT xml_col AS CLOB)), 0) as xml_len " +
+            "FROM t_large_lob_sink ORDER BY id");
+        
+        while (sourceRs.next() && sinkRs.next()) {
+            int id = sourceRs.getInt("id");
+            long sourceBlobLen = sourceRs.getLong("blob_len");
+            long sinkBlobLen = sinkRs.getLong("blob_len");
+            long sourceClobLen = sourceRs.getLong("clob_len");
+            long sinkClobLen = sinkRs.getLong("clob_len");
+            long sourceXmlLen = sourceRs.getLong("xml_len");
+            long sinkXmlLen = sinkRs.getLong("xml_len");
+            
+            assertEquals(sourceBlobLen, sinkBlobLen, 
+                String.format("BLOB length mismatch for id=%d: expected=%d, actual=%d", 
+                    id, sourceBlobLen, sinkBlobLen));
+            assertEquals(sourceClobLen, sinkClobLen, 
+                String.format("CLOB length mismatch for id=%d: expected=%d, actual=%d", 
+                    id, sourceClobLen, sinkClobLen));
+            assertEquals(sourceXmlLen, sinkXmlLen, 
+                String.format("XMLTYPE length mismatch for id=%d: expected=%d, actual=%d", 
+                    id, sourceXmlLen, sinkXmlLen));
+            
+            LOG.info("Verified large LOB integrity for id={}: BLOB={}MB, CLOB={}MB, XML={}MB", 
+                id, sourceBlobLen / (1024*1024), sourceClobLen / (1024*1024), sourceXmlLen / (1024*1024));
+        }
+    }
+
+    private int countRows(Connection conn, String tableName) throws SQLException {
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT count(*) FROM " + tableName)) {
+            rs.next();
+            return rs.getInt(1);
+        }
+    }
+
+    private void dropTable(Connection conn, String tableName) {
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("DROP TABLE " + tableName);
+            LOG.debug("Dropped table: {}", tableName);
+        } catch (SQLException e) {
+            LOG.debug("Could not drop table {}: {}", tableName, e.getMessage());
+        }
+    }
+
     private void verifyLobDataIntegrity() throws SQLException {
         // Verify BLOB sizes match
         Statement sourceStmt = sourceConn.createStatement();
