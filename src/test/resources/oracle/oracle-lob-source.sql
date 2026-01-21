@@ -30,37 +30,15 @@ SELECT
     1024
 FROM DUAL;
 
--- Medium BLOB/CLOB (10KB) - Use DBMS_LOB.WRITE for larger data
-DECLARE
-    v_blob BLOB;
-    v_clob CLOB;
-    v_data RAW(2000);
-    v_text VARCHAR2(4000);
-    v_amount INTEGER := 2000;
-    v_offset INTEGER := 1;
-BEGIN
-    -- Create BLOB
-    INSERT INTO t_lob_source (id, blob_col, clob_col, blob_size, clob_size)
-    VALUES (3, EMPTY_BLOB(), EMPTY_CLOB(), 10000, 10000)
-    RETURNING blob_col, clob_col INTO v_blob, v_clob;
-    
-    -- Write BLOB in chunks
-    FOR i IN 1..5 LOOP
-        v_data := UTL_RAW.CAST_TO_RAW(DBMS_RANDOM.STRING('A', 2000));
-        DBMS_LOB.WRITE(v_blob, 2000, v_offset, v_data);
-        v_offset := v_offset + 2000;
-    END LOOP;
-    
-    -- Write CLOB in chunks
-    v_offset := 1;
-    FOR i IN 1..3 LOOP
-        v_text := DBMS_RANDOM.STRING('A', 3333);
-        DBMS_LOB.WRITEAPPEND(v_clob, LENGTH(v_text), v_text);
-    END LOOP;
-    
-    COMMIT;
-END;
-/
+-- Medium LOBs (using TO_CLOB/TO_BLOB to avoid RAW size limit)
+INSERT INTO t_lob_source (id, blob_col, clob_col, blob_size, clob_size)
+SELECT 
+    3,
+    TO_BLOB(UTL_RAW.CAST_TO_RAW(RPAD('A', 2000, 'B'))),
+    TO_CLOB(RPAD('TestData', 4000, ' LOB data for cross-version replication test ')),
+    2000,
+    4000
+FROM DUAL;
 
 -- Null LOBs (edge case)
 INSERT INTO t_lob_source (id, blob_col, clob_col, blob_size, clob_size)
@@ -75,7 +53,7 @@ INSERT INTO t_lob_source (id, blob_col, clob_col, blob_size, clob_size)
 SELECT 
     6,
     UTL_RAW.CAST_TO_RAW('Binary data with special bytes'),
-    'Unicode test: ' || UNISTR('\00E9\00E8\00EA') || ' - ' || UNISTR('\4E2D\6587') || ' - ' || DBMS_RANDOM.STRING('A', 500),
+    TO_CLOB('Unicode test: ' || UNISTR('\00E9\00E8\00EA') || ' - ' || UNISTR('\4E2D\6587') || ' - ' || RPAD('X', 500, 'Y')),
     32,
     520
 FROM DUAL;
