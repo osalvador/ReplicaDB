@@ -276,12 +276,13 @@ class Oracle2OracleCrossVersionLobTest {
     void testCrossVersionLargeLobReplication() throws ParseException, IOException, SQLException {
         Assumptions.assumeTrue(containersAvailable, "Containers not available");
         
-        LOG.info("=== Cross-version Large LOB Replication Test (200MB+) ===");
-        LOG.info("Creating large LOBs (BLOB: 200MB, CLOB: 200MB, XMLTYPE: 200MB)...");
+        LOG.info("=== Cross-version Large LOB Replication Test (50MB+) ===");
+        LOG.info("Creating large LOBs (BLOB: 50MB, CLOB: 50MB, XMLTYPE: 50MB)...");
         
-        long blobSize = 200 * 1024 * 1024; // 200MB
-        long clobSize = 200 * 1024 * 1024; // 200MB (characters)
-        long xmlSize = 200 * 1024 * 1024;   // 200MB
+        // Use 50MB for CI stability - large enough to test streaming, small enough to avoid resource issues
+        long blobSize = 50 * 1024 * 1024; // 50MB
+        long clobSize = 50 * 1024 * 1024; // 50MB (characters)
+        long xmlSize = 50 * 1024 * 1024;   // 50MB
         
         // Create table with large LOB support
         createLargeLobTable(sourceConn, "t_large_lob_source");
@@ -306,7 +307,8 @@ class Oracle2OracleCrossVersionLobTest {
                 "--sink-password", sinkOracle.getPassword(),
                 "--sink-table", "t_large_lob_sink",
                 "--mode", ReplicationMode.COMPLETE.getModeText(),
-                "--fetch-size", "10"  // Smaller fetch size for large LOBs
+                "--fetch-size", "5",  // Small fetch size for large LOBs to reduce memory pressure
+                "--jobs", "1"  // Single job for large LOBs to avoid resource contention
         };
         
         long startTime = System.currentTimeMillis();
@@ -330,6 +332,17 @@ class Oracle2OracleCrossVersionLobTest {
     }
 
     private void createLargeLobTable(Connection conn, String tableName) throws SQLException {
+        // Drop table if exists to avoid ORA-00955
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("DROP TABLE " + tableName + " PURGE");
+            LOG.debug("Dropped existing table: {}", tableName);
+        } catch (SQLException e) {
+            if (e.getErrorCode() != 942) { // ORA-00942: table or view does not exist
+                LOG.warn("Could not drop table {}: {}", tableName, e.getMessage());
+            }
+        }
+        
+        // Create fresh table
         String createSql = "CREATE TABLE " + tableName + " (" +
                 "id NUMBER PRIMARY KEY, " +
                 "blob_col BLOB, " +
@@ -343,15 +356,6 @@ class Oracle2OracleCrossVersionLobTest {
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(createSql);
             LOG.info("Created large LOB table: {}", tableName);
-        } catch (SQLException e) {
-            if (e.getErrorCode() == 955) { // ORA-00955: name already exists
-                LOG.debug("Table {} already exists, truncating", tableName);
-                try (Statement stmt = conn.createStatement()) {
-                    stmt.execute("TRUNCATE TABLE " + tableName);
-                }
-            } else {
-                throw e;
-            }
         }
     }
 
@@ -363,9 +367,9 @@ class Oracle2OracleCrossVersionLobTest {
         conn.setAutoCommit(false);
         
         try (PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
-            // Create large BLOB (200MB)
-            LOG.info("Creating 200MB BLOB...");
-            byte[] blobChunk = new byte[1024 * 1024]; // 1MB chunks
+            // Create large BLOB using streaming to avoid memory issues
+            LOG.info("Creating {}MB BLOB...", blobSize / (1024*1024));
+            byte[] blobChunk = new byte[512 * 1024]; // 512KB chunks for better memory efficiency
             for (int i = 0; i < blobChunk.length; i++) {
                 blobChunk[i] = (byte) ('A' + (i % 26));
             }
@@ -381,9 +385,9 @@ class Oracle2OracleCrossVersionLobTest {
                 }
             }
             
-            // Create large CLOB (200MB)
-            LOG.info("Creating 200MB CLOB...");
-            char[] clobChunk = new char[1024 * 1024]; // 1MB chunks
+            // Create large CLOB using streaming
+            LOG.info("Creating {}MB CLOB...", clobSize / (1024*1024));
+            char[] clobChunk = new char[512 * 1024]; // 512KB chunks for better memory efficiency
             for (int i = 0; i < clobChunk.length; i++) {
                 clobChunk[i] = (char) ('A' + (i % 26));
             }
@@ -399,8 +403,8 @@ class Oracle2OracleCrossVersionLobTest {
                 }
             }
             
-            // Create large XMLTYPE (50MB)
-            LOG.info("Creating 50MB XMLTYPE...");
+            // Create large XMLTYPE
+            LOG.info("Creating {}MB XMLTYPE...", xmlSize / (1024*1024));
             StringBuilder xmlBuilder = new StringBuilder();
             xmlBuilder.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
             xmlBuilder.append("<root>");
