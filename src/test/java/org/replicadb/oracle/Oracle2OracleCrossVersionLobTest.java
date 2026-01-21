@@ -272,18 +272,17 @@ class Oracle2OracleCrossVersionLobTest {
     }
 
     @Test
-    @Disabled("Large LOB test disabled by default - requires significant memory/resources. Enable manually for testing ORA-64219 with large data volumes")
-    @DisplayName("Cross-version LOB replication with large LOBs (50MB+)")
+    @DisplayName("Cross-version LOB replication with large LOBs (25MB+)")
     void testCrossVersionLargeLobReplication() throws ParseException, IOException, SQLException {
         Assumptions.assumeTrue(containersAvailable, "Containers not available");
         
-        LOG.info("=== Cross-version Large LOB Replication Test (50MB+) ===");
-        LOG.info("Creating large LOBs (BLOB: 50MB, CLOB: 50MB, XMLTYPE: 50MB)...");
+        LOG.info("=== Cross-version Large LOB Replication Test (25MB+) ===");
+        LOG.info("Creating large LOBs (BLOB: 25MB, CLOB: 25MB, XMLTYPE: 25MB)...");
         
-        // Use 50MB for CI stability - large enough to test streaming, small enough to avoid resource issues
-        long blobSize = 50 * 1024 * 1024; // 50MB
-        long clobSize = 50 * 1024 * 1024; // 50MB (characters)
-        long xmlSize = 50 * 1024 * 1024;   // 50MB
+        // Use 25MB for CI stability - large enough to test streaming, balanced with CI resources
+        long blobSize = 25 * 1024 * 1024; // 25MB
+        long clobSize = 25 * 1024 * 1024; // 25MB (characters)
+        long xmlSize = 25 * 1024 * 1024;   // 25MB
         
         // Create table with large LOB support
         createLargeLobTable(sourceConn, "t_large_lob_source");
