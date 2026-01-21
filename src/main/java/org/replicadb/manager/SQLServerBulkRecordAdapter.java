@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.sql.RowSet;
+import java.nio.charset.StandardCharsets;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -209,6 +210,11 @@ public class SQLServerBulkRecordAdapter implements ISQLServerBulkRecord {
                             case Types.TIMESTAMP:
                                 value = null;
                                 break;
+                            case Types.BINARY:
+                            case Types.VARBINARY:
+                            case Types.LONGVARBINARY:
+                                value = new byte[0];
+                                break;
                             default:
                                 break;
                         }
@@ -247,10 +253,20 @@ public class SQLServerBulkRecordAdapter implements ISQLServerBulkRecord {
                             case Types.TIMESTAMP:
                                 value = java.sql.Timestamp.valueOf(strValue);
                                 break;
+                            case Types.BINARY:
+                            case Types.VARBINARY:
+                            case Types.LONGVARBINARY:
+                                // Convert String to byte array for binary columns
+                                value = strValue.getBytes(StandardCharsets.UTF_8);
+                                break;
                             default:
                                 break;
                         }
                     }
+                }
+                // Handle byte arrays for binary types - keep as is
+                else if (value instanceof byte[]) {
+                    // byte[] is already the correct type for BINARY/VARBINARY columns
                 }
                 // Keep Boolean as Boolean for BIT columns (SQL Server BulkCopy expects Boolean, not Integer)
                 else if (value instanceof Boolean) {

@@ -68,6 +68,16 @@ class Oracle2CsvFileTest {
     void tearDown() throws SQLException {
         File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
         LOG.info("Deleted file: {}", sinkFile.delete());
+        
+        // Clean up any temp files that may have been left behind
+        File tmpDir = new File("/tmp");
+        File[] tempFiles = tmpDir.listFiles((dir, name) -> name.contains("oracle2csv_sink.csv.repdb."));
+        if (tempFiles != null) {
+            for (File f : tempFiles) {
+                LOG.info("Cleanup temp file: {}", f.delete() ? f.getName() : "FAILED: " + f.getName());
+            }
+        }
+        
         this.oracleConn.close();
 
         FileManager.setTempFilesPath(new HashMap<>());
