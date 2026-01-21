@@ -50,18 +50,23 @@ class Oracle2OracleCrossVersionLobTest {
             
             // Try to start 18c first, fall back to 21c if not available (ARM compatibility)
             try {
+                LOG.info("Attempting to start Oracle 18c container...");
                 sourceOracle = ReplicadbOracleContainer.getOracle18cInstance();
+                LOG.info("Oracle 18c container started successfully");
             } catch (Exception e) {
-                LOG.warn("Oracle 18c not available (possibly ARM architecture), using 21c: {}", e.getMessage());
+                LOG.warn("Oracle 18c not available, attempting Oracle 21c. Reason: {}", 
+                    e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
                 sourceOracle = ReplicadbOracleContainer.getOracle21cInstance();
+                LOG.info("Oracle 21c container started successfully");
             }
             
+            LOG.info("Starting Oracle 23c container for sink...");
             sinkOracle = ReplicadbOracleContainer.getOracle23cInstance();
             containersAvailable = true;
-            LOG.info("Oracle containers started: source={}, sink={}", 
+            LOG.info("Oracle containers started successfully: source={}, sink={}", 
                 sourceOracle.getOracleVersion(), sinkOracle.getOracleVersion());
         } catch (Exception e) {
-            LOG.warn("Could not start Oracle containers for cross-version testing: {}", e.getMessage());
+            LOG.error("Could not start Oracle containers for cross-version testing", e);
             containersAvailable = false;
         }
     }

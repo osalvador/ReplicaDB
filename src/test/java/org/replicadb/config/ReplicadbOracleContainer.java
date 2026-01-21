@@ -164,9 +164,9 @@ public class ReplicadbOracleContainer extends OracleContainer {
 		TimeZone.setDefault(timeZone);
 
 		// Creating Database with better error handling
-		try (final Connection con = DriverManager.getConnection(container.getJdbcUrl(), container.getUsername(),
-				container.getPassword())) {
-			LOG.info("Creating Oracle tables for database: {}", container.getDatabaseName());
+		try (final Connection con = DriverManager.getConnection(this.getJdbcUrl(), this.getUsername(),
+				this.getPassword())) {
+			LOG.info("Creating Oracle tables for database: {}", this.getDatabaseName());
 			final ScriptRunner runner = new ScriptRunner(con, false, true);
 
 			// Run scripts with individual error handling
