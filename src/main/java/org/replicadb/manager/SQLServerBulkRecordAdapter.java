@@ -77,20 +77,51 @@ public class SQLServerBulkRecordAdapter implements ISQLServerBulkRecord {
     @Override
     public int getPrecision(int column) {
         try {
-            return metaData.getPrecision(column);
+            int precision = metaData.getPrecision(column);
+            // SQL Server BulkCopy requires non-zero precision for variable-length types
+            if (precision <= 0) {
+                int type = getColumnType(column);
+                switch (type) {
+                    case Types.VARCHAR:
+                    case Types.CHAR:
+                    case Types.LONGVARCHAR:
+                        return 8000; // SQL Server VARCHAR max without MAX
+                    case Types.NVARCHAR:
+                    case Types.NCHAR:
+                    case Types.LONGNVARCHAR:
+                        return 4000; // SQL Server NVARCHAR max without MAX
+                    case Types.BINARY:
+                    case Types.VARBINARY:
+                    case Types.LONGVARBINARY:
+                        return 8000; // SQL Server VARBINARY max without MAX
+                    case Types.DECIMAL:
+                    case Types.NUMERIC:
+                        return 38; // SQL Server max precision for DECIMAL
+                    case Types.FLOAT:
+                    case Types.DOUBLE:
+                    case Types.REAL:
+                        return 53; // SQL Server FLOAT precision
+                    default:
+                        return 38; // Safe default
+                }
+            }
+            return precision;
         } catch (SQLException e) {
             LOG.error("Error getting precision for column {}", column, e);
-            return 0;
+            return 38; // Safe default instead of 0
         }
     }
 
     @Override
     public int getScale(int column) {
         try {
-            return metaData.getScale(column);
+            int scale = metaData.getScale(column);
+            // For DECIMAL/NUMERIC with 0 scale, keep it (it's valid for integers)
+            // Only provide default if we can't get it
+            return scale;
         } catch (SQLException e) {
             LOG.error("Error getting scale for column {}", column, e);
-            return 0;
+            return 0; // 0 is valid for scale
         }
     }
 
