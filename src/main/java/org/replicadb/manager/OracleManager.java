@@ -11,7 +11,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 
 public class OracleManager extends SqlManager {
@@ -125,6 +127,9 @@ public class OracleManager extends SqlManager {
 
         oracleAlterSession(true);
 
+        // Track streams that need to be closed after batch execution
+        List<AutoCloseable> openStreams = new ArrayList<>();
+
         if (resultSet.next()) {
             // Create Bandwidth Throttling
             BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
@@ -132,8 +137,6 @@ public class OracleManager extends SqlManager {
             do {
                 bt.acquiere();
 
-                boolean hasLargeLobs = false; // Track if this row has large LOBs
-                
                 // Get Columns values
                 for (int i = 1; i <= columnsNumber; i++) {
 
@@ -175,20 +178,16 @@ public class OracleManager extends SqlManager {
                             ps.setBytes(i, resultSet.getBytes(i));
                             break;
                         case Types.BLOB:
-                            // Use streaming to avoid ORA-64219 when replicating between different Oracle versions
+                            // Stream BLOB without loading into memory
+                            // Keep stream open until after executeBatch()
                             Blob blobData = getBlob(resultSet, i);
-                            if (blobData != null && blobData.length() > 0) {
-                                hasLargeLobs = true; // Mark that this row has LOBs
-                            }
-                            streamBlobToSink(blobData, ps, i);
+                            streamBlobToSink(blobData, ps, i, openStreams);
                             break;
                         case Types.CLOB:
-                            // Use streaming to avoid ORA-64219 when replicating between different Oracle versions
+                            // Stream CLOB without loading into memory
+                            // Keep stream open until after executeBatch()
                             Clob clobData = resultSet.getClob(i);
-                            if (clobData != null && clobData.length() > 0) {
-                                hasLargeLobs = true; // Mark that this row has LOBs
-                            }
-                            streamClobToSink(clobData, ps, i);
+                            streamClobToSink(clobData, ps, i, openStreams);
                             break;
                         case Types.BOOLEAN:
                         case Types.BIT:
@@ -284,40 +283,24 @@ public class OracleManager extends SqlManager {
                     }
                 }
 
-                // Handle LOB rows differently to avoid stream closure issues
-                if (hasLargeLobs) {
-                    // Execute any pending batch before processing LOB row
-                    if (count > 0) {
-                        ps.executeBatch();
-                        this.getConnection().commit();
-                        count = 0;
-                    }
-                    
-                    // Execute LOB row immediately (streams are still open)
-                    ps.executeUpdate();
+                ps.addBatch();
+
+                if (++count % batchSize == 0) {
+                    ps.executeBatch();
                     this.getConnection().commit();
-                    totalRows++;
-                } else {
-                    // Use efficient batching for non-LOB rows
-                    ps.addBatch();
-                    count++;
-                    
-                    if (count % batchSize == 0) {
-                        ps.executeBatch();
-                        this.getConnection().commit();
-                        count = 0;
-                    }
-                    
-                    totalRows++;
+                    // Close all streams after successful batch execution
+                    closeStreams(openStreams);
                 }
+
+                totalRows++;
             } while (resultSet.next());
-            
-            // Execute remaining batched rows (non-LOB rows only)
-            if (count > 0) {
-                ps.executeBatch();
-            }
         }
 
+        ps.executeBatch(); // insert remaining records
+        this.getConnection().commit();
+        // Close all remaining streams after final batch
+        closeStreams(openStreams);
+        
         ps.close();
 
         this.getConnection().commit();
@@ -475,12 +458,19 @@ public class OracleManager extends SqlManager {
      * never materializing the entire LOB in memory.
      *
      * @param sourceBlob Source BLOB from ResultSet (may be null)
-     * @param ps Target PreparedStatement  
+    /**
+     * Streams BLOB content from source to sink PreparedStatement.
+     * The stream is kept open and tracked for later cleanup after batch execution.
+     * This avoids both ORA-64219 (LOB locators) and OutOfMemoryError (full LOB in memory).
+     *
+     * @param sourceBlob Source BLOB from ResultSet (may be null)
+     * @param ps Target PreparedStatement
      * @param columnIndex 1-based column index
+     * @param openStreams List to track open streams for cleanup
      * @throws SQLException if database access error occurs
-     * @throws IOException if stream read/write error occurs
+     * @throws IOException if stream read error occurs
      */
-    private void streamBlobToSink(Blob sourceBlob, PreparedStatement ps, int columnIndex) 
+    private void streamBlobToSink(Blob sourceBlob, PreparedStatement ps, int columnIndex, List<AutoCloseable> openStreams) 
             throws SQLException, IOException {
         if (sourceBlob == null) {
             ps.setNull(columnIndex, Types.BLOB);
@@ -494,28 +484,29 @@ public class OracleManager extends SqlManager {
             return;
         }
         
-        // Use getBinaryStream to read BLOB content - this avoids passing LOB locators
-        // between different Oracle database instances which causes ORA-64219
-        // Note: Stream is NOT closed here - it will be consumed by ps.executeUpdate()
-        // and then closed automatically by the JDBC driver
+        // Stream BLOB without loading into memory
+        // Stream is kept open and will be closed after executeBatch()
         InputStream blobStream = sourceBlob.getBinaryStream();
         ps.setBinaryStream(columnIndex, blobStream, blobLength);
-        // sourceBlob.free() is called after executeUpdate() by the JDBC driver
+        
+        // Track stream and blob for cleanup after batch execution
+        openStreams.add(blobStream);
+        openStreams.add(() -> sourceBlob.free());
     }
 
     /**
-     * Streams CLOB content from source to sink PreparedStatement using chunked transfer.
-     * This avoids LOB locator transfer issues (ORA-64219) between different Oracle versions.
-     * The CLOB content is read as a character stream and written directly to the PreparedStatement,
-     * never materializing the entire LOB in memory.
+     * Streams CLOB content from source to sink PreparedStatement.
+     * The stream is kept open and tracked for later cleanup after batch execution.
+     * This avoids both ORA-64219 (LOB locators) and OutOfMemoryError (full LOB in memory).
      *
      * @param sourceClob Source CLOB from ResultSet (may be null)
      * @param ps Target PreparedStatement
      * @param columnIndex 1-based column index
+     * @param openStreams List to track open streams for cleanup
      * @throws SQLException if database access error occurs
-     * @throws IOException if stream read/write error occurs
+     * @throws IOException if stream read error occurs
      */
-    private void streamClobToSink(Clob sourceClob, PreparedStatement ps, int columnIndex) 
+    private void streamClobToSink(Clob sourceClob, PreparedStatement ps, int columnIndex, List<AutoCloseable> openStreams) 
             throws SQLException, IOException {
         if (sourceClob == null) {
             ps.setNull(columnIndex, Types.CLOB);
@@ -529,12 +520,32 @@ public class OracleManager extends SqlManager {
             return;
         }
         
-        // Use getCharacterStream to read CLOB content - this avoids passing LOB locators
-        // between different Oracle database instances which causes ORA-64219
-        // Note: Stream is NOT closed here - it will be consumed by ps.executeUpdate()
-        // and then closed automatically by the JDBC driver
+        // Stream CLOB without loading into memory
+        // Stream is kept open and will be closed after executeBatch()
         Reader clobReader = sourceClob.getCharacterStream();
         ps.setCharacterStream(columnIndex, clobReader, clobLength);
-        // sourceClob.free() is called after executeUpdate() by the JDBC driver
+        
+        // Track stream and clob for cleanup after batch execution
+        openStreams.add(clobReader);
+        openStreams.add(() -> sourceClob.free());
+    }
+
+    /**
+     * Closes all tracked streams and frees LOB resources after batch execution.
+     * This is called after executeBatch() to properly cleanup resources.
+     *
+     * @param openStreams List of streams and LOBs to close/free
+     */
+    private void closeStreams(List<AutoCloseable> openStreams) {
+        for (AutoCloseable resource : openStreams) {
+            try {
+                if (resource != null) {
+                    resource.close();
+                }
+            } catch (Exception e) {
+                LOG.warn("Error closing LOB stream/resource: {}", e.getMessage());
+            }
+        }
+        openStreams.clear();
     }
 }
