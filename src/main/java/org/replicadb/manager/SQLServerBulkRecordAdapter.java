@@ -181,14 +181,74 @@ public class SQLServerBulkRecordAdapter implements ISQLServerBulkRecord {
                 Object value = rowSet.getObject(i);
                 int columnType = getColumnType(i);
 
-                // Convert Boolean to Integer (0/1) for SQL Server BIT compatibility
-                if (value instanceof Boolean) {
-                    value = ((Boolean) value) ? 1 : 0;
+                // Handle null values
+                if (value == null) {
+                    rowData[i - 1] = null;
+                    continue;
+                }
+
+                // Convert String values to appropriate types for SQL Server
+                if (value instanceof String) {
+                    String strValue = (String) value;
+                    if (strValue.isEmpty()) {
+                        // Empty string handling based on column type
+                        switch (columnType) {
+                            case Types.BIT:
+                            case Types.BOOLEAN:
+                            case Types.INTEGER:
+                            case Types.BIGINT:
+                            case Types.SMALLINT:
+                            case Types.TINYINT:
+                            case Types.DECIMAL:
+                            case Types.NUMERIC:
+                            case Types.FLOAT:
+                            case Types.DOUBLE:
+                            case Types.REAL:
+                            case Types.DATE:
+                            case Types.TIME:
+                            case Types.TIMESTAMP:
+                                value = null;
+                                break;
+                            default:
+                                break;
+                        }
+                    } else {
+                        // Parse non-empty string values
+                        switch (columnType) {
+                            case Types.BIT:
+                            case Types.BOOLEAN:
+                                value = "true".equalsIgnoreCase(strValue) || "1".equals(strValue);
+                                break;
+                            case Types.DATE:
+                                value = java.sql.Date.valueOf(strValue);
+                                break;
+                            case Types.TIME:
+                                value = java.sql.Time.valueOf(strValue);
+                                break;
+                            case Types.TIMESTAMP:
+                                value = java.sql.Timestamp.valueOf(strValue);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+                // Keep Boolean as Boolean for BIT columns (SQL Server BulkCopy expects Boolean, not Integer)
+                else if (value instanceof Boolean) {
+                    // No conversion needed - SQL Server BulkCopy handles Boolean for BIT columns
+                }
+                // Convert Integer to Boolean for BIT columns when source provides Integer
+                else if (value instanceof Integer && (columnType == Types.BIT || columnType == Types.BOOLEAN)) {
+                    value = ((Integer) value) != 0;
                 }
                 // Convert BigDecimal to appropriate numeric type for SQL Server
                 else if (value instanceof java.math.BigDecimal) {
                     java.math.BigDecimal bd = (java.math.BigDecimal) value;
                     switch (columnType) {
+                        case Types.BIT:
+                        case Types.BOOLEAN:
+                            value = bd.intValue() != 0;
+                            break;
                         case Types.BIGINT:
                             value = bd.longValue();
                             break;
