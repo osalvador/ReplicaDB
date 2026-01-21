@@ -44,6 +44,8 @@ class Oracle2CsvFileTest {
     @BeforeEach
     void before() throws SQLException {
         this.oracleConn = DriverManager.getConnection(oracle.getJdbcUrl(), oracle.getUsername(), oracle.getPassword());
+        // Reset temp files map before each test to prevent duplicate merges
+        FileManager.setTempFilesPath(new HashMap<>());
         // Ensure file is deleted before test
         File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
         if (sinkFile.exists()) {

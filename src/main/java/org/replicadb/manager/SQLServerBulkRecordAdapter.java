@@ -179,10 +179,37 @@ public class SQLServerBulkRecordAdapter implements ISQLServerBulkRecord {
             Object[] rowData = new Object[columnCount];
             for (int i = 1; i <= columnCount; i++) {
                 Object value = rowSet.getObject(i);
+                int columnType = getColumnType(i);
 
                 // Convert Boolean to Integer (0/1) for SQL Server BIT compatibility
                 if (value instanceof Boolean) {
                     value = ((Boolean) value) ? 1 : 0;
+                }
+                // Convert BigDecimal to appropriate numeric type for SQL Server
+                else if (value instanceof java.math.BigDecimal) {
+                    java.math.BigDecimal bd = (java.math.BigDecimal) value;
+                    switch (columnType) {
+                        case Types.BIGINT:
+                            value = bd.longValue();
+                            break;
+                        case Types.INTEGER:
+                            value = bd.intValue();
+                            break;
+                        case Types.SMALLINT:
+                        case Types.TINYINT:
+                            value = bd.shortValue();
+                            break;
+                        case Types.FLOAT:
+                        case Types.DOUBLE:
+                            value = bd.doubleValue();
+                            break;
+                        case Types.REAL:
+                            value = bd.floatValue();
+                            break;
+                        // For DECIMAL/NUMERIC, keep as BigDecimal
+                        default:
+                            break;
+                    }
                 }
 
                 rowData[i - 1] = value;
