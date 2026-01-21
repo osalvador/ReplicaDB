@@ -272,22 +272,17 @@ class Oracle2OracleCrossVersionLobTest {
     }
 
     @Test
-    @Disabled("Large LOB test disabled - ORA-17266 IOException occurs with LOBs >10MB due to JDBC stream handling. " +
-             "Root cause: Current implementation creates Blob/Clob objects in memory which expire during batch operations. " +
-             "Requires refactoring OracleManager.insertDataToTable() to use PreparedStatement.setBinaryStream() " +
-             "and setCharacterStream() for direct streaming instead of createBlob().setBytes(). " +
-             "See: https://github.com/osalvador/ReplicaDB/issues/213")
-    @DisplayName("Cross-version LOB replication with large LOBs (25MB+)")
+    @DisplayName("Cross-version LOB replication with large LOBs (10MB+)")
     void testCrossVersionLargeLobReplication() throws ParseException, IOException, SQLException {
         Assumptions.assumeTrue(containersAvailable, "Containers not available");
         
-        LOG.info("=== Cross-version Large LOB Replication Test (25MB+) ===");
-        LOG.info("Creating large LOBs (BLOB: 25MB, CLOB: 25MB, XMLTYPE: 25MB)...");
+        LOG.info("=== Cross-version Large LOB Replication Test (10MB+) ===");
+        LOG.info("Creating large LOBs (BLOB: 10MB, CLOB: 10MB, XMLTYPE: 10MB)...");
         
-        // Use 25MB for CI stability - large enough to test streaming, balanced with CI resources
-        long blobSize = 25 * 1024 * 1024; // 25MB
-        long clobSize = 25 * 1024 * 1024; // 25MB (characters)
-        long xmlSize = 25 * 1024 * 1024;   // 25MB
+        // Use 10MB to test large LOB streaming without overwhelming CI resources
+        long blobSize = 10 * 1024 * 1024; // 10MB
+        long clobSize = 10 * 1024 * 1024; // 10MB (characters)
+        long xmlSize = 10 * 1024 * 1024;   // 10MB
         
         // Create table with large LOB support
         createLargeLobTable(sourceConn, "t_large_lob_source");

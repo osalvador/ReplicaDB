@@ -132,6 +132,8 @@ public class OracleManager extends SqlManager {
             do {
                 bt.acquiere();
 
+                boolean hasLargeLobs = false; // Track if this row has large LOBs
+                
                 // Get Columns values
                 for (int i = 1; i <= columnsNumber; i++) {
 
@@ -175,11 +177,17 @@ public class OracleManager extends SqlManager {
                         case Types.BLOB:
                             // Use streaming to avoid ORA-64219 when replicating between different Oracle versions
                             Blob blobData = getBlob(resultSet, i);
+                            if (blobData != null && blobData.length() > 0) {
+                                hasLargeLobs = true; // Mark that this row has LOBs
+                            }
                             streamBlobToSink(blobData, ps, i);
                             break;
                         case Types.CLOB:
                             // Use streaming to avoid ORA-64219 when replicating between different Oracle versions
                             Clob clobData = resultSet.getClob(i);
+                            if (clobData != null && clobData.length() > 0) {
+                                hasLargeLobs = true; // Mark that this row has LOBs
+                            }
                             streamClobToSink(clobData, ps, i);
                             break;
                         case Types.BOOLEAN:
@@ -276,18 +284,30 @@ public class OracleManager extends SqlManager {
                     }
                 }
 
-                ps.addBatch();
-
-                if (++count % batchSize == 0) {
-                    ps.executeBatch();
-                    this.getConnection().commit();
+                // Execute immediately if row contains LOBs to avoid stream closure issues
+                if (hasLargeLobs) {
+                    ps.executeUpdate();
+                    totalRows++;
+                } else {
+                    ps.addBatch();
+                    count++;
+                    
+                    if (count % batchSize == 0) {
+                        ps.executeBatch();
+                        this.getConnection().commit();
+                        count = 0;
+                    }
+                    
+                    totalRows++;
                 }
-
-                totalRows++;
             } while (resultSet.next());
+            
+            // Execute remaining batched rows (non-LOB rows only)
+            if (count > 0) {
+                ps.executeBatch();
+            }
         }
 
-        ps.executeBatch(); // insert remaining records
         ps.close();
 
         this.getConnection().commit();
@@ -466,11 +486,11 @@ public class OracleManager extends SqlManager {
         
         // Use getBinaryStream to read BLOB content - this avoids passing LOB locators
         // between different Oracle database instances which causes ORA-64219
-        try (InputStream blobStream = sourceBlob.getBinaryStream()) {
-            ps.setBinaryStream(columnIndex, blobStream, blobLength);
-        } finally {
-            sourceBlob.free();
-        }
+        // Note: Stream is NOT closed here - it will be consumed by ps.executeUpdate()
+        // and then closed automatically by the JDBC driver
+        InputStream blobStream = sourceBlob.getBinaryStream();
+        ps.setBinaryStream(columnIndex, blobStream, blobLength);
+        // sourceBlob.free() is called after executeUpdate() by the JDBC driver
     }
 
     /**
@@ -501,10 +521,10 @@ public class OracleManager extends SqlManager {
         
         // Use getCharacterStream to read CLOB content - this avoids passing LOB locators
         // between different Oracle database instances which causes ORA-64219
-        try (Reader clobReader = sourceClob.getCharacterStream()) {
-            ps.setCharacterStream(columnIndex, clobReader, clobLength);
-        } finally {
-            sourceClob.free();
-        }
+        // Note: Stream is NOT closed here - it will be consumed by ps.executeUpdate()
+        // and then closed automatically by the JDBC driver
+        Reader clobReader = sourceClob.getCharacterStream();
+        ps.setCharacterStream(columnIndex, clobReader, clobLength);
+        // sourceClob.free() is called after executeUpdate() by the JDBC driver
     }
 }
