@@ -252,13 +252,38 @@ public class SQLServerBulkRecordAdapter implements ISQLServerBulkRecord {
                                 value = new java.math.BigDecimal(strValue);
                                 break;
                             case Types.DATE:
-                                value = java.sql.Date.valueOf(strValue);
+                                try {
+                                    value = java.sql.Date.valueOf(strValue);
+                                } catch (IllegalArgumentException e) {
+                                    LOG.warn("Failed to parse date '{}' for column {}, setting to null: {}", strValue, i, e.getMessage());
+                                    value = null;
+                                }
                                 break;
                             case Types.TIME:
-                                value = java.sql.Time.valueOf(strValue);
+                                try {
+                                    value = java.sql.Time.valueOf(strValue);
+                                } catch (IllegalArgumentException e) {
+                                    LOG.warn("Failed to parse time '{}' for column {}, setting to null: {}", strValue, i, e.getMessage());
+                                    value = null;
+                                }
                                 break;
                             case Types.TIMESTAMP:
-                                value = java.sql.Timestamp.valueOf(strValue);
+                                try {
+                                    // SQL Server datetime has precision up to milliseconds (3 digits)
+                                    // Truncate microseconds if present (more than 3 decimal places)
+                                    String timestampStr = strValue;
+                                    if (timestampStr.contains(".")) {
+                                        String[] parts = timestampStr.split("\\.");
+                                        if (parts.length == 2 && parts[1].length() > 3) {
+                                            // Truncate to 3 digits (milliseconds only)
+                                            timestampStr = parts[0] + "." + parts[1].substring(0, 3);
+                                        }
+                                    }
+                                    value = java.sql.Timestamp.valueOf(timestampStr);
+                                } catch (IllegalArgumentException e) {
+                                    LOG.warn("Failed to parse timestamp '{}' for column {}, setting to null: {}", strValue, i, e.getMessage());
+                                    value = null;
+                                }
                                 break;
                             case Types.BINARY:
                             case Types.VARBINARY:
