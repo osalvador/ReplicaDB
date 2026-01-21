@@ -284,11 +284,21 @@ public class OracleManager extends SqlManager {
                     }
                 }
 
-                // Execute immediately if row contains LOBs to avoid stream closure issues
+                // Handle LOB rows differently to avoid stream closure issues
                 if (hasLargeLobs) {
+                    // Execute any pending batch before processing LOB row
+                    if (count > 0) {
+                        ps.executeBatch();
+                        this.getConnection().commit();
+                        count = 0;
+                    }
+                    
+                    // Execute LOB row immediately (streams are still open)
                     ps.executeUpdate();
+                    this.getConnection().commit();
                     totalRows++;
                 } else {
+                    // Use efficient batching for non-LOB rows
                     ps.addBatch();
                     count++;
                     
