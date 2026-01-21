@@ -189,17 +189,6 @@ $ replicadb --mode=complete -j=1 \
 | Amazon S3               | :heavy_multiplication_x: | :heavy_check_mark: |            N/A            |           N/A            |     :heavy_check_mark:    |
 | JDBC-Compliant database |    :heavy_check_mark:    | :heavy_check_mark: | :heavy_multiplication_x:  | :heavy_multiplication_x: |     :heavy_check_mark:    |
 
-## Oracle Cross-Version LOB Replication
-
-ReplicaDB supports replicating tables with BLOB and CLOB columns between different Oracle database versions (e.g., Oracle 11g → Oracle 19c/23c). This fixes the `ORA-64219: invalid LOB locator encountered` error that can occur when LOB locators are passed between different Oracle instances.
-
-**How it works**: LOB data is streamed using `getBinaryStream()`/`getCharacterStream()` instead of passing LOB locators directly, ensuring compatibility across Oracle versions.
-
-**Tested version combinations**:
-- Oracle 18c → Oracle 23c
-- Oracle 21c → Oracle 23c  
-- Oracle 23c → Oracle 23c (same version)
-
 # Roadmap
 
 Features: 
