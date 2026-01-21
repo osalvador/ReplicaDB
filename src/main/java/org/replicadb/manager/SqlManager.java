@@ -374,12 +374,33 @@ public abstract class SqlManager extends ConnManager {
         } else {
             tableName = getSinkTableName();
         }
-        String sql = sqlCommand + tableName;
-        LOG.info("Truncating sink table with this command: {}", sql);
+        String truncateSql = sqlCommand + tableName;
+        LOG.info("Truncating sink table with this command: {}", truncateSql);
+        
         Statement statement = this.getConnection().createStatement();
-        statement.executeUpdate(sql);
-        statement.close();
-        this.getConnection().commit();
+        try {
+            statement.executeUpdate(truncateSql);
+            statement.close();
+            this.getConnection().commit();
+        } catch (SQLException e) {
+            LOG.warn("TRUNCATE failed ({}), falling back to DELETE FROM: {}", e.getMessage(), tableName);
+            statement.close();
+            
+            // Fallback to DELETE FROM for databases with TRUNCATE issues (DB2, etc.)
+            String deleteSql = "DELETE FROM " + tableName;
+            LOG.info("Deleting all rows from sink table with this command: {}", deleteSql);
+            Statement deleteStatement = this.getConnection().createStatement();
+            try {
+                deleteStatement.executeUpdate(deleteSql);
+                deleteStatement.close();
+                this.getConnection().commit();
+                LOG.info("DELETE FROM succeeded as fallback for table: {}", tableName);
+            } catch (SQLException deleteEx) {
+                deleteStatement.close();
+                LOG.error("Both TRUNCATE and DELETE FROM failed for table: {}", tableName, deleteEx);
+                throw deleteEx;
+            }
+        }
     }
 
     /**
