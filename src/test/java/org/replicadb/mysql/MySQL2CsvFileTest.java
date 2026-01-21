@@ -47,6 +47,24 @@ class MySQL2CsvFileTest {
     @BeforeEach
     void before() throws SQLException {
         this.mysqlConn = DriverManager.getConnection(mysql.getJdbcUrl(), mysql.getUsername(), mysql.getPassword());
+        
+        // Clean up any leftover temp files from previous tests
+        File tmpDir = new File("/tmp");
+        File[] tempFiles = tmpDir.listFiles((dir, name) -> name.contains("mysql2csv_sink.csv.repdb."));
+        if (tempFiles != null) {
+            for (File f : tempFiles) {
+                LOG.info("Deleting leftover temp file: {}", f.delete() ? f.getName() : "FAILED: " + f.getName());
+            }
+        }
+        
+        // Reset temp files map
+        FileManager.setTempFilesPath(new HashMap<>());
+        
+        // Ensure sink file is deleted before test
+        File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
+        if (sinkFile.exists()) {
+            LOG.info("Deleting sink file before test: {}", sinkFile.delete());
+        }
     }
 
     @AfterEach

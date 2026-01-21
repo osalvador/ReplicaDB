@@ -47,10 +47,23 @@ class MariaDB2CsvFileTest {
     @BeforeEach
     void before() throws SQLException {
         this.mariadbConn = DriverManager.getConnection(mariadb.getJdbcUrl(), mariadb.getUsername(), mariadb.getPassword());
-        // Ensure file is deleted before test
+        
+        // Clean up any leftover temp files from previous tests
+        File tmpDir = new File("/tmp");
+        File[] tempFiles = tmpDir.listFiles((dir, name) -> name.contains("mariadb2csv_sink.csv.repdb."));
+        if (tempFiles != null) {
+            for (File f : tempFiles) {
+                LOG.info("Deleting leftover temp file: {}", f.delete() ? f.getName() : "FAILED: " + f.getName());
+            }
+        }
+        
+        // Reset temp files map
+        FileManager.setTempFilesPath(new HashMap<>());
+        
+        // Ensure sink file is deleted before test
         File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
         if (sinkFile.exists()) {
-            sinkFile.delete();
+            LOG.info("Deleting sink file before test: {}", sinkFile.delete());
         }
     }
 

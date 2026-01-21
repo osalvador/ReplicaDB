@@ -51,6 +51,24 @@ class Postgres2CsvFileTest {
 	void before() throws SQLException {
 		this.postgresConn = DriverManager.getConnection(postgres.getJdbcUrl(), postgres.getUsername(),
 				postgres.getPassword());
+		
+		// Clean up any leftover temp files from previous tests
+		final File tmpDir = new File("/tmp");
+		final File[] tempFiles = tmpDir.listFiles((dir, name) -> name.contains("fileSink.csv.repdb."));
+		if (tempFiles != null) {
+			for (final File f : tempFiles) {
+				LOG.info("Deleting leftover temp file: {}", f.delete() ? f.getName() : "FAILED: " + f.getName());
+			}
+		}
+		
+		// Reset temp files map
+		FileManager.setTempFilesPath(new HashMap<>());
+		
+		// Ensure sink file is deleted before test
+		final File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
+		if (sinkFile.exists()) {
+			LOG.info("Deleting sink file before test: {}", sinkFile.delete());
+		}
 	}
 
 	@AfterEach
