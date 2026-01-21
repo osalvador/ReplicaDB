@@ -338,6 +338,21 @@ public class SQLServerBulkRecordAdapter implements ISQLServerBulkRecord {
                             break;
                     }
                 }
+                // Handle java.sql.Timestamp with nanoseconds precision for SQL Server
+                // SQL Server datetime/datetime2 has limited precision, need to truncate nanoseconds
+                // This applies regardless of the declared columnType since Timestamps can be used for various date/time columns
+                else if (value instanceof java.sql.Timestamp) {
+                    java.sql.Timestamp ts = (java.sql.Timestamp) value;
+                    // SQL Server datetime has precision up to milliseconds (3 digits)
+                    // Get nanoseconds and truncate to milliseconds precision
+                    int nanos = ts.getNanos();
+                    int millis = nanos / 1000000; // Convert to milliseconds
+                    // Create new timestamp with truncated precision
+                    java.sql.Timestamp truncated = new java.sql.Timestamp(ts.getTime());
+                    truncated.setNanos(millis * 1000000); // Set back with millisecond precision only
+                    value = truncated;
+                    LOG.trace("Truncated Timestamp nanoseconds from {} to {} for column {}", nanos, millis * 1000000, i);
+                }
 
                 rowData[i - 1] = value;
             }
