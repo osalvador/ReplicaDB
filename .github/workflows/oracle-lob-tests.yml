@@ -10,6 +10,8 @@ on:
       - 'src/main/java/org/replicadb/manager/OracleManager.java'
       - 'src/test/java/org/replicadb/oracle/Oracle2OracleCrossVersionLobTest.java'
       - 'src/test/java/org/replicadb/config/ReplicadbOracleContainer.java'
+      - 'src/test/resources/oracle/oracle-lob-source.sql'
+      - 'src/test/resources/sinks/oracle-lob-sink.sql'
       - '.github/workflows/oracle-lob-tests.yml'
   pull_request:
     branches: [ master ]
@@ -17,6 +19,8 @@ on:
       - 'src/main/java/org/replicadb/manager/OracleManager.java'
       - 'src/test/java/org/replicadb/oracle/Oracle2OracleCrossVersionLobTest.java'
       - 'src/test/java/org/replicadb/config/ReplicadbOracleContainer.java'
+      - 'src/test/resources/oracle/oracle-lob-source.sql'
+      - 'src/test/resources/sinks/oracle-lob-sink.sql'
       - '.github/workflows/oracle-lob-tests.yml'
   workflow_dispatch:  # Allow manual trigger
 
