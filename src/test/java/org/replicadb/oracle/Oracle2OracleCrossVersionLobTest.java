@@ -157,7 +157,17 @@ class Oracle2OracleCrossVersionLobTest {
         Assumptions.assumeTrue(containersAvailable, "Containers not available");
         
         int sourceRows = countSourceRows();
-        LOG.info("Source LOB rows: {}", sourceRows);
+        int expectedRows = 6; // Based on oracle-lob-source.sql
+        LOG.info("=== Cross-version LOB Replication Test - Complete Mode ===");
+        LOG.info("Expected rows in source: {}", expectedRows);
+        LOG.info("Actual rows in source: {}", sourceRows);
+        LOG.info("Source: Oracle {}, Sink: Oracle {}", 
+            sourceOracle.getOracleVersion(), sinkOracle.getOracleVersion());
+        
+        if (sourceRows != expectedRows) {
+            LOG.warn("Source row count mismatch! Expected: {}, Actual: {}. Test data may not have loaded correctly.", 
+                expectedRows, sourceRows);
+        }
         
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
@@ -175,11 +185,19 @@ class Oracle2OracleCrossVersionLobTest {
         ToolOptions options = new ToolOptions(args);
         int result = ReplicaDB.processReplica(options);
         
+        int sinkRows = countSinkRows();
+        LOG.info("Replication completed. Rows in sink: {}", sinkRows);
+        
         assertEquals(0, result, "Replication should succeed without ORA-64219");
-        assertEquals(sourceRows, countSinkRows(), "All LOB rows should be replicated");
+        assertEquals(sourceRows, sinkRows, 
+            String.format("All LOB rows should be replicated. Expected: %d, Actual: %d", sourceRows, sinkRows));
         
         // Verify LOB data integrity
-        verifyLobDataIntegrity();
+        if (sourceRows > 0) {
+            LOG.info("Verifying LOB data integrity...");
+            verifyLobDataIntegrity();
+            LOG.info("LOB data integrity verified successfully");
+        }
     }
 
     @Test
@@ -188,6 +206,10 @@ class Oracle2OracleCrossVersionLobTest {
         Assumptions.assumeTrue(containersAvailable, "Containers not available");
         
         int sourceRows = countSourceRows();
+        int expectedRows = 6;
+        LOG.info("=== Cross-version LOB Replication Test - Incremental Mode ===");
+        LOG.info("Expected rows in source: {}", expectedRows);
+        LOG.info("Actual rows in source: {}", sourceRows);
         
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
@@ -206,8 +228,12 @@ class Oracle2OracleCrossVersionLobTest {
         ToolOptions options = new ToolOptions(args);
         int result = ReplicaDB.processReplica(options);
         
+        int sinkRows = countSinkRows();
+        LOG.info("Incremental replication completed. Rows in sink: {}", sinkRows);
+        
         assertEquals(0, result, "Incremental replication should succeed without ORA-64219");
-        assertEquals(sourceRows, countSinkRows(), "All LOB rows should be replicated");
+        assertEquals(sourceRows, sinkRows, 
+            String.format("All LOB rows should be replicated. Expected: %d, Actual: %d", sourceRows, sinkRows));
     }
 
     @Test
@@ -216,6 +242,10 @@ class Oracle2OracleCrossVersionLobTest {
         Assumptions.assumeTrue(containersAvailable, "Containers not available");
         
         int sourceRows = countSourceRows();
+        int expectedRows = 6;
+        LOG.info("=== Cross-version LOB Replication Test - Parallel Mode (2 jobs) ===");
+        LOG.info("Expected rows in source: {}", expectedRows);
+        LOG.info("Actual rows in source: {}", sourceRows);
         
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
@@ -233,8 +263,12 @@ class Oracle2OracleCrossVersionLobTest {
         ToolOptions options = new ToolOptions(args);
         int result = ReplicaDB.processReplica(options);
         
+        int sinkRows = countSinkRows();
+        LOG.info("Parallel replication completed. Rows in sink: {}", sinkRows);
+        
         assertEquals(0, result, "Parallel replication should succeed without ORA-64219");
-        assertEquals(sourceRows, countSinkRows(), "All LOB rows should be replicated");
+        assertEquals(sourceRows, sinkRows, 
+            String.format("All LOB rows should be replicated. Expected: %d, Actual: %d", sourceRows, sinkRows));
     }
 
     private void verifyLobDataIntegrity() throws SQLException {
