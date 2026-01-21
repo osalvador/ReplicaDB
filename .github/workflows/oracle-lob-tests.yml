@@ -1,0 +1,72 @@
+# Workflow to test Oracle cross-version LOB replication fix (Issue #213)
+# This tests the fix for ORA-64219: invalid LOB locator encountered
+
+name: Oracle Cross-Version LOB Tests
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'src/main/java/org/replicadb/manager/OracleManager.java'
+      - 'src/test/java/org/replicadb/oracle/Oracle2OracleCrossVersionLobTest.java'
+      - 'src/test/java/org/replicadb/config/ReplicadbOracleContainer.java'
+      - '.github/workflows/oracle-lob-tests.yml'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'src/main/java/org/replicadb/manager/OracleManager.java'
+      - 'src/test/java/org/replicadb/oracle/Oracle2OracleCrossVersionLobTest.java'
+      - 'src/test/java/org/replicadb/config/ReplicadbOracleContainer.java'
+      - '.github/workflows/oracle-lob-tests.yml'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  oracle-lob-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 11
+      uses: actions/setup-java@v4
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Run Oracle Cross-Version LOB Tests
+      run: |
+        mvn test \
+          -Dtest=Oracle2OracleCrossVersionLobTest \
+          -DfailIfNoTests=false \
+          -B \
+          --file pom.xml
+
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: oracle-lob-test-results
+        path: target/surefire-reports/
+        retention-days: 7
+
+    - name: Test Summary
+      if: always()
+      run: |
+        echo "## Oracle Cross-Version LOB Test Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ -f target/surefire-reports/TEST-org.replicadb.oracle.Oracle2OracleCrossVersionLobTest.xml ]; then
+          echo "✅ Test report generated" >> $GITHUB_STEP_SUMMARY
+          # Extract test counts from XML
+          tests=$(grep -oP 'tests="\K[^"]+' target/surefire-reports/TEST-org.replicadb.oracle.Oracle2OracleCrossVersionLobTest.xml | head -1)
+          failures=$(grep -oP 'failures="\K[^"]+' target/surefire-reports/TEST-org.replicadb.oracle.Oracle2OracleCrossVersionLobTest.xml | head -1)
+          errors=$(grep -oP 'errors="\K[^"]+' target/surefire-reports/TEST-org.replicadb.oracle.Oracle2OracleCrossVersionLobTest.xml | head -1)
+          skipped=$(grep -oP 'skipped="\K[^"]+' target/surefire-reports/TEST-org.replicadb.oracle.Oracle2OracleCrossVersionLobTest.xml | head -1)
+          echo "- Tests: $tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Failures: $failures" >> $GITHUB_STEP_SUMMARY
+          echo "- Errors: $errors" >> $GITHUB_STEP_SUMMARY
+          echo "- Skipped: $skipped" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ No test report found" >> $GITHUB_STEP_SUMMARY
+        fi

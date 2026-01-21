@@ -9,7 +9,6 @@ import org.replicadb.manager.util.BandwidthThrottling;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.Reader;
 import java.sql.*;
 import java.util.Arrays;
@@ -174,23 +173,14 @@ public class OracleManager extends SqlManager {
                             ps.setBytes(i, resultSet.getBytes(i));
                             break;
                         case Types.BLOB:
-                            Blob blobData = getBlob(resultSet,i);
-                            ps.setBlob(i, blobData);
-                            if (blobData != null) blobData.free();
+                            // Use streaming to avoid ORA-64219 when replicating between different Oracle versions
+                            Blob blobData = getBlob(resultSet, i);
+                            streamBlobToSink(blobData, ps, i);
                             break;
                         case Types.CLOB:
+                            // Use streaming to avoid ORA-64219 when replicating between different Oracle versions
                             Clob clobData = resultSet.getClob(i);
-                            if (clobData != null) {
-                                long clobLength = clobData.length();
-                                if (clobLength > 0) {
-                                    ps.setCharacterStream(i, clobData.getCharacterStream(), clobLength);
-                                } else {
-                                    ps.setNull(i, Types.CLOB);
-                                }
-                                clobData.free();
-                            } else {
-                                ps.setNull(i, Types.CLOB);
-                            }
+                            streamClobToSink(clobData, ps, i);
                             break;
                         case Types.BOOLEAN:
                         case Types.BIT:
@@ -446,5 +436,75 @@ public class OracleManager extends SqlManager {
             }
         }
         super.dropStagingTable();
+    }
+
+    /**
+     * Streams BLOB content from source to sink PreparedStatement using chunked transfer.
+     * This avoids LOB locator transfer issues (ORA-64219) between different Oracle versions.
+     * The BLOB content is read as a binary stream and written directly to the PreparedStatement,
+     * never materializing the entire LOB in memory.
+     *
+     * @param sourceBlob Source BLOB from ResultSet (may be null)
+     * @param ps Target PreparedStatement  
+     * @param columnIndex 1-based column index
+     * @throws SQLException if database access error occurs
+     * @throws IOException if stream read/write error occurs
+     */
+    private void streamBlobToSink(Blob sourceBlob, PreparedStatement ps, int columnIndex) 
+            throws SQLException, IOException {
+        if (sourceBlob == null) {
+            ps.setNull(columnIndex, Types.BLOB);
+            return;
+        }
+        
+        long blobLength = sourceBlob.length();
+        if (blobLength == 0) {
+            ps.setNull(columnIndex, Types.BLOB);
+            sourceBlob.free();
+            return;
+        }
+        
+        // Use getBinaryStream to read BLOB content - this avoids passing LOB locators
+        // between different Oracle database instances which causes ORA-64219
+        try (InputStream blobStream = sourceBlob.getBinaryStream()) {
+            ps.setBinaryStream(columnIndex, blobStream, blobLength);
+        } finally {
+            sourceBlob.free();
+        }
+    }
+
+    /**
+     * Streams CLOB content from source to sink PreparedStatement using chunked transfer.
+     * This avoids LOB locator transfer issues (ORA-64219) between different Oracle versions.
+     * The CLOB content is read as a character stream and written directly to the PreparedStatement,
+     * never materializing the entire LOB in memory.
+     *
+     * @param sourceClob Source CLOB from ResultSet (may be null)
+     * @param ps Target PreparedStatement
+     * @param columnIndex 1-based column index
+     * @throws SQLException if database access error occurs
+     * @throws IOException if stream read/write error occurs
+     */
+    private void streamClobToSink(Clob sourceClob, PreparedStatement ps, int columnIndex) 
+            throws SQLException, IOException {
+        if (sourceClob == null) {
+            ps.setNull(columnIndex, Types.CLOB);
+            return;
+        }
+        
+        long clobLength = sourceClob.length();
+        if (clobLength == 0) {
+            ps.setNull(columnIndex, Types.CLOB);
+            sourceClob.free();
+            return;
+        }
+        
+        // Use getCharacterStream to read CLOB content - this avoids passing LOB locators
+        // between different Oracle database instances which causes ORA-64219
+        try (Reader clobReader = sourceClob.getCharacterStream()) {
+            ps.setCharacterStream(columnIndex, clobReader, clobLength);
+        } finally {
+            sourceClob.free();
+        }
     }
 }

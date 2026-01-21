@@ -16,10 +16,22 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TimeZone;
 
 public class ReplicadbOracleContainer extends OracleContainer {
 	private static final Logger LOG = LogManager.getLogger(ReplicadbOracleContainer.class);
+	
+	// Oracle version to Docker image mapping for cross-version testing
+	private static final Map<String, String> VERSION_IMAGES = new HashMap<>();
+	static {
+		VERSION_IMAGES.put("11", "gvenzl/oracle-xe:11-slim-faststart");
+		VERSION_IMAGES.put("18", "gvenzl/oracle-xe:18-slim-faststart");
+		VERSION_IMAGES.put("21", "gvenzl/oracle-xe:21-slim-faststart");
+		VERSION_IMAGES.put("23", "gvenzl/oracle-free:23-slim-faststart");
+	}
+	
 	// Using Oracle Free image with compatibility declaration for ARM architecture
 	private static final DockerImageName ORACLE_FREE_IMAGE = DockerImageName
 			.parse("gvenzl/oracle-free:23-slim-faststart").asCompatibleSubstituteFor("gvenzl/oracle-xe");
@@ -29,31 +41,118 @@ public class ReplicadbOracleContainer extends OracleContainer {
 	private static final String ORACLE_SOURCE_FILE = "/oracle/oracle-source.sql";
 	private static ReplicadbOracleContainer container;
 	
+	// Per-version container instances for cross-version testing
+	private static final Map<String, ReplicadbOracleContainer> versionContainers = new HashMap<>();
+	
 	// Track whether geometry support is available
 	private boolean geometryTablesCreated = false;
 	// Track whether XML support is available
 	private boolean xmlSupportAvailable = false;
+	// Oracle major version for this container
+	private final String oracleVersion;
 
 	private ReplicadbOracleContainer() {
 		super(ORACLE_FREE_IMAGE);
+		this.oracleVersion = "23";
+	}
+	
+	private ReplicadbOracleContainer(String version) {
+		super(getDockerImageForVersion(version));
+		this.oracleVersion = version;
+	}
+	
+	private static DockerImageName getDockerImageForVersion(String version) {
+		String imageName = VERSION_IMAGES.get(version);
+		if (imageName == null) {
+			throw new IllegalArgumentException("Unsupported Oracle version: " + version + 
+				". Supported versions: " + VERSION_IMAGES.keySet());
+		}
+		// All gvenzl images need compatibility declaration for testcontainers oracle module
+		// The OracleContainer class expects gvenzl/oracle-free as the base image
+		return DockerImageName.parse(imageName).asCompatibleSubstituteFor("gvenzl/oracle-free");
 	}
 
 	public static ReplicadbOracleContainer getInstance() {
 		if (container == null) {
 			container = new ReplicadbOracleContainer();
-			// Enhanced configuration for Oracle Free (ARM-compatible)
-			container // Oracle Free uses FREEPDB1 as default PDB
-					.withUsername("test").withPassword("test").withReuse(false) // Disable reuse to avoid stale
-																				// container issues
-					.withStartupTimeout(Duration.ofMinutes(10)) // Increased to 10 minutes for PMON startup
-					.withSharedMemorySize(3221225472L) // Increased to 3GB shared memory
-					// .withEnv("ORACLE_INIT_PARAMS", "processes=200,sessions=300,memory_target=2G")
-					// // Increase limits
-					.withPrivilegedMode(true); // Enable privileged mode for Oracle processes
-
+			configureContainer(container);
 			container.start();
 		}
 		return container;
+	}
+	
+	/**
+	 * Get an Oracle container instance for a specific version.
+	 * Useful for cross-version LOB replication testing (e.g., 11g to 23c).
+	 * 
+	 * @param version Oracle version string: "11", "18", "21", "23"
+	 * @return Container configured for the specified Oracle version
+	 */
+	public static ReplicadbOracleContainer getInstance(String version) {
+		return versionContainers.computeIfAbsent(version, v -> {
+			ReplicadbOracleContainer versionContainer = new ReplicadbOracleContainer(v);
+			configureContainer(versionContainer);
+			versionContainer.start();
+			return versionContainer;
+		});
+	}
+	
+	/**
+	 * Get an Oracle 11g container instance for cross-version testing.
+	 * Note: May not be available on ARM architectures.
+	 */
+	public static ReplicadbOracleContainer getOracle11gInstance() {
+		return getInstance("11");
+	}
+	
+	/**
+	 * Get an Oracle 18c container instance for cross-version testing.
+	 */
+	public static ReplicadbOracleContainer getOracle18cInstance() {
+		return getInstance("18");
+	}
+	
+	/**
+	 * Get an Oracle 21c container instance for cross-version testing.
+	 */
+	public static ReplicadbOracleContainer getOracle21cInstance() {
+		return getInstance("21");
+	}
+	
+	/**
+	 * Get an Oracle 23c (Free) container instance.
+	 */
+	public static ReplicadbOracleContainer getOracle23cInstance() {
+		return getInstance("23");
+	}
+	
+	private static void configureContainer(ReplicadbOracleContainer container) {
+		// Enhanced configuration for Oracle containers
+		container
+			.withUsername("test")
+			.withPassword("test")
+			.withReuse(false)
+			.withStartupTimeout(Duration.ofMinutes(10))
+			.withSharedMemorySize(3221225472L)
+			.withPrivilegedMode(true);
+	}
+	
+	/**
+	 * Get the Oracle major version number for this container.
+	 * 
+	 * @return Major version string (e.g., "11", "18", "21", "23")
+	 */
+	public String getOracleVersion() {
+		return oracleVersion;
+	}
+	
+	/**
+	 * Get the Oracle major version as an integer.
+	 * 
+	 * @return Major version number
+	 */
+	public int getOracleMajorVersion() {
+		return Integer.parseInt(oracleVersion);
 	}
 
 	@Override
