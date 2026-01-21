@@ -277,11 +277,11 @@ class Oracle2OracleCrossVersionLobTest {
         Assumptions.assumeTrue(containersAvailable, "Containers not available");
         
         LOG.info("=== Cross-version Large LOB Replication Test (200MB+) ===");
-        LOG.info("Creating large LOBs (BLOB: 200MB, CLOB: 200MB, XMLTYPE: 50MB)...");
+        LOG.info("Creating large LOBs (BLOB: 200MB, CLOB: 200MB, XMLTYPE: 200MB)...");
         
         long blobSize = 200 * 1024 * 1024; // 200MB
         long clobSize = 200 * 1024 * 1024; // 200MB (characters)
-        long xmlSize = 50 * 1024 * 1024;   // 50MB
+        long xmlSize = 200 * 1024 * 1024;   // 200MB
         
         // Create table with large LOB support
         createLargeLobTable(sourceConn, "t_large_lob_source");
