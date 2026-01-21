@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 public abstract class SqlManager extends ConnManager {
 
     private static final Logger LOG = LogManager.getLogger(SqlManager.class.getName());
+    private static final String DRIVER_PARAM_KEY = "driver";
 
     protected Connection connection;
     protected DataSourceType dsType;
@@ -206,6 +207,8 @@ public abstract class SqlManager extends ConnManager {
             }
 
             props.putAll(connectionParams);
+            // Filter driver parameter - used for Class.forName() only, not JDBC connection
+            props.remove(DRIVER_PARAM_KEY);
             conn = DriverManager.getConnection(connectString, props);
         } else {
             LOG.trace("No connection parameters specified. Using regular API for making connection.");
@@ -250,6 +253,8 @@ public abstract class SqlManager extends ConnManager {
             }
 
             props.putAll(connectionParams);
+            // Filter driver parameter - used for Class.forName() only, not JDBC connection
+            props.remove(DRIVER_PARAM_KEY);
             conn = DriverManager.getConnection(connectString, props);
         } else {
             LOG.trace("No connection parameters specified. Using regular API for making connection.");

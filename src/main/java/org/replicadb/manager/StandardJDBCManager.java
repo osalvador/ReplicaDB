@@ -238,9 +238,8 @@ public class StandardJDBCManager extends SqlManager {
    protected void mergeStagingTable () throws Exception {
       // Not necessary
    }
-
    @Override
    protected void truncateTable () throws SQLException {
-      super.truncateTable("DELETE ");
+      super.truncateTable("TRUNCATE TABLE ");
    }
 }
