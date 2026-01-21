@@ -103,9 +103,10 @@ public class SQLServerManager extends SqlManager {
       LOG.debug("Performing BulkCopy into {} ", tableName);
       try {
          // Write from the source to the destination.
-         // If the source ResulSet is an implementation of RowSet (e.g. csv file) cast it.
+         // If the source is a RowSet (e.g., MongoDB, CSV file), use the adapter
+         // to handle type conversions (like Boolean to Integer for BIT columns)
          if (resultSet instanceof RowSet) {
-            bulkCopy.writeToServer((RowSet) resultSet);
+            bulkCopy.writeToServer(new SQLServerBulkRecordAdapter((RowSet) resultSet));
          } else {
             bulkCopy.writeToServer(resultSet);
          }
