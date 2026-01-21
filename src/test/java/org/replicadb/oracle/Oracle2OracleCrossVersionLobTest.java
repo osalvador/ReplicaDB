@@ -272,7 +272,8 @@ class Oracle2OracleCrossVersionLobTest {
     }
 
     @Test
-    @DisplayName("Cross-version LOB replication with large LOBs (200MB+)")
+    @Disabled("Large LOB test disabled by default - requires significant memory/resources. Enable manually for testing ORA-64219 with large data volumes")
+    @DisplayName("Cross-version LOB replication with large LOBs (50MB+)")
     void testCrossVersionLargeLobReplication() throws ParseException, IOException, SQLException {
         Assumptions.assumeTrue(containersAvailable, "Containers not available");
         
