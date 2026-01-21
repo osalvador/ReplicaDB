@@ -219,6 +219,25 @@ public class SQLServerBulkRecordAdapter implements ISQLServerBulkRecord {
                             case Types.BOOLEAN:
                                 value = "true".equalsIgnoreCase(strValue) || "1".equals(strValue);
                                 break;
+                            case Types.INTEGER:
+                                value = Integer.parseInt(strValue);
+                                break;
+                            case Types.BIGINT:
+                                value = Long.parseLong(strValue);
+                                break;
+                            case Types.SMALLINT:
+                            case Types.TINYINT:
+                                value = Short.parseShort(strValue);
+                                break;
+                            case Types.FLOAT:
+                            case Types.DOUBLE:
+                            case Types.REAL:
+                                value = Double.parseDouble(strValue);
+                                break;
+                            case Types.DECIMAL:
+                            case Types.NUMERIC:
+                                value = new java.math.BigDecimal(strValue);
+                                break;
                             case Types.DATE:
                                 value = java.sql.Date.valueOf(strValue);
                                 break;
