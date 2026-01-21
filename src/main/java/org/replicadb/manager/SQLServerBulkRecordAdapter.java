@@ -68,6 +68,13 @@ public class SQLServerBulkRecordAdapter implements ISQLServerBulkRecord {
             if (type == Types.BOOLEAN) {
                 return Types.BIT;
             }
+            // Convert BINARY to VARBINARY for SQL Server BulkCopy compatibility
+            // SQL Server BulkCopy expects VARBINARY for binary data, not BINARY
+            // This is especially important when the source (e.g., MongoDB) reports Types.BINARY
+            // but the sink column is varbinary(max) or image
+            if (type == Types.BINARY) {
+                return Types.VARBINARY;
+            }
             return type;
         } catch (SQLException e) {
             LOG.error("Error getting column type for column {}", column, e);
