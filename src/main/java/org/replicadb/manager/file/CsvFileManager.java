@@ -261,11 +261,23 @@ public class CsvFileManager extends FileManager {
                     for (int i = 1; i <= columnCount; ++i) {
                         Object object = resultSet.getObject(i);
                         if (object instanceof Clob) {
-                            printer.print(((Clob) object).getCharacterStream());
+                            Clob clob = (Clob) object;
+                            String clobContent = clob.getSubString(1, (int) clob.length());
+                            printer.print(clobContent);
                         } else if (object instanceof SQLXML) {
-                            printer.print(((SQLXML) object).getCharacterStream());
-                        } else
+                            // Read SQLXML content and strip trailing newlines to avoid double line breaks
+                            // Oracle XMLType returns XML content with trailing newline which would cause
+                            // duplicate rows when combined with printer.println()
+                            SQLXML sqlxml = (SQLXML) object;
+                            String xmlContent = sqlxml.getString();
+                            if (xmlContent != null) {
+                                // Strip trailing whitespace/newlines from XML content
+                                xmlContent = xmlContent.stripTrailing();
+                            }
+                            printer.print(xmlContent);
+                        } else {
                             printer.print(object);
+                        }
                     }
                     printer.println();
                     totalRows++;
