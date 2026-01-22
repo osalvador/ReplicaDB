@@ -70,14 +70,12 @@ class MariaDB2MongoTest {
         ResultSet rs = stmt.executeQuery("SELECT VERSION()");
         rs.next();
         String version = rs.getString(1);
-        LOG.info(version);
         assertTrue(version.contains("10.2"));
     }
 
     @Test
     void testMongoDBConnection() {
         long count = mongoClient.getDatabase(mongoDatabaseName).getCollection("t_source").countDocuments();
-        LOG.info("MongoDB t_source count: {}", count);
         assertTrue(count > 0);
     }
 

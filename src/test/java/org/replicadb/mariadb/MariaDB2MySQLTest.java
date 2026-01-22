@@ -56,7 +56,6 @@ class MariaDB2MySQLTest {
         ResultSet rs = stmt.executeQuery("SELECT count(*) FROM t_sink");
         rs.next();
         int count = rs.getInt(1);
-        LOG.info("Sink rows: {}", count);
         return count;
     }
 
@@ -66,7 +65,6 @@ class MariaDB2MySQLTest {
         ResultSet rs = stmt.executeQuery("SELECT VERSION()");
         rs.next();
         String version = rs.getString(1);
-        LOG.info(version);
         assertTrue(version.contains("10.2"));
     }
 
@@ -76,7 +74,6 @@ class MariaDB2MySQLTest {
         ResultSet rs = stmt.executeQuery("SELECT VERSION()");
         rs.next();
         String version = rs.getString(1);
-        LOG.info(version);
         assertTrue(version.contains("5.6"));
     }
 

@@ -56,7 +56,6 @@ class MariaDB2SqliteTest {
         ResultSet rs = stmt.executeQuery("select count(*) from t_sink");
         rs.next();
         int count = rs.getInt(1);
-        LOG.info(count);
         return count;
     }
 

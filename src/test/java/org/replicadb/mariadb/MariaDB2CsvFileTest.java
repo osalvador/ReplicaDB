@@ -4,6 +4,8 @@ import org.apache.commons.cli.ParseException;
 import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbMariaDBContainer;
 import org.replicadb.manager.file.FileFormats;
@@ -77,7 +79,6 @@ class MariaDB2CsvFileTest {
         Path path = Paths.get(URI.create(SINK_FILE_URI_PATH));
         try (var lines = Files.lines(path)) {
             int count = (int) lines.count();
-            LOG.info("File total Rows: {}", count);
             return count;
         }
     }
@@ -88,7 +89,6 @@ class MariaDB2CsvFileTest {
         ResultSet rs = stmt.executeQuery("SELECT VERSION()");
         rs.next();
         String version = rs.getString(1);
-        LOG.info(version);
         assertTrue(version.contains("10.2"));
     }
 
