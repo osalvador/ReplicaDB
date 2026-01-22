@@ -272,17 +272,17 @@ class Oracle2OracleCrossVersionLobTest {
     }
 
     @Test
-    @DisplayName("Cross-version LOB replication with large LOBs (50MB+)")
+    @DisplayName("Cross-version LOB replication with large LOBs (200MB+)")
     void testCrossVersionLargeLobReplication() throws ParseException, IOException, SQLException {
         Assumptions.assumeTrue(containersAvailable, "Containers not available");
         
-        LOG.info("=== Cross-version Large LOB Replication Test (50MB+) ===");
-        LOG.info("Creating large LOBs (BLOB: 50MB, CLOB: 50MB, XMLTYPE: 50MB)...");
+        LOG.info("=== Cross-version Large LOB Replication Test (200MB+) ===");
+        LOG.info("Creating large LOBs (BLOB: 200MB, CLOB: 200MB, XMLTYPE: 200MB)...");
         
-        // Use 50MB to test streaming with realistic large LOB sizes
-        long blobSize = 50 * 1024 * 1024; // 50MB
-        long clobSize = 50 * 1024 * 1024; // 50MB (characters)
-        long xmlSize = 50 * 1024 * 1024;   // 50MB
+        // Use 200MB to validate streaming solution with production-scale LOBs
+        long blobSize = 200 * 1024 * 1024; // 200MB
+        long clobSize = 200 * 1024 * 1024; // 200MB (characters)
+        long xmlSize = 200 * 1024 * 1024;   // 200MB
         
         // Create table with large LOB support
         createLargeLobTable(sourceConn, "t_large_lob_source");
