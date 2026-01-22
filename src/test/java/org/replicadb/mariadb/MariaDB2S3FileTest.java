@@ -77,11 +77,45 @@ class MariaDB2S3FileTest {
                 while (reader.readLine() != null) {
                     lineCount++;
                 }
-                // Subtract 1 for header row (first line)
-                totalRows += Math.max(0, lineCount - 1);
+                // CSV files have no headers, just count all lines
+                totalRows += lineCount;
             }
         }
         return totalRows;
+    }
+
+    private void debugCsvFiles(String bucketName) throws IOException, SQLException {
+        System.out.println("\n=== DEBUG: CSV FILES IN S3 ===");
+        List<S3ObjectSummary> objects = s3Client.listObjects(bucketName).getObjectSummaries();
+        System.out.println("Total files in bucket: " + objects.size());
+        
+        int totalLines = 0;
+        for (S3ObjectSummary obj : objects) {
+            String objectKey = obj.getKey();
+            System.out.println("\n--- File: " + objectKey + " ---");
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(s3Client.getObject(bucketName, objectKey).getObjectContent()))) {
+                int lineCount = 0;
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    lineCount++;
+                    if (lineCount <= 3) {  // Show first 3 lines
+                        System.out.println("Line " + lineCount + ": " + line.substring(0, Math.min(100, line.length())));
+                    }
+                }
+                System.out.println("Total lines in file: " + lineCount);
+                totalLines += lineCount;
+            }
+        }
+        System.out.println("\nTotal lines across all files: " + totalLines);
+        
+        // Check source table row count
+        Statement stmt = mariadbConn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) as cnt FROM t_source");
+        if (rs.next()) {
+            System.out.println("Rows in source table t_source: " + rs.getInt("cnt"));
+        }
+        System.out.println("=== END DEBUG ===\n");
     }
 
     @Test
@@ -99,7 +133,7 @@ class MariaDB2S3FileTest {
     }
 
     @Test
-    void testMariaDB2S3FileComplete() throws ParseException, IOException {
+    void testMariaDB2S3FileComplete() throws ParseException, IOException, SQLException {
         // Clean bucket before test
         List<S3ObjectSummary> existingObjects = s3Client.listObjects(ReplicadbLocalStackContainer.TEST_BUCKET_NAME).getObjectSummaries();
         for (S3ObjectSummary obj : existingObjects) {
@@ -126,6 +160,8 @@ class MariaDB2S3FileTest {
         
         assertEquals(0, ReplicaDB.processReplica(options));
         
+        debugCsvFiles(ReplicadbLocalStackContainer.TEST_BUCKET_NAME);
+        
         List<S3ObjectSummary> objects = s3Client.listObjects(ReplicadbLocalStackContainer.TEST_BUCKET_NAME).getObjectSummaries();
         assertTrue(objects.size() > 0, "S3 bucket should contain at least one object");
         
@@ -134,7 +170,7 @@ class MariaDB2S3FileTest {
     }
 
     @Test
-    void testMariaDB2S3FileCompleteParallel() throws ParseException, IOException {
+    void testMariaDB2S3FileCompleteParallel() throws ParseException, IOException, SQLException {
         // Clean bucket before test
         List<S3ObjectSummary> existingObjects = s3Client.listObjects(ReplicadbLocalStackContainer.TEST_BUCKET_NAME).getObjectSummaries();
         for (S3ObjectSummary obj : existingObjects) {
@@ -161,6 +197,8 @@ class MariaDB2S3FileTest {
         options.setSinkConnectionParams(sinkConnectionParams);
         
         assertEquals(0, ReplicaDB.processReplica(options));
+        
+        debugCsvFiles(ReplicadbLocalStackContainer.TEST_BUCKET_NAME);
         
         List<S3ObjectSummary> objects = s3Client.listObjects(ReplicadbLocalStackContainer.TEST_BUCKET_NAME).getObjectSummaries();
         assertTrue(objects.size() > 0, "S3 bucket should contain at least one object");
