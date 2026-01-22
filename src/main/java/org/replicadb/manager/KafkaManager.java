@@ -9,6 +9,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.manager.util.BandwidthThrottling;
 
 import java.sql.*;
 import java.text.SimpleDateFormat;
@@ -87,10 +88,10 @@ public class KafkaManager extends SqlManager {
 
         if (resultSet.next()) {
             // Create Bandwidth Throttling
-            bandwidthThrottlingCreate(resultSet, rsmd);
+            BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
 
             do {
-                bandwidthThrottlingAcquiere();
+                bt.acquiere();
 
                 // Just one sink column and is a JSON.
                 // Create a JSON object form content.
