@@ -88,6 +88,25 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
       }
       this.fetchSize = rows;
    }
+
+   /**
+    * Override setMaxRows to avoid validation issues with BaseRowSet.
+    * When maxRows is 0 (unlimited), we don't validate against fetchSize.
+    */
+   @Override
+   public void setMaxRows(int max) throws SQLException {
+      // Call parent to set the value, but catch validation exceptions when max=0
+      if (max == 0) {
+         // Temporarily set fetchSize to 0 to avoid validation error
+         int currentFetchSize = this.fetchSize;
+         this.fetchSize = 0;
+         super.setMaxRows(max);
+         this.fetchSize = currentFetchSize;
+      } else {
+         super.setMaxRows(max);
+      }
+   }
+
    @Override
    public void execute () throws SQLException {
 

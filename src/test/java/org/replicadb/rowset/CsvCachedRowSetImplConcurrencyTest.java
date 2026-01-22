@@ -24,8 +24,8 @@ class CsvCachedRowSetImplConcurrencyTest {
             csvRowSet.setColumnsTypes("VARCHAR,VARCHAR");
             csvRowSet.setColumnsNames("col1,col2");
             
-            // Set maxRows to avoid validation error (maxRows must be >= fetchSize or 0)
-            csvRowSet.setMaxRows(0); // 0 means no limit
+            // Set maxRows to 0 (unlimited) - CsvCachedRowSetImpl handles validation internally
+            csvRowSet.setMaxRows(0);
             
             // Execute to initialize metadata
             csvRowSet.execute();
@@ -58,8 +58,8 @@ class CsvCachedRowSetImplConcurrencyTest {
             csvRowSet.setColumnsTypes("VARCHAR,INTEGER");
             csvRowSet.setColumnsNames("name,age");
             
-            // Set maxRows to avoid validation error (maxRows must be >= fetchSize or 0)
-            csvRowSet.setMaxRows(0); // 0 means no limit
+            // Set maxRows to 0 (unlimited) - CsvCachedRowSetImpl handles validation internally
+            csvRowSet.setMaxRows(0);
             
             // Execute to initialize
             csvRowSet.execute();
