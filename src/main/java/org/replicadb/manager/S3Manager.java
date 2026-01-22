@@ -19,7 +19,6 @@ import org.replicadb.manager.file.FileManagerFactory;
 
 import java.net.URI;
 import java.sql.*;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -313,4 +312,3 @@ public class S3Manager extends SqlManager {
     }
 
 }
-

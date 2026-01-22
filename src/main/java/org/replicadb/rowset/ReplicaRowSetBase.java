@@ -8,7 +8,6 @@ import javax.sql.rowset.RowSetMetaDataImpl;
 import javax.sql.rowset.spi.SyncProvider;
 import javax.sql.rowset.spi.SyncProviderException;
 import java.io.Reader;
-import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.Map;
@@ -19,7 +18,7 @@ import java.util.Map;
  * data sources (CSV, MongoDB, ORC) while maintaining compatibility with
  * standard javax.sql.rowset interfaces.
  */
-public abstract class ReplicaRowSetBase extends BaseRowSet implements CachedRowSet, Serializable {
+public abstract class ReplicaRowSetBase extends BaseRowSet implements CachedRowSet {
 
 	/**
 	 * The RowSetMetaData object that contains information about the columns in this

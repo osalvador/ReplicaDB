@@ -17,7 +17,6 @@ import java.sql.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Test class for Oracle SDO_GEOMETRY spatial data type replication.

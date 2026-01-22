@@ -16,8 +16,6 @@ import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 
 import static org.replicadb.manager.SupportedManagers.MARIADB;
 import static org.replicadb.manager.SupportedManagers.MYSQL;

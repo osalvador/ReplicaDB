@@ -3,8 +3,6 @@ package org.replicadb.mariadb;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.commons.cli.ParseException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
@@ -26,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers
 class MariaDB2S3FileTest {
-    private static final Logger LOG = LogManager.getLogger(MariaDB2S3FileTest.class);
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
     private static final int EXPECTED_ROWS = 4096;
@@ -65,7 +62,6 @@ class MariaDB2S3FileTest {
         ResultSet rs = stmt.executeQuery("SELECT VERSION()");
         rs.next();
         String version = rs.getString(1);
-        LOG.info(version);
         assertTrue(version.contains("10.2"));
     }
 
@@ -98,7 +94,6 @@ class MariaDB2S3FileTest {
         
         List<S3ObjectSummary> objects = s3Client.listObjects(ReplicadbLocalStackContainer.TEST_BUCKET_NAME).getObjectSummaries();
         assertTrue(objects.size() > 0, "S3 bucket should contain at least one object");
-        LOG.info("S3 objects created: {}", objects.size());
     }
 
     @Test
@@ -126,6 +121,5 @@ class MariaDB2S3FileTest {
         
         List<S3ObjectSummary> objects = s3Client.listObjects(ReplicadbLocalStackContainer.TEST_BUCKET_NAME).getObjectSummaries();
         assertTrue(objects.size() > 0, "S3 bucket should contain at least one object");
-        LOG.info("S3 objects created: {}", objects.size());
     }
 }

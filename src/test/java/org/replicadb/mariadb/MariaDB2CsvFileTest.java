@@ -1,8 +1,6 @@
 package org.replicadb.mariadb;
 
 import org.apache.commons.cli.ParseException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
@@ -27,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers
 class MariaDB2CsvFileTest {
-    private static final Logger LOG = LogManager.getLogger(MariaDB2CsvFileTest.class);
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
     private static final int EXPECTED_ROWS = 4096;
@@ -53,7 +50,7 @@ class MariaDB2CsvFileTest {
         File[] tempFiles = tmpDir.listFiles((dir, name) -> name.contains("mariadb2csv_sink.csv.repdb."));
         if (tempFiles != null) {
             for (File f : tempFiles) {
-                LOG.info("Deleting leftover temp file: {}", f.delete() ? f.getName() : "FAILED: " + f.getName());
+                f.delete();
             }
         }
         
@@ -63,14 +60,14 @@ class MariaDB2CsvFileTest {
         // Ensure sink file is deleted before test
         File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
         if (sinkFile.exists()) {
-            LOG.info("Deleting sink file before test: {}", sinkFile.delete());
+            sinkFile.delete();
         }
     }
 
     @AfterEach
     void tearDown() throws SQLException {
         File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
-        LOG.info("Deleted file: {}", sinkFile.delete());
+        sinkFile.delete();
         this.mariadbConn.close();
 
         FileManager.setTempFilesPath(new HashMap<>());

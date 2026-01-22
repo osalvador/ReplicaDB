@@ -3,8 +3,6 @@ package org.replicadb.mariadb;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.apache.orc.OrcFile;
 import org.apache.orc.Reader;
 import org.junit.Rule;
@@ -29,7 +27,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers
 class MariaDB2OrcFileTest {
-    private static final Logger LOG = LogManager.getLogger(MariaDB2OrcFileTest.class);
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
     private static final int EXPECTED_ROWS = 4096;
@@ -63,7 +60,6 @@ class MariaDB2OrcFileTest {
         Path path = new Path(sinkFile.getPath());
         Reader reader = OrcFile.createReader(path, OrcFile.readerOptions(new Configuration(true)));
         int count = (int) reader.getNumberOfRows();
-        LOG.info("File total Rows: {}", count);
         return count;
     }
 
@@ -73,7 +69,6 @@ class MariaDB2OrcFileTest {
         ResultSet rs = stmt.executeQuery("SELECT VERSION()");
         rs.next();
         String version = rs.getString(1);
-        LOG.info(version);
         assertTrue(version.contains("10.2"));
     }
 

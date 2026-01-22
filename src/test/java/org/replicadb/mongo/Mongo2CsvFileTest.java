@@ -3,8 +3,6 @@ package org.replicadb.mongo;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import org.apache.commons.cli.ParseException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.bson.Document;
 import org.junit.Rule;
 import org.junit.jupiter.api.*;
@@ -28,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Testcontainers
 class Mongo2CsvFileTest {
-    private static final Logger LOG = LogManager.getLogger(Mongo2CsvFileTest.class);
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
     private static final int EXPECTED_ROWS = 4096;
@@ -74,7 +71,7 @@ class Mongo2CsvFileTest {
                 }
             }
         } catch (IOException e) {
-            LOG.error("Error cleaning up files", e);
+            // Error cleaning up files
         }
     }
 

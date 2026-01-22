@@ -11,7 +11,6 @@ import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Properties;
 
 public class ReplicadbDuckDBFakeContainer {
     private static final Logger LOG = LogManager.getLogger(ReplicadbDuckDBFakeContainer.class);

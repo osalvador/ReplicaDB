@@ -1,7 +1,5 @@
 package org.replicadb.manager.file;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.DataSourceType;
 
@@ -10,9 +8,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -21,7 +17,6 @@ import java.util.Map;
  * the files about formats, compressions, etc.
  */
 public abstract class FileManager {
-    private static final Logger LOG = LogManager.getLogger(FileManager.class);
 
     /**
      * The ReplicaDB options defined by the user

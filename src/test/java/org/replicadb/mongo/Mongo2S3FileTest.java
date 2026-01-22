@@ -5,8 +5,6 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import org.apache.commons.cli.ParseException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.bson.Document;
 import org.junit.Rule;
 import org.junit.jupiter.api.*;
@@ -28,10 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers
 class Mongo2S3FileTest {
-    private static final Logger LOG = LogManager.getLogger(Mongo2S3FileTest.class);
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-    private static final int EXPECTED_ROWS = 4096;
     private static final String SINK_COLLECTION = "t_sink";
     private static final String SOURCE_COLUMNS = "{_id:0,c_integer:1,c_smallint:1,c_bigint:1,c_numeric:1,c_decimal:1,c_real:1,c_double_precision:1,c_float:1,c_binary:1,c_binary_var:1,c_binary_lob:1,c_boolean:1,c_character:1,c_character_var:1,c_character_lob:1,c_national_character:1,c_national_character_var:1,c_date:1,c_timestamp_with_timezone:1}";
 
