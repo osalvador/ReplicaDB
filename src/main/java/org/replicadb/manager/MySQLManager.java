@@ -13,6 +13,7 @@ import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.util.BandwidthThrottling;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.Properties;
@@ -162,13 +163,26 @@ public class MySQLManager extends SqlManager {
       return totalRows;
    }
 
+   /**
+    * Copy data to MySQL/MariaDB using LOAD DATA LOCAL INFILE
+    * @param row StringBuilder guaranteed non-null by insertDataToTable contract
+    */
+   @SuppressWarnings("null") // row parameter is guaranteed non-null by calling contract in insertDataToTable
    private void copyData (String loadDataSql, StringBuilder row, MariaDbStatement mariadbStatement, JdbcPreparedStatement mysqlStatement) throws IOException, SQLException {
       if (mysqlStatement != null) {
-         mysqlStatement.setLocalInfileInputStream(new ReaderInputStream(CharSource.wrap(row).openStream(), StandardCharsets.UTF_8));
+         InputStream inputStream = ReaderInputStream.builder()
+            .setReader(CharSource.wrap(row).openStream())
+            .setCharset(StandardCharsets.UTF_8)
+            .get();
+         mysqlStatement.setLocalInfileInputStream(inputStream);
          mysqlStatement.executeUpdate(loadDataSql);
       } else {
          assert mariadbStatement != null;
-         mariadbStatement.setLocalInfileInputStream(new ReaderInputStream(CharSource.wrap(row).openStream(), StandardCharsets.UTF_8));
+         InputStream inputStream = ReaderInputStream.builder()
+            .setReader(CharSource.wrap(row).openStream())
+            .setCharset(StandardCharsets.UTF_8)
+            .get();
+         mariadbStatement.setLocalInfileInputStream(inputStream);
          mariadbStatement.executeUpdate(loadDataSql);
       }
    }

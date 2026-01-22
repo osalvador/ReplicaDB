@@ -232,7 +232,6 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
       CSVRecord record;
 
       // Load CSV records into the rowset using direct row appending (like MongoDB)
-      int loadedCount = 0;
       for (int i = 1; i <= currentFetchSize && hasMoreRecords(); i++) {
          lineNumber++;
          try {
@@ -296,7 +295,7 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
                // Add row to the RowSet (this is the key fix!)
                this.appendRow(rowData);
                this.incrementRowCount();
-               loadedCount++;
+
          } catch (Exception e) {
             LOG.error("CSV error processing record {}: {}", lineNumber, e.getMessage(), e);
             throw new SQLException(e);
@@ -310,23 +309,6 @@ public class CsvCachedRowSetImpl extends StreamingRowSetImpl {
       } else {
          this.beforeFirst(); // No data, position before first
       }
-   }
-
-   /**
-    * Parses the string argument as a boolean. The boolean returned represents the value true if the
-    * string argument is not null and is equal, ignoring case, to the string "true", "yes", "on",
-    * "1", "t", "y".
-    *
-    * @param s the String containing the booleanvalue
-    * @return representation to be parsed
-    */
-   private boolean convertToBoolean (String s) {
-      return ("1".equalsIgnoreCase(s)
-          || "yes".equalsIgnoreCase(s)
-          || "true".equalsIgnoreCase(s)
-          || "on".equalsIgnoreCase(s)
-          || "y".equalsIgnoreCase(s)
-          || "t".equalsIgnoreCase(s));
    }
 
    /**

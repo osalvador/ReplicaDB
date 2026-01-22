@@ -1,8 +1,6 @@
 package org.replicadb.oracle;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIf;
-import org.replicadb.config.ReplicadbOracleContainer;
 
 import static org.junit.jupiter.api.Assertions.*;
 

@@ -1,30 +1,6 @@
 package org.replicadb.postgres;
 
-import org.apache.commons.cli.ParseException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.junit.ClassRule;
-import org.junit.jupiter.api.*;
-import org.replicadb.ReplicaDB;
-import org.replicadb.cli.ReplicationMode;
-import org.replicadb.cli.ToolOptions;
-import org.replicadb.manager.file.FileFormats;
-import org.replicadb.utils.ScriptRunner;
-import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.sql.*;
-import java.util.Properties;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Testcontainers
 class Postgres2S3FileTest {

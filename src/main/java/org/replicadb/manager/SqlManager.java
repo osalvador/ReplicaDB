@@ -121,6 +121,7 @@ public abstract class SqlManager extends ConnManager {
      * @param fetchSize Overrides default or parameterized fetch size
      * @return A ResultSet encapsulating the results or null on error
      */
+    @SuppressWarnings("null") // Java varargs guarantee args is never null (empty array when no args provided)
     protected ResultSet execute(String stmt, Integer fetchSize, Object... args)
             throws SQLException {
         // Release any previously-open statement.

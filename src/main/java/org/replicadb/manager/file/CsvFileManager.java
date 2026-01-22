@@ -313,18 +313,25 @@ public class CsvFileManager extends FileManager {
         // Only append if there are more temp files to merge
         if (tempFilesIdx < getTempFilePathSize()) {
             // Append the rest temporal files into final file
-            try (FileChannel finalFileChannel = new FileOutputStream(finalFile, true).getChannel()) {
+            try (FileOutputStream fos = new FileOutputStream(finalFile, true);
+                 FileChannel finalFileChannel = fos.getChannel()) {
                 // Starts with 1 because the first temp file was renamed.
                 for (int i = tempFilesIdx; i <= getTempFilePathSize() - 1; i++) {
                     // Temp file channel
                     File tempFile = getFileFromPathString(getTempFilePath(i));
                     LOG.debug("Appending temp file {} to final file", tempFile.getPath());
-                    FileChannel tempFileChannel = new FileInputStream(tempFile).getChannel();
-                    // Append temp file to final file
-                    finalFileChannel.transferFrom(tempFileChannel, finalFileChannel.size(), tempFileChannel.size());
-                    tempFileChannel.close();
-                    // Delete temp file
-                    tempFile.delete();
+                    
+                    // Properly manage FileInputStream and FileChannel resources
+                    try (FileInputStream fis = new FileInputStream(tempFile);
+                         FileChannel tempFileChannel = fis.getChannel()) {
+                        // Append temp file to final file
+                        finalFileChannel.transferFrom(tempFileChannel, finalFileChannel.size(), tempFileChannel.size());
+                    } // Both FileInputStream and FileChannel closed here
+                    
+                    // Delete temp file only after successful transfer
+                    if (!tempFile.delete()) {
+                        LOG.warn("Failed to delete temp file: {}", tempFile.getPath());
+                    }
                 }
             }
         }

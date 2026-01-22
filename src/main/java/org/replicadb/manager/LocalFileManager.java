@@ -17,7 +17,6 @@ import java.net.URL;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -152,6 +151,9 @@ public class LocalFileManager extends SqlManager {
 
         if (uri.getAuthority() != null && uri.getAuthority().length() > 0) {
             // Hack for UNC Path
+            if (urlString == null) {
+                throw new IllegalArgumentException("URL string cannot be null for UNC path conversion");
+            }
             uri = (new URL("file://" + urlString.substring("file:".length()))).toURI();
         }
 

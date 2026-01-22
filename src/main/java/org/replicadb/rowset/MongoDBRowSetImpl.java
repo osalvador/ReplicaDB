@@ -255,7 +255,6 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
 		Document document;
 
 		// Load fetch size documents into the rowset using direct row appending
-		int loadedCount = 0;
 		for (int i = 1; i <= currentFetchSize && this.cursor.hasNext(); i++) {
 			try {
 				document = this.cursor.next();
@@ -278,7 +277,6 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
 					this.appendRow(rowData);
 				}
 				this.incrementRowCount();
-				loadedCount++;
 			} catch (final Exception e) {
 				LOG.error("MongoDB error processing document {}: {}", i, e.getMessage(), e);
 				throw e;

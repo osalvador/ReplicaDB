@@ -43,12 +43,6 @@ import java.util.*;
 public class JdbcRowSetResourceBundle implements Serializable {
 
    /**
-    * This <code>String</code> variable stores the location
-    * of the resource bundle location.
-    */
-   private static String fileName;
-
-   /**
     * This variable will hold the <code>PropertyResourceBundle</code>
     * of the text to be internationalized.
     */
@@ -59,27 +53,6 @@ public class JdbcRowSetResourceBundle implements Serializable {
     *
     */
    private static volatile JdbcRowSetResourceBundle jpResBundle;
-
-   /**
-    * The variable which will represent the properties
-    * the suffix or extension of the resource bundle.
-    **/
-   private static final String PROPERTIES = "properties";
-
-   /**
-    * The variable to represent underscore
-    **/
-   private static final String UNDERSCORE = "_";
-
-   /**
-    * The variable which will represent dot
-    **/
-   private static final String DOT = ".";
-
-   /**
-    * The variable which will represent the slash.
-    **/
-   private static final String SLASH = "/";
 
    /**
     * The variable where the default resource bundle will

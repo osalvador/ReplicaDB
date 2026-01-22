@@ -171,14 +171,18 @@ public class SQLServerManager extends SqlManager {
             Pattern r = Pattern.compile(pattern);
             Matcher m = r.matcher(ex.getMessage());
             if (m.find()) {
-               // get source column metadata
-               Field fi = SQLServerBulkCopy.class.getDeclaredField("srcColumnMetadata");
-               fi.setAccessible(true);
-               HashMap<Integer, Object> srcColumnsMetadata = (HashMap<Integer, Object>) fi.get(bulkCopy);
-               // get destination column metadata
-               fi = SQLServerBulkCopy.class.getDeclaredField("destColumnMetadata");
-               fi.setAccessible(true);
-               HashMap<Integer, Object> destColumnsMetadata = (HashMap<Integer, Object>) fi.get(bulkCopy);
+               try {
+                  // get source column metadata - reflection into driver internals
+                  Field fi = SQLServerBulkCopy.class.getDeclaredField("srcColumnMetadata");
+                  fi.setAccessible(true);
+                  @SuppressWarnings("unchecked") // Safe cast for MS SQL Server JDBC driver 12.x internal structure
+                  HashMap<Integer, Object> srcColumnsMetadata = (HashMap<Integer, Object>) fi.get(bulkCopy);
+                  
+                  // get destination column metadata
+                  fi = SQLServerBulkCopy.class.getDeclaredField("destColumnMetadata");
+                  fi.setAccessible(true);
+                  @SuppressWarnings("unchecked") // Safe cast for MS SQL Server JDBC driver 12.x internal structure  
+                  HashMap<Integer, Object> destColumnsMetadata = (HashMap<Integer, Object>) fi.get(bulkCopy);
 
                // iterate over the HashMap and log the columns metadata and mapping
                for (Integer key : destColumnsMetadata.keySet()) {
@@ -230,9 +234,12 @@ public class SQLServerManager extends SqlManager {
                   LOG.debug("colid {} : Source column {} ({}:(precision:{},scale:{})) mapped to sink column {} ({}:(precision:{},scale:{}))", key, srcColumnName, srcType, srcColumnPrecision, srcColumnScale, destColumnName, destType, destPrecision, destScale);
 
                }
+               } catch (NoSuchFieldException | IllegalAccessException e) {
+                  LOG.warn("Failed to extract column metadata via reflection - SQL Server driver version may have changed: {}", e.getMessage());
+               }
             }
-         } catch (NoSuchFieldException | IllegalAccessException e) {
-            // ignore exception
+         } catch (Exception e) {
+            LOG.error("Error logging column length error: {}", e.getMessage());
          }
       }
    }

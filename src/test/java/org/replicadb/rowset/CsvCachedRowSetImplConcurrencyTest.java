@@ -1,12 +1,6 @@
 package org.replicadb.rowset;
 
 import org.junit.jupiter.api.Test;
-import javax.sql.RowSetMetaData;
-import javax.sql.rowset.RowSetMetaDataImpl;
-import java.io.File;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Types;
 import org.apache.commons.csv.CSVFormat;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,8 +18,7 @@ class CsvCachedRowSetImplConcurrencyTest {
         Path tempCsvFile = Files.createTempFile("test", ".csv");
         Files.write(tempCsvFile, "col1,col2\nvalue1,value2\n".getBytes());
         
-        try {
-            CsvCachedRowSetImpl csvRowSet = new CsvCachedRowSetImpl();
+        try (CsvCachedRowSetImpl csvRowSet = new CsvCachedRowSetImpl()) {
             csvRowSet.setSourceFile(tempCsvFile.toFile());
             csvRowSet.setCsvFormat(CSVFormat.DEFAULT.withFirstRecordAsHeader());
             csvRowSet.setColumnsTypes("VARCHAR,VARCHAR");
@@ -42,6 +35,8 @@ class CsvCachedRowSetImplConcurrencyTest {
             assertDoesNotThrow(() -> csvRowSet.moveToInsertRow(),
                     "moveToInsertRow() should handle multiple calls gracefully");
             
+        } catch (Exception e) {
+            fail("Test failed with exception: " + e.getMessage());
         } finally {
             // Clean up temporary file
             Files.deleteIfExists(tempCsvFile);
@@ -54,8 +49,7 @@ class CsvCachedRowSetImplConcurrencyTest {
         Path tempCsvFile = Files.createTempFile("test", ".csv");
         Files.write(tempCsvFile, "name,age\nJohn,25\nJane,30\n".getBytes());
         
-        try {
-            CsvCachedRowSetImpl csvRowSet = new CsvCachedRowSetImpl();
+        try (CsvCachedRowSetImpl csvRowSet = new CsvCachedRowSetImpl()) {
             csvRowSet.setSourceFile(tempCsvFile.toFile());
             csvRowSet.setCsvFormat(CSVFormat.DEFAULT.withFirstRecordAsHeader());
             csvRowSet.setColumnsTypes("VARCHAR,INTEGER");
