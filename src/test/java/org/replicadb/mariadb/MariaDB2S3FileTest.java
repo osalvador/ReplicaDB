@@ -67,17 +67,21 @@ class MariaDB2S3FileTest {
             return 0;
         }
         
-        // Read the first CSV file from S3
-        String objectKey = objects.get(0).getKey();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(s3Client.getObject(bucketName, objectKey).getObjectContent()))) {
-            int lineCount = 0;
-            while (reader.readLine() != null) {
-                lineCount++;
+        // Count total rows from ALL CSV files in the bucket
+        int totalRows = 0;
+        for (S3ObjectSummary obj : objects) {
+            String objectKey = obj.getKey();
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(s3Client.getObject(bucketName, objectKey).getObjectContent()))) {
+                int lineCount = 0;
+                while (reader.readLine() != null) {
+                    lineCount++;
+                }
+                // Subtract 1 for header row (first line)
+                totalRows += Math.max(0, lineCount - 1);
             }
-            // Subtract 1 for header row
-            return Math.max(0, lineCount - 1);
         }
+        return totalRows;
     }
 
     @Test
@@ -96,6 +100,12 @@ class MariaDB2S3FileTest {
 
     @Test
     void testMariaDB2S3FileComplete() throws ParseException, IOException {
+        // Clean bucket before test
+        List<S3ObjectSummary> existingObjects = s3Client.listObjects(ReplicadbLocalStackContainer.TEST_BUCKET_NAME).getObjectSummaries();
+        for (S3ObjectSummary obj : existingObjects) {
+            s3Client.deleteObject(ReplicadbLocalStackContainer.TEST_BUCKET_NAME, obj.getKey());
+        }
+        
         String s3Url = localstack.getS3ConnectionString() + "/mariadb2s3_test.csv";
         
         String[] args = {
@@ -125,6 +135,12 @@ class MariaDB2S3FileTest {
 
     @Test
     void testMariaDB2S3FileCompleteParallel() throws ParseException, IOException {
+        // Clean bucket before test
+        List<S3ObjectSummary> existingObjects = s3Client.listObjects(ReplicadbLocalStackContainer.TEST_BUCKET_NAME).getObjectSummaries();
+        for (S3ObjectSummary obj : existingObjects) {
+            s3Client.deleteObject(ReplicadbLocalStackContainer.TEST_BUCKET_NAME, obj.getKey());
+        }
+        
         String s3Url = localstack.getS3ConnectionString() + "/mariadb2s3_parallel_test.csv";
         
         String[] args = {
