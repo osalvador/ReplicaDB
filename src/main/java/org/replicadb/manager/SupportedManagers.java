@@ -61,6 +61,12 @@ public enum SupportedManagers {
         // jdbc:mysql://...; so we cannot parse the scheme component via URL
         // objects. Instead, attempt to pull out the scheme as best as we can.
 
+        // Validate connectStr is not null before processing
+        if (connectStr == null) {
+            LOG.error("Connection string is null for DataSourceType: {}", dsType);
+            return null;
+        }
+
         // First, see if this is of the form [scheme://hostname-and-etc..]
         int schemeStopIdx = connectStr.indexOf("//");
         if (-1 == schemeStopIdx) {

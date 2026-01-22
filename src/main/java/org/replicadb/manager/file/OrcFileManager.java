@@ -425,14 +425,15 @@ public class OrcFileManager extends FileManager {
                 String crcPath = "file://" + tempFile.getParent() + "/." + tempFile.getName() + ".crc";
                 crcFile = getFileFromPathString(crcPath);
             } catch (MalformedURLException | URISyntaxException e) {
-                LOG.error(e);
+                LOG.error("Error getting file from path: {}", filePath.getValue(), e);
             }
 
-            if (tempFile.exists()) {
+            // Null-safe file cleanup
+            if (tempFile != null && tempFile.exists()) {
                 LOG.debug("Remove temp file {}", tempFile.getPath());
                 tempFile.delete();
             }
-            if (crcFile.exists()) {
+            if (crcFile != null && crcFile.exists()) {
                 LOG.debug("Remove crc temp file {}", crcFile.getPath());
                 crcFile.delete();
             }

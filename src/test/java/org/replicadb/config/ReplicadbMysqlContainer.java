@@ -25,10 +25,12 @@ public class ReplicadbMysqlContainer extends MySQLContainer<ReplicadbMysqlContai
     super(IMAGE_VERSION);
   }
 
+  @SuppressWarnings("resource") // Singleton container lifecycle managed by TestContainers framework
   public static ReplicadbMysqlContainer getInstance() {
     if (container == null) {
-      container = new ReplicadbMysqlContainer()
-          .withCommand("--local-infile=1");
+      // Create container instance first to avoid resource leak warning
+      ReplicadbMysqlContainer newContainer = new ReplicadbMysqlContainer();
+      container = newContainer.withCommand("--local-infile=1");
       container.start();
     }
     return container;

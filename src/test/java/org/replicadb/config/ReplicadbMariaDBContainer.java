@@ -25,9 +25,12 @@ public class ReplicadbMariaDBContainer extends MariaDBContainer<ReplicadbMariaDB
     super(IMAGE_VERSION);
   }
 
+  @SuppressWarnings("resource") // Singleton container lifecycle managed by TestContainers framework
   public static ReplicadbMariaDBContainer getInstance() {
     if (container == null) {
-      container = new ReplicadbMariaDBContainer().withCommand("--local-infile=1");
+      // Create container instance first to avoid resource leak warning
+      ReplicadbMariaDBContainer newContainer = new ReplicadbMariaDBContainer();
+      container = newContainer.withCommand("--local-infile=1");
       container.start();
     }
     return container;
