@@ -26,6 +26,7 @@ NC='\033[0m' # No Color
 # Configuration
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 POM_FILE="${REPO_ROOT}/pom.xml"
+README_FILE="${REPO_ROOT}/README.md"
 
 ################################################################################
 # Functions
@@ -103,12 +104,30 @@ update_pom_version() {
     
     print_success "pom.xml updated"
 }
-
+update_readme_version() {
+    local old_version=$1
+    local new_version=$2
+    
+    print_info "Updating README.md installation version: ${old_version} → ${new_version}"
+    
+    if [ ! -f "$README_FILE" ]; then
+        print_warning "README.md not found, skipping README update"
+        return
+    fi
+    
+    # Update version in README.md installation section
+    # Replaces all occurrences of vX.Y.Z with the new version
+    sed -i.bak "s/ReplicaDB-${old_version}/ReplicaDB-${new_version}/g" "$README_FILE"
+    sed -i.bak "s/v${old_version}/v${new_version}/g" "$README_FILE"
+    rm -f "${README_FILE}.bak"
+    
+    print_success "README.md updated"
+}
 create_release_commit() {
     local version=$1
     
     print_info "Creating release commit..."
-    git add "$POM_FILE"
+    git add "$POM_FILE" "$README_FILE"
     git commit -m "Release v${version}" || print_warning "Commit may have failed or nothing to commit"
     
     print_success "Release commit created"
@@ -222,6 +241,7 @@ main() {
     print_header "Executing Release Steps"
     
     update_pom_version "$old_version" "$new_version"
+    update_readme_version "$old_version" "$new_version"
     create_release_commit "$new_version"
     create_git_tag "$new_version"
     push_to_origin "$new_version"
