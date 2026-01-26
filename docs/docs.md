@@ -939,6 +939,8 @@ source.table=schema.table_name
 
 ReplicaDB uses the MSSQL Server [bulk copy API](https://docs.microsoft.com/en-gb/sql/connect/jdbc/using-bulk-copy-with-the-jdbc-driver) for load data into the database.
 
+Oracle `BLOB` and `CLOB` columns are supported when replicating into SQL Server using bulk copy. Ensure sink columns use `VARBINARY(MAX)` for `BLOB` and `NVARCHAR(MAX)` for `CLOB`, and avoid casting these columns in the source query so they can be streamed during bulk copy.
+
 Hence, depending on the source database, some data types are not supported by the *MSSQL Server bulk copy*, and must be cast during the replication process to avoid the `Specification of length or precision 0 is invalid` exception.
 
 In addition, to avoid the exception `Column xx is invalid. Please check your column mappings` it will be necessary to include all source and sink columns.
