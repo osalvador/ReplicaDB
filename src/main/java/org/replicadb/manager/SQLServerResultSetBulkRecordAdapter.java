@@ -84,6 +84,23 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     public int getColumnType(int column) {
         try {
             int type = metaData.getColumnType(column);
+            
+            // Handle unsupported/unknown types (negative or non-standard codes like Oracle's -104)
+            if (type < 0) {
+                LOG.debug("Mapping unsupported source type {} to VARCHAR for column {}", type, column);
+                return Types.VARCHAR;
+            }
+            
+            // Handle Oracle-specific types that SQL Server doesn't support
+            if (type == Types.ROWID
+                || type == Types.ARRAY
+                || type == Types.STRUCT
+                || type == Types.SQLXML
+                || type == Types.OTHER) {
+                LOG.debug("Mapping unsupported type {} to VARCHAR for column {}", type, column);
+                return Types.VARCHAR;
+            }
+            
             if (type == Types.BOOLEAN) {
                 return Types.BIT;
             }
@@ -318,7 +335,53 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                 int sourceType = sourceTypes[i - 1];
                 Object value;
 
-                if (columnType == Types.VARBINARY
+                // Handle Oracle INTERVAL types by converting to string
+                if (sourceType == -104 || sourceType == -103) {  // INTERVALDS or INTERVALYM
+                    Object intervalObj = resultSet.getObject(i);
+                    value = resultSet.wasNull() ? null : (intervalObj != null ? intervalObj.toString() : null);
+                    LOG.debug("Converted Oracle INTERVAL type {} to string for column {}", sourceType, i);
+                } else if (sourceType == Types.ROWID) {
+                    // Convert ROWID to string
+                    java.sql.RowId rowId = resultSet.getRowId(i);
+                    value = resultSet.wasNull() ? null : (rowId != null ? new String(rowId.getBytes()) : null);
+                    LOG.debug("Converted ROWID to string for column {}", i);
+                } else if (sourceType == Types.ARRAY) {
+                    // Convert ARRAY to string
+                    java.sql.Array arrayData = resultSet.getArray(i);
+                    value = resultSet.wasNull() ? null : (arrayData != null ? arrayData.toString() : null);
+                    LOG.debug("Converted ARRAY to string for column {}", i);
+                } else if (sourceType == Types.STRUCT) {
+                    // Convert STRUCT to string
+                    Object structObj = resultSet.getObject(i);
+                    value = resultSet.wasNull() ? null : (structObj != null ? structObj.toString() : null);
+                    LOG.debug("Converted STRUCT to string for column {}", i);
+                } else if (sourceType == Types.SQLXML) {
+                    // Convert SQLXML to string
+                    java.sql.SQLXML xmlData = resultSet.getSQLXML(i);
+                    if (resultSet.wasNull()) {
+                        value = null;
+                    } else if (xmlData != null) {
+                        value = xmlData.getString();
+                    } else {
+                        value = null;
+                    }
+                    LOG.debug("Converted SQLXML to string for column {}", i);
+                } else if (sourceType == Types.OTHER) {
+                    // Handle OTHER type (PostgreSQL specific types, etc.)
+                    Object otherObj = resultSet.getObject(i);
+                    if (resultSet.wasNull()) {
+                        value = null;
+                    } else if (otherObj != null) {
+                        if (otherObj instanceof byte[]) {
+                            value = otherObj;  // Keep as bytes
+                        } else {
+                            value = otherObj.toString();
+                        }
+                    } else {
+                        value = null;
+                    }
+                    LOG.debug("Converted OTHER type to appropriate format for column {}", i);
+                } else if (columnType == Types.VARBINARY
                     && sourceType != Types.BLOB
                     && sourceType != Types.LONGVARBINARY) {
                     value = resultSet.getBytes(i);
