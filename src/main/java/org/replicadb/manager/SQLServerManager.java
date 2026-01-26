@@ -108,7 +108,7 @@ public class SQLServerManager extends SqlManager {
          if (resultSet instanceof RowSet) {
             bulkCopy.writeToServer(new SQLServerBulkRecordAdapter((RowSet) resultSet));
          } else {
-            bulkCopy.writeToServer(resultSet);
+            bulkCopy.writeToServer(new SQLServerResultSetBulkRecordAdapter(resultSet));
          }
 
 

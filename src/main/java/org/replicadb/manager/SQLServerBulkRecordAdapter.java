@@ -68,6 +68,14 @@ public class SQLServerBulkRecordAdapter implements ISQLServerBulkRecord {
             if (type == Types.BOOLEAN) {
                 return Types.BIT;
             }
+            // Convert LOB types to SQL Server compatible types for bulk copy
+            // BLOB/LONGVARBINARY -> VARBINARY, CLOB/LONGNVARCHAR -> NVARCHAR
+            if (type == Types.BLOB || type == Types.LONGVARBINARY) {
+                return Types.VARBINARY;
+            }
+            if (type == Types.CLOB || type == Types.LONGNVARCHAR) {
+                return Types.NVARCHAR;
+            }
             // Convert BINARY to VARBINARY for SQL Server BulkCopy compatibility
             // SQL Server BulkCopy expects VARBINARY for binary data, not BINARY
             // This is especially important when the source (e.g., MongoDB) reports Types.BINARY
@@ -300,6 +308,8 @@ public class SQLServerBulkRecordAdapter implements ISQLServerBulkRecord {
                 else if (value instanceof byte[]) {
                     // byte[] is already the correct type for BINARY/VARBINARY columns
                 }
+                // LOBs are expected to be provided as streams or byte[]/String by the source
+                // This adapter does not materialize large values; see ResultSet adapter for streaming
                 // Keep Boolean as Boolean for BIT columns (SQL Server BulkCopy expects Boolean, not Integer)
                 else if (value instanceof Boolean) {
                     // No conversion needed - SQL Server BulkCopy handles Boolean for BIT columns
