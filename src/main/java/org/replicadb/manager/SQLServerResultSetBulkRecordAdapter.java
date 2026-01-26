@@ -112,9 +112,21 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
      */
     public int getPrecision(int column) {
         try {
+            int sourceType = metaData.getColumnType(column);
+            
+            // For date/time types, SQL Server bulk copy has specific precision requirements
+            if (sourceType == Types.TIMESTAMP || sourceType == Types.TIMESTAMP_WITH_TIMEZONE) {
+                return 23;  // SQL Server DATETIME2(3) compatible precision
+            }
+            if (sourceType == Types.TIME || sourceType == Types.TIME_WITH_TIMEZONE) {
+                return 16;  // SQL Server TIME(3) compatible precision
+            }
+            if (sourceType == Types.DATE) {
+                return 10;  // SQL Server DATE precision
+            }
+            
             int precision = metaData.getPrecision(column);
             if (precision <= 0) {
-                int sourceType = metaData.getColumnType(column);
                 if (sourceType == Types.BLOB || sourceType == Types.LONGVARBINARY
                     || sourceType == Types.CLOB || sourceType == Types.LONGNVARCHAR) {
                     return -1;

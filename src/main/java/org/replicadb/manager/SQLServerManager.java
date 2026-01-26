@@ -83,15 +83,22 @@ public class SQLServerManager extends SqlManager {
 
       // Columns Mapping
       if (this.options.getSinkColumns() != null && !this.options.getSinkColumns().isEmpty()) {
-         String sinkColumns = getAllSinkColumns(rsmd);
+         // Get sink columns directly from options without calling getAllSinkColumns,
+         // which may have side effects or return columns in wrong order
+         String sinkColumns = this.options.getSinkColumns();
          // Remove quotes from column names, which are not supported by SQLServerBulkCopy
          String[] sinkColumnsArray = sinkColumns.replace("\"", "").split(",");
          LOG.trace("Mapping columns: source index --> sink column name");
          for (int i = 1; i <= sinkColumnsArray.length; i++) {
             String sinkCol = sinkColumnsArray[i - 1].trim(); // Trim whitespace from column names
-            // Use column index for source (1-based) to avoid case sensitivity issues with MongoDB
-            bulkCopy.addColumnMapping(i, sinkCol);
-            LOG.trace("{} (index {}) --> {}", rsmd.getColumnName(i), i, sinkCol);
+            if (resultSet instanceof RowSet) {
+               // Use column index for source (1-based) to avoid case sensitivity issues with MongoDB
+               bulkCopy.addColumnMapping(i, sinkCol);
+               LOG.debug("Column mapping (RowSet): source index {} --> sink column {}", i, sinkCol);
+            } else {
+               bulkCopy.addColumnMapping(rsmd.getColumnName(i), sinkCol);
+               LOG.debug("Column mapping (ResultSet): source column {} --> sink column {}", rsmd.getColumnName(i), sinkCol);
+            }
          }
       } else {
          for (int i = 1; i <= columnCount; i++) {
