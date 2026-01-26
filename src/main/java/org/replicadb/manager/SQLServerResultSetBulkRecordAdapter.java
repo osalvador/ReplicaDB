@@ -45,6 +45,11 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     }
 
     @Override
+    /**
+     * Returns the 1-based column ordinals in order.
+     *
+     * @return ordered set of column ordinals
+     */
     public Set<Integer> getColumnOrdinals() {
         Set<Integer> ordinals = new LinkedHashSet<>();
         for (int i = 1; i <= columnCount; i++) {
@@ -54,6 +59,12 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     }
 
     @Override
+    /**
+     * Returns the column name for the given ordinal.
+     *
+     * @param column 1-based column ordinal
+     * @return column name or null on error
+     */
     public String getColumnName(int column) {
         try {
             return metaData.getColumnName(column);
@@ -64,6 +75,12 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     }
 
     @Override
+    /**
+     * Returns a SQL Server compatible column type.
+     *
+     * @param column 1-based column ordinal
+     * @return JDBC type for bulk copy
+     */
     public int getColumnType(int column) {
         try {
             int type = metaData.getColumnType(column);
@@ -87,6 +104,12 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     }
 
     @Override
+    /**
+     * Returns column precision for bulk copy metadata.
+     *
+     * @param column 1-based column ordinal
+     * @return precision value
+     */
     public int getPrecision(int column) {
         try {
             int precision = metaData.getPrecision(column);
@@ -129,6 +152,12 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     }
 
     @Override
+    /**
+     * Returns column scale for bulk copy metadata.
+     *
+     * @param column 1-based column ordinal
+     * @return scale value
+     */
     public int getScale(int column) {
         try {
             return metaData.getScale(column);
@@ -139,6 +168,12 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     }
 
     @Override
+    /**
+     * Indicates whether the column is auto-increment.
+     *
+     * @param column 1-based column ordinal
+     * @return true if auto-increment
+     */
     public boolean isAutoIncrement(int column) {
         try {
             return metaData.isAutoIncrement(column);
@@ -149,6 +184,12 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     }
 
     @Override
+    /**
+     * Returns the formatter used for date/time columns.
+     *
+     * @param column 1-based column ordinal
+     * @return formatter or null for defaults
+     */
     public DateTimeFormatter getColumnDateTimeFormatter(int column) {
         try {
             int type = metaData.getColumnType(column);
@@ -163,50 +204,116 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     }
 
     @Override
+    /**
+     * Sets timestamp with timezone format using a pattern.
+     *
+     * @param format date/time format pattern
+     */
     public void setTimestampWithTimezoneFormat(String format) {
         this.dateTimeFormatter = DateTimeFormatter.ofPattern(format);
     }
 
     @Override
+    /**
+     * Sets timestamp with timezone format using a formatter.
+     *
+     * @param formatter date/time formatter
+     */
     public void setTimestampWithTimezoneFormat(DateTimeFormatter formatter) {
         this.dateTimeFormatter = formatter;
     }
 
     @Override
+    /**
+     * Sets time with timezone format using a pattern.
+     *
+     * @param format time format pattern
+     */
     public void setTimeWithTimezoneFormat(String format) {
         this.timeFormatter = DateTimeFormatter.ofPattern(format);
     }
 
     @Override
+    /**
+     * Sets time with timezone format using a formatter.
+     *
+     * @param formatter time formatter
+     */
     public void setTimeWithTimezoneFormat(DateTimeFormatter formatter) {
         this.timeFormatter = formatter;
     }
 
     @Override
+    /**
+     * No-op. Metadata is read from the ResultSet.
+     *
+     * @param positionInFile column position
+     * @param columnName column name
+     * @param jdbcType JDBC type
+     * @param precision column precision
+     * @param scale column scale
+     */
     public void addColumnMetadata(int positionInFile, String columnName, int jdbcType, int precision, int scale) {
         LOG.trace("addColumnMetadata called for column {} at position {}", columnName, positionInFile);
     }
 
     @Override
+    /**
+     * No-op. Metadata is read from the ResultSet.
+     *
+     * @param positionInFile column position
+     * @param columnName column name
+     * @param jdbcType JDBC type
+     * @param precision column precision
+     * @param scale column scale
+     * @param dateTimeFormatter formatter
+     */
     public void addColumnMetadata(int positionInFile, String columnName, int jdbcType, int precision, int scale,
                                   DateTimeFormatter dateTimeFormatter) {
         LOG.trace("addColumnMetadata with formatter called for column {} at position {}", columnName, positionInFile);
     }
 
     @Override
+    /**
+     * Returns the current row values for bulk copy, deferring LOB streams until last.
+     *
+     * @return row values array
+     */
     public Object[] getRowData() {
         try {
             Object[] rowData = new Object[columnCount];
+            int[] columnTypes = new int[columnCount];
+            int[] sourceTypes = new int[columnCount];
+            boolean[] streamColumns = new boolean[columnCount];
+
             for (int i = 1; i <= columnCount; i++) {
                 int columnType = getColumnType(i);
+                columnTypes[i - 1] = columnType;
+                int sourceType = metaData.getColumnType(i);
+                sourceTypes[i - 1] = sourceType;
+                streamColumns[i - 1] = sourceType == Types.BLOB
+                    || sourceType == Types.CLOB
+                    || sourceType == Types.LONGVARBINARY
+                    || sourceType == Types.LONGNVARCHAR;
+            }
+
+            for (int i = 1; i <= columnCount; i++) {
+                if (streamColumns[i - 1]) {
+                    continue;
+                }
+
+                int columnType = columnTypes[i - 1];
+                int sourceType = sourceTypes[i - 1];
                 Object value;
 
-                if (columnType == Types.VARBINARY) {
-                    InputStream stream = resultSet.getBinaryStream(i);
-                    value = resultSet.wasNull() ? null : stream;
-                } else if (columnType == Types.NVARCHAR) {
-                    Reader reader = resultSet.getCharacterStream(i);
-                    value = resultSet.wasNull() ? null : reader;
+                if (columnType == Types.VARBINARY
+                    && sourceType != Types.BLOB
+                    && sourceType != Types.LONGVARBINARY) {
+                    value = resultSet.getBytes(i);
+                } else if (columnType == Types.NVARCHAR
+                    && sourceType != Types.CLOB
+                    && sourceType != Types.LONGNVARCHAR) {
+                    value = resultSet.getString(i);
                 } else {
                     value = resultSet.getObject(i);
                 }
@@ -231,6 +338,25 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
 
                 rowData[i - 1] = value;
             }
+
+            for (int i = 1; i <= columnCount; i++) {
+                if (!streamColumns[i - 1]) {
+                    continue;
+                }
+
+                int columnType = columnTypes[i - 1];
+                Object value;
+
+                if (columnType == Types.VARBINARY) {
+                    InputStream stream = resultSet.getBinaryStream(i);
+                    value = resultSet.wasNull() ? null : stream;
+                } else {
+                    Reader reader = resultSet.getCharacterStream(i);
+                    value = resultSet.wasNull() ? null : reader;
+                }
+
+                rowData[i - 1] = value;
+            }
             return rowData;
         } catch (SQLException e) {
             LOG.error("Error getting row data", e);
@@ -239,6 +365,11 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     }
 
     @Override
+    /**
+     * Advances to the next row in the ResultSet.
+     *
+     * @return true if another row is available
+     */
     public boolean next() {
         try {
             return resultSet.next();
