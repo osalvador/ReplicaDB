@@ -142,7 +142,7 @@ Instead, you can use a configuration file, `replicadb.conf`:
 ######################## ReplicadB General Options ########################
 mode=complete
 jobs=1
-############################# Soruce Options ##############################
+############################# Source Options ##############################
 source.connect=jdbc:oracle:thin:@${ORAHOST}:${ORAPORT}:${ORASID}
 source.user=${ORAUSER}
 source.password=${ORAPASS}
