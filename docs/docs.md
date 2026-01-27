@@ -146,7 +146,7 @@ usage: replicadb [OPTIONS]
 | `--quoted-identifiers`                                  | Should all database identifiers be quoted.                                                               | `false`            |
 | `--sink-columns <col,col,col...>`                       | Sink database table columns to be populated                                                              | `--source-columns` |
 | `--sink-connect <jdbc-uri>`                             | Sink database JDBC connect string                                                                        | required           |
-| `--sink-disable-escape`                                 | Escape srings before populating to the table of the sink database.                                       | `false`            |
+| `--sink-disable-escape`                                 | Escape strings before populating to the table of the sink database.                                       | `false`            |
 | `--sink-disable-truncate`                               | Disable the truncation of the sink database table before populate.                                       | `false`            |
 | `--sink-password <password>`                            | Sink database authentication password                                                                    |                    |
 | `--sink-staging-schema <schema-name>`                   | Scheme name on the sink database, with right permissions for creating staging tables.                    | `PUBLIC`           |
@@ -156,7 +156,7 @@ usage: replicadb [OPTIONS]
 | `--sink-user <username>`                                | Sink database authentication username                                                                    |                    |
 | `--source-columns <col,col,col...>`                     | Source database table columns to be extracted                                                            | `*`                |
 | `--source-connect <jdbc-uri>`                           | Source database JDBC connect string                                                                      | required           |
-| `--source-password <password>`                          | Source databse authentication password                                                                   |                    |
+| `--source-password <password>`                          | Source database authentication password                                                                   |                    |
 | `--source-query <statement>`                            | SQL statement to be executed in the source database                                                      |                    |
 | `--source-table <table-name>`                           | Source database table to read                                                                            |                    |
 | `--source-user <username>`                              | Source database authentication username                                                                  |                    |
@@ -205,7 +205,7 @@ mode=complete
 If you are familiar with Ant or Maven, you have most certainly already encountered the variables (like `${token}`) that are automatically expanded when the configuration file is loaded. ReplicaDB supports this feature as well,  here is an example: 
 
 ```properties
-source.connect=jdbc:postgresql://${PGHOST}$/${PGDATABASE}
+source.connect=jdbc:postgresql://${PGHOST}/${PGDATABASE}
 source.user=${PGUSER}
 source.password=${PGPASSWORD}
 source.table=TEST
@@ -242,7 +242,7 @@ Examples:
 
 ```properties
 # Source JDBC connection parameters
-# source.connect.parameter.[prameter_name]=parameter_value
+# source.connect.parameter.[parameter_name]=parameter_value
 # Example for Oracle
 source.connect.parameter.oracle.net.tns_admin=${TNS_ADMIN}
 source.connect.parameter.oracle.net.networkCompression=on
@@ -251,7 +251,7 @@ source.connect.parameter.defaultRowPrefetch=5000
 
 ```properties
 # Sink JDBC connection parameters
-# sink.connect.parameter.[prameter_name]=parameter_value
+# sink.connect.parameter.[parameter_name]=parameter_value
 # Example for PostgreSQL
 sink.connect.parameter.ApplicationName=ReplicaDB
 sink.connect.parameter.reWriteBatchedInserts=true
@@ -265,10 +265,10 @@ To supply a password securely, the options file must be used using the `--option
 
 ```bash
 $ replicadb --source-connect jdbc:mysql://database.example.com/employees \
---source-username boss --options-file ./conf/empoloyee.conf
+--source-user boss --options-file ./conf/employee.conf
 ```
 
-where the options file `./conf/empoloyee.conf` contains the following:
+where the options file `./conf/employee.conf` contains the following:
 
 ```properties
 source.password=myEmployeePassword
@@ -278,7 +278,7 @@ source.password=myEmployeePassword
 
 ```bash
 $ replicadb --source-connect jdbc:mysql://database.example.com/employees \
---source-username boss --source-password myEmployeePassword
+--source-user boss --source-password myEmployeePassword
 ```
 
 <br>
@@ -637,7 +637,7 @@ The CSV connector supports the following extra parameters that can only be defin
 ############################# ReplicadB Basics #############################
 mode=complete
 jobs=1
-############################# Soruce Options #############################
+############################# Source Options #############################
 source.connect=file:///Users/osalvador/Downloads/fileSource.txt
 source.connect.parameter.columns.types=integer, integer, varchar, time, float, boolean
 source.connect.parameter.format=DEFAULT
@@ -682,7 +682,7 @@ Unlike in a database, the replication mode for a CSV file as sink has a slight d
 mode=complete
 jobs=4
 
-############################# Soruce Options #############################
+############################# Source Options #############################
 source.connect=jdbc:oracle:thin:@host:port:sid
 source.user=orauser
 source.password=orapassword
@@ -706,7 +706,7 @@ Remember that in order to specify a connection using a TNSNames alias, you must 
 mode=complete
 jobs=4
 
-############################# Soruce Options #############################
+############################# Source Options #############################
 source.connect=jdbc:oracle:thin:@MY_DATABASE_SID
 source.user=orauser
 source.password=orapassword
@@ -815,7 +815,7 @@ Example:
 mode=complete
 jobs=4
 
-############################# Soruce Options #############################
+############################# Source Options #############################
 source.connect=jdbc:oracle:thin:@host:port:sid
 source.user=orauser
 source.password=orapassword
@@ -867,7 +867,7 @@ Example:
 mode=complete
 jobs=4
 
-############################# Soruce Options #############################
+############################# Source Options #############################
 source.connect=jdbc:oracle:thin:@host:port:sid
 source.user=orauser
 source.password=orapassword
@@ -951,7 +951,7 @@ In this example, 4 columns from table `t_source` in PostgresSQL are replicated t
 
 ```properties
 ...
-############################# Soruce Options ##############################
+############################# Source Options ##############################
 source.connect=jdbc:postgresql://localhost:5432/postgres
 source.user=root
 source.password=ReplicaDB_1234
@@ -982,7 +982,7 @@ In the SQLite connector the `complete-atomic` mode is not supported because repl
 ######################## ReplicadB General Options ########################
 mode=complete
 jobs=1
-############################# Soruce Options ##############################
+############################# Source Options ##############################
 source.connect=jdbc:postgresql://localhost:5432/postgres
 source.user=sa
 source.password=root
