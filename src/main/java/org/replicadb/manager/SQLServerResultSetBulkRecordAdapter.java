@@ -192,13 +192,21 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     @Override
     /**
      * Returns column scale for bulk copy metadata.
+     * SQL Server requires scale to be between 0 and precision.
      *
      * @param column 1-based column ordinal
-     * @return scale value
+     * @return scale value (minimum 0, never negative)
      */
     public int getScale(int column) {
         try {
-            return metaData.getScale(column);
+            int scale = metaData.getScale(column);
+            // SQL Server requires scale >= 0. Invalid or negative scales (e.g., from Oracle metadata)
+            // should default to 0
+            if (scale < 0) {
+                LOG.debug("Invalid scale {} for column {}, using default 0", scale, column);
+                return 0;
+            }
+            return scale;
         } catch (SQLException e) {
             LOG.error("Error getting scale for column {}", column, e);
             return 0;
