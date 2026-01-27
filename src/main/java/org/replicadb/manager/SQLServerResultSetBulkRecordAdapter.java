@@ -85,8 +85,17 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
         try {
             int type = metaData.getColumnType(column);
             
-            // Handle unsupported/unknown types (negative or non-standard codes like Oracle's -104)
-            if (type < 0) {
+            // Standard JDBC types that appear negative in some drivers (e.g., MariaDB)
+            // -5 = BIGINT, -7 = BIT - these are valid and should NOT be mapped to VARCHAR
+            if (type == -5) {  // BIGINT
+                return Types.BIGINT;
+            }
+            if (type == -7) {  // BIT
+                return Types.BIT;
+            }
+            
+            // Handle other truly unknown/unsupported types (negative or non-standard codes like Oracle's -104)
+            if (type < -7) {
                 LOG.debug("Mapping unsupported source type {} to VARCHAR for column {}", type, column);
                 return Types.VARCHAR;
             }
