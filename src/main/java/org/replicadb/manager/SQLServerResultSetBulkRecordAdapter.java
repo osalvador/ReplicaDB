@@ -132,9 +132,10 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     @Override
     /**
      * Returns column precision for bulk copy metadata.
+     * SQL Server maximum precision is 38 for NUMERIC/DECIMAL types.
      *
      * @param column 1-based column ordinal
-     * @return precision value
+     * @return precision value (capped at 38 for SQL Server compatibility)
      */
     public int getPrecision(int column) {
         try {
@@ -152,6 +153,14 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
             }
             
             int precision = metaData.getPrecision(column);
+            
+            // SQL Server maximum precision for NUMERIC/DECIMAL is 38
+            // Clamp any larger values to 38 to prevent bulk copy errors
+            if (precision > 38) {
+                LOG.debug("Source precision {} exceeds SQL Server maximum of 38 for column {}, capping to 38", precision, column);
+                precision = 38;
+            }
+            
             if (precision <= 0) {
                 if (sourceType == Types.BLOB || sourceType == Types.LONGVARBINARY
                     || sourceType == Types.CLOB || sourceType == Types.LONGNVARCHAR) {
