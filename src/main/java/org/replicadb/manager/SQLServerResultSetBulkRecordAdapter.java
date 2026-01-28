@@ -425,16 +425,17 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                 }
 
                 // Special handling: SQL Server bulk copy requires VARBINARY columns to contain
-                // byte[] or valid hex strings. If we have a non-binary source type being mapped
-                // to VARBINARY with string data, set to NULL to avoid "not in a valid hex format" errors
+                // byte[] or valid hex strings. If we have non-binary source type being mapped
+                // to VARBINARY with string data, convert it to hex representation
                 if (columnType == Types.VARBINARY && sourceType != Types.BLOB 
                     && sourceType != Types.LONGVARBINARY && value instanceof String) {
                     String strValue = (String) value;
-                    // Check if string looks like hex (starts with 0x or all hex chars)
-                    boolean isValidHex = strValue.matches("(?i)^(0x)?[0-9a-f]*$");
-                    if (!isValidHex || strValue.isEmpty()) {
-                        LOG.debug("Skipping non-hex string value for VARBINARY column {}: {}", i, 
-                            strValue.length() > 50 ? strValue.substring(0, 50) + "..." : strValue);
+                    if (!strValue.isEmpty()) {
+                        // Convert string to hex representation (e.g., "hello" -> "68656c6c6f")
+                        value = stringToHex(strValue);
+                        LOG.debug("Converted string to hex for VARBINARY column {}: {} bytes", i, 
+                            strValue.length());
+                    } else {
                         value = null;
                     }
                 }
@@ -493,5 +494,20 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
             LOG.error("Error advancing to next row", e);
             throw new RuntimeException("Error advancing to next row in ResultSet", e);
         }
+    }
+
+    /**
+     * Converts a string to its hexadecimal representation (for VARBINARY columns).
+     * For example: "hello" -> "0x68656c6c6f"
+     *
+     * @param str the string to convert
+     * @return hexadecimal representation with 0x prefix
+     */
+    private String stringToHex(String str) {
+        StringBuilder hex = new StringBuilder("0x");
+        for (char c : str.toCharArray()) {
+            hex.append(String.format("%02x", (int) c));
+        }
+        return hex.toString();
     }
 }
