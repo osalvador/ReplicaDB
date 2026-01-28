@@ -133,13 +133,15 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     /**
      * Returns column precision for bulk copy metadata.
      * SQL Server maximum precision is 38 for NUMERIC/DECIMAL types.
+     * VARCHAR/TEXT columns can be up to 8000, NVARCHAR up to 4000.
      *
      * @param column 1-based column ordinal
-     * @return precision value (capped at 38 for SQL Server compatibility)
+     * @return precision value (capped at 38 for NUMERIC only, appropriate limits for other types)
      */
     public int getPrecision(int column) {
         try {
             int sourceType = metaData.getColumnType(column);
+            int precision = metaData.getPrecision(column);
             
             // For date/time types, SQL Server bulk copy has specific precision requirements
             if (sourceType == Types.TIMESTAMP || sourceType == Types.TIMESTAMP_WITH_TIMEZONE) {
@@ -152,22 +154,14 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                 return 10;  // SQL Server DATE precision
             }
             
-            int precision = metaData.getPrecision(column);
-            
-            // SQL Server maximum precision for NUMERIC/DECIMAL is 38
-            // Clamp any larger values to 38 to prevent bulk copy errors
-            if (precision > 38) {
-                LOG.debug("Source precision {} exceeds SQL Server maximum of 38 for column {}, capping to 38", precision, column);
-                precision = 38;
-            }
-            
+            // For unbounded text types (precision <= 0 or very large), return appropriate defaults
             if (precision <= 0) {
                 if (sourceType == Types.BLOB || sourceType == Types.LONGVARBINARY
                     || sourceType == Types.CLOB || sourceType == Types.LONGNVARCHAR) {
                     return -1;
                 }
-                int type = getColumnType(column);
-                switch (type) {
+                int columnType = getColumnType(column);
+                switch (columnType) {
                     case Types.VARCHAR:
                     case Types.CHAR:
                     case Types.LONGVARCHAR:
@@ -191,6 +185,30 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                         return 38;
                 }
             }
+            
+            // Get the target column type for SQL Server
+            int columnType = getColumnType(column);
+            
+            // Only cap NUMERIC/DECIMAL to 38, not VARCHAR types
+            if (columnType == Types.NUMERIC || columnType == Types.DECIMAL) {
+                if (precision > 38) {
+                    LOG.debug("Source precision {} exceeds SQL Server maximum of 38 for column {}, capping to 38", precision, column);
+                    precision = 38;
+                }
+            } else if (columnType == Types.VARCHAR || columnType == Types.CHAR || columnType == Types.LONGVARCHAR) {
+                // For VARCHAR types, cap at 8000 (SQL Server varchar limit)
+                if (precision > 8000) {
+                    LOG.debug("Source VARCHAR precision {} exceeds SQL Server maximum of 8000 for column {}, capping to 8000", precision, column);
+                    precision = 8000;
+                }
+            } else if (columnType == Types.NVARCHAR || columnType == Types.NCHAR || columnType == Types.LONGNVARCHAR) {
+                // For NVARCHAR types, cap at 4000 (SQL Server nvarchar limit)
+                if (precision > 4000) {
+                    LOG.debug("Source NVARCHAR precision {} exceeds SQL Server maximum of 4000 for column {}, capping to 4000", precision, column);
+                    precision = 4000;
+                }
+            }
+            
             return precision;
         } catch (SQLException e) {
             LOG.error("Error getting precision for column {}", column, e);
