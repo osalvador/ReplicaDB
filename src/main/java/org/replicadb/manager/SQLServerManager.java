@@ -91,14 +91,9 @@ public class SQLServerManager extends SqlManager {
          LOG.trace("Mapping columns: source index --> sink column name");
          for (int i = 1; i <= sinkColumnsArray.length; i++) {
             String sinkCol = sinkColumnsArray[i - 1].trim(); // Trim whitespace from column names
-            if (resultSet instanceof RowSet) {
-               // Use column index for source (1-based) to avoid case sensitivity issues with MongoDB
-               bulkCopy.addColumnMapping(i, sinkCol);
-               LOG.debug("Column mapping (RowSet): source index {} --> sink column {}", i, sinkCol);
-            } else {
-               bulkCopy.addColumnMapping(rsmd.getColumnName(i), sinkCol);
-               LOG.debug("Column mapping (ResultSet): source column {} --> sink column {}", rsmd.getColumnName(i), sinkCol);
-            }
+            // Use source ordinal mapping to ensure alignment with explicit sink column order
+            bulkCopy.addColumnMapping(i, sinkCol);
+            LOG.debug("Column mapping: source index {} --> sink column {}", i, sinkCol);
          }
       } else {
          for (int i = 1; i <= columnCount; i++) {
