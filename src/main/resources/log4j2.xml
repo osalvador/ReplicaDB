@@ -6,7 +6,7 @@
         </Console>
     </Appenders>
     <Loggers>
-        <!-- ReplicaDB application logger - controlled by --verbose option -->
+        <!-- ReplicaDB application logger (controlled by -v/verbose option) -->
         <Logger name="org.replicadb" level="info" additivity="false">
             <AppenderRef ref="console"/>
         </Logger>
