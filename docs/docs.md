@@ -38,6 +38,23 @@ layout: page
   - [4.7 MSSQL Server Connector](#47-mssql-server-connector)
   - [4.8 SQLite Connector](#48-sqlite-connector)
   - [4.9 MongoDB Connector](#49-mongodb-connector)
+- [5. Troubleshooting](#5-troubleshooting)
+  - [5.1 Connection Failures](#51-connection-failures)
+  - [5.2 Permission Errors](#52-permission-errors)
+  - [5.3 Memory Issues](#53-memory-issues)
+  - [5.4 Performance Problems](#54-performance-problems)
+  - [5.5 Log Configuration](#55-log-configuration)
+- [6. Performance Tuning](#6-performance-tuning)
+  - [6.1 Optimal Parallelism](#61-optimal-parallelism)
+  - [6.2 Fetch Size Optimization](#62-fetch-size-optimization)
+  - [6.3 Network Optimization](#63-network-optimization)
+  - [6.4 Database-Specific Optimizations](#64-database-specific-optimizations)
+  - [6.5 Performance Monitoring](#65-performance-monitoring)
+- [7. Architecture](#7-architecture)
+  - [7.1 Overview](#71-overview)
+  - [7.2 Core Components](#72-core-components)
+  - [7.3 Data Flow](#73-data-flow)
+  - [7.4 Design Principles](#74-design-principles)
 
 {::comment}
     3.7. Controlling transaction isolation
@@ -50,9 +67,9 @@ layout: page
 
 # 1. Introduction
 
-ReplicaDB is primarily a command line, portable and cross-platform tool for data replication between source and sink databases. Its main objective is performance, implementing database engine-specific techniques to achieve optimal performance for each database, whether used as a source or sink.
+ReplicaDB is a high-performance, portable, and cross-platform command-line tool for data replication between source and sink databases. It implements database engine-specific optimizations to achieve optimal performance for each supported database, whether used as a source or destination.
 
-ReplicaDB follows the Convention over configuration design, so the user will introduce the minimum parameters necessary for the replication process, the rest will be default.
+ReplicaDB follows the "Convention over Configuration" design principle, requiring users to provide only the minimum necessary parameters for replication while applying sensible defaults for all other settings.
 
 # 2. Basic Usage
 
@@ -67,12 +84,12 @@ ReplicaDB implements three replication modes: `complete`, `complete-atomic` and 
 
 ### Complete
 
-The `complete` mode makes a complete replica of the source table, of all its data, from source to sink. In `complete` mode, only` INSERT` is done in the sink table without worrying about the primary keys. ReplicaDB will perform the following actions on a `complete` replication:
+The `complete` mode makes a complete replica of the source table, of all its data, from source to sink. In `complete` mode, only `INSERT` is done in the sink table without worrying about the primary keys. ReplicaDB will perform the following actions on a `complete` replication:
 
   - Truncate the sink table with the `TRUNCATE TABLE` statement.
   - Select and copy the data in parallel from the source table to the sink table.
 
-So data is **not** available in the Sink Table during the replication process.
+So data is **not** available in the sink table during the replication process.
 
 
 ![ReplicaDB Mode Complete](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Mode_Complete.png){:class="img-responsive"}
@@ -90,7 +107,7 @@ The `complete-atomic` mode performs a complete replication (`DELETE` and `INSERT
   - Drop the sink staging table.
 
 
-So data is available in the Sink Table during the replication process.
+So data is available in the sink table during the replication process.
 
 ![ReplicaDB Mode Complete Atomic](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Mode_Complete-Atomic.png){:class="img-responsive"}
 
@@ -102,7 +119,7 @@ To do this, it is necessary to have a strategy for filtering the new data at the
 
 Currently, you must store the last value of the column used to determine changes in the source table. In future versions, ReplicaDB will do this automatically.
 
-In the `incremental` mode, the` INSERT or UPDATE` or `UPSERT` technique is used in the sink table. ReplicaDB needs to create a staging table in the sink database, where data is copied in parallel. The last step of the replication is to merge the staging table with the sink table. ReplicaDB will perform the following actions in an `incremental` replication:
+In the `incremental` mode, the `INSERT or UPDATE` or `UPSERT` technique is used in the sink table. ReplicaDB needs to create a staging table in the sink database, where data is copied in parallel. The last step of the replication is to merge the staging table with the sink table. ReplicaDB will perform the following actions in an `incremental` replication:
 
   - Automatically create the staging table in the sink database.
   - Truncate the staging table.
@@ -112,7 +129,7 @@ In the `incremental` mode, the` INSERT or UPDATE` or `UPSERT` technique is used 
   - Drop the sink staging table.
 
 
-So data is available in the Sink Table during the replication process.
+So data is available in the sink table during the replication process.
 
 
 ![ReplicaDB Mode Incremental](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Mode_Incremental.png){:class="img-responsive"}
@@ -1224,4 +1241,493 @@ sink.columns=sku, document
 ```
 
 You can also replicate from Postgres jsonb to MongoDB using the `jsonb` data type. ReplicaDB will automatically convert the jsonb data type to a MongoDB document.
+
+# 5. Troubleshooting
+
+This section covers common issues and their solutions when using ReplicaDB.
+
+## 5.1 Connection Failures
+
+**Problem**: Unable to connect to source or sink database
+
+**Common Causes**:
+- Incorrect JDBC URL format
+- Network connectivity issues
+- Firewall blocking database ports
+- Database server not running
+
+**Solutions**:
+- Verify JDBC URL syntax matches database vendor requirements
+- Test network connectivity: `telnet <host> <port>` or `nc -zv <host> <port>`
+- Check firewall rules allow connections to database ports
+- Confirm database service is running: `systemctl status <database-service>`
+- Enable verbose logging: `--verbose` or `-v`
+
+**Example Error**:
+```
+ERROR SqlManager: Could not connect to database: Communications link failure
+```
+
+**Fix**: Verify hostname, port, and network connectivity.
+
+## 5.2 Permission Errors
+
+**Problem**: Access denied or insufficient privileges
+
+**Common Causes**:
+- Missing SELECT permissions on source tables
+- Missing INSERT/UPDATE/DELETE permissions on sink tables
+- Missing CREATE TABLE permissions for staging tables
+
+**Solutions**:
+- **Source**: Grant SELECT: `GRANT SELECT ON table TO user;`
+- **Sink**: Grant necessary permissions:
+  ```sql
+  GRANT INSERT, UPDATE, DELETE ON table TO user;
+  GRANT CREATE TABLE ON schema TO user;
+  ```
+- Verify permissions: `SHOW GRANTS FOR user;` (MySQL) or `\du` (PostgreSQL)
+
+**Example Error**:
+```
+ERROR OracleManager: ORA-01031: insufficient privileges
+ERROR PostgresqlManager: permission denied for table
+```
+
+## 5.3 Memory Issues
+
+**Problem**: Out of memory errors or slow performance
+
+**Common Causes**:
+- Insufficient Java heap size
+- Large `--fetch-size` value
+- Too many parallel jobs for available memory
+
+**Solutions**:
+- Increase JVM memory: Set `JAVA_OPTS="-Xmx2g"` before running ReplicaDB
+- Reduce fetch size: `--fetch-size=1000` (default is 5000)
+- Reduce parallelism: `--jobs=2` (default is 4)
+- Monitor memory usage during replication
+
+**Example Error**:
+```
+java.lang.OutOfMemoryError: Java heap space
+```
+
+**Fix**: Set appropriate JVM memory based on available RAM:
+```bash
+export JAVA_OPTS="-Xmx4g"  # 4GB heap
+replicadb --options-file config.conf
+```
+
+## 5.4 Performance Problems
+
+**Problem**: Replication is slower than expected
+
+**Common Causes**:
+- Suboptimal fetch size
+- Too few or too many parallel jobs
+- Network latency between databases
+- Missing indexes on source tables
+- No bandwidth throttling on constrained networks
+
+**Solutions**:
+- **Optimize fetch size**: Test values between 1000-10000 based on row size
+- **Adjust parallelism**: 
+  - Local databases: `--jobs=8` to `--jobs=16`
+  - Remote databases: `--jobs=4` to `--jobs=8`
+- **Add indexes**: Create indexes on columns used in `--source-where` clauses
+- **Use bandwidth throttling**: `--bandwidth-throttling=10240` (10 MB/s)
+- **Monitor database**: Check CPU, I/O, and connection pool usage
+
+**Diagnostic commands**:
+```bash
+# Run with verbose mode
+replicadb --verbose --options-file config.conf
+
+# Monitor with different job counts
+replicadb --jobs=4 ...  # Test baseline
+replicadb --jobs=8 ...  # Test with more parallelism
+```
+
+## 5.5 Log Configuration
+
+**Problem**: Need more detailed logging for diagnosis
+
+**Solution**: Configure Log4j2 logging level
+
+Edit `$REPLICADB_HOME/conf/log4j2.xml`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n"/>
+    </Console>
+  </Appenders>
+  <Loggers>
+    <!-- Set to DEBUG for detailed logging -->
+    <Root level="INFO">
+      <AppenderRef ref="Console"/>
+    </Root>
+    <!-- Enable specific package logging -->
+    <Logger name="org.replicadb" level="DEBUG"/>
+  </Loggers>
+</Configuration>
+```
+
+Or use command-line option:
+```bash
+replicadb --verbose --options-file config.conf
+```
+
+**Log Levels**:
+- `ERROR`: Only critical errors
+- `WARN`: Warnings and errors
+- `INFO`: General information (default)
+- `DEBUG`: Detailed diagnostic information
+- `TRACE`: Very detailed trace information
+
+
+# 6. Performance Tuning
+
+This section provides guidelines for optimizing ReplicaDB performance for large-scale data replication.
+
+## 6.1 Optimal Parallelism
+
+The `--jobs` parameter controls the number of parallel threads used for replication. Finding the right balance is crucial for performance.
+
+**General Guidelines**:
+- **Default**: 4 parallel jobs (suitable for most scenarios)
+- **Local databases**: 8-16 jobs (when both databases are on same network/server)
+- **Remote databases**: 4-8 jobs (balance network bandwidth and database load)
+- **Limited resources**: 1-2 jobs (reduce memory and CPU pressure)
+
+**Considerations**:
+- Monitor database CPU and connection pool usage
+- Each job opens one connection to source and sink
+- More jobs = more memory consumption
+- Network bandwidth may become bottleneck before CPU
+
+**Example**:
+```bash
+# High-performance local replication
+replicadb --jobs=12 --source-connect=... --sink-connect=...
+
+# Conservative remote replication
+replicadb --jobs=4 --source-connect=... --sink-connect=...
+```
+
+## 6.2 Fetch Size Optimization
+
+The `--fetch-size` parameter determines how many rows are read from the database in each batch.
+
+**Default**: 5000 rows
+
+**Guidelines**:
+- **Large rows** (many columns or LOBs): 1000-2000 rows
+- **Small rows** (few columns): 10000-20000 rows
+- **Memory constrained**: 1000-3000 rows
+- **High bandwidth**: 10000-15000 rows
+
+**Impact**:
+- Smaller fetch size = more network round trips
+- Larger fetch size = more memory per job
+- Total memory ≈ fetch_size × row_size × jobs
+
+**Example**:
+```bash
+# For tables with large VARCHAR or BLOB columns
+replicadb --fetch-size=2000 --jobs=4 ...
+
+# For tables with few small columns
+replicadb --fetch-size=15000 --jobs=8 ...
+```
+
+## 6.3 Network Optimization
+
+### Bandwidth Throttling
+
+Use `--bandwidth-throttling` to prevent network saturation when sharing bandwidth with other services.
+
+**Syntax**: `--bandwidth-throttling=<KB/s>`
+
+**Examples**:
+```bash
+# Limit to 10 MB/s total
+replicadb --bandwidth-throttling=10240 ...
+
+# No limit (default)
+replicadb --bandwidth-throttling=0 ...
+```
+
+**Important**: Bandwidth limit is per job. With 4 jobs and 10 MB/s limit, actual usage could reach 40 MB/s.
+
+### Network Proximity
+
+- Run ReplicaDB close to the database with slower network connection
+- Prefer internal/private networks over public internet
+- Use compression for WAN transfers (if supported by database)
+
+## 6.4 Database-Specific Optimizations
+
+### Oracle
+
+- Use direct path hints: `SELECT /*+ PARALLEL(4) */ ...` via `--source-query`
+- Enable parallel DML on sink: `ALTER SESSION ENABLE PARALLEL DML`
+- Consider partitioned tables for very large datasets
+
+### PostgreSQL
+
+- Adjust `work_mem` for better sort performance
+- Use `--source-where` to leverage partition pruning
+- Consider `UNLOGGED` tables for sink during initial load (then convert to logged)
+
+### MySQL/MariaDB
+
+- Disable binary logging temporarily: `SET SQL_LOG_BIN=0` (if acceptable)
+- Use bulk insert optimization: ensured by ReplicaDB automatically
+- Consider `--sink-disable-escape` if data is pre-validated
+
+### MongoDB
+
+- Use appropriate read concern: `readConcern=local` for performance
+- Create indexes after bulk load, not before
+- Use projection (`--source-columns`) to reduce data transfer
+
+## 6.5 Performance Monitoring
+
+**Key Metrics to Monitor**:
+- Throughput: Rows per second
+- Database CPU and I/O utilization
+- Network bandwidth usage
+- Memory consumption (Java heap)
+- Connection pool saturation
+
+**Diagnostic Approach**:
+1. Start with defaults (`--jobs=4`, `--fetch-size=5000`)
+2. Run test replication and measure baseline
+3. Adjust one parameter at a time
+4. Monitor bottleneck (CPU, network, or I/O)
+5. Iterate until optimal performance
+
+**Example Baseline Test**:
+```bash
+# Test 1: Baseline
+time replicadb --mode=complete --verbose ...
+
+# Test 2: More parallelism
+time replicadb --mode=complete --jobs=8 --verbose ...
+
+# Test 3: Larger fetch size
+time replicadb --mode=complete --jobs=8 --fetch-size=10000 --verbose ...
+```
+
+**Expected Performance**:
+- Small tables (<1M rows): 50,000-100,000 rows/sec
+- Medium tables (1M-10M rows): 20,000-50,000 rows/sec  
+- Large tables (>10M rows): 10,000-30,000 rows/sec
+
+*Actual performance varies based on hardware, network, database configuration, and row complexity.*
+
+
+# 7. Architecture
+
+This section explains ReplicaDB's internal architecture and design principles.
+
+## 7.1 Overview
+
+ReplicaDB uses a simple yet efficient architecture designed for high-performance bulk data transfer:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      ReplicaDB Process                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌───────────────┐      ┌──────────────┐      ┌─────────┐ │
+│  │   CLI Parser  │─────▶│ Config Manager│─────▶│ Manager │ │
+│  └───────────────┘      └──────────────┘      │ Factory │ │
+│                                                └─────────┘ │
+│                                                     │       │
+│         ┌───────────────────────────────────────────┘       │
+│         │                                                   │
+│         ▼                                                   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │         Source Manager  │  Sink Manager             │   │
+│  │  (Oracle, Postgres,     │  (Oracle, Postgres,       │   │
+│  │   MySQL, MongoDB, etc)  │   MySQL, MongoDB, etc)    │   │
+│  └──────┬──────────────────┴──────────┬─────────────────┘   │
+│         │                             │                     │
+│         ▼                             ▼                     │
+│  ┌──────────────┐            ┌──────────────┐              │
+│  │ Parallel     │            │ Parallel     │              │
+│  │ Reader Tasks │            │ Writer Tasks │              │
+│  │ (1...N jobs) │───────────▶│ (1...N jobs) │              │
+│  └──────────────┘            └──────────────┘              │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+         │                             │
+         ▼                             ▼
+    ┌────────┐                    ┌────────┐
+    │ Source │                    │  Sink  │
+    │Database│                    │Database│
+    └────────┘                    └────────┘
+```
+
+## 7.2 Core Components
+
+### Connection Layer
+
+**Purpose**: Manages database connections using JDBC drivers or native protocols.
+
+**Key Features**:
+- JDBC connection pooling
+- Native protocol support for MongoDB (MongoDB Java Driver)
+- Kafka producer/consumer integration
+- File system access for CSV and S3
+
+**Responsibilities**:
+- Establish and validate connections
+- Handle authentication
+- Manage connection lifecycle
+
+### Data Reader (Source Manager)
+
+**Purpose**: Extracts data from the source database in parallel.
+
+**Key Features**:
+- Database-specific optimization (e.g., Oracle hash partitioning, PostgreSQL OFFSET)
+- Configurable fetch size for memory management
+- Support for custom queries via `--source-query`
+- WHERE clause filtering via `--source-where`
+
+**Parallel Processing**:
+- Splits work across N jobs (threads)
+- Each job reads a partition of the data
+- Uses database-specific partitioning strategies:
+  - **Oracle**: `ORA_HASH(ROWID, N)`
+  - **PostgreSQL**: `OFFSET` and `LIMIT`
+  - **MySQL/MariaDB**: Primary key ranges
+  - **MongoDB**: Collection splitting
+
+### Data Writer (Sink Manager)
+
+**Purpose**: Writes data to the sink database in parallel using optimized batch operations.
+
+**Key Features**:
+- Database-specific bulk operations (e.g., Oracle `APPEND_VALUES`, PostgreSQL `COPY`)
+- Automatic type mapping between different databases
+- Staging table management for `incremental` and `complete-atomic` modes
+- UPSERT operations for incremental replication
+
+**Batch Operations**:
+- Batches inserts for efficiency
+- Uses native bulk load APIs when available
+- Handles transaction management
+
+### Flow Control
+
+**Purpose**: Coordinates the overall replication process and manages resources.
+
+**Key Features**:
+- Job scheduling and thread pool management
+- Bandwidth throttling (per-job rate limiting)
+- Progress monitoring and logging
+- Error handling and retry logic
+
+**Process Flow**:
+1. Parse command-line arguments and configuration
+2. Validate connections to source and sink
+3. Determine partitioning strategy based on database and table
+4. Launch N parallel jobs
+5. Each job reads from source and writes to sink
+6. Wait for all jobs to complete
+7. Perform post-processing (staging table merge, cleanup)
+
+### State Management
+
+**Purpose**: Tracks replication progress and manages incremental updates.
+
+**Key Features**:
+- Staging table creation and management
+- Primary key detection for UPSERT operations
+- Transaction coordination for `complete-atomic` mode
+- Metadata tracking (row counts, timing)
+
+**Replication Modes**:
+- **Complete**: Truncate + parallel insert
+- **Complete-Atomic**: Staging table + atomic swap
+- **Incremental**: Staging table + UPSERT merge
+
+## 7.3 Data Flow
+
+### Complete Mode
+
+```
+1. Truncate sink table
+2. [Job 1] Read partition 1 → Write to sink
+3. [Job 2] Read partition 2 → Write to sink
+4. [Job N] Read partition N → Write to sink
+5. All jobs complete → Done
+```
+
+### Complete-Atomic Mode
+
+```
+1. Create staging table
+2. Start DELETE transaction (async)
+3. [Job 1] Read partition 1 → Write to staging
+4. [Job 2] Read partition 2 → Write to staging
+5. [Job N] Read partition N → Write to staging
+6. Wait for DELETE to complete
+7. INSERT INTO sink SELECT FROM staging (atomic)
+8. Commit transaction
+9. Drop staging table
+```
+
+### Incremental Mode
+
+```
+1. Create staging table
+2. [Job 1] Read new data partition 1 → Write to staging
+3. [Job 2] Read new data partition 2 → Write to staging
+4. [Job N] Read new data partition N → Write to staging
+5. UPSERT from staging to sink (using primary keys)
+6. Drop staging table
+```
+
+## 7.4 Design Principles
+
+### Convention Over Configuration
+
+ReplicaDB applies sensible defaults to minimize configuration:
+- Automatic partitioning strategy selection
+- Default fetch size (5000) and parallelism (4 jobs)
+- Automatic type mapping between databases
+- Intelligent staging table naming
+
+### Database-Agnostic Interface
+
+Each database has a `Manager` class implementing a common interface:
+- `read()`: Extract data
+- `write()`: Load data
+- `getPartitioningStrategy()`: Define how to split work
+- `getSupportedModes()`: Define capabilities
+
+This allows adding new databases without changing core logic.
+
+### Performance-First Design
+
+- Parallel processing by default
+- Bulk operations over row-by-row
+- Database-specific optimizations (Oracle hints, PostgreSQL COPY)
+- Minimal memory footprint through streaming
+
+### Simplicity
+
+- Single JAR with embedded dependencies
+- No external daemons or agents
+- No database triggers or schema modifications
+- Command-line only (no GUI overhead)
 
