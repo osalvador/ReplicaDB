@@ -7,6 +7,8 @@ import org.apache.logging.log4j.Logger;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
+import java.sql.Blob;
+import java.sql.Clob;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -95,20 +97,20 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
             }
             
             // Handle other truly unknown/unsupported types (negative or non-standard codes like Oracle's -104)
-            if (type < -7) {
-                LOG.debug("Mapping unsupported source type {} to VARCHAR for column {}", type, column);
-                return Types.VARCHAR;
-            }
+                if (type < -7) {
+                    LOG.debug("Mapping unsupported source type {} to VARCHAR", type);
+                    return Types.VARCHAR;
+                }
             
             // Handle Oracle-specific types that SQL Server doesn't support
-            if (type == Types.ROWID
-                || type == Types.ARRAY
-                || type == Types.STRUCT
-                || type == Types.SQLXML
-                || type == Types.OTHER) {
-                LOG.debug("Mapping unsupported type {} to VARCHAR for column {}", type, column);
-                return Types.VARCHAR;
-            }
+                if (type == Types.ROWID
+                    || type == Types.ARRAY
+                    || type == Types.STRUCT
+                    || type == Types.SQLXML
+                    || type == Types.OTHER) {
+                    LOG.debug("Mapping unsupported type {} to VARCHAR", type);
+                    return Types.VARCHAR;
+                }
             
             if (type == Types.BOOLEAN) {
                 return Types.BIT;
@@ -121,6 +123,9 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
             }
             if (type == Types.BINARY) {
                 return Types.VARBINARY;
+            }
+            if (type == Types.TIMESTAMP_WITH_TIMEZONE || type == Types.TIME_WITH_TIMEZONE) {
+                return Types.VARCHAR;
             }
             return type;
         } catch (SQLException e) {
@@ -358,6 +363,7 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
             int[] columnTypes = new int[columnCount];
             int[] sourceTypes = new int[columnCount];
             boolean[] streamColumns = new boolean[columnCount];
+            boolean[] binaryColumns = new boolean[columnCount];
 
             for (int i = 1; i <= columnCount; i++) {
                 int columnType = getColumnType(i);
@@ -368,6 +374,10 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     || sourceType == Types.CLOB
                     || sourceType == Types.LONGVARBINARY
                     || sourceType == Types.LONGNVARCHAR;
+                binaryColumns[i - 1] = columnType == Types.VARBINARY
+                    || columnType == Types.LONGVARBINARY
+                    || columnType == Types.BINARY
+                    || columnType == Types.BLOB;
             }
 
             for (int i = 1; i <= columnCount; i++) {
@@ -393,17 +403,17 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     // Convert ARRAY to string
                     java.sql.Array arrayData = resultSet.getArray(i);
                     value = resultSet.wasNull() ? null : (arrayData != null ? arrayData.toString() : null);
-                    LOG.debug("Converted ARRAY to string for column {}", i);
+                    LOG.debug("Converted ARRAY to string");
                 } else if (sourceType == Types.STRUCT) {
                     // Convert STRUCT to string
                     Object structObj = resultSet.getObject(i);
                     value = resultSet.wasNull() ? null : (structObj != null ? structObj.toString() : null);
-                    LOG.debug("Converted STRUCT to string for column {}", i);
+                    LOG.debug("Converted STRUCT to string");
                 } else if (sourceType == Types.SQLXML) {
-                    // Skip SQLXML - converting to string causes bulk copy hex format errors
-                    // SQL Server has native XML type, but bulk copy with string XML content fails
-                    LOG.debug("Skipping SQLXML for column {} (causes bulk copy errors)", i);
-                    value = null;
+                    // Convert SQLXML/XMLTYPE to VARCHAR-compatible string
+                    final java.sql.SQLXML xml = resultSet.getSQLXML(i);
+                    value = resultSet.wasNull() ? null : (xml != null ? xml.getString() : null);
+                    LOG.debug("Converted SQLXML to string");
                 } else if (sourceType == Types.OTHER) {
                     // Handle OTHER type (PostgreSQL specific types, etc.)
                     Object otherObj = resultSet.getObject(i);
@@ -412,21 +422,20 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     } else if (otherObj != null) {
                         if (otherObj instanceof byte[]) {
                             value = otherObj;  // Keep as bytes for VARBINARY columns
-                            LOG.debug("OTHER type is binary data for column {}", i);
+                            LOG.debug("OTHER type is binary data");
                         } else if (otherObj instanceof String) {
                             // For text-based OTHER types, pass as-is
                             value = otherObj;
-                            LOG.debug("OTHER type is string for column {}", i);
+                            LOG.debug("OTHER type is string");
                         } else {
                             // For complex types, convert to string representation
                             value = otherObj.toString();
-                            LOG.debug("Converted OTHER type to string for column {}", i);
+                            LOG.debug("Converted OTHER type to string");
                         }
                     } else {
                         value = null;
                     }
-                } else if ((columnType == Types.VARBINARY || columnType == Types.LONGVARBINARY || columnType == Types.BINARY)
-                    && sourceType != Types.BLOB) {
+                } else if (binaryColumns[i - 1] && sourceType != Types.BLOB) {
                     value = resultSet.getBytes(i);
                     // LOG.debug("Red bytes for binary column {}: {} bytes", i, value != null ? ((byte[]) value).length : "null");
                 } else if (columnType == Types.NVARCHAR
@@ -442,75 +451,34 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     continue;
                 }
 
+                if (value instanceof Blob) {
+                    value = ((Blob) value).getBinaryStream();
+                } else if (value instanceof Clob) {
+                    value = ((Clob) value).getCharacterStream();
+                }
+
                 // Special handling: SQL Server bulk copy requires binary columns to contain
                 // byte[] data. If we have non-binary source type with hex string data,
                 // convert hex string to bytes. Applies to VARBINARY, LONGVARBINARY (image), BINARY, BLOB
-                if ((columnType == Types.VARBINARY || columnType == Types.LONGVARBINARY || 
-                     columnType == Types.BINARY || columnType == Types.BLOB) 
+                if (binaryColumns[i - 1]
                     && sourceType != Types.BLOB && sourceType != Types.LONGVARBINARY 
                     && value instanceof String) {
                     String strValue = (String) value;
                     if (!strValue.isEmpty()) {
                         // Check if string is hex (from PostgreSQL encode(col, 'hex'))
-                        if (strValue.matches("(?i)^[0-9a-f]+$")) {
+                        if ((strValue.length() % 2 == 0) && strValue.matches("(?i)^[0-9a-f]+$")) {
                             // Convert hex string to byte array
                             value = hexStringToBytes(strValue);
-                            LOG.debug("Converted hex string to byte[] for binary column {}: {} bytes", i, 
+                            LOG.debug("Converted hex string to byte[]: {} bytes",
                                 ((byte[])value).length);
                         } else {
                             // Not hex, convert string characters to bytes
                             value = strValue.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                            LOG.debug("Converted string to UTF-8 bytes for binary column {}: {} bytes", i, 
+                            LOG.debug("Converted string to UTF-8 bytes: {} bytes",
                                 strValue.length());
                         }
                     } else {
                         value = null;
-                    }
-                }
-
-                // Handle Oracle specific types by class name checking to avoid hard dependency if possible,
-                // or just handle them if they leaked through getObject()
-                if (value != null) {
-                    String className = value.getClass().getName();
-                    if (className.contains("oracle.sql.RAW")) {
-                        // FORCE conversion to byte[]
-                        try {
-                            // Reflection or casting if we added dependency
-                            // For now, let's try to assume we can get bytes from it or it should have been caught by getBytes logic
-                            // If we really want to fix it:
-                            java.lang.reflect.Method method = value.getClass().getMethod("getBytes");
-                            value = method.invoke(value);
-                            LOG.debug("Converted oracle.sql.RAW to byte[] for column {}", i);
-                        } catch (Exception e) {
-                            LOG.warn("Failed to convert oracle.sql.RAW to bytes for column {}", i, e);
-                        }
-                    } else if (className.contains("oracle.sql.TIMESTAMP")) {
-                         // Convert to java.sql.Timestamp
-                        try {
-                           java.lang.reflect.Method method = value.getClass().getMethod("timestampValue");
-                           value = method.invoke(value);
-                           LOG.debug("Converted oracle.sql.TIMESTAMP to java.sql.Timestamp for column {}", i);
-                        } catch (Exception e) {
-                           LOG.warn("Failed to convert oracle.sql.TIMESTAMP to java.sql.Timestamp for column {}", i, e);
-                        }
-                    } else if (className.contains("oracle.sql.BLOB")) {
-                        // FORCE conversion to InputStream
-                       try {
-                           java.lang.reflect.Method method = value.getClass().getMethod("getBinaryStream");
-                           value = method.invoke(value);
-                           LOG.debug("Converted oracle.sql.BLOB to InputStream for column {}", i);
-                       } catch (Exception e) {
-                           LOG.warn("Failed to convert oracle.sql.BLOB to InputStream for column {}", i, e);
-                       }
-                    } else if (className.contains("oracle.sql.CLOB")) {
-                        // FORCE conversion to CharacterStream
-                       try {
-                           java.lang.reflect.Method method = value.getClass().getMethod("getCharacterStream");
-                           value = method.invoke(value);
-                           LOG.debug("Converted oracle.sql.CLOB to Reader for column {}", i);
-                       } catch (Exception e) {
-                           LOG.warn("Failed to convert oracle.sql.CLOB to Reader for column {}", i, e);
-                       }
                     }
                 }
 
@@ -539,7 +507,7 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                 int sourceType = sourceTypes[i - 1];
                 Object value;
 
-                if (columnType == Types.VARBINARY || columnType == Types.LONGVARBINARY || columnType == Types.BINARY || columnType == Types.BLOB
+                if (binaryColumns[i - 1]
                     || sourceType == Types.BLOB || sourceType == Types.LONGVARBINARY) {
                     InputStream stream = resultSet.getBinaryStream(i);
                     value = resultSet.wasNull() ? null : stream;
