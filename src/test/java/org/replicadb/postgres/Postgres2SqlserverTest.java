@@ -97,7 +97,6 @@ class Postgres2SqlserverTest {
       assertEquals(TOTAL_SINK_ROWS, countSinkRows());
    }
 
-   @Disabled("SQL Server sink does not support complete-atomic mode with staging schema - requires schema creation")
    @Test
    void testPostgres2SqlserverCompleteAtomic () throws ParseException, IOException, SQLException {
       String[] args = {
@@ -108,7 +107,7 @@ class Postgres2SqlserverTest {
           "--sink-connect", sqlserver.getJdbcUrl(),
           "--sink-user", sqlserver.getUsername(),
           "--sink-password", sqlserver.getPassword(),
-          "--sink-staging-schema", sqlserver.getDatabaseName(),
+          "--sink-staging-schema", "dbo",
           "--source-columns", SOURCE_COLUMNS,
           "--sink-columns", SINK_COLUMNS,
           "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
@@ -119,7 +118,6 @@ class Postgres2SqlserverTest {
 
    }
 
-   @Disabled("SQL Server sink does not support incremental mode with staging schema - requires schema creation")
    @Test
    void testPostgres2SqlserverIncremental () throws ParseException, IOException, SQLException {
       String[] args = {
@@ -130,7 +128,7 @@ class Postgres2SqlserverTest {
           "--sink-connect", sqlserver.getJdbcUrl(),
           "--sink-user", sqlserver.getUsername(),
           "--sink-password", sqlserver.getPassword(),
-          "--sink-staging-schema", sqlserver.getDatabaseName(),
+          "--sink-staging-schema", "dbo",
           "--source-columns", SOURCE_COLUMNS,
           "--sink-columns", SINK_COLUMNS,
           "--mode", ReplicationMode.INCREMENTAL.getModeText()
@@ -160,7 +158,6 @@ class Postgres2SqlserverTest {
       assertEquals(TOTAL_SINK_ROWS, countSinkRows());
    }
 
-   @Disabled("SQL Server sink does not support complete-atomic mode with staging schema - requires schema creation")
    @Test
    void testPostgres2SqlserverCompleteAtomicParallel () throws ParseException, IOException, SQLException {
       String[] args = {
@@ -171,7 +168,7 @@ class Postgres2SqlserverTest {
           "--sink-connect", sqlserver.getJdbcUrl(),
           "--sink-user", sqlserver.getUsername(),
           "--sink-password", sqlserver.getPassword(),
-          "--sink-staging-schema", sqlserver.getDatabaseName(),
+          "--sink-staging-schema", "dbo",
           "--source-columns", SOURCE_COLUMNS,
           "--sink-columns", SINK_COLUMNS,
           "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
@@ -182,7 +179,6 @@ class Postgres2SqlserverTest {
       assertEquals(TOTAL_SINK_ROWS, countSinkRows());
    }
 
-   @Disabled("SQL Server sink does not support incremental mode with staging schema - requires schema creation")
    @Test
    void testSqlserver2PostgresIncrementalParallel () throws ParseException, IOException, SQLException {
       String[] args = {
@@ -193,7 +189,7 @@ class Postgres2SqlserverTest {
           "--sink-connect", sqlserver.getJdbcUrl(),
           "--sink-user", sqlserver.getUsername(),
           "--sink-password", sqlserver.getPassword(),
-          "--sink-staging-schema", sqlserver.getDatabaseName(),
+          "--sink-staging-schema", "dbo",
           "--source-columns", SOURCE_COLUMNS,
           "--sink-columns", SINK_COLUMNS,
           "--mode", ReplicationMode.INCREMENTAL.getModeText(),

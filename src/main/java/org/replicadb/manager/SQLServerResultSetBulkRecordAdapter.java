@@ -400,16 +400,10 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     value = resultSet.wasNull() ? null : (structObj != null ? structObj.toString() : null);
                     LOG.debug("Converted STRUCT to string for column {}", i);
                 } else if (sourceType == Types.SQLXML) {
-                    // Convert SQLXML to string (stored as CLOB in SQL Server)
-                    java.sql.SQLXML xmlData = resultSet.getSQLXML(i);
-                    if (resultSet.wasNull()) {
-                        value = null;
-                    } else if (xmlData != null) {
-                        value = xmlData.getString();
-                        LOG.debug("Converted SQLXML to string for column {}", i);
-                    } else {
-                        value = null;
-                    }
+                    // Skip SQLXML - converting to string causes bulk copy hex format errors
+                    // SQL Server has native XML type, but bulk copy with string XML content fails
+                    LOG.debug("Skipping SQLXML for column {} (causes bulk copy errors)", i);
+                    value = null;
                 } else if (sourceType == Types.OTHER) {
                     // Handle OTHER type (PostgreSQL specific types, etc.)
                     Object otherObj = resultSet.getObject(i);
@@ -417,14 +411,20 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                         value = null;
                     } else if (otherObj != null) {
                         if (otherObj instanceof byte[]) {
-                            value = otherObj;  // Keep as bytes
+                            value = otherObj;  // Keep as bytes for VARBINARY columns
+                            LOG.debug("OTHER type is binary data for column {}", i);
+                        } else if (otherObj instanceof String) {
+                            // For text-based OTHER types, pass as-is
+                            value = otherObj;
+                            LOG.debug("OTHER type is string for column {}", i);
                         } else {
+                            // For complex types, convert to string representation
                             value = otherObj.toString();
+                            LOG.debug("Converted OTHER type to string for column {}", i);
                         }
                     } else {
                         value = null;
                     }
-                    LOG.debug("Converted OTHER type to appropriate format for column {}", i);
                 } else if (columnType == Types.VARBINARY
                     && sourceType != Types.BLOB
                     && sourceType != Types.LONGVARBINARY) {

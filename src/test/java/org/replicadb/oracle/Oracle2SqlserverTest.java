@@ -104,7 +104,7 @@ class Oracle2SqlserverTest {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", sqlserver.getJdbcUrl(), "--sink-user", sqlserver.getUsername(), "--sink-password",
-				sqlserver.getPassword(), "--sink-staging-schema", sqlserver.getUsername(), "--mode",
+				sqlserver.getPassword(), "--sink-staging-schema", "dbo", "--mode",
 				ReplicationMode.COMPLETE_ATOMIC.getModeText()};
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
@@ -116,7 +116,7 @@ class Oracle2SqlserverTest {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", sqlserver.getJdbcUrl(), "--sink-user", sqlserver.getUsername(), "--sink-password",
-				sqlserver.getPassword(), "--sink-staging-schema", sqlserver.getUsername(), "--mode",
+				sqlserver.getPassword(), "--sink-staging-schema", "dbo", "--mode",
 				ReplicationMode.INCREMENTAL.getModeText()};
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
@@ -139,7 +139,7 @@ class Oracle2SqlserverTest {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", sqlserver.getJdbcUrl(), "--sink-user", sqlserver.getUsername(), "--sink-password",
-				sqlserver.getPassword(), "--sink-staging-schema", sqlserver.getUsername(), "--mode",
+				sqlserver.getPassword(), "--sink-staging-schema", "dbo", "--mode",
 				ReplicationMode.COMPLETE_ATOMIC.getModeText(), "--jobs", "4"};
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
@@ -151,7 +151,7 @@ class Oracle2SqlserverTest {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", sqlserver.getJdbcUrl(), "--sink-user", sqlserver.getUsername(), "--sink-password",
-				sqlserver.getPassword(), "--sink-staging-schema", sqlserver.getUsername(), "--mode",
+				sqlserver.getPassword(), "--sink-staging-schema", "dbo", "--mode",
 				ReplicationMode.INCREMENTAL.getModeText(), "--jobs", "4"};
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
