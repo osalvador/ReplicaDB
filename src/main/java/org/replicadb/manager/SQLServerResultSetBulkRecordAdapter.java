@@ -400,9 +400,16 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     value = resultSet.wasNull() ? null : (structObj != null ? structObj.toString() : null);
                     LOG.debug("Converted STRUCT to string for column {}", i);
                 } else if (sourceType == Types.SQLXML) {
-                    // Skip SQLXML - no direct SQL Server equivalent, causes bulk copy hex format errors
-                    LOG.debug("Skipping SQLXML for column {} (no SQL Server equivalent)", i);
-                    value = null;
+                    // Convert SQLXML to string (stored as CLOB in SQL Server)
+                    java.sql.SQLXML xmlData = resultSet.getSQLXML(i);
+                    if (resultSet.wasNull()) {
+                        value = null;
+                    } else if (xmlData != null) {
+                        value = xmlData.getString();
+                        LOG.debug("Converted SQLXML to string for column {}", i);
+                    } else {
+                        value = null;
+                    }
                 } else if (sourceType == Types.OTHER) {
                     // Handle OTHER type (PostgreSQL specific types, etc.)
                     Object otherObj = resultSet.getObject(i);
