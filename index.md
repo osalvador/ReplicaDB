@@ -20,22 +20,22 @@ ReplicaDB is **Cross Platform**; you can replicate data across different platfor
 ![ReplicaDB-Conceptual](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Conceptual.jpg){:class="img-responsive"}
 
 
-# Why another database replication software
+# Why ReplicaDB
 
-Because I have not found any tool that covers my needs:
+ReplicaDB addresses common gaps in existing database replication tools by providing:
 
-- Open Source.
-- Java based cross-platform solution, compatible with Linux, Windows, and MacOS.
-- Any database engine SQL, NoSQL, or other persistent stores like CSV, Amazon S3, or Kafka. 
-- Simple architecture, just a command line tool that can run on any server (including my laptop), without any remote agents in the databases.
-- Good performance for a large amount of data. 
-- I do not need streaming replication or a pure change data capture (CDC) system that requires installation in the source database.
+- **Open Source:** Transparent development and community-driven improvements
+- **Cross-Platform:** Java-based solution compatible with Linux, Windows, and macOS
+- **Heterogeneous Support:** Works with SQL, NoSQL, and persistent stores like CSV, Amazon S3, or Kafka
+- **Simple Architecture:** Standalone command-line tool without requiring database agents
+- **High Performance:** Optimized for bulk data transfer with large datasets
+- **Non-Intrusive:** Focused on batch replication without requiring database triggers or CDC installation
 
 I have reviewed and tested other open source tools and none of them meets all the above requirements:
 
-- **SymetricDS**: It was the best option of all, but I was looking for a smaller solution, mainly focused on performance. SymmetricDS is intrusive since installs database triggers that capture data changes in a data capture table. This table requires maintenance. SymmetricDS is more like a CDC system based on triggers.  
-- **Sqoop**: Sqoop is what I was looking for, but oh! it is only valid for Hadoop.
-- **Kettel** and **Talend**: Both are very complete ETL tools, but for each of the different source and sink tables that I have to replicate, I should do a custom development
+- **SymmetricDS**: It was the best option of all, but I was looking for a smaller solution, mainly focused on performance. SymmetricDS is intrusive since it installs database triggers that capture data changes in a data capture table. This table requires maintenance. SymmetricDS is more like a CDC system based on triggers.  
+- **Sqoop**: Sqoop is what I was looking for, however, it is only valid for Hadoop.
+- **Pentaho** and **Talend**: Both are very complete ETL tools, but for each of the different source and sink tables that I have to replicate, I should do custom development
 
 
 # Installation
@@ -44,18 +44,18 @@ I have reviewed and tested other open source tools and none of them meets all th
 
 ### System Requirements
 
-ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Standard Edition (SE) or Java Development Kit (JDK) Standard Edition (SE) version 8.0 or above. The minimum operating system requirements are:
+ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Standard Edition (SE) or Java Development Kit (JDK) Standard Edition (SE) version 11 or above. The minimum system requirements are:
 
-*   Java SE Runtime Environment 8 or above    
-*   Memory - 128 (MB) available
+*   Java SE Runtime Environment 11 or above
+*   Memory - 256 MB minimum, 1 GB recommended for large datasets
 
 ### Install
 
-Just download [latest](https://github.com/osalvador/ReplicaDB/releases) release and unzip it. 
+Just download the [latest release](https://github.com/osalvador/ReplicaDB/releases) and unzip it. 
 
 ```bash
-$ curl -o ReplicaDB-0.15.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.15.0/ReplicaDB-0.15.0.tar.gz"
-$ tar -xvzf ReplicaDB-0.15.0.tar.gz
+$ curl -o ReplicaDB-0.16.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.16.0/ReplicaDB-0.16.0.tar.gz"
+$ tar -xvzf ReplicaDB-0.16.0.tar.gz
 $ ./bin/replicadb --help
 ```
 
@@ -74,7 +74,7 @@ For example, to replicate a DB2 database table as both source and sink
 ######################## ReplicadB General Options ########################
 mode=complete
 jobs=1
-############################# Soruce Options ##############################
+############################# Source Options ##############################
 source.connect=jdbc:db2://localhost:50000/testdb
 source.user=${DB2USR}
 source.password=${DB2PASS}
@@ -189,10 +189,10 @@ $ replicadb --mode=complete -j=1 \
 | SQL Server              | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |       <i class="far fa-times-circle"></i>        |
 | SQLite                  | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  |       <i class="far fa-times-circle"></i>        | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
 | MongoDB                 | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  |       <i class="far fa-times-circle"></i>        | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
-| CSV                     | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  |                                                  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
+| CSV                     | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  |                                                  | <i class="far fa-check-circle text-success"></i> |       <i class="far fa-times-circle"></i>        |
 | Denodo                  | <i class="far fa-check-circle text-success"></i>  |                                                   |                                                  |                                                  |                                                  |
 | Kafka                   |        <i class="far fa-times-circle"></i>        |                                                   |                                                  | <i class="far fa-check-circle text-success"></i> | <i class="far fa-check-circle text-success"></i> |
-| Amazon S3               |        <i class="far fa-times-circle"></i>        | <i class="far fa-check-circle text-success"></i>  |                                                  |                                                  | <i class="far fa-check-circle text-success"></i> |
+| Amazon S3               |        <i class="far fa-times-circle"></i>        | <i class="far fa-check-circle text-success"></i>  |                                                  |                                                  |       <i class="far fa-times-circle"></i>        |
 | JDBC-Compliant database | <i class="far fa-check-circle text-success"></i>  | <i class="far fa-check-circle text-success"></i>  |       <i class="far fa-times-circle"></i>        |       <i class="far fa-times-circle"></i>        |       <i class="far fa-check-circle text-success"></i>    |
 
 Supported feature <i class="far fa-check-circle text-success"></i>. Unsupported feature <i class="far fa-times-circle"></i>. Not applicable feature `blank`
