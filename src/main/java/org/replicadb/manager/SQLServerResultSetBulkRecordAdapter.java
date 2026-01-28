@@ -468,6 +468,12 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     }
                 }
 
+                // Temporary Debugging: Log ALL columns
+                LOG.debug("RowData Col {}: SrcType={}, ValueClass={}, Value={}", 
+                    i, columnType, 
+                    value == null ? "null" : value.getClass().getName(),
+                    value);
+                
                 if (value != null && (columnType == Types.VARBINARY || columnType == Types.LONGVARBINARY || columnType == Types.BINARY || columnType == Types.BLOB)) {
                     if (value instanceof byte[]) {
                          LOG.debug("Column {} (Binary/Blob) value is byte array of length: {}", i, ((byte[])value).length);
