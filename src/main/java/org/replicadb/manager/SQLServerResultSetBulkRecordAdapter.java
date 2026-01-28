@@ -426,8 +426,7 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                         value = null;
                     }
                 } else if ((columnType == Types.VARBINARY || columnType == Types.LONGVARBINARY || columnType == Types.BINARY)
-                    && sourceType != Types.BLOB
-                    && sourceType != Types.LONGVARBINARY) {
+                    && sourceType != Types.BLOB) {
                     value = resultSet.getBytes(i);
                 } else if (columnType == Types.NVARCHAR
                     && sourceType != Types.CLOB
