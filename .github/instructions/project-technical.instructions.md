@@ -121,8 +121,10 @@ try {
 ```xml
 <!-- Pattern: Version properties for consistency -->
 <properties>
-    <version.debezium>1.5.2.Final</version.debezium>
-    <version.testContainers>1.18.3</version.testContainers>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+    <version.testContainers>1.21.3</version.testContainers>
 </properties>
 
 <!-- Database drivers bundled for convenience -->
@@ -135,11 +137,15 @@ try {
 
 ### Log4j2 Integration Pattern
 ```java
-// Consistent logging across all classes
+// Consistent logging pattern used across ALL manager classes
 private static final Logger LOG = LogManager.getLogger(ClassName.class.getName());
 
 // Thread-aware logging for parallel processing
 LOG.info("{}: Executing SQL statement: {}", Thread.currentThread().getName(), stmt);
+
+// Use structured logging with placeholders (NOT string concatenation)
+LOG.info("Total process time: {}ms", elapsed);
+LOG.trace("Trying with scheme: {}", scheme);
 ```
 
 ## Testing Philosophy and Strategies
@@ -310,6 +316,168 @@ public class DatabaseUtils {
 ```
 
 ## Development Workflow Guidelines
+
+### Build and Test Commands
+
+**Standard Development Build**
+```bash
+# Build with integration tests (excludes problematic Oracle LOB tests)
+mvn -B package --file pom.xml -Dtest='!Oracle2OracleCrossVersionLobTest'
+
+# Build without tests (faster development cycle)
+mvn -DskipTests -B package --file pom.xml
+
+# Clean build with dependency resolution
+mvn clean install -Dmaven.javadoc.skip=true -DskipTests -B -V
+```
+
+**Release Build**
+```bash
+# Full release with all dependencies
+mvn clean install -Dmaven.javadoc.skip=true -DskipTests -B -V -P release
+
+# Release without Oracle JDBC driver (licensing compliance)
+mvn clean install -Dmaven.javadoc.skip=true -DskipTests -B -V -P release-no-oracle
+```
+
+**Running Tests**
+```bash
+# Run all tests
+mvn test
+
+# Run specific test class
+mvn test -Dtest=MySQL2PostgresTest
+
+# Run tests with TestContainers (requires Docker)
+mvn test -Dtest='*2PostgresTest'
+```
+
+### Local Development Setup
+
+1. **Prerequisites**
+   - Java 11 JDK (LTS recommended)
+   - Maven 3.6+
+   - Docker (for TestContainers integration tests)
+   - Git
+
+2. **Initial Setup**
+   ```bash
+   git clone https://github.com/osalvador/ReplicaDB.git
+   cd ReplicaDB
+   mvn clean package -DskipTests
+   ```
+
+3. **Running ReplicaDB Locally**
+   ```bash
+   # After building, use the CLI wrapper scripts
+   ./bin/replicadb --options-file conf/replicadb.conf
+   
+   # Or run directly with Java
+   java -jar target/ReplicaDB-0.16.0.jar --source-connect jdbc:postgresql://...
+   ```
+
+### Release Process Workflow
+
+ReplicaDB uses an **automated release script** that handles version management:
+
+```bash
+# Create and publish a new release
+./release.sh 0.16.0
+```
+
+**What happens automatically:**
+1. Validates semantic versioning format (X.Y.Z)
+2. Updates `pom.xml` with new version
+3. Updates `README.md` installation instructions
+4. Creates git commit: `Release v0.16.0`
+5. Creates git tag: `v0.16.0`
+6. Pushes to origin/master
+7. GitHub Actions CI/CD triggered on tag push
+8. Builds release artifacts (JAR, tar.gz, zip)
+9. Publishes Docker images
+10. Creates GitHub release with assets
+
+**Manual steps** (if needed):
+```bash
+# Check current version
+mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec
+
+# View release history
+git tag -l "v*"
+
+# Build specific release profile
+mvn clean install -P release
+```
+
+### Continuous Integration Workflows
+
+**CT_Push.yml** (Continuous Testing on Push)
+- Triggers on: Push to master, Pull requests
+- Java: 11 with Adopt distribution
+- Tests: All except Oracle LOB cross-version tests
+- Builds: Standard release artifacts
+
+**CI_Release.yml** (Release Pipeline)
+- Triggers on: Git tags matching `v*`, Manual workflow_dispatch
+- Java: 11 with Adopt distribution
+- Profiles: `release` (full) and `release-no-oracle`
+- Outputs: JAR, tar.gz, zip archives, Docker images
+- Deployment: Automatic GitHub release creation
+
+### Debug and Development Tips
+
+**TestContainers Debugging**
+```java
+// Enable TestContainers logging
+@Testcontainers
+class MyTest {
+    static {
+        // Shows container startup logs
+        System.setProperty("testcontainers.reuse.enable", "true");
+    }
+}
+```
+
+**Logging Configuration**
+- Development: Edit `src/main/resources/log4j2.xml`
+- Testing: Edit `src/test/resources/log4j2-test.xml`
+- Runtime: Use `--verbose` CLI flag (TRACE, DEBUG, INFO, WARN, ERROR)
+
+```bash
+# Run with debug logging
+java -jar ReplicaDB.jar --verbose TRACE --options-file config.conf
+```
+
+**Maven Profiles**
+```xml
+<!-- pom.xml profiles available -->
+<profiles>
+    <profile>
+        <id>release</id>
+        <!-- Full release with all JDBC drivers including Oracle -->
+    </profile>
+    <profile>
+        <id>release-no-oracle</id>
+        <!-- Release excluding Oracle JDBC (licensing) -->
+    </profile>
+</profiles>
+```
+
+### IDE Configuration
+
+**IntelliJ IDEA**
+1. Import as Maven project
+2. Set SDK to Java 11
+3. Enable annotation processing (if using Lombok in future)
+4. Configure TestContainers plugin for better integration test experience
+
+**VS Code**
+1. Install Java Extension Pack
+2. Configure `java.configuration.runtimes` for Java 11
+3. Use integrated terminal for Maven commands
+4. TestContainers work out-of-the-box with Docker Desktop
+
+### Development Workflow Guidelines
 
 ### Adding New Database Support
 1. **Create manager class** extending SqlManager
