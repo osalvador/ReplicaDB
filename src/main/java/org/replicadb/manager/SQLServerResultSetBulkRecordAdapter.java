@@ -552,7 +552,7 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                 int columnType = columnTypes[i - 1];
                 Object value;
 
-                if (columnType == Types.VARBINARY) {
+                if (columnType == Types.VARBINARY || columnType == Types.LONGVARBINARY || columnType == Types.BINARY || columnType == Types.BLOB) {
                     InputStream stream = resultSet.getBinaryStream(i);
                     value = resultSet.wasNull() ? null : stream;
                 } else {
