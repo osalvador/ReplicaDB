@@ -443,21 +443,22 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                 }
 
                 // Special handling: SQL Server bulk copy requires VARBINARY columns to contain
-                // byte[] or valid hex strings. If we have non-binary source type being mapped
-                // to VARBINARY with string data, convert it to valid hex format
+                // byte[] data. If we have non-binary source type with hex string data,
+                // convert hex string to bytes
                 if (columnType == Types.VARBINARY && sourceType != Types.BLOB 
                     && sourceType != Types.LONGVARBINARY && value instanceof String) {
                     String strValue = (String) value;
                     if (!strValue.isEmpty()) {
-                        // Check if string is already hex (from PostgreSQL encode(col, 'hex'))
+                        // Check if string is hex (from PostgreSQL encode(col, 'hex'))
                         if (strValue.matches("(?i)^[0-9a-f]+$")) {
-                            // Already hex, just add 0x prefix
-                            value = "0x" + strValue;
-                            LOG.debug("Added 0x prefix to hex string for VARBINARY column {}", i);
+                            // Convert hex string to byte array
+                            value = hexStringToBytes(strValue);
+                            LOG.debug("Converted hex string to byte[] for VARBINARY column {}: {} bytes", i, 
+                                ((byte[])value).length);
                         } else {
-                            // Not hex yet, convert string to hex representation
-                            value = stringToHex(strValue);
-                            LOG.debug("Converted string to hex for VARBINARY column {}: {} chars", i, 
+                            // Not hex, convert string characters to bytes
+                            value = strValue.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                            LOG.debug("Converted string to UTF-8 bytes for VARBINARY column {}: {} bytes", i, 
                                 strValue.length());
                         }
                     } else {
@@ -522,17 +523,19 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     }
 
     /**
-     * Converts a string to its hexadecimal representation (for VARBINARY columns).
-     * For example: "hello" -> "0x68656c6c6f"
+     * Converts a hexadecimal string to byte array (for VARBINARY columns).
+     * For example: "48656c6c6f" -> byte[] {0x48, 0x65, 0x6c, 0x6c, 0x6f}
      *
-     * @param str the string to convert
-     * @return hexadecimal representation with 0x prefix
+     * @param hexString the hex string to convert (without 0x prefix)
+     * @return byte array
      */
-    private String stringToHex(String str) {
-        StringBuilder hex = new StringBuilder("0x");
-        for (char c : str.toCharArray()) {
-            hex.append(String.format("%02x", (int) c));
+    private byte[] hexStringToBytes(String hexString) {
+        int len = hexString.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(hexString.charAt(i), 16) << 4)
+                    + Character.digit(hexString.charAt(i + 1), 16));
         }
-        return hex.toString();
+        return data;
     }
 }
