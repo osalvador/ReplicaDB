@@ -442,23 +442,25 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     continue;
                 }
 
-                // Special handling: SQL Server bulk copy requires VARBINARY columns to contain
+                // Special handling: SQL Server bulk copy requires binary columns to contain
                 // byte[] data. If we have non-binary source type with hex string data,
-                // convert hex string to bytes
-                if (columnType == Types.VARBINARY && sourceType != Types.BLOB 
-                    && sourceType != Types.LONGVARBINARY && value instanceof String) {
+                // convert hex string to bytes. Applies to VARBINARY, LONGVARBINARY (image), BINARY, BLOB
+                if ((columnType == Types.VARBINARY || columnType == Types.LONGVARBINARY || 
+                     columnType == Types.BINARY || columnType == Types.BLOB) 
+                    && sourceType != Types.BLOB && sourceType != Types.LONGVARBINARY 
+                    && value instanceof String) {
                     String strValue = (String) value;
                     if (!strValue.isEmpty()) {
                         // Check if string is hex (from PostgreSQL encode(col, 'hex'))
                         if (strValue.matches("(?i)^[0-9a-f]+$")) {
                             // Convert hex string to byte array
                             value = hexStringToBytes(strValue);
-                            LOG.debug("Converted hex string to byte[] for VARBINARY column {}: {} bytes", i, 
+                            LOG.debug("Converted hex string to byte[] for binary column {}: {} bytes", i, 
                                 ((byte[])value).length);
                         } else {
                             // Not hex, convert string characters to bytes
                             value = strValue.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                            LOG.debug("Converted string to UTF-8 bytes for VARBINARY column {}: {} bytes", i, 
+                            LOG.debug("Converted string to UTF-8 bytes for binary column {}: {} bytes", i, 
                                 strValue.length());
                         }
                     } else {
