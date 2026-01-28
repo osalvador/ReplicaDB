@@ -468,6 +468,34 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     }
                 }
 
+                // Handle Oracle specific types by class name checking to avoid hard dependency if possible,
+                // or just handle them if they leaked through getObject()
+                if (value != null) {
+                    String className = value.getClass().getName();
+                    if (className.contains("oracle.sql.RAW")) {
+                        // FORCE conversion to byte[]
+                        try {
+                            // Reflection or casting if we added dependency
+                            // For now, let's try to assume we can get bytes from it or it should have been caught by getBytes logic
+                            // If we really want to fix it:
+                            java.lang.reflect.Method method = value.getClass().getMethod("getBytes");
+                            value = method.invoke(value);
+                            LOG.debug("Converted oracle.sql.RAW to byte[] for column {}", i);
+                        } catch (Exception e) {
+                            LOG.warn("Failed to convert oracle.sql.RAW to bytes for column {}", i, e);
+                        }
+                    } else if (className.contains("oracle.sql.TIMESTAMP")) {
+                         // Convert to java.sql.Timestamp
+                        try {
+                           java.lang.reflect.Method method = value.getClass().getMethod("timestampValue");
+                           value = method.invoke(value);
+                           LOG.debug("Converted oracle.sql.TIMESTAMP to java.sql.Timestamp for column {}", i);
+                        } catch (Exception e) {
+                           LOG.warn("Failed to convert oracle.sql.TIMESTAMP to java.sql.Timestamp for column {}", i, e);
+                        }
+                    }
+                }
+
                 // Temporary Debugging: Log ALL columns
                 LOG.debug("RowData Col {}: SrcType={}, ValueClass={}, Value={}", 
                     i, columnType, 
