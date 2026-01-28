@@ -424,6 +424,21 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     continue;
                 }
 
+                // Special handling: SQL Server bulk copy requires VARBINARY columns to contain
+                // byte[] or valid hex strings. If we have a non-binary source type being mapped
+                // to VARBINARY with string data, set to NULL to avoid "not in a valid hex format" errors
+                if (columnType == Types.VARBINARY && sourceType != Types.BLOB 
+                    && sourceType != Types.LONGVARBINARY && value instanceof String) {
+                    String strValue = (String) value;
+                    // Check if string looks like hex (starts with 0x or all hex chars)
+                    boolean isValidHex = strValue.matches("(?i)^(0x)?[0-9a-f]*$");
+                    if (!isValidHex || strValue.isEmpty()) {
+                        LOG.debug("Skipping non-hex string value for VARBINARY column {}: {}", i, 
+                            strValue.length() > 50 ? strValue.substring(0, 50) + "..." : strValue);
+                        value = null;
+                    }
+                }
+
                 if (value instanceof Integer && (columnType == Types.BIT || columnType == Types.BOOLEAN)) {
                     value = ((Integer) value) != 0;
                 } else if (value instanceof BigDecimal && (columnType == Types.BIT || columnType == Types.BOOLEAN)) {
