@@ -379,11 +379,11 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                 int sourceType = sourceTypes[i - 1];
                 Object value;
 
-                // Handle Oracle INTERVAL types by converting to string
+                // Handle Oracle INTERVAL types by setting to NULL
+                // (no direct SQL Server equivalent, string conversion causes bulk copy errors)
                 if (sourceType == -104 || sourceType == -103) {  // INTERVALDS or INTERVALYM
-                    Object intervalObj = resultSet.getObject(i);
-                    value = resultSet.wasNull() ? null : (intervalObj != null ? intervalObj.toString() : null);
-                    LOG.debug("Converted Oracle INTERVAL type {} to string for column {}", sourceType, i);
+                    LOG.debug("Skipping Oracle INTERVAL type {} for column {} (no SQL Server equivalent)", sourceType, i);
+                    value = null;
                 } else if (sourceType == Types.ROWID) {
                     // Convert ROWID to string
                     java.sql.RowId rowId = resultSet.getRowId(i);
@@ -400,16 +400,9 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     value = resultSet.wasNull() ? null : (structObj != null ? structObj.toString() : null);
                     LOG.debug("Converted STRUCT to string for column {}", i);
                 } else if (sourceType == Types.SQLXML) {
-                    // Convert SQLXML to string
-                    java.sql.SQLXML xmlData = resultSet.getSQLXML(i);
-                    if (resultSet.wasNull()) {
-                        value = null;
-                    } else if (xmlData != null) {
-                        value = xmlData.getString();
-                    } else {
-                        value = null;
-                    }
-                    LOG.debug("Converted SQLXML to string for column {}", i);
+                    // Skip SQLXML - no direct SQL Server equivalent, causes bulk copy hex format errors
+                    LOG.debug("Skipping SQLXML for column {} (no SQL Server equivalent)", i);
+                    value = null;
                 } else if (sourceType == Types.OTHER) {
                     // Handle OTHER type (PostgreSQL specific types, etc.)
                     Object otherObj = resultSet.getObject(i);
