@@ -17,6 +17,7 @@ layout: page
   - [3.2 Connecting to a Database Server](#32-connecting-to-a-database-server)
   - [3.3 Selecting the Data to Replicate](#33-selecting-the-data-to-replicate)
   - [3.4 Free-form Query Replications](#34-free-form-query-replications)
+  - [3.5 Bandwidth Throttling](#35-bandwidth-throttling)
 - [4. Notes for specific connectors](#4-notes-for-specific-connectors)
   - [4.1 CSV files Connector](#41-csv-files-connector)
     - [4.1.1 CSV File as Source](#411-csv-file-as-source)
@@ -49,13 +50,13 @@ layout: page
 
 # 1. Introduction
 
-ReplicaDB is primarily a command line, portable and cross-platform tool for data replication between a source and a sink databases. Its main objective is performance, implementing all the specific DataBase engine techniques to achieve the best performance for each of them, either as a source or as a sink.
+ReplicaDB is primarily a command line, portable and cross-platform tool for data replication between source and sink databases. Its main objective is performance, implementing database engine-specific techniques to achieve optimal performance for each database, whether used as a source or sink.
 
 ReplicaDB follows the Convention over configuration design, so the user will introduce the minimum parameters necessary for the replication process, the rest will be default.
 
 # 2. Basic Usage
 
-With ReplicaDB, you can _replicate_ data between relational databases and non-relational databases. The input to the replication process is a database table or custom query. ReplicaDB will read the source table row-by-row and the output of this replication process is q table in the sink database containing a copy of the source table. The replication process is performed in parallel.
+With ReplicaDB, you can _replicate_ data between relational databases and non-relational databases. The input to the replication process is a database table or custom query. ReplicaDB will read the source table row-by-row and the output of this replication process is a table in the sink database containing a copy of the source data. The replication process is performed in parallel.
 
 By default, ReplicaDB will truncate the sink table before populating it with data, unless `--sink-disable-truncate false` is indicated.
 
@@ -138,7 +139,7 @@ usage: replicadb [OPTIONS]
 
 | Argument                                                | Description                                                                                              | Default            |
 |---------------------------------------------------------|----------------------------------------------------------------------------------------------------------|--------------------|
-| `--fetch-size <fetch-size>`                             | Number of entries to read from database at once.                                                         | `100`              |
+| `--fetch-size <fetch-size>`                             | Number of entries to read from database at once.                                                         | `5000`             |
 | `-h`,`--help`                                           | Print this help screen                                                                                   |                    |
 | `-j`,`--jobs <n>`                                       | Use n jobs to replicate in parallel.                                                                     | `4`                |
 | `--mode <mode>`                                         | Specifies the replication mode. The allowed values are `complete`, `complete-atomic` or `incremental`    | `complete`         |
@@ -149,7 +150,7 @@ usage: replicadb [OPTIONS]
 | `--sink-disable-escape`                                 | Escape strings before populating to the table of the sink database.                                       | `false`            |
 | `--sink-disable-truncate`                               | Disable the truncation of the sink database table before populate.                                       | `false`            |
 | `--sink-password <password>`                            | Sink database authentication password                                                                    |                    |
-| `--sink-staging-schema <schema-name>`                   | Scheme name on the sink database, with right permissions for creating staging tables.                    | `PUBLIC`           |
+| `--sink-staging-schema <schema-name>`                   | Schema name on the sink database, with right permissions for creating staging tables.                    | `PUBLIC`           |
 | `--sink-staging-table <table-name>`                     | Qualified name of the sink staging table. The table must exist in the sink database.                     |                    |
 | `--sink-staging-table-alias <staging-table-name-alias>` | Alias name for the sink staging table.                                                                   |                    |
 | `--sink-table <table-name>`                             | Sink database table to populate                                                                          | `--source-table`   |
@@ -161,6 +162,7 @@ usage: replicadb [OPTIONS]
 | `--source-table <table-name>`                           | Source database table to read                                                                            |                    |
 | `--source-user <username>`                              | Source database authentication username                                                                  |                    |
 | `--source-where <where clause>`                         | Source database WHERE clause to use during extraction                                                    |                    |
+| `--bandwidth-throttling <KB/s>`                         | Limits replication bandwidth to specified kilobytes per second. 0 means unlimited.                       | `0`                |
 | `-v`,`--verbose`                                        | Print more information while working                                                                     |                    |
 | `--version`                                             | Show implementation version and exit                                                                     |                    |
 
@@ -300,6 +302,58 @@ For example:
 ```bash
 $ replicadb --source-query 'SELECT a.*, b.* FROM a JOIN b on (a.id == b.id)'
 ```
+
+<br>
+## 3.5 Bandwidth Throttling
+
+ReplicaDB supports bandwidth throttling to prevent network saturation during large replication jobs. Use the `--bandwidth-throttling` parameter to specify a maximum transfer rate in kilobytes per second.
+
+**Supported Databases:**
+- Oracle (Source/Sink)
+- PostgreSQL (Source/Sink)
+- MySQL/MariaDB (Source/Sink)
+- MongoDB (Source/Sink)
+- SQLite (Source/Sink)
+- Kafka (Sink only)
+- Standard JDBC-compliant databases (Source/Sink)
+
+**Not Supported:**
+- SQL Server
+- CSV/Local Files
+- Amazon S3
+
+**Example:**
+
+```bash
+$ replicadb --mode=complete \
+  --source-connect=jdbc:oracle:thin:@host:port:sid \
+  --source-user=user \
+  --source-password=pass \
+  --source-table=large_table \
+  --sink-connect=jdbc:postgresql://host/db \
+  --sink-user=user \
+  --sink-password=pass \
+  --sink-table=large_table \
+  --bandwidth-throttling=10240  # Limit to 10 MB/s
+```
+
+Or using an options file:
+
+```properties
+mode=complete
+jobs=4
+bandwidth.throttling=10240
+source.connect=jdbc:oracle:thin:@host:port:sid
+source.user=user
+source.password=pass
+source.table=large_table
+sink.connect=jdbc:postgresql://host/db
+sink.user=user
+sink.password=pass
+sink.table=large_table
+```
+
+> **Note:** Bandwidth throttling is applied per job. If you use 4 parallel jobs with a 10 MB/s limit, the total bandwidth could reach up to 40 MB/s.
 
 
 # 4. Notes for specific connectors
