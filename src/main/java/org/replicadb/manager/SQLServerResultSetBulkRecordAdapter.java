@@ -426,15 +426,22 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
 
                 // Special handling: SQL Server bulk copy requires VARBINARY columns to contain
                 // byte[] or valid hex strings. If we have non-binary source type being mapped
-                // to VARBINARY with string data, convert it to hex representation
+                // to VARBINARY with string data, convert it to valid hex format
                 if (columnType == Types.VARBINARY && sourceType != Types.BLOB 
                     && sourceType != Types.LONGVARBINARY && value instanceof String) {
                     String strValue = (String) value;
                     if (!strValue.isEmpty()) {
-                        // Convert string to hex representation (e.g., "hello" -> "68656c6c6f")
-                        value = stringToHex(strValue);
-                        LOG.debug("Converted string to hex for VARBINARY column {}: {} bytes", i, 
-                            strValue.length());
+                        // Check if string is already hex (from PostgreSQL encode(col, 'hex'))
+                        if (strValue.matches("(?i)^[0-9a-f]+$")) {
+                            // Already hex, just add 0x prefix
+                            value = "0x" + strValue;
+                            LOG.debug("Added 0x prefix to hex string for VARBINARY column {}", i);
+                        } else {
+                            // Not hex yet, convert string to hex representation
+                            value = stringToHex(strValue);
+                            LOG.debug("Converted string to hex for VARBINARY column {}: {} chars", i, 
+                                strValue.length());
+                        }
                     } else {
                         value = null;
                     }
