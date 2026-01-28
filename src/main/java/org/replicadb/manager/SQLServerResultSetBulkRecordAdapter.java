@@ -493,6 +493,24 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                         } catch (Exception e) {
                            LOG.warn("Failed to convert oracle.sql.TIMESTAMP to java.sql.Timestamp for column {}", i, e);
                         }
+                    } else if (className.contains("oracle.sql.BLOB")) {
+                        // FORCE conversion to InputStream
+                       try {
+                           java.lang.reflect.Method method = value.getClass().getMethod("getBinaryStream");
+                           value = method.invoke(value);
+                           LOG.debug("Converted oracle.sql.BLOB to InputStream for column {}", i);
+                       } catch (Exception e) {
+                           LOG.warn("Failed to convert oracle.sql.BLOB to InputStream for column {}", i, e);
+                       }
+                    } else if (className.contains("oracle.sql.CLOB")) {
+                        // FORCE conversion to CharacterStream
+                       try {
+                           java.lang.reflect.Method method = value.getClass().getMethod("getCharacterStream");
+                           value = method.invoke(value);
+                           LOG.debug("Converted oracle.sql.CLOB to Reader for column {}", i);
+                       } catch (Exception e) {
+                           LOG.warn("Failed to convert oracle.sql.CLOB to Reader for column {}", i, e);
+                       }
                     }
                 }
 
