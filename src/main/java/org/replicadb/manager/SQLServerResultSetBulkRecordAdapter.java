@@ -428,6 +428,7 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                 } else if ((columnType == Types.VARBINARY || columnType == Types.LONGVARBINARY || columnType == Types.BINARY)
                     && sourceType != Types.BLOB) {
                     value = resultSet.getBytes(i);
+                    // LOG.debug("Red bytes for binary column {}: {} bytes", i, value != null ? ((byte[]) value).length : "null");
                 } else if (columnType == Types.NVARCHAR
                     && sourceType != Types.CLOB
                     && sourceType != Types.LONGNVARCHAR) {
@@ -464,6 +465,14 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                         }
                     } else {
                         value = null;
+                    }
+                }
+
+                if (value != null && (columnType == Types.VARBINARY || columnType == Types.LONGVARBINARY || columnType == Types.BINARY || columnType == Types.BLOB)) {
+                    if (value instanceof byte[]) {
+                         LOG.debug("Column {} (Binary/Blob) value is byte array of length: {}", i, ((byte[])value).length);
+                    } else {
+                         LOG.debug("Column {} (Binary/Blob) value is NOT byte array. Class: {}. Value: {}", i, value.getClass().getName(), value);
                     }
                 }
 
