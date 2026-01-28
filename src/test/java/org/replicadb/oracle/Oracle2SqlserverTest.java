@@ -24,6 +24,16 @@ class Oracle2SqlserverTest {
 	private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
 	private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
 	private static final int EXPECTED_ROWS = 4096;
+	private static final String SOURCE_COLUMNS = "c_integer,c_smallint,c_bigint,c_numeric,c_decimal,"
+			+ "c_real,c_double_precision,c_float,c_binary,c_binary_var,c_binary_lob,"
+			+ "c_boolean,c_character,c_character_var,c_character_lob,c_national_character,"
+			+ "c_national_character_var,c_date,c_timestamp_without_timezone,c_timestamp_with_timezone,"
+			+ "c_interval_day,c_interval_year,c_xml";
+	private static final String SINK_COLUMNS = "c_integer,c_smallint,c_bigint,c_numeric,c_decimal,"
+			+ "c_real,c_double_precision,c_float,c_binary,c_binary_var,c_binary_lob,"
+			+ "c_boolean,c_character,c_character_var,c_character_lob,c_national_character,"
+			+ "c_national_character_var,c_date,c_timestamp_without_timezone,c_timestamp_with_timezone,"
+			+ "c_interval_day,c_interval_year,c_xml";
 
 	private Connection oracleConn;
 	private Connection sqlserverConn;
@@ -93,7 +103,7 @@ class Oracle2SqlserverTest {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", sqlserver.getJdbcUrl(), "--sink-user", sqlserver.getUsername(), "--sink-password",
-				sqlserver.getPassword()};
+				sqlserver.getPassword(), "--source-columns", SOURCE_COLUMNS, "--sink-columns", SINK_COLUMNS};
 		final ToolOptions options = new ToolOptions(args);
 		Assertions.assertEquals(0, ReplicaDB.processReplica(options));
 		assertEquals(EXPECTED_ROWS, this.countSinkRows());
@@ -104,7 +114,8 @@ class Oracle2SqlserverTest {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", sqlserver.getJdbcUrl(), "--sink-user", sqlserver.getUsername(), "--sink-password",
-				sqlserver.getPassword(), "--sink-staging-schema", "dbo", "--mode",
+				sqlserver.getPassword(), "--source-columns", SOURCE_COLUMNS, "--sink-columns", SINK_COLUMNS,
+				"--sink-staging-schema", "dbo", "--mode",
 				ReplicationMode.COMPLETE_ATOMIC.getModeText()};
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
@@ -116,7 +127,8 @@ class Oracle2SqlserverTest {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", sqlserver.getJdbcUrl(), "--sink-user", sqlserver.getUsername(), "--sink-password",
-				sqlserver.getPassword(), "--sink-staging-schema", "dbo", "--mode",
+				sqlserver.getPassword(), "--source-columns", SOURCE_COLUMNS, "--sink-columns", SINK_COLUMNS,
+				"--sink-staging-schema", "dbo", "--mode",
 				ReplicationMode.INCREMENTAL.getModeText()};
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
@@ -128,7 +140,8 @@ class Oracle2SqlserverTest {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", sqlserver.getJdbcUrl(), "--sink-user", sqlserver.getUsername(), "--sink-password",
-				sqlserver.getPassword(), "--jobs", "4"};
+				sqlserver.getPassword(), "--source-columns", SOURCE_COLUMNS, "--sink-columns", SINK_COLUMNS,
+				"--jobs", "4"};
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
 		assertEquals(EXPECTED_ROWS, this.countSinkRows());
@@ -139,7 +152,8 @@ class Oracle2SqlserverTest {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", sqlserver.getJdbcUrl(), "--sink-user", sqlserver.getUsername(), "--sink-password",
-				sqlserver.getPassword(), "--sink-staging-schema", "dbo", "--mode",
+				sqlserver.getPassword(), "--source-columns", SOURCE_COLUMNS, "--sink-columns", SINK_COLUMNS,
+				"--sink-staging-schema", "dbo", "--mode",
 				ReplicationMode.COMPLETE_ATOMIC.getModeText(), "--jobs", "4"};
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
@@ -151,7 +165,8 @@ class Oracle2SqlserverTest {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", sqlserver.getJdbcUrl(), "--sink-user", sqlserver.getUsername(), "--sink-password",
-				sqlserver.getPassword(), "--sink-staging-schema", "dbo", "--mode",
+				sqlserver.getPassword(), "--source-columns", SOURCE_COLUMNS, "--sink-columns", SINK_COLUMNS,
+				"--sink-staging-schema", "dbo", "--mode",
 				ReplicationMode.INCREMENTAL.getModeText(), "--jobs", "4"};
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
