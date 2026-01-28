@@ -28,7 +28,8 @@ class Postgres2SqlserverTest {
    private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
    private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
    private static final int TOTAL_SINK_ROWS = 4097;
-   private static final String SOURCE_COLUMNS = "c_integer,c_smallint,c_bigint,c_numeric::text,c_decimal::text,c_real,c_double_precision,c_float,encode(c_binary, 'hex'),encode(c_binary_var, 'hex'),encode(c_binary_lob, 'hex'),c_boolean,c_character,c_character_var,c_character_lob,c_national_character,c_national_character_var,c_date,c_time_without_timezone,c_timestamp_without_timezone,c_xml::text";
+   // Use raw binary columns instead of encode(..., 'hex') to ensure correct binary transfer
+   private static final String SOURCE_COLUMNS = "c_integer,c_smallint,c_bigint,c_numeric::text,c_decimal::text,c_real,c_double_precision,c_float,c_binary,c_binary_var,c_binary_lob,c_boolean,c_character,c_character_var,c_character_lob,c_national_character,c_national_character_var,c_date,c_time_without_timezone,c_timestamp_without_timezone,c_xml::text";
    private static final String SINK_COLUMNS = "c_integer,c_smallint,c_bigint,c_numeric      ,c_decimal      ,c_real,c_double_precision,c_float,c_binary               ,c_binary_var               ,c_binary_lob               ,c_boolean,c_character,c_character_var,c_character_lob,c_national_character,c_national_character_var,c_date,c_time_without_timezone,c_timestamp_without_timezone,c_xml";
 
    private Connection postgresConn;
