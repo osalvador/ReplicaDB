@@ -514,20 +514,6 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     }
                 }
 
-                // Temporary Debugging: Log ALL columns
-                LOG.debug("RowData Col {}: SrcType={}, ValueClass={}, Value={}", 
-                    i, columnType, 
-                    value == null ? "null" : value.getClass().getName(),
-                    value);
-                
-                if (value != null && (columnType == Types.VARBINARY || columnType == Types.LONGVARBINARY || columnType == Types.BINARY || columnType == Types.BLOB)) {
-                    if (value instanceof byte[]) {
-                         LOG.debug("Column {} (Binary/Blob) value is byte array of length: {}", i, ((byte[])value).length);
-                    } else {
-                         LOG.debug("Column {} (Binary/Blob) value is NOT byte array. Class: {}. Value: {}", i, value.getClass().getName(), value);
-                    }
-                }
-
                 if (value instanceof Integer && (columnType == Types.BIT || columnType == Types.BOOLEAN)) {
                     value = ((Integer) value) != 0;
                 } else if (value instanceof BigDecimal && (columnType == Types.BIT || columnType == Types.BOOLEAN)) {
@@ -553,8 +539,6 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                 int sourceType = sourceTypes[i - 1];
                 Object value;
 
-                LOG.debug("Stream Col {}: sourceType={}, columnType={}", i, sourceType, columnType);
-
                 if (columnType == Types.VARBINARY || columnType == Types.LONGVARBINARY || columnType == Types.BINARY || columnType == Types.BLOB
                     || sourceType == Types.BLOB || sourceType == Types.LONGVARBINARY) {
                     InputStream stream = resultSet.getBinaryStream(i);
@@ -562,12 +546,6 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                 } else {
                     Reader reader = resultSet.getCharacterStream(i);
                     value = resultSet.wasNull() ? null : reader;
-                }
-
-                if (value == null) {
-                    LOG.debug("Stream Col {}: value is null", i);
-                } else {
-                    LOG.debug("Stream Col {}: value class={}", i, value.getClass().getName());
                 }
 
                 rowData[i - 1] = value;
