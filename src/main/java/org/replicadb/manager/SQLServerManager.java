@@ -72,16 +72,46 @@ public class SQLServerManager extends SqlManager {
       // IMPORTANT: do not close the shared manager connection
       Connection conn = this.getConnection();
       DatabaseMetaData metaData = conn.getMetaData();
-      String catalog = conn.getCatalog();
-      String schema = conn.getSchema();
       
-      try (ResultSet rs = metaData.getColumns(catalog, schema, tableName, null)) {
+      // Normalize and split schema.table - SQL Server qualified names can be:
+      // [db].[schema].[table], schema.table, or just table
+      String normalized = tableName.replace("[", "").replace("]", "").replace("\"", "").trim();
+      
+      String schemaPattern;
+      String tablePattern;
+      
+      String[] parts = normalized.split("\\.");
+      if (parts.length == 2) {
+         // schema.table
+         schemaPattern = parts[0];
+         tablePattern = parts[1];
+      } else if (parts.length == 3) {
+         // catalog.schema.table
+         schemaPattern = parts[1];
+         tablePattern = parts[2];
+      } else {
+         // No schema provided; SQL Server default is typically dbo for user tables
+         schemaPattern = "dbo";
+         tablePattern = normalized;
+      }
+      
+      String catalog = conn.getCatalog();
+      LOG.trace("Looking up sink column metadata: catalog={}, schema={}, table={}", catalog, schemaPattern, tablePattern);
+      
+      try (ResultSet rs = metaData.getColumns(catalog, schemaPattern, tablePattern, null)) {
          java.util.Map<String, Integer> columnTypesByName = new HashMap<>();
          while (rs.next()) {
             String columnName = rs.getString("COLUMN_NAME").toLowerCase();
             int columnType = rs.getInt("DATA_TYPE");
             columnTypesByName.put(columnName, columnType);
             LOG.trace("Sink column '{}' has JDBC type {}", columnName, columnType);
+         }
+         
+         // Fail fast if no columns found - prevents cryptic BulkCopy errors
+         if (columnTypesByName.isEmpty()) {
+            LOG.warn("Could not resolve sink metadata for table '{}' (schema={}, table={}). Type coercion will be disabled.",
+                tableName, schemaPattern, tablePattern);
+            return columnTypeMap;
          }
          
          // Map source column positions to sink column types
