@@ -103,7 +103,7 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
             this.sinkColumnNames = null;
         }
         this.sinkColumnTypes = sinkColumnTypes != null ? sinkColumnTypes : new HashMap<>();
-        LOG.debug("Created SQLServerResultSetBulkRecordAdapter with {} columns", columnCount);
+        LOG.trace("Created SQLServerResultSetBulkRecordAdapter with {} columns", columnCount);
     }
 
     @Override
@@ -182,7 +182,7 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
             
             // Handle other truly unknown/unsupported types (negative or non-standard codes like Oracle's -104)
                 if (type < -7) {
-                    LOG.debug("Mapping unsupported source type {} to VARCHAR", type);
+                    LOG.trace("Mapping unsupported source type {} to VARCHAR", type);
                     return Types.VARCHAR;
                 }
             
@@ -192,7 +192,7 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     || type == Types.STRUCT
                     || type == Types.SQLXML
                     || type == Types.OTHER) {
-                    LOG.debug("Mapping unsupported type {} to VARCHAR", type);
+                    LOG.trace("Mapping unsupported type {} to VARCHAR", type);
                     return Types.VARCHAR;
                 }
             
@@ -293,19 +293,19 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
             // Only cap NUMERIC/DECIMAL to 38, not VARCHAR types
             if (columnType == Types.NUMERIC || columnType == Types.DECIMAL) {
                 if (precision > 38) {
-                    LOG.debug("Source precision {} exceeds SQL Server maximum of 38 for column {}, capping to 38", precision, column);
+                    LOG.trace("Source precision {} exceeds SQL Server maximum of 38 for column {}, capping to 38", precision, column);
                     precision = 38;
                 }
             } else if (columnType == Types.VARCHAR || columnType == Types.CHAR || columnType == Types.LONGVARCHAR) {
                 // For VARCHAR types, cap at 8000 (SQL Server varchar limit)
                 if (precision > 8000) {
-                    LOG.debug("Source VARCHAR precision {} exceeds SQL Server maximum of 8000 for column {}, capping to 8000", precision, column);
+                    LOG.trace("Source VARCHAR precision {} exceeds SQL Server maximum of 8000 for column {}, capping to 8000", precision, column);
                     precision = 8000;
                 }
             } else if (columnType == Types.NVARCHAR || columnType == Types.NCHAR || columnType == Types.LONGNVARCHAR) {
                 // For NVARCHAR types, cap at 4000 (SQL Server nvarchar limit)
                 if (precision > 4000) {
-                    LOG.debug("Source NVARCHAR precision {} exceeds SQL Server maximum of 4000 for column {}, capping to 4000", precision, column);
+                    LOG.trace("Source NVARCHAR precision {} exceeds SQL Server maximum of 4000 for column {}, capping to 4000", precision, column);
                     precision = 4000;
                 }
             }
@@ -343,7 +343,7 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
             // If source TIMESTAMP has higher scale (e.g., Oracle microseconds = 6), cap it
             if (sourceType == Types.TIMESTAMP || sourceType == Types.TIMESTAMP_WITH_TIMEZONE) {
                 if (scale > 3) {
-                    LOG.debug("Capping TIMESTAMP scale from {} to 3 for SQL Server DATETIME compatibility (column {})", scale, column);
+                    LOG.warn("Capping TIMESTAMP scale from {} to 3 for SQL Server DATETIME compatibility (column {})", scale, column);
                     return 3;
                 }
             }
@@ -351,7 +351,7 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
             // SQL Server requires scale >= 0. Invalid or negative scales (e.g., from Oracle metadata)
             // should default to 0
             if (scale < 0) {
-                LOG.debug("Invalid scale {} for column {}, using default 0", scale, column);
+                LOG.trace("Invalid scale {} for column {}, using default 0", scale, column);
                 return 0;
             }
             return scale;
@@ -580,28 +580,28 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                 // Handle Oracle INTERVAL types by setting to NULL
                 // (no direct SQL Server equivalent, string conversion causes bulk copy errors)
                 if (sourceType == -104 || sourceType == -103) {  // INTERVALDS or INTERVALYM
-                    LOG.debug("Skipping Oracle INTERVAL type {} for column {} (no SQL Server equivalent)", sourceType, i);
+                    LOG.trace("Skipping Oracle INTERVAL type {} for column {} (no SQL Server equivalent)", sourceType, i);
                     value = null;
                 } else if (sourceType == Types.ROWID) {
                     // Convert ROWID to string
                     java.sql.RowId rowId = resultSet.getRowId(i);
                     value = resultSet.wasNull() ? null : (rowId != null ? new String(rowId.getBytes()) : null);
-                    LOG.debug("Converted ROWID to string for column {}", i);
+                    LOG.trace("Converted ROWID to string for column {}", i);
                 } else if (sourceType == Types.ARRAY) {
                     // Convert ARRAY to string
                     java.sql.Array arrayData = resultSet.getArray(i);
                     value = resultSet.wasNull() ? null : (arrayData != null ? arrayData.toString() : null);
-                    LOG.debug("Converted ARRAY to string");
+                    LOG.trace("Converted ARRAY to string");
                 } else if (sourceType == Types.STRUCT) {
                     // Convert STRUCT to string
                     Object structObj = resultSet.getObject(i);
                     value = resultSet.wasNull() ? null : (structObj != null ? structObj.toString() : null);
-                    LOG.debug("Converted STRUCT to string");
+                    LOG.trace("Converted STRUCT to string");
                 } else if (sourceType == Types.SQLXML) {
                     // Convert SQLXML/XMLTYPE to VARCHAR-compatible string
                     final java.sql.SQLXML xml = resultSet.getSQLXML(i);
                     value = resultSet.wasNull() ? null : (xml != null ? xml.getString() : null);
-                    LOG.debug("Converted SQLXML to string");
+                    LOG.trace("Converted SQLXML to string");
                 } else if (sourceType == Types.OTHER) {
                     // Handle OTHER type (PostgreSQL specific types, etc.)
                     Object otherObj = resultSet.getObject(i);
@@ -610,22 +610,21 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     } else if (otherObj != null) {
                         if (otherObj instanceof byte[]) {
                             value = otherObj;  // Keep as bytes for VARBINARY columns
-                            LOG.debug("OTHER type is binary data");
+                            LOG.trace("OTHER type is binary data");
                         } else if (otherObj instanceof String) {
                             // For text-based OTHER types, pass as-is
                             value = otherObj;
-                            LOG.debug("OTHER type is string");
+                            LOG.trace("OTHER type is string");
                         } else {
                             // For complex types, convert to string representation
                             value = otherObj.toString();
-                            LOG.debug("Converted OTHER type to string");
+                            LOG.trace("Converted OTHER type to string");
                         }
                     } else {
                         value = null;
                     }
                 } else if (binaryColumns[i - 1] && sourceType != Types.BLOB) {
-                    value = resultSet.getBytes(i);
-                    // LOG.debug("Red bytes for binary column {}: {} bytes", i, value != null ? ((byte[]) value).length : "null");
+                    value = resultSet.getBytes(i);                    
                 } else if (columnType == Types.NVARCHAR
                     && sourceType != Types.CLOB
                     && sourceType != Types.LONGNVARCHAR) {
@@ -657,12 +656,12 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                         if ((strValue.length() % 2 == 0) && strValue.matches("(?i)^[0-9a-f]+$")) {
                             // Convert hex string to byte array
                             value = hexStringToBytes(strValue);
-                            LOG.debug("Converted hex string to byte[]: {} bytes",
+                            LOG.trace("Converted hex string to byte[]: {} bytes",
                                 ((byte[])value).length);
                         } else {
                             // Not hex, convert string characters to bytes
                             value = strValue.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                            LOG.debug("Converted string to UTF-8 bytes: {} bytes",
+                            LOG.trace("Converted string to UTF-8 bytes: {} bytes",
                                 strValue.length());
                         }
                     } else {
