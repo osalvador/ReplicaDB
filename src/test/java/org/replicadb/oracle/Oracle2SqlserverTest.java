@@ -29,6 +29,7 @@ class Oracle2SqlserverTest {
 			+ "c_boolean,c_character,c_character_var,c_character_lob,c_national_character,"
 			+ "c_national_character_var,c_date,c_timestamp_without_timezone,"
 			+ "c_xml";
+	// Sink has c_time_without_timezone but Oracle doesn't, so we skip it and map directly to c_timestamp_without_timezone
 	private static final String SINK_COLUMNS = "c_integer,c_smallint,c_bigint,c_numeric,c_decimal,"
 			+ "c_real,c_double_precision,c_float,c_binary,c_binary_var,c_binary_lob,"
 			+ "c_boolean,c_character,c_character_var,c_character_lob,c_national_character,"
