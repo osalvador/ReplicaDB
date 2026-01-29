@@ -15,13 +15,33 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
  * Adapter that wraps a JDBC {@link ResultSet} to be used with SQL Server bulk copy.
  * This adapter provides SQL Server compatible type mappings and streams LOB values
  * as {@link InputStream} / {@link Reader} without materializing them in memory.
+ * 
+ * <h3>Type Coercion Support</h3>
+ * When source and sink column types differ, the adapter performs automatic type conversion:
+ * <ul>
+ *   <li><b>TIMESTAMP → DATE:</b> Truncates time component, preserving only date</li>
+ *   <li><b>TIMESTAMP → TIME:</b> Extracts time component, discarding date</li>
+ *   <li><b>Oracle INTERVAL types:</b> Skipped (no SQL Server equivalent)</li>
+ * </ul>
+ * 
+ * <h3>Precision Handling</h3>
+ * <ul>
+ *   <li>SQL Server DECIMAL/NUMERIC limited to precision 38 (Oracle supports 126)</li>
+ *   <li>Fractional seconds truncated to milliseconds for DATETIME types</li>
+ *   <li>NCHAR/NVARCHAR types preserve Unicode characters</li>
+ * </ul>
+ * 
+ * @see SQLServerManager#insertDataToTable(ResultSet, int)
+ * @see <a href="https://docs.microsoft.com/sql/connect/jdbc/using-bulk-copy">SQL Server BulkCopy Documentation</a>
  */
 public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord {
 
@@ -30,6 +50,8 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     private final ResultSet resultSet;
     private final ResultSetMetaData metaData;
     private final int columnCount;
+    private final Map<Integer, Integer> sinkColumnTypes;
+    private final Set<Integer> loggedCoercions = new java.util.HashSet<>();
     private DateTimeFormatter dateTimeFormatter;
     private DateTimeFormatter timeFormatter;
 
@@ -40,9 +62,21 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
      * @throws SQLException if metadata cannot be retrieved
      */
     public SQLServerResultSetBulkRecordAdapter(ResultSet resultSet) throws SQLException {
+        this(resultSet, null);
+    }
+
+    /**
+     * Creates a new adapter wrapping the given {@link ResultSet} with sink column type mappings.
+     *
+     * @param resultSet the ResultSet to wrap
+     * @param sinkColumnTypes map of column index (1-based) to sink JDBC type, or null for no type coercion
+     * @throws SQLException if metadata cannot be retrieved
+     */
+    public SQLServerResultSetBulkRecordAdapter(ResultSet resultSet, Map<Integer, Integer> sinkColumnTypes) throws SQLException {
         this.resultSet = resultSet;
         this.metaData = resultSet.getMetaData();
         this.columnCount = metaData.getColumnCount();
+        this.sinkColumnTypes = sinkColumnTypes != null ? sinkColumnTypes : new HashMap<>();
         LOG.debug("Created SQLServerResultSetBulkRecordAdapter with {} columns", columnCount);
     }
 
@@ -86,6 +120,27 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     public int getColumnType(int column) {
         try {
             int type = metaData.getColumnType(column);
+            
+            // Check if sink expects a different type for type coercion
+            Integer sinkType = sinkColumnTypes.get(column);
+            if (sinkType != null && sinkType != type) {
+                // Handle TIMESTAMP -> DATE conversion
+                if (type == Types.TIMESTAMP && sinkType == Types.DATE) {
+                    if (loggedCoercions.add(column)) {
+                        LOG.info("Column {} ('{}') type coercion: TIMESTAMP (source) -> DATE (sink). Time component will be truncated.", 
+                                 column, metaData.getColumnName(column));
+                    }
+                    return Types.DATE;
+                }
+                // Handle TIMESTAMP -> TIME conversion
+                if (type == Types.TIMESTAMP && sinkType == Types.TIME) {
+                    if (loggedCoercions.add(column)) {
+                        LOG.info("Column {} ('{}') type coercion: TIMESTAMP (source) -> TIME (sink). Date component will be discarded.", 
+                                 column, metaData.getColumnName(column));
+                    }
+                    return Types.TIME;
+                }
+            }
             
             // Standard JDBC types that appear negative in some drivers (e.g., MariaDB)
             // -5 = BIGINT, -7 = BIT - these are valid and should NOT be mapped to VARCHAR
@@ -147,6 +202,18 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
         try {
             int sourceType = metaData.getColumnType(column);
             int precision = metaData.getPrecision(column);
+            
+            // Check for type coercion first
+            Integer sinkType = sinkColumnTypes.get(column);
+            if (sinkType != null && sinkType != sourceType) {
+                // Use sink type precision for coerced types
+                if (sinkType == Types.DATE) {
+                    return 10;  // SQL Server DATE precision
+                }
+                if (sinkType == Types.TIME) {
+                    return 16;  // SQL Server TIME(3) compatible precision
+                }
+            }
             
             // For date/time types, SQL Server bulk copy has specific precision requirements
             if (sourceType == Types.TIMESTAMP || sourceType == Types.TIMESTAMP_WITH_TIMEZONE) {
@@ -231,6 +298,16 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
      */
     public int getScale(int column) {
         try {
+            int sourceType = metaData.getColumnType(column);
+            
+            // Check for type coercion - DATE and TIME types have 0 scale
+            Integer sinkType = sinkColumnTypes.get(column);
+            if (sinkType != null && sinkType != sourceType) {
+                if (sinkType == Types.DATE || sinkType == Types.TIME) {
+                    return 0;
+                }
+            }
+            
             int scale = metaData.getScale(column);
             // SQL Server requires scale >= 0. Invalid or negative scales (e.g., from Oracle metadata)
             // should default to 0
@@ -388,6 +465,35 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                 int columnType = columnTypes[i - 1];
                 int sourceType = sourceTypes[i - 1];
                 Object value;
+                
+                // Check for type coercion first
+                Integer sinkType = sinkColumnTypes.get(i);
+                if (sinkType != null && sinkType != sourceType) {
+                    // TIMESTAMP -> DATE conversion (truncate time component)
+                    if (sourceType == Types.TIMESTAMP && sinkType == Types.DATE) {
+                        Timestamp ts = resultSet.getTimestamp(i);
+                        if (ts != null && !resultSet.wasNull()) {
+                            value = new java.sql.Date(ts.getTime());
+                            LOG.trace("Converted TIMESTAMP to DATE for column {}: {}", i, value);
+                        } else {
+                            value = null;
+                        }
+                        rowData[i - 1] = value;
+                        continue;
+                    }
+                    // TIMESTAMP -> TIME conversion (keep only time component)
+                    else if (sourceType == Types.TIMESTAMP && sinkType == Types.TIME) {
+                        Timestamp ts = resultSet.getTimestamp(i);
+                        if (ts != null && !resultSet.wasNull()) {
+                            value = new java.sql.Time(ts.getTime());
+                            LOG.trace("Converted TIMESTAMP to TIME for column {}: {}", i, value);
+                        } else {
+                            value = null;
+                        }
+                        rowData[i - 1] = value;
+                        continue;
+                    }
+                }
 
                 // Handle Oracle INTERVAL types by setting to NULL
                 // (no direct SQL Server equivalent, string conversion causes bulk copy errors)

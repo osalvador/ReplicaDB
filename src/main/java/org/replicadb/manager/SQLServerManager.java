@@ -57,6 +57,48 @@ public class SQLServerManager extends SqlManager {
       stmt.close();
    }
 
+   /**
+    * Retrieves sink column types from SQL Server metadata.
+    * Maps source column positions to sink column JDBC types for type-aware BulkCopy operations.
+    *
+    * @param tableName the sink table name
+    * @param sourceMetaData the source ResultSet metadata
+    * @return Map of column index (1-based) to JDBC type code
+    * @throws SQLException if metadata retrieval fails
+    */
+   private java.util.Map<Integer, Integer> getSinkColumnTypes(String tableName, ResultSetMetaData sourceMetaData) throws SQLException {
+      java.util.Map<Integer, Integer> columnTypeMap = new HashMap<>();
+      
+      try (Connection conn = getConnection()) {
+         DatabaseMetaData metaData = conn.getMetaData();
+         String catalog = conn.getCatalog();
+         String schema = conn.getSchema();
+         
+         try (ResultSet rs = metaData.getColumns(catalog, schema, tableName, null)) {
+            java.util.Map<String, Integer> columnTypesByName = new HashMap<>();
+            while (rs.next()) {
+               String columnName = rs.getString("COLUMN_NAME").toLowerCase();
+               int columnType = rs.getInt("DATA_TYPE");
+               columnTypesByName.put(columnName, columnType);
+               LOG.trace("Sink column '{}' has JDBC type {}", columnName, columnType);
+            }
+            
+            // Map source column positions to sink column types
+            for (int i = 1; i <= sourceMetaData.getColumnCount(); i++) {
+               String sourceColumnName = sourceMetaData.getColumnName(i).toLowerCase();
+               Integer sinkType = columnTypesByName.get(sourceColumnName);
+               if (sinkType != null) {
+                  columnTypeMap.put(i, sinkType);
+                  LOG.trace("Mapped source column {} ('{}') to sink JDBC type {}", i, sourceColumnName, sinkType);
+               }
+            }
+         }
+      }
+      
+      LOG.debug("Retrieved {} sink column type mappings for table {}", columnTypeMap.size(), tableName);
+      return columnTypeMap;
+   }
+
    @Override
    public int insertDataToTable (ResultSet resultSet, int taskId) throws SQLException {
 
@@ -71,6 +113,9 @@ public class SQLServerManager extends SqlManager {
 
       ResultSetMetaData rsmd = resultSet.getMetaData();
       int columnCount = rsmd.getColumnCount();
+
+      // Retrieve sink column types for type-aware mapping
+      java.util.Map<Integer, Integer> sinkColumnTypes = getSinkColumnTypes(tableName, rsmd);
 
       SQLServerBulkCopy bulkCopy = new SQLServerBulkCopy(this.getConnection());
       // BulkCopy Options
@@ -110,7 +155,8 @@ public class SQLServerManager extends SqlManager {
          if (resultSet instanceof RowSet) {
             bulkCopy.writeToServer(new SQLServerBulkRecordAdapter((RowSet) resultSet));
          } else {
-            bulkCopy.writeToServer(new SQLServerResultSetBulkRecordAdapter(resultSet));
+            // Pass sink column types to adapter for type-aware BulkCopy
+            bulkCopy.writeToServer(new SQLServerResultSetBulkRecordAdapter(resultSet, sinkColumnTypes));
          }
 
 
