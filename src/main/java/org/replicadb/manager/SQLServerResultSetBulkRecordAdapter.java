@@ -309,6 +309,16 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
             }
             
             int scale = metaData.getScale(column);
+            
+            // SQL Server DATETIME has millisecond precision (scale 3 max)
+            // If source TIMESTAMP has higher scale (e.g., Oracle microseconds = 6), cap it
+            if (sourceType == Types.TIMESTAMP || sourceType == Types.TIMESTAMP_WITH_TIMEZONE) {
+                if (scale > 3) {
+                    LOG.debug("Capping TIMESTAMP scale from {} to 3 for SQL Server DATETIME compatibility (column {})", scale, column);
+                    return 3;
+                }
+            }
+            
             // SQL Server requires scale >= 0. Invalid or negative scales (e.g., from Oracle metadata)
             // should default to 0
             if (scale < 0) {
