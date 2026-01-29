@@ -24,8 +24,26 @@ jobs:
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
+    - name: Configure TestContainers for CI
+      run: |
+        cat > src/test/resources/testcontainers.properties <<EOF
+        # CI configuration - no reuse, enable cleanup
+        testcontainers.reuse.enable=false
+        testcontainers.ryuk.disabled=false
+        testcontainers.container.startup.timeout.seconds=120
+        EOF
+
     - name: Get version
       run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
+
+    - name: Cleanup Docker resources
+      run: |
+        echo "Disk space before cleanup:"
+        df -h
+        docker system prune -af --volumes
+        docker volume prune -f
+        echo "Disk space after cleanup:"
+        df -h
 
     - name: Build and Integration Tests
       run: mvn -B package --file pom.xml

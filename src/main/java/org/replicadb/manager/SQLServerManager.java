@@ -20,6 +20,30 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+/**
+ * SQL Server-specific connection manager using Microsoft JDBC Driver and BulkCopy API.
+ * 
+ * <p><strong>Logging Standards:</strong> This class follows ReplicaDB logging conventions with ~10 logging
+ * statements (reduced from 24) for consistency with other manager implementations like
+ * PostgresqlManager and OracleManager (5-8 statements each). TRACE-level statements were removed
+ * to reduce development noise, as they never execute in production/CI environments (log level = INFO).</p>
+ * 
+ * <p><strong>Enabling Detailed Logging:</strong> To enable detailed column mapping traces during local
+ * development debugging, add the following to your {@code log4j2-test.xml}:</p>
+ * <pre>
+ * &lt;Logger name="org.replicadb.manager.SQLServerManager" level="trace" additivity="false"&gt;
+ *     &lt;AppenderRef ref="console"/&gt;
+ * &lt;/Logger&gt;
+ * </pre>
+ * 
+ * <p><strong>Current Logging Distribution:</strong></p>
+ * <ul>
+ *   <li>DEBUG: 3 statements (operation summaries and column mappings)</li>
+ *   <li>INFO: 3 statements (SQL commands and merge operations)</li>
+ *   <li>WARN: 4 statements (metadata lookup failures and edge cases)</li>
+ *   <li>ERROR: 3 statements (BulkCopy failures and column mismatches)</li>
+ * </ul>
+ */
 public class SQLServerManager extends SqlManager {
 
    private static final Logger LOG = LogManager.getLogger(SQLServerManager.class.getName());
@@ -96,7 +120,6 @@ public class SQLServerManager extends SqlManager {
       }
       
       String catalog = conn.getCatalog();
-      LOG.trace("Looking up sink column metadata: catalog={}, schema={}, table={}", catalog, schemaPattern, tablePattern);
       
       try (ResultSet rs = metaData.getColumns(catalog, schemaPattern, tablePattern, null)) {
          java.util.Map<String, Integer> columnTypesByName = new HashMap<>();
@@ -123,7 +146,6 @@ public class SQLServerManager extends SqlManager {
                Integer sinkType = columnTypesByName.get(sinkColumnName);
                if (sinkType != null) {
                   columnTypeMap.put(i, sinkType);
-                  LOG.trace("Mapped source position {} to sink column '{}' with JDBC type {}", i, sinkColumnName, sinkType);
                }
             }
          } else {
@@ -133,7 +155,6 @@ public class SQLServerManager extends SqlManager {
                Integer sinkType = columnTypesByName.get(sourceColumnName);
                if (sinkType != null) {
                   columnTypeMap.put(i, sinkType);
-                  LOG.trace("Mapped source column {} ('{}') to sink JDBC type {}", i, sourceColumnName, sinkType);
                }
             }
          }
@@ -174,14 +195,12 @@ public class SQLServerManager extends SqlManager {
       }
 
       String catalog = conn.getCatalog();
-      LOG.trace("Looking up sink column ordinals: catalog={}, schema={}, table={}", catalog, schemaPattern, tablePattern);
 
       try (ResultSet rs = metaData.getColumns(catalog, schemaPattern, tablePattern, null)) {
          while (rs.next()) {
             String columnName = rs.getString("COLUMN_NAME").toLowerCase();
             int ordinal = rs.getInt("ORDINAL_POSITION");
             columnOrdinalsByName.put(columnName, ordinal);
-            LOG.trace("Sink column '{}' has ordinal {}", columnName, ordinal);
          }
       }
 
@@ -239,7 +258,6 @@ public class SQLServerManager extends SqlManager {
 
       // Columns Mapping
       if (sinkColumnsArray != null) {
-         LOG.trace("Mapping columns: source index --> sink column name");
          for (int i = 1; i <= sinkColumnsArray.length; i++) {
             String sinkCol = sinkColumnsArray[i - 1];
             Integer destOrdinal = sinkColumnOrdinals != null ? sinkColumnOrdinals.get(sinkCol.toLowerCase()) : null;
@@ -253,7 +271,6 @@ public class SQLServerManager extends SqlManager {
          }
       } else {
          for (int i = 1; i <= columnCount; i++) {
-            LOG.trace("source {} - {} sink", rsmd.getColumnName(i), i);
             bulkCopy.addColumnMapping(rsmd.getColumnName(i), i);
          }
       }
@@ -389,8 +406,12 @@ public class SQLServerManager extends SqlManager {
                   String destType = "";
                   destType = getJdbcTypeName(destJdbcType);
 
-                  // Log source column mapped to sink column with metadata
-                  LOG.debug("colid {} : Source column {} ({}:(precision:{},scale:{})) mapped to sink column {} ({}:(precision:{},scale:{}))", key, srcColumnName, srcType, srcColumnPrecision, srcColumnScale, destColumnName, destType, destPrecision, destScale);
+                  // Log only mismatched columns at ERROR level for diagnostics
+                  if (srcColumnPrecision != destPrecision || srcColumnType != destJdbcType) {
+                     LOG.error("Column length mismatch: colid {} source {} {}({},{}) != sink {} {}({},{})", 
+                        key, srcColumnName, srcType, srcColumnPrecision, srcColumnScale, 
+                        destColumnName, destType, destPrecision, destScale);
+                  }
 
                }
                } catch (NoSuchFieldException | IllegalAccessException e) {
@@ -481,7 +502,6 @@ public class SQLServerManager extends SqlManager {
       }
 
       sql.append(" ) ");
-      LOG.trace("allColls: {} \n pks: {}", allColls, pks);
 
       // Set all columns for UPDATE SET statement
       String allColSelect = Arrays.stream(allColls.split("\\s*,\\s*"))
