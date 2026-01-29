@@ -101,7 +101,7 @@ select
     CONVERT(TRIM(to_char(generate_series, 'XXXXXX')),'us7ascii','AL32UTF8') as C_NATIONAL_CHARACTER,
     CONVERT(TRIM(to_char(generate_series, 'XXXXXX')),'us7ascii','AL32UTF8')  as C_NATIONAL_CHARACTER_VAR,
     sysdate as C_DATE,
-    systimestamp as C_TIME_WITHOUT_TIMEZONE,
+    systimestamp as C_TIMESTAMP_WITHOUT_TIMEZONE,
     systimestamp AT TIME ZONE 'Europe/Madrid' as C_TIMESTAMP_WITH_TIMEZONE,
     INTERVAL '5 10:09:18' DAY TO SECOND C_INTERVAL_DAY,
     INTERVAL '12-2' YEAR TO MONTH C_INTERVAL_YEAR,
