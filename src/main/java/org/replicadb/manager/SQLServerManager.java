@@ -143,6 +143,55 @@ public class SQLServerManager extends SqlManager {
       return columnTypeMap;
    }
 
+   /**
+    * Retrieves sink column ordinals from SQL Server metadata.
+    *
+    * @param tableName the sink table name
+    * @return Map of sink column name (lowercase) to ordinal position (1-based)
+    * @throws SQLException if metadata retrieval fails
+    */
+   private java.util.Map<String, Integer> getSinkColumnOrdinals(String tableName) throws SQLException {
+      java.util.Map<String, Integer> columnOrdinalsByName = new HashMap<>();
+
+      Connection conn = this.getConnection();
+      DatabaseMetaData metaData = conn.getMetaData();
+
+      String normalized = tableName.replace("[", "").replace("]", "").replace("\"", "").trim();
+
+      String schemaPattern;
+      String tablePattern;
+
+      String[] parts = normalized.split("\\.");
+      if (parts.length == 2) {
+         schemaPattern = parts[0];
+         tablePattern = parts[1];
+      } else if (parts.length == 3) {
+         schemaPattern = parts[1];
+         tablePattern = parts[2];
+      } else {
+         schemaPattern = "dbo";
+         tablePattern = normalized;
+      }
+
+      String catalog = conn.getCatalog();
+      LOG.trace("Looking up sink column ordinals: catalog={}, schema={}, table={}", catalog, schemaPattern, tablePattern);
+
+      try (ResultSet rs = metaData.getColumns(catalog, schemaPattern, tablePattern, null)) {
+         while (rs.next()) {
+            String columnName = rs.getString("COLUMN_NAME").toLowerCase();
+            int ordinal = rs.getInt("ORDINAL_POSITION");
+            columnOrdinalsByName.put(columnName, ordinal);
+            LOG.trace("Sink column '{}' has ordinal {}", columnName, ordinal);
+         }
+      }
+
+      if (columnOrdinalsByName.isEmpty()) {
+         LOG.warn("Could not resolve sink column ordinals for table '{}' (schema={}, table={}).", tableName, schemaPattern, tablePattern);
+      }
+
+      return columnOrdinalsByName;
+   }
+
    @Override
    public int insertDataToTable (ResultSet resultSet, int taskId) throws SQLException {
 
@@ -174,6 +223,11 @@ public class SQLServerManager extends SqlManager {
       // Retrieve sink column types for type-aware mapping
       java.util.Map<Integer, Integer> sinkColumnTypes = getSinkColumnTypes(tableName, rsmd);
 
+      java.util.Map<String, Integer> sinkColumnOrdinals = null;
+      if (sinkColumnsArray != null) {
+         sinkColumnOrdinals = getSinkColumnOrdinals(tableName);
+      }
+
       SQLServerBulkCopy bulkCopy = new SQLServerBulkCopy(this.getConnection());
       // BulkCopy Options
       SQLServerBulkCopyOptions copyOptions = new SQLServerBulkCopyOptions();
@@ -188,9 +242,14 @@ public class SQLServerManager extends SqlManager {
          LOG.trace("Mapping columns: source index --> sink column name");
          for (int i = 1; i <= sinkColumnsArray.length; i++) {
             String sinkCol = sinkColumnsArray[i - 1];
-            // Use source ordinal mapping to ensure alignment with explicit sink column order
-            bulkCopy.addColumnMapping(i, sinkCol);
-            LOG.debug("Column mapping: source index {} --> sink column {}", i, sinkCol);
+            Integer destOrdinal = sinkColumnOrdinals != null ? sinkColumnOrdinals.get(sinkCol.toLowerCase()) : null;
+            if (destOrdinal == null) {
+               throw new IllegalArgumentException(String.format(
+                   "Sink column '%s' not found in destination table '%s'.", sinkCol, tableName));
+            }
+            // Map source ordinal to destination ordinal to skip extra sink columns
+            bulkCopy.addColumnMapping(i, destOrdinal);
+            LOG.debug("Column mapping: source index {} --> sink column {} (dest ordinal {})", i, sinkCol, destOrdinal);
          }
       } else {
          for (int i = 1; i <= columnCount; i++) {
@@ -208,7 +267,7 @@ public class SQLServerManager extends SqlManager {
             bulkCopy.writeToServer(new SQLServerBulkRecordAdapter((RowSet) resultSet));
          } else {
             // Pass sink column types to adapter for type-aware BulkCopy
-            bulkCopy.writeToServer(new SQLServerResultSetBulkRecordAdapter(resultSet, sinkColumnTypes, sinkColumnsArray));
+            bulkCopy.writeToServer(new SQLServerResultSetBulkRecordAdapter(resultSet, sinkColumnTypes, null));
          }
 
 
