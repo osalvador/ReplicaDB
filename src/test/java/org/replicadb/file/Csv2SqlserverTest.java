@@ -30,7 +30,7 @@ class Csv2SqlserverTest {
 
    private static final String SOURCE_COLUMNS = "C_VARCHAR,C_CHAR,C_LONGVARCHAR,C_INTEGER,C_BIGINT,C_TINYINT,C_SMALLINT,C_NUMERIC,C_DECIMAL,C_DOUBLE,C_FLOAT,C_DATE,C_TIMESTAMP,C_TIME,C_BOOLEAN";
    private static final String SOURCE_COLUMNS_TYPES ="VARCHAR, CHAR, LONGVARCHAR, INTEGER, BIGINT, TINYINT, SMALLINT, NUMERIC, DECIMAL, DOUBLE, DOUBLE, DATE, TIMESTAMP, TIME, BOOLEAN" ;
-   private static final String SINK_COLUMNS = "c_character_var,c_character,c_character_lob,c_integer,c_bigint,c_smallint,c_real,c_numeric,c_decimal,c_double_precision,c_float,c_date,c_timestamp_without_timezone,c_time_without_timezone";
+   private static final String SINK_COLUMNS = "c_character_var,c_character,c_character_lob,c_integer,c_bigint,c_smallint,c_real,c_numeric,c_decimal,c_double_precision,c_float,c_date,c_timestamp_without_timezone,c_time_without_timezone,c_boolean";
 
    private Connection sqlserverConn;
 
