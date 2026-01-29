@@ -545,6 +545,14 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                             if (resultSet.wasNull()) {
                                 value = null;
                             }
+                            if (value instanceof Timestamp) {
+                                Timestamp ts = (Timestamp) value;
+                                int nanos = ts.getNanos();
+                                int millis = nanos / 1000000;
+                                Timestamp truncated = new Timestamp(ts.getTime());
+                                truncated.setNanos(millis * 1000000);
+                                value = truncated;
+                            }
                             LOG.trace("Retrieved TIMESTAMP as java.sql.Timestamp for column {}", i);
                             rowData[i - 1] = value;
                             continue;
