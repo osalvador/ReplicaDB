@@ -85,12 +85,26 @@ public class SQLServerManager extends SqlManager {
          }
          
          // Map source column positions to sink column types
-         for (int i = 1; i <= sourceMetaData.getColumnCount(); i++) {
-            String sourceColumnName = sourceMetaData.getColumnName(i).toLowerCase();
-            Integer sinkType = columnTypesByName.get(sourceColumnName);
-            if (sinkType != null) {
-               columnTypeMap.put(i, sinkType);
-               LOG.trace("Mapped source column {} ('{}') to sink JDBC type {}", i, sourceColumnName, sinkType);
+         // When explicit sink columns are specified, use positional mapping
+         if (this.options.getSinkColumns() != null && !this.options.getSinkColumns().isEmpty()) {
+            String[] sinkColumnsArray = this.options.getSinkColumns().replace("\"", "").split(",");
+            for (int i = 1; i <= Math.min(sinkColumnsArray.length, sourceMetaData.getColumnCount()); i++) {
+               String sinkColumnName = sinkColumnsArray[i - 1].trim().toLowerCase();
+               Integer sinkType = columnTypesByName.get(sinkColumnName);
+               if (sinkType != null) {
+                  columnTypeMap.put(i, sinkType);
+                  LOG.trace("Mapped source position {} to sink column '{}' with JDBC type {}", i, sinkColumnName, sinkType);
+               }
+            }
+         } else {
+            // No explicit sink columns - match by source column name
+            for (int i = 1; i <= sourceMetaData.getColumnCount(); i++) {
+               String sourceColumnName = sourceMetaData.getColumnName(i).toLowerCase();
+               Integer sinkType = columnTypesByName.get(sourceColumnName);
+               if (sinkType != null) {
+                  columnTypeMap.put(i, sinkType);
+                  LOG.trace("Mapped source column {} ('{}') to sink JDBC type {}", i, sourceColumnName, sinkType);
+               }
             }
          }
       }
