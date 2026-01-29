@@ -158,6 +158,19 @@ public class SQLServerManager extends SqlManager {
       ResultSetMetaData rsmd = resultSet.getMetaData();
       int columnCount = rsmd.getColumnCount();
 
+        String[] sinkColumnsArray = null;
+        if (this.options.getSinkColumns() != null && !this.options.getSinkColumns().isEmpty()) {
+          sinkColumnsArray = Arrays.stream(this.options.getSinkColumns().replace("\"", "").split(","))
+             .map(String::trim)
+             .toArray(String[]::new);
+          if (sinkColumnsArray.length != columnCount) {
+            throw new IllegalArgumentException(String.format(
+               "Sink columns count (%d) does not match source column count (%d). Verify --sink-columns and --source-columns alignment.",
+               sinkColumnsArray.length,
+               columnCount));
+          }
+        }
+
       // Retrieve sink column types for type-aware mapping
       java.util.Map<Integer, Integer> sinkColumnTypes = getSinkColumnTypes(tableName, rsmd);
 
@@ -171,15 +184,10 @@ public class SQLServerManager extends SqlManager {
       bulkCopy.setDestinationTableName(tableName);
 
       // Columns Mapping
-      if (this.options.getSinkColumns() != null && !this.options.getSinkColumns().isEmpty()) {
-         // Get sink columns directly from options without calling getAllSinkColumns,
-         // which may have side effects or return columns in wrong order
-         String sinkColumns = this.options.getSinkColumns();
-         // Remove quotes from column names, which are not supported by SQLServerBulkCopy
-         String[] sinkColumnsArray = sinkColumns.replace("\"", "").split(",");
+      if (sinkColumnsArray != null) {
          LOG.trace("Mapping columns: source index --> sink column name");
          for (int i = 1; i <= sinkColumnsArray.length; i++) {
-            String sinkCol = sinkColumnsArray[i - 1].trim(); // Trim whitespace from column names
+            String sinkCol = sinkColumnsArray[i - 1];
             // Use source ordinal mapping to ensure alignment with explicit sink column order
             bulkCopy.addColumnMapping(i, sinkCol);
             LOG.debug("Column mapping: source index {} --> sink column {}", i, sinkCol);
@@ -200,7 +208,7 @@ public class SQLServerManager extends SqlManager {
             bulkCopy.writeToServer(new SQLServerBulkRecordAdapter((RowSet) resultSet));
          } else {
             // Pass sink column types to adapter for type-aware BulkCopy
-            bulkCopy.writeToServer(new SQLServerResultSetBulkRecordAdapter(resultSet, sinkColumnTypes));
+            bulkCopy.writeToServer(new SQLServerResultSetBulkRecordAdapter(resultSet, sinkColumnTypes, sinkColumnsArray));
          }
 
 

@@ -51,6 +51,7 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
     private final ResultSetMetaData metaData;
     private final int columnCount;
     private final Map<Integer, Integer> sinkColumnTypes;
+    private final String[] sinkColumnNames;
     private final Set<Integer> loggedCoercions = new java.util.HashSet<>();
     private DateTimeFormatter dateTimeFormatter;
     private DateTimeFormatter timeFormatter;
@@ -62,7 +63,7 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
      * @throws SQLException if metadata cannot be retrieved
      */
     public SQLServerResultSetBulkRecordAdapter(ResultSet resultSet) throws SQLException {
-        this(resultSet, null);
+        this(resultSet, null, null);
     }
 
     /**
@@ -73,9 +74,34 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
      * @throws SQLException if metadata cannot be retrieved
      */
     public SQLServerResultSetBulkRecordAdapter(ResultSet resultSet, Map<Integer, Integer> sinkColumnTypes) throws SQLException {
+        this(resultSet, sinkColumnTypes, null);
+    }
+
+    /**
+     * Creates a new adapter wrapping the given {@link ResultSet} with sink column type mappings and explicit sink columns.
+     *
+     * @param resultSet the ResultSet to wrap
+     * @param sinkColumnTypes map of column index (1-based) to sink JDBC type, or null for no type coercion
+     * @param sinkColumnNames sink column names in positional order, or null to use source metadata names
+     * @throws SQLException if metadata cannot be retrieved
+     */
+    public SQLServerResultSetBulkRecordAdapter(ResultSet resultSet, Map<Integer, Integer> sinkColumnTypes, String[] sinkColumnNames) throws SQLException {
         this.resultSet = resultSet;
         this.metaData = resultSet.getMetaData();
-        this.columnCount = metaData.getColumnCount();
+        int sourceColumnCount = metaData.getColumnCount();
+        if (sinkColumnNames != null && sinkColumnNames.length > 0) {
+            if (sinkColumnNames.length != sourceColumnCount) {
+                throw new IllegalArgumentException(String.format(
+                    "Sink columns count (%d) does not match source column count (%d).",
+                    sinkColumnNames.length,
+                    sourceColumnCount));
+            }
+            this.columnCount = sinkColumnNames.length;
+            this.sinkColumnNames = sinkColumnNames;
+        } else {
+            this.columnCount = sourceColumnCount;
+            this.sinkColumnNames = null;
+        }
         this.sinkColumnTypes = sinkColumnTypes != null ? sinkColumnTypes : new HashMap<>();
         LOG.debug("Created SQLServerResultSetBulkRecordAdapter with {} columns", columnCount);
     }
@@ -103,6 +129,9 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
      */
     public String getColumnName(int column) {
         try {
+            if (sinkColumnNames != null && column <= sinkColumnNames.length) {
+                return sinkColumnNames[column - 1];
+            }
             return metaData.getColumnName(column);
         } catch (SQLException e) {
             LOG.error("Error getting column name for column {}", column, e);
