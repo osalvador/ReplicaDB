@@ -213,7 +213,56 @@ public class SQLServerManager extends SqlManager {
 
    @Override
    public int insertDataToTable (ResultSet resultSet, int taskId) throws SQLException {
+      // SQL Server deadlock retry constants
+      final int MAX_RETRIES = 3;
+      final long INITIAL_WAIT_MS = 1000L; // Increased from 500ms to reduce collision probability
+      final int DEADLOCK_ERROR_CODE = 1205;
+      
+      SQLException lastException = null;
 
+      for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+         try {
+            return insertDataToTableInternal(resultSet, taskId);
+         } catch (SQLException ex) {
+            lastException = ex;
+            
+            // Check for SQL Server deadlock error (1205) and retry only if attempts remain
+            if (ex.getErrorCode() == DEADLOCK_ERROR_CODE && attempt < MAX_RETRIES) {
+               long waitMs = INITIAL_WAIT_MS * attempt; // Linear backoff to spread out retries
+               // Add randomization to reduce collision probability (0-50% jitter)
+               waitMs += (long) (Math.random() * waitMs * 0.5);
+               
+               LOG.warn("TaskId-{}: SQL Server deadlock detected (error 1205) on attempt {}/{}. " +
+                        "Retrying in {} ms. This is normal under high parallel load.", 
+                        taskId, attempt, MAX_RETRIES, waitMs);
+               
+               try {
+                  Thread.sleep(waitMs);
+               } catch (InterruptedException ie) {
+                  Thread.currentThread().interrupt();
+                  throw new SQLException("Interrupted while waiting for deadlock retry", ie);
+               }
+            } else {
+               // Not a deadlock or no retries left - throw immediately
+               throw ex;
+            }
+         }
+      }
+      
+      // Should never reach here, but added for completeness
+      throw new SQLException("Failed to insert data after " + MAX_RETRIES + 
+              " retries due to SQL Server deadlocks (error 1205)", lastException);
+   }
+
+   /**
+    * Internal method that performs the actual bulk copy operation.
+    * Separated from insertDataToTable to enable retry logic for deadlock errors.
+    * 
+    * <p><strong>Deadlock Handling:</strong> SQL Server bulk inserts can deadlock under
+    * high parallel load. The caller (insertDataToTable) implements retry logic with
+    * exponential backoff and jitter to handle error 1205.</p>
+    */
+   private int insertDataToTableInternal(ResultSet resultSet, int taskId) throws SQLException {
       String tableName;
 
       // Get table name and columns
@@ -252,6 +301,11 @@ public class SQLServerManager extends SqlManager {
       SQLServerBulkCopyOptions copyOptions = new SQLServerBulkCopyOptions();
       copyOptions.setBulkCopyTimeout(0);
       copyOptions.setBatchSize(options.getFetchSize());
+      
+      // Use TABLOCK to acquire table-level lock and prevent deadlocks during parallel operations
+      // This is the recommended approach for parallel bulk inserts to avoid row-level lock contention
+      copyOptions.setTableLock(true);
+      
       bulkCopy.setBulkCopyOptions(copyOptions);
 
       bulkCopy.setDestinationTableName(tableName);
