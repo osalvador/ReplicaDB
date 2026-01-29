@@ -24,12 +24,13 @@ class Oracle2SqlserverTest {
 	private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
 	private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
 	private static final int EXPECTED_ROWS = 4096;
+	// Oracle source doesn't have c_time_without_timezone, so we exclude it from mapping
 	private static final String SOURCE_COLUMNS = "c_integer,c_smallint,c_bigint,c_numeric,c_decimal,"
 			+ "c_real,c_double_precision,c_float,c_binary,c_binary_var,c_binary_lob,"
 			+ "c_boolean,c_character,c_character_var,c_character_lob,c_national_character,"
 			+ "c_national_character_var,c_date,c_timestamp_without_timezone,"
 			+ "c_xml";
-	// Sink has c_time_without_timezone but Oracle doesn't, so we skip it and map directly to c_timestamp_without_timezone
+	// Match source columns - skip c_time_without_timezone which Oracle doesn't have
 	private static final String SINK_COLUMNS = "c_integer,c_smallint,c_bigint,c_numeric,c_decimal,"
 			+ "c_real,c_double_precision,c_float,c_binary,c_binary_var,c_binary_lob,"
 			+ "c_boolean,c_character,c_character_var,c_character_lob,c_national_character,"
