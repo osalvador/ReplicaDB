@@ -69,28 +69,28 @@ public class SQLServerManager extends SqlManager {
    private java.util.Map<Integer, Integer> getSinkColumnTypes(String tableName, ResultSetMetaData sourceMetaData) throws SQLException {
       java.util.Map<Integer, Integer> columnTypeMap = new HashMap<>();
       
-      try (Connection conn = getConnection()) {
-         DatabaseMetaData metaData = conn.getMetaData();
-         String catalog = conn.getCatalog();
-         String schema = conn.getSchema();
+      // IMPORTANT: do not close the shared manager connection
+      Connection conn = this.getConnection();
+      DatabaseMetaData metaData = conn.getMetaData();
+      String catalog = conn.getCatalog();
+      String schema = conn.getSchema();
+      
+      try (ResultSet rs = metaData.getColumns(catalog, schema, tableName, null)) {
+         java.util.Map<String, Integer> columnTypesByName = new HashMap<>();
+         while (rs.next()) {
+            String columnName = rs.getString("COLUMN_NAME").toLowerCase();
+            int columnType = rs.getInt("DATA_TYPE");
+            columnTypesByName.put(columnName, columnType);
+            LOG.trace("Sink column '{}' has JDBC type {}", columnName, columnType);
+         }
          
-         try (ResultSet rs = metaData.getColumns(catalog, schema, tableName, null)) {
-            java.util.Map<String, Integer> columnTypesByName = new HashMap<>();
-            while (rs.next()) {
-               String columnName = rs.getString("COLUMN_NAME").toLowerCase();
-               int columnType = rs.getInt("DATA_TYPE");
-               columnTypesByName.put(columnName, columnType);
-               LOG.trace("Sink column '{}' has JDBC type {}", columnName, columnType);
-            }
-            
-            // Map source column positions to sink column types
-            for (int i = 1; i <= sourceMetaData.getColumnCount(); i++) {
-               String sourceColumnName = sourceMetaData.getColumnName(i).toLowerCase();
-               Integer sinkType = columnTypesByName.get(sourceColumnName);
-               if (sinkType != null) {
-                  columnTypeMap.put(i, sinkType);
-                  LOG.trace("Mapped source column {} ('{}') to sink JDBC type {}", i, sourceColumnName, sinkType);
-               }
+         // Map source column positions to sink column types
+         for (int i = 1; i <= sourceMetaData.getColumnCount(); i++) {
+            String sourceColumnName = sourceMetaData.getColumnName(i).toLowerCase();
+            Integer sinkType = columnTypesByName.get(sourceColumnName);
+            if (sinkType != null) {
+               columnTypeMap.put(i, sinkType);
+               LOG.trace("Mapped source column {} ('{}') to sink JDBC type {}", i, sourceColumnName, sinkType);
             }
          }
       }
