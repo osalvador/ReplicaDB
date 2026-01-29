@@ -504,6 +504,41 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                         continue;
                     }
                 }
+                
+                // Handle temporal sink types explicitly to ensure correct Java type for BulkCopy
+                // This prevents "invalid column length" errors when Oracle JDBC returns vendor-specific types
+                if (sinkType != null) {
+                    switch (sinkType) {
+                        case Types.TIMESTAMP:
+                        case Types.TIMESTAMP_WITH_TIMEZONE:
+                            // Always use getTimestamp() for temporal sink columns
+                            value = resultSet.getTimestamp(i);
+                            if (resultSet.wasNull()) {
+                                value = null;
+                            }
+                            LOG.trace("Retrieved TIMESTAMP as java.sql.Timestamp for column {}", i);
+                            rowData[i - 1] = value;
+                            continue;
+                            
+                        case Types.DATE:
+                            value = resultSet.getDate(i);
+                            if (resultSet.wasNull()) {
+                                value = null;
+                            }
+                            LOG.trace("Retrieved DATE as java.sql.Date for column {}", i);
+                            rowData[i - 1] = value;
+                            continue;
+                            
+                        case Types.TIME:
+                            value = resultSet.getTime(i);
+                            if (resultSet.wasNull()) {
+                                value = null;
+                            }
+                            LOG.trace("Retrieved TIME as java.sql.Time for column {}", i);
+                            rowData[i - 1] = value;
+                            continue;
+                    }
+                }
 
                 // Handle Oracle INTERVAL types by setting to NULL
                 // (no direct SQL Server equivalent, string conversion causes bulk copy errors)
