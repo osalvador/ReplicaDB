@@ -26,9 +26,9 @@ create table t_sink
     /*datetimes:*/
     c_date                       date,
     c_time_without_timezone      time,
-    c_timestamp_without_timezone datetime,
+    c_timestamp_without_timezone datetime2(3),
     c_time_with_timezone         varchar(100) /*not supported*/,
-    c_timestamp_with_timezone    datetime,
+    c_timestamp_with_timezone    datetime2(3),
     /*intervals:*/
     c_interval_day               varchar(100)  /*not supported*/,
     c_interval_year              varchar(100)  /*not supported*/,
