@@ -41,6 +41,8 @@ Common alternatives and how ReplicaDB differs:
 
 **Feature Comparison**
 
+{:.table}
+
 | Feature | SymmetricDS | Sqoop | Pentaho/Talend | ReplicaDB |
 |---------|-------------|-------|----------------|-----------|
 | Database Agents Required | Yes | No | No | **No** |
