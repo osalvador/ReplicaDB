@@ -1016,9 +1016,73 @@ sink.connect=file:///Users/osalvador/Downloads/file.csv
 
 To connect to an Oracle database, either as a source or sink, we must specify a Database URL string. In the Oracle documentation you can review all available options:[Oracle Database URLs and Database Specifiers](https://docs.oracle.com/cd/B28359_01/java.111/b31224/urls.htm#BEIJFHHB)
 
-Remember that in order to specify a connection using a TNSNames alias, you must set the `oracle.net.tns_admin` property as indicated in the Oracle documentation.
+### 4.2.1 Connection String Formats
 
-**Example**
+Oracle supports different connection string formats depending on your database configuration:
+
+**SID Format (Legacy)**
+
+Use this format for traditional Oracle databases with SID identifiers:
+
+```
+jdbc:oracle:thin:@${DBHOST}:${DBPORT}:${ORASID}
+```
+
+**Service Name Format (Recommended for PDB)**
+
+Use this format for Oracle 12c+ Pluggable Databases (PDB) or when using service names. This is the **required** format for Oracle 19c PDB connections:
+
+```
+jdbc:oracle:thin:@//${DBHOST}:${DBPORT}/${SERVICE_NAME}
+```
+
+**TNSNames Alias Format**
+
+To specify a connection using a TNSNames alias, you must set the `oracle.net.tns_admin` property:
+
+```
+jdbc:oracle:thin:@MY_DATABASE_ALIAS
+```
+
+**Examples**
+
+Example using **SID format** (legacy databases):
+
+```properties
+############################# ReplicadB Basics #############################
+mode=complete
+jobs=4
+
+############################# Source Options #############################
+source.connect=jdbc:oracle:thin:@${ORAHOST}:${ORAPORT}:${ORASID}
+source.user=${ORAUSER}
+source.password=${ORAPASS}
+source.table=schema.table_name
+
+############################# Sink Options #############################
+...
+
+```
+
+Example using **Service Name format** (Oracle 19c PDB):
+
+```properties
+############################# ReplicadB Basics #############################
+mode=complete
+jobs=4
+
+############################# Source Options #############################
+source.connect=jdbc:oracle:thin:@//${ORAHOST}:${ORAPORT}/${SERVICE_NAME}
+source.user=${ORAUSER}
+source.password=${ORAPASS}
+source.table=schema.table_name
+
+############################# Sink Options #############################
+...
+
+```
+
+Example using **TNSNames alias**:
 
 ```properties
 ############################# ReplicadB Basics #############################
@@ -1978,4 +2042,3 @@ This allows adding new databases without changing core logic.
 - No external daemons or agents
 - No database triggers or schema modifications
 - Command-line only (no GUI overhead)
-

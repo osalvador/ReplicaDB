@@ -179,8 +179,29 @@
                                     <input type="text" class="form-control" id="FormSourceUser" name="sourceUser">
                                 </div>
                                 <div class="form-group ">
-                                    <label for="FormSourceDatabase">Database / SID</label>
+                                    <label for="FormSourceDatabase">Database / SID or Service Name</label>
                                     <input type="text" class="form-control" id="FormSourceDatabase" name="sourceDatabase">
+                                    <small class="form-text text-muted" id="FormSourceDatabaseWarning" style="display:none; color: #dc3545;">
+                                        <i class="fas fa-exclamation-triangle"></i> This looks like a PDB service name. Consider selecting "Service Name" format below for Oracle 19c PDB.
+                                    </small>
+                                </div>
+
+                                <div class="form-group" id="FormSourceOracleFormatGroup" style="display:none;">
+                                    <label>Oracle Connection Format</label>
+                                    <div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="sourceOracleFormat" id="FormSourceOracleFormatService" value="service" checked>
+                                            <label class="form-check-label" for="FormSourceOracleFormatService">
+                                                Service Name <small class="text-muted">(recommended for Oracle 19c PDB)</small>
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="sourceOracleFormat" id="FormSourceOracleFormatSID" value="sid">
+                                            <label class="form-check-label" for="FormSourceOracleFormatSID">
+                                                SID <small class="text-muted">(legacy)</small>
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="form-group ">
@@ -512,8 +533,29 @@
                                     <input type="text" class="form-control" id="FormSinkUser" name="sinkUser">
                                 </div>
                                 <div class="form-group ">
-                                    <label for="FormSinkDatabase">Database / SID</label>
+                                    <label for="FormSinkDatabase">Database / SID or Service Name</label>
                                     <input type="text" class="form-control" id="FormSinkDatabase" name="sinkDatabase">
+                                    <small class="form-text text-muted" id="FormSinkDatabaseWarning" style="display:none; color: #dc3545;">
+                                        <i class="fas fa-exclamation-triangle"></i> This looks like a PDB service name. Consider selecting "Service Name" format below for Oracle 19c PDB.
+                                    </small>
+                                </div>
+
+                                <div class="form-group" id="FormSinkOracleFormatGroup" style="display:none;">
+                                    <label>Oracle Connection Format</label>
+                                    <div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="sinkOracleFormat" id="FormSinkOracleFormatService" value="service" checked>
+                                            <label class="form-check-label" for="FormSinkOracleFormatService">
+                                                Service Name <small class="text-muted">(recommended for Oracle 19c PDB)</small>
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="sinkOracleFormat" id="FormSinkOracleFormatSID" value="sid">
+                                            <label class="form-check-label" for="FormSinkOracleFormatSID">
+                                                SID <small class="text-muted">(legacy)</small>
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="form-group ">
@@ -969,7 +1011,7 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
 
     // Create Connection Helper
     Handlebars.registerHelper("createConnect", function (dsType, options) {
-        var connectType, host, port, database, sqliteFilePath, filePath, kafkaServers = "";
+        var connectType, host, port, database, sqliteFilePath, filePath, kafkaServers, oracleFormat = "";
 
         console.log(dsType);
         if (dsType === "source") {
@@ -979,6 +1021,7 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
             database = this.sourceDatabase;
             filePath = this.sourceFilePath;
             sqliteFilePath = this.sourceSqliteFilePath;
+            oracleFormat = this.sourceOracleFormat;
         } else {
             connectType = this.sinkType;
             host = this.sinkHost;
@@ -987,11 +1030,18 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
             filePath = this.sinkFilePath;
             kafkaServers = this.sinkKafkaBootstrapServers;
             sqliteFilePath = this.sinkSqliteFilePath;
+            oracleFormat = this.sinkOracleFormat;
         }
 
         switch (connectType) {
             case "oracle":
-                return "jdbc:oracle:thin:@" + host + ":" + port + ":" + database;
+                // Use service name format (with //) or SID format (with :) based on radio button
+                if (oracleFormat === "sid") {
+                    return "jdbc:oracle:thin:@" + host + ":" + port + ":" + database;
+                } else {
+                    // Default to service name format (recommended for Oracle 19c PDB)
+                    return "jdbc:oracle:thin:@//" + host + ":" + port + "/" + database;
+                }
                 break;
             case "mysql":
                 return "jdbc:mysql://" + host + ":" + port + "/" + database;
@@ -1130,6 +1180,10 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
 
             switch (this.value) {
                 case "oracle":
+                    $('#CardSourceConnectionSettings').show("slow");
+                    $('#CardSourceDataFiltering').show("slow");
+                    $('#FormSourceOracleFormatGroup').show("slow");
+                    break;
                 case "mysql":
                 case "mariadb":
                 case "postgres":
@@ -1137,14 +1191,17 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
                 case "denodo":
                     $('#CardSourceConnectionSettings').show("slow");
                     $('#CardSourceDataFiltering').show("slow");
+                    $('#FormSourceOracleFormatGroup').hide();
                     break;
                 case "sqlite":
                     $('#CardSourceSqliteSettings').show("slow");
                     $('#CardSourceDataFiltering').show("slow");
+                    $('#FormSourceOracleFormatGroup').hide();
                     break;
                 case "file":
                     $('#CardSourceFileSettings').show("slow");
                     $('#CardSourceFileDataParsing').show("slow");
+                    $('#FormSourceOracleFormatGroup').hide();
                     break;
                 default:
                     console.log("no se quien soy:" + this.value);
@@ -1161,24 +1218,93 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
                 case "postgres":
                     $('#CardSinkDisableEscape').show("slow");
                 case "oracle":
+                    $('#CardSinkConnectionSettings').show("slow");
+                    $('#CardSinkDataMapping').show("slow");
+                    showStagingSettings();
+                    if (this.value === "oracle") {
+                        $('#FormSinkOracleFormatGroup').show("slow");
+                    }
+                    break;
                 case "sqlserver":
                     $('#CardSinkConnectionSettings').show("slow");
                     $('#CardSinkDataMapping').show("slow");
                     showStagingSettings();
+                    $('#FormSinkOracleFormatGroup').hide();
                     break;
                 case "sqlite":
                     $('#CardSinkSqliteSettings').show("slow");
                     $('#CardSinkDataMapping').show("slow");
+                    $('#FormSinkOracleFormatGroup').hide();
                     break;
                 case "file":
                     $('#CardSinkFileSettings').show("slow");
                     $('#CardSinkFileDataParsing').show("slow");
+                    $('#FormSinkOracleFormatGroup').hide();
                     break;
                 case "kafka":
                     $('#CardSinkKafkaSettings').show("slow");
+                    $('#FormSinkOracleFormatGroup').hide();
                     break;
                 default:
                     console.log("no se quien soy:" + this.value);
+            }
+        });
+
+        // PDB Pattern Detection and Validation for Source
+        $("#FormSourceDatabase").on('input', function() {
+            var dbValue = $(this).val();
+            var selectedFormat = $('input[name="sourceOracleFormat"]:checked').val();
+            var sourceType = $("#FormSourceType").val();
+            
+            // Only validate if Oracle is selected and SID format is chosen
+            if (sourceType === "oracle" && selectedFormat === "sid" && dbValue) {
+                // Check for PDB patterns: dots (.) or _pdb suffixes
+                if (dbValue.includes('.') || dbValue.match(/_pdb\d*$/i)) {
+                    $('#FormSourceDatabaseWarning').show();
+                } else {
+                    $('#FormSourceDatabaseWarning').hide();
+                }
+            } else {
+                $('#FormSourceDatabaseWarning').hide();
+            }
+        });
+
+        // Hide warning when switching to Service Name format
+        $('input[name="sourceOracleFormat"]').change(function() {
+            if ($(this).val() === "service") {
+                $('#FormSourceDatabaseWarning').hide();
+            } else {
+                // Re-validate when switching back to SID
+                $("#FormSourceDatabase").trigger('input');
+            }
+        });
+
+        // PDB Pattern Detection and Validation for Sink
+        $("#FormSinkDatabase").on('input', function() {
+            var dbValue = $(this).val();
+            var selectedFormat = $('input[name="sinkOracleFormat"]:checked').val();
+            var sinkType = $("#FormSinkType").val();
+            
+            // Only validate if Oracle is selected and SID format is chosen
+            if (sinkType === "oracle" && selectedFormat === "sid" && dbValue) {
+                // Check for PDB patterns: dots (.) or _pdb suffixes
+                if (dbValue.includes('.') || dbValue.match(/_pdb\d*$/i)) {
+                    $('#FormSinkDatabaseWarning').show();
+                } else {
+                    $('#FormSinkDatabaseWarning').hide();
+                }
+            } else {
+                $('#FormSinkDatabaseWarning').hide();
+            }
+        });
+
+        // Hide warning when switching to Service Name format
+        $('input[name="sinkOracleFormat"]').change(function() {
+            if ($(this).val() === "service") {
+                $('#FormSinkDatabaseWarning').hide();
+            } else {
+                // Re-validate when switching back to SID
+                $("#FormSinkDatabase").trigger('input');
             }
         });
 
