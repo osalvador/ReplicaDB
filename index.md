@@ -160,7 +160,7 @@ You can create a configuration file for a ReplicaDB process by filling out a sim
 
 ```bash
 $ replicadb --mode=complete -j=1 \
---source-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID \
+--source-connect=jdbc:oracle:thin:@//$ORAHOST:$ORAPORT/$SERVICE_NAME \
 --source-user=$ORAUSER \
 --source-password=$ORAPASS \
 --source-table=dept \
@@ -179,7 +179,7 @@ Alternatively, use a configuration file to simplify repeated operations:
 mode=complete
 jobs=1
 ############################# Source Options ##############################
-source.connect=jdbc:oracle:thin:@${ORAHOST}:${ORAPORT}:${ORASID}
+source.connect=jdbc:oracle:thin:@//${ORAHOST}:${ORAPORT}/${SERVICE_NAME} # You can also use SID format here ${ORASID}
 source.user=${ORAUSER}
 source.password=${ORAPASS}
 source.table=dept
@@ -198,7 +198,7 @@ $ replicadb --options-file replicadb.conf
 
 ```bash
 $ replicadb --mode=complete -j=1 \
---sink-connect=jdbc:oracle:thin:@$ORAHOST:$ORAPORT:$ORASID \
+--sink-connect=jdbc:oracle:thin:@//$ORAHOST:$ORAPORT/$SERVICE_NAME \
 --sink-user=$ORAUSER \
 --sink-password=$ORAPASS \
 --sink-table=dept \
