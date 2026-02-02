@@ -18,6 +18,15 @@ layout: page
   - [3.3 Selecting the Data to Replicate](#33-selecting-the-data-to-replicate)
   - [3.4 Free-form Query Replications](#34-free-form-query-replications)
   - [3.5 Bandwidth Throttling](#35-bandwidth-throttling)
+  - [3.6 Data Type Transformations in Source Queries](#36-data-type-transformations-in-source-queries)
+    - [3.6.1 JSON Type Transformations](#361-json-type-transformations)
+    - [3.6.2 LOB Type Transformations](#362-lob-type-transformations)
+    - [3.6.3 Numeric Precision Transformations](#363-numeric-precision-transformations)
+    - [3.6.4 Date/Time Format Transformations](#364-datetime-format-transformations)
+    - [3.6.5 Custom Transformations](#365-custom-transformations)
+    - [3.6.6 Important Limitations](#366-important-limitations)
+    - [3.6.7 Best Practices](#367-best-practices)
+    - [3.6.8 Troubleshooting](#368-troubleshooting)
 - [4. Notes for specific connectors](#4-notes-for-specific-connectors)
   - [4.1 CSV files Connector](#41-csv-files-connector)
     - [4.1.1 CSV File as Source](#411-csv-file-as-source)
@@ -371,6 +380,245 @@ sink.table=large_table
 ```
 
 > **Note:** Bandwidth throttling is applied per job. If you use 4 parallel jobs with a 10 MB/s limit, the total bandwidth could reach up to 40 MB/s.
+
+<br>
+## 3.6 Data Type Transformations in Source Queries
+
+ReplicaDB is designed as a **data transport tool**, not a data transformation tool. It replicates data faithfully from source to sink without applying transformations or ETL logic. However, different database systems have incompatible data types that may require transformation at the database level before replication.
+
+**Design Philosophy:**
+- ReplicaDB focuses on efficient bulk data transfer
+- Data transformations should be performed by the source database, not by ReplicaDB
+- Use `--source-query` to transform data types at the source before replication
+
+**When to Use Source Query Transformations:**
+
+1. **Incompatible data types** between source and sink databases
+2. **JSON/JSONB columns** that require string conversion
+3. **LOB types (CLOB/BLOB)** that need casting
+4. **Numeric precision** exceeding sink database limits
+5. **Custom data formatting** requirements
+
+### 3.6.1 JSON Type Transformations
+
+JSON types are handled differently across database systems. When replicating JSON columns between heterogeneous databases, you may need to convert them to text at the source.
+
+#### MySQL/MariaDB to SQL Server
+
+**Problem:** MySQL stores JSON as strings with quotes, but SQL Server validates JSON format strictly and rejects improperly formatted values.
+
+**Solution:** Use `JSON_UNQUOTE()` or `CAST()` to convert JSON to plain text:
+
+```bash
+# Using JSON_UNQUOTE (recommended for JSON columns)
+$ replicadb --mode=complete \
+  --source-connect=jdbc:mysql://mysql-host:3306/mydb \
+  --source-user=root \
+  --source-password=pass \
+  --source-query='SELECT id, name, JSON_UNQUOTE(json_data) as json_data FROM source_table' \
+  --sink-connect=jdbc:sqlserver://sqlserver-host:1433;databaseName=mydb \
+  --sink-user=sa \
+  --sink-password=pass \
+  --sink-table=target_table
+```
+
+```bash
+# Using CAST (converts JSON to VARCHAR)
+$ replicadb --mode=complete \
+  --source-query='SELECT id, CAST(json_array AS CHAR(5000)) as json_array, CAST(json_object AS CHAR(5000)) as json_object FROM t_source'
+```
+
+**Options file format:**
+
+```properties
+mode=complete
+jobs=4
+
+source.connect=jdbc:mysql://mysql-host:3306/mydb
+source.user=root
+source.password=pass
+source.query=SELECT id, name, JSON_UNQUOTE(json_data) as json_data, JSON_UNQUOTE(json_array) as json_array FROM source_table
+
+sink.connect=jdbc:sqlserver://sqlserver-host:1433;databaseName=mydb
+sink.user=sa
+sink.password=pass
+sink.table=target_table
+```
+
+#### PostgreSQL to MySQL/MariaDB
+
+**Problem:** PostgreSQL `JSONB` type may not map correctly to MySQL `JSON` type.
+
+**Solution:** Cast JSONB to TEXT at the source:
+
+```bash
+$ replicadb --mode=complete \
+  --source-connect=jdbc:postgresql://pg-host:5432/mydb \
+  --source-user=postgres \
+  --source-password=pass \
+  --source-query='SELECT id, name, json_column::TEXT as json_column, jsonb_column::TEXT as jsonb_column FROM source_table' \
+  --sink-connect=jdbc:mysql://mysql-host:3306/mydb \
+  --sink-table=target_table
+```
+
+#### Oracle to PostgreSQL
+
+**Problem:** Oracle doesn't have native JSON type (pre-21c), uses CLOB or VARCHAR2 for JSON data.
+
+**Solution:** Ensure JSON is stored as TEXT/VARCHAR:
+
+```bash
+$ replicadb --mode=complete \
+  --source-connect=jdbc:oracle:thin:@oracle-host:1521:ORCL \
+  --source-user=system \
+  --source-password=pass \
+  --source-query='SELECT id, name, TO_CHAR(json_clob) as json_data FROM source_table' \
+  --sink-connect=jdbc:postgresql://pg-host:5432/mydb \
+  --sink-table=target_table
+```
+
+#### MongoDB to Relational Databases
+
+**Problem:** MongoDB stores native BSON/JSON that needs conversion for relational databases.
+
+**Solution:** Use aggregation pipeline to convert to string representation:
+
+```properties
+source.connect=mongodb://mongo-host:27017/mydb
+source.table=mycollection
+source.query=[{$project: {_id:1, name:1, json_field: {$toString: "$json_field"}}}]
+
+sink.connect=jdbc:postgresql://pg-host:5432/mydb
+sink.table=target_table
+```
+
+### 3.6.2 LOB Type Transformations
+
+#### CLOB to VARCHAR
+
+When replicating CLOB columns to databases with VARCHAR limits, convert at source:
+
+```bash
+# Oracle CLOB to PostgreSQL TEXT
+$ replicadb --source-query='SELECT id, name, DBMS_LOB.SUBSTR(clob_column, 32767, 1) as clob_column FROM source_table'
+
+# Oracle CLOB to MySQL VARCHAR
+$ replicadb --source-query='SELECT id, TO_CHAR(clob_column) as clob_column FROM source_table WHERE DBMS_LOB.GETLENGTH(clob_column) <= 65535'
+```
+
+#### BLOB to Binary/VARBINARY
+
+Convert BLOB to hexadecimal string for text-based sinks:
+
+```bash
+# Oracle BLOB to hex string
+$ replicadb --source-query='SELECT id, RAWTOHEX(blob_column) as blob_hex FROM source_table'
+
+# PostgreSQL BYTEA to hex
+$ replicadb --source-query='SELECT id, encode(bytea_column, '\''hex'\'') as bytea_hex FROM source_table'
+```
+
+### 3.6.3 Numeric Precision Transformations
+
+Different databases have varying numeric precision limits. Transform at source to avoid overflow:
+
+```bash
+# Oracle NUMBER(38,10) to SQL Server DECIMAL(38,10) - exceeds SQL Server max precision
+$ replicadb --source-query='SELECT id, ROUND(amount, 8) as amount FROM source_table'
+
+# MySQL DECIMAL(65,30) to PostgreSQL NUMERIC(38,10)
+$ replicadb --source-query='SELECT id, CAST(large_decimal AS DECIMAL(38,10)) as large_decimal FROM source_table'
+```
+
+### 3.6.4 Date/Time Format Transformations
+
+Standardize date formats for cross-database compatibility:
+
+```bash
+# Oracle DATE to ISO format string
+$ replicadb --source-query='SELECT id, TO_CHAR(date_column, '\''YYYY-MM-DD HH24:MI:SS'\'') as date_column FROM source_table'
+
+# MySQL DATETIME to Unix timestamp
+$ replicadb --source-query='SELECT id, UNIX_TIMESTAMP(datetime_column) as datetime_unix FROM source_table'
+
+# PostgreSQL TIMESTAMP to ISO string
+$ replicadb --source-query='SELECT id, TO_CHAR(timestamp_column, '\''YYYY-MM-DD"T"HH24:MI:SS"Z"'\'') as timestamp_iso FROM source_table'
+```
+
+### 3.6.5 Custom Transformations
+
+Apply business logic at the source database:
+
+```bash
+# Concatenate columns
+$ replicadb --source-query='SELECT id, CONCAT(first_name, '\'' '\'', last_name) as full_name FROM source_table'
+
+# Conditional transformations
+$ replicadb --source-query='SELECT id, CASE WHEN status=1 THEN '\''active'\'' ELSE '\''inactive'\'' END as status_text FROM source_table'
+
+# NULL handling
+$ replicadb --source-query='SELECT id, COALESCE(nullable_column, '\''DEFAULT'\'') as nullable_column FROM source_table'
+```
+
+### 3.6.6 Important Limitations
+
+**Parallel Processing Constraints:**
+
+Some databases don't support parallel processing with custom queries:
+
+- **Oracle:** Custom queries (`--source-query`) disable parallel processing. Use `--source-table`, `--source-columns`, and `--source-where` instead for parallel execution.
+- **SQL Server:** Same limitation as Oracle.
+
+For maximum performance with these databases, consider:
+
+1. Create a database view with transformations
+2. Use the view as `--source-table` for parallel processing
+3. Or accept single-threaded processing with `--source-query` and `-j=1`
+
+**Example using a view:**
+
+```sql
+-- Create view in source database
+CREATE VIEW v_transformed_data AS
+SELECT id, name, JSON_UNQUOTE(json_data) as json_data 
+FROM source_table;
+```
+
+```bash
+# Use view for parallel replication
+$ replicadb --mode=complete -j=4 \
+  --source-table=v_transformed_data \
+  --sink-table=target_table
+```
+
+### 3.6.7 Best Practices
+
+1. **Test transformations** in the source database first before using in ReplicaDB
+2. **Consider performance impact** of complex transformations on source database
+3. **Use database views** when same transformation is needed repeatedly
+4. **Document transformations** in your data pipeline documentation
+5. **Validate data types** match between source query output and sink table
+6. **Use appropriate string lengths** when casting to VARCHAR/CHAR
+7. **Handle NULL values** explicitly in transformations
+8. **Monitor source database load** when applying transformations
+
+### 3.6.8 Troubleshooting
+
+**Error: "JSON text is not properly formatted"**
+- **Cause:** JSON column contains quoted strings that SQL Server validates as invalid JSON
+- **Solution:** Use `JSON_UNQUOTE()` or `CAST()` in source query
+
+**Error: "Numeric overflow" or "Value out of range"**
+- **Cause:** Source numeric precision exceeds sink database limits
+- **Solution:** Use `ROUND()` or `CAST()` to reduce precision in source query
+
+**Error: "String data would be truncated"**
+- **Cause:** Source string/LOB length exceeds sink column size
+- **Solution:** Use `SUBSTR()` or `LEFT()` functions to truncate in source query
+
+**Performance degradation with source-query**
+- **Cause:** Oracle/SQL Server disable parallel processing with custom queries
+- **Solution:** Create a database view and use `--source-table` instead
 
 
 # 4. Notes for specific connectors
