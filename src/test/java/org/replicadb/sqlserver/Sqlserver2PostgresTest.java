@@ -182,13 +182,12 @@ class Sqlserver2PostgresTest {
     }
 
     /**
-     * Test IMAGE replication WITHOUT cast - documents Issue #202 bug.
-     * Expected behavior: Binary data doubles in size due to hex encoding.
-     * This test is disabled because it expects failure (known bug).
+     * Test IMAGE replication WITHOUT cast - validates Issue #202 fix.
+     * Expected behavior: Binary data transferred correctly using PostgreSQL binary COPY format.
+     * Binary lengths should match exactly (no hex encoding).
      */
     @Test
-    @Disabled("Known issue #202: IMAGE type causes hex encoding, data doubles in size")
-    void testImageReplicationWithoutCastExpectFailure() throws ParseException, IOException, SQLException {
+    void testImageReplicationWithoutCast() throws ParseException, IOException, SQLException {
         setupImageTables();
 
         String[] args = {
@@ -226,18 +225,23 @@ class Sqlserver2PostgresTest {
 
             LOG.info("Row {}: Source length = {}, Sink length = {}", id, sourceLen, sinkLen);
 
-            // Assert that sink length is approximately 2x source length (hex encoding)
-            assertTrue(sinkLen > sourceLen * 1.9 && sinkLen < sourceLen * 2.1,
-                "Expected hex encoding to double size for id=" + id +
+            // Assert that sink length matches source length exactly (binary COPY format fix)
+            assertEquals(sourceLen, sinkLen,
+                "Binary length should match for id=" + id +
                 " (source=" + sourceLen + ", sink=" + sinkLen + ")");
         }
+        
+        LOG.info("✓ IMAGE replication validated: Binary data transferred correctly without CAST");
     }
 
     /**
-     * Test IMAGE replication WITH cast workaround - validates Issue #202 solution.
-     * Expected behavior: Binary data lengths match exactly (no hex encoding).
-     * Uses source-query instead of source-columns to apply CAST on SQL Server side only.
+     * Test IMAGE replication WITH cast workaround - validates Issue #202 fix.
+     * Expected behavior: Binary data lengths should match exactly (no hex encoding).
+     * Uses source-query instead of source-columns to apply CAST on SQL Server side.
      * Note: SQL Server doesn't support parallel replication with custom queries, so jobs=1.
+     * 
+     * This test validates that the PostgreSQL binary COPY format fix correctly handles
+     * binary data from SQL Server, preserving byte-for-byte fidelity.
      */
     @Test
     void testImageReplicationWithCastWorkaround() throws ParseException, IOException, SQLException {
@@ -265,10 +269,10 @@ class Sqlserver2PostgresTest {
         countRs.next();
         assertEquals(5, countRs.getInt(1), "Expected 5 rows replicated");
 
-        // Verify binary data lengths match exactly (workaround successful)
+        // Verify binary data lengths - measure the CAST version to match what's extracted
         Statement sqlserverStmt = sqlserverConn.createStatement();
         ResultSet sourceRs = sqlserverStmt.executeQuery(
-            "SELECT id, DATALENGTH(image_col) as len FROM t_image_source WHERE image_col IS NOT NULL ORDER BY id");
+            "SELECT id, DATALENGTH(CAST(image_col AS varbinary(max))) as len FROM t_image_source WHERE image_col IS NOT NULL ORDER BY id");
 
         ResultSet sinkRs = postgresStmt.executeQuery(
             "SELECT id, LENGTH(image_col) as len FROM t_image_sink WHERE image_col IS NOT NULL ORDER BY id");
@@ -278,9 +282,11 @@ class Sqlserver2PostgresTest {
             long sourceLen = sourceRs.getLong("len");
             long sinkLen = sinkRs.getLong("len");
 
-            LOG.info("Row {}: Source length = {}, Sink length = {} (MATCH)", id, sourceLen, sinkLen);
+            LOG.info("Row {}: Source length = {}, Sink length = {}", id, sourceLen, sinkLen);
 
-            // Assert exact match (no hex encoding with cast workaround)
+            // This assertion will fail until ReplicaDB handles binary data correctly
+            // Expected: sourceLen == sinkLen
+            // Actual: sinkLen == sourceLen * 2 (hex encoding bug)
             assertEquals(sourceLen, sinkLen,
                 "Binary length mismatch for id=" + id + " (source=" + sourceLen + ", sink=" + sinkLen + ")");
         }

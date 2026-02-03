@@ -66,6 +66,34 @@ public class PostgresqlManager extends SqlManager {
             // Get Postgres COPY meta-command manager
             PgConnection copyOperationConnection = this.connection.unwrap(PgConnection.class);
             CopyManager copyManager = new CopyManager(copyOperationConnection);
+            
+            // Detect binary columns and choose appropriate COPY format
+            if (hasBinaryColumns(rsmd)) {
+                LOG.info("Binary columns detected, using COPY (FORMAT BINARY) for table {}", tableName);
+                String copyCmd = "COPY " + tableName + " (" + allColumns + ") FROM STDIN (FORMAT BINARY)";
+                copyIn = copyManager.copyIn(copyCmd);
+                
+                try {
+                    totalRows = insertDataViaBinaryCopy(resultSet, taskId, rsmd, copyIn);
+                    this.getConnection().commit();
+                    return totalRows;
+                } catch (Exception e) {
+                    if (copyIn != null && copyIn.isActive()) {
+                        copyIn.cancelCopy();
+                    }
+                    this.connection.rollback();
+                    LOG.error("Error during binary COPY to table {}, processed {} rows. Check PostgreSQL version (requires 8.0+) and column types.", 
+                              tableName, totalRows, e);
+                    throw e;
+                } finally {
+                    if (copyIn != null && copyIn.isActive()) {
+                        copyIn.cancelCopy();
+                    }
+                }
+            }
+            
+            // No binary columns, use TEXT format (existing behavior)
+            LOG.info("No binary columns, using COPY (FORMAT TEXT) for table {}", tableName);
             String copyCmd = getCopyCommand(tableName, allColumns);
             copyIn = copyManager.copyIn(copyCmd);
 
@@ -388,6 +416,214 @@ public class PostgresqlManager extends SqlManager {
             hexChars[j * 2 + 1] = hexArray[v & 0x0F];
         }
         return  "\\\\x" + new String(hexChars);
+    }
+
+    /**
+     * Checks if the ResultSet contains any binary column types that require binary COPY format.
+     * Binary columns include BINARY, VARBINARY, LONGVARBINARY, and BLOB types.
+     *
+     * @param rsmd ResultSetMetaData to analyze
+     * @return true if any column is a binary type, false otherwise
+     * @throws SQLException if metadata access fails
+     */
+    private boolean hasBinaryColumns(ResultSetMetaData rsmd) throws SQLException {
+        if (rsmd == null) {
+            return false;
+        }
+        
+        for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+            int type = rsmd.getColumnType(i);
+            if (type == Types.BINARY || 
+                type == Types.VARBINARY || 
+                type == Types.LONGVARBINARY || 
+                type == Types.BLOB) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Inserts data to PostgreSQL using binary COPY format.
+     * This format is required for correct binary data transfer without hex encoding.
+     * 
+     * PostgreSQL binary COPY format:
+     * - Header: 19 bytes (signature + flags + extension length)
+     * - Rows: field count + field data (length + bytes)
+     * - Trailer: 2 bytes (-1 as int16)
+     *
+     * @param resultSet the ResultSet containing data to insert
+     * @param taskId the task identifier for logging
+     * @param rsmd ResultSetMetaData for column information
+     * @param copyIn the PostgreSQL CopyIn operation
+     * @return number of rows inserted
+     * @throws SQLException if database operation fails
+     * @throws IOException if I/O operation fails
+     */
+    private int insertDataViaBinaryCopy(ResultSet resultSet, int taskId, 
+                                       ResultSetMetaData rsmd, CopyIn copyIn) 
+                                       throws SQLException, IOException {
+        int totalRows = 0;
+        int columnsNumber = rsmd.getColumnCount();
+        
+        // Write PostgreSQL binary COPY header (19 bytes)
+        // Signature: "PGCOPY\n\377\r\n\0" (11 bytes)
+        byte[] signature = new byte[] {
+            'P', 'G', 'C', 'O', 'P', 'Y', '\n', (byte)0xFF, '\r', '\n', 0
+        };
+        copyIn.writeToCopy(signature, 0, 11);
+        
+        // Flags field: 0x00000000 (4 bytes, int32 in network byte order)
+        // Header extension area length: 0x00000000 (4 bytes, int32)
+        ByteArrayOutputStream headerBuf = new ByteArrayOutputStream();
+        DataOutputStream headerDos = new DataOutputStream(headerBuf);
+        headerDos.writeInt(0); // flags
+        headerDos.writeInt(0); // extension length
+        byte[] headerBytes = headerBuf.toByteArray();
+        copyIn.writeToCopy(headerBytes, 0, headerBytes.length);
+        
+        // Create Bandwidth Throttling
+        BandwidthThrottling bt = new BandwidthThrottling(
+            options.getBandwidthThrottling(), 
+            options.getFetchSize(), 
+            resultSet
+        );
+        
+        if (resultSet.next()) {
+            do {
+                bt.acquiere();
+                
+                // Build row data in memory
+                ByteArrayOutputStream rowData = new ByteArrayOutputStream();
+                DataOutputStream dos = new DataOutputStream(rowData);
+                
+                // Field count (int16 = 2 bytes)
+                dos.writeShort(columnsNumber);
+                
+                // For each field
+                for (int i = 1; i <= columnsNumber; i++) {
+                    int columnType = rsmd.getColumnType(i);
+                    
+                    switch (columnType) {
+                        case Types.BINARY:
+                        case Types.VARBINARY:
+                        case Types.LONGVARBINARY:
+                            byte[] binaryData = resultSet.getBytes(i);
+                            if (resultSet.wasNull() || binaryData == null) {
+                                dos.writeInt(-1); // NULL marker
+                            } else {
+                                dos.writeInt(binaryData.length);
+                                dos.write(binaryData);
+                            }
+                            break;
+                            
+                        case Types.BLOB:
+                            Blob blob = resultSet.getBlob(i);
+                            if (resultSet.wasNull() || blob == null) {
+                                dos.writeInt(-1);
+                            } else {
+                                try {
+                                    byte[] blobBytes = blob.getBytes(1, (int) blob.length());
+                                    dos.writeInt(blobBytes.length);
+                                    dos.write(blobBytes);
+                                } finally {
+                                    blob.free();
+                                }
+                            }
+                            break;
+                            
+                        case Types.VARCHAR:
+                        case Types.CHAR:
+                        case Types.LONGVARCHAR:
+                            String text = resultSet.getString(i);
+                            if (resultSet.wasNull() || text == null) {
+                                dos.writeInt(-1);
+                            } else {
+                                byte[] textBytes = text.getBytes(StandardCharsets.UTF_8);
+                                dos.writeInt(textBytes.length);
+                                dos.write(textBytes);
+                            }
+                            break;
+                            
+                        case Types.CLOB:
+                            String clobText = clobToString(resultSet.getClob(i));
+                            if (resultSet.wasNull() || clobText == null) {
+                                dos.writeInt(-1);
+                            } else {
+                                byte[] clobBytes = clobText.getBytes(StandardCharsets.UTF_8);
+                                dos.writeInt(clobBytes.length);
+                                dos.write(clobBytes);
+                            }
+                            break;
+                            
+                        case Types.INTEGER:
+                            if (resultSet.wasNull()) {
+                                dos.writeInt(-1);
+                            } else {
+                                dos.writeInt(4); // int32 is 4 bytes
+                                dos.writeInt(resultSet.getInt(i));
+                            }
+                            break;
+                            
+                        case Types.BIGINT:
+                            if (resultSet.wasNull()) {
+                                dos.writeInt(-1);
+                            } else {
+                                dos.writeInt(8); // int64 is 8 bytes
+                                dos.writeLong(resultSet.getLong(i));
+                            }
+                            break;
+                            
+                        case Types.SMALLINT:
+                            if (resultSet.wasNull()) {
+                                dos.writeInt(-1);
+                            } else {
+                                dos.writeInt(2); // int16 is 2 bytes
+                                dos.writeShort(resultSet.getShort(i));
+                            }
+                            break;
+                            
+                        case Types.BOOLEAN:
+                        case Types.BIT:
+                            if (resultSet.wasNull()) {
+                                dos.writeInt(-1);
+                            } else {
+                                dos.writeInt(1); // boolean is 1 byte
+                                dos.writeByte(resultSet.getBoolean(i) ? 1 : 0);
+                            }
+                            break;
+                            
+                        default:
+                            // Fallback to text representation for unsupported types
+                            String value = resultSet.getString(i);
+                            if (resultSet.wasNull() || value == null) {
+                                dos.writeInt(-1);
+                            } else {
+                                byte[] valueBytes = value.getBytes(StandardCharsets.UTF_8);
+                                dos.writeInt(valueBytes.length);
+                                dos.write(valueBytes);
+                            }
+                            break;
+                    }
+                }
+                
+                // Write row to COPY stream
+                byte[] rowBytes = rowData.toByteArray();
+                copyIn.writeToCopy(rowBytes, 0, rowBytes.length);
+                totalRows++;
+                
+            } while (resultSet.next());
+        }
+        
+        // Write trailer: -1 as int16 (2 bytes: 0xFFFF)
+        ByteArrayOutputStream trailer = new ByteArrayOutputStream();
+        DataOutputStream trailerDos = new DataOutputStream(trailer);
+        trailerDos.writeShort(-1); // End marker
+        byte[] trailerBytes = trailer.toByteArray();
+        copyIn.writeToCopy(trailerBytes, 0, trailerBytes.length);
+        
+        copyIn.endCopy();
+        return totalRows;
     }
 
 
