@@ -10,10 +10,13 @@ import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbPostgresqlContainer;
 import org.replicadb.config.ReplicadbSqlserverContainer;
+import org.replicadb.utils.ScriptRunner;
 import org.testcontainers.containers.MSSQLServerContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.*;
@@ -27,6 +30,8 @@ class Sqlserver2PostgresTest {
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
     private static final int EXPECTED_ROWS = 4097;
+    private static final String IMAGE_SOURCE_FILE = "/sqlserver/sqlserver-image-source.sql";
+    private static final String IMAGE_SINK_FILE = "/sinks/pg-image-sink.sql";
 
     private Connection sqlserverConn;
     private Connection postgresConn;
@@ -49,6 +54,8 @@ class Sqlserver2PostgresTest {
     @AfterEach
     void tearDown() throws SQLException {
         postgresConn.createStatement().execute("TRUNCATE TABLE t_sink");
+        // Clean up IMAGE test tables if they exist
+        postgresConn.createStatement().execute("DROP TABLE IF EXISTS t_image_sink");
         this.sqlserverConn.close();
         this.postgresConn.close();
     }
@@ -145,5 +152,136 @@ class Sqlserver2PostgresTest {
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(EXPECTED_ROWS, countSinkRows());
+    }
+
+    /**
+     * Helper method to set up IMAGE test tables in SQL Server and PostgreSQL.
+     * Creates t_image_source with IMAGE column and t_image_sink with BYTEA column.
+     */
+    private void setupImageTables() throws SQLException, IOException {
+        ScriptRunner sqlserverRunner = new ScriptRunner(sqlserverConn, false, true);
+        ScriptRunner postgresRunner = new ScriptRunner(postgresConn, false, true);
+
+        try {
+            sqlserverRunner.runScript(new BufferedReader(
+                new FileReader(RESOURCE_DIR + IMAGE_SOURCE_FILE)));
+            LOG.info("IMAGE source table created");
+        } catch (SQLException e) {
+            LOG.error("Failed to create IMAGE source table", e);
+            throw e;
+        }
+
+        try {
+            postgresRunner.runScript(new BufferedReader(
+                new FileReader(RESOURCE_DIR + IMAGE_SINK_FILE)));
+            LOG.info("IMAGE sink table created");
+        } catch (SQLException e) {
+            LOG.error("Failed to create IMAGE sink table", e);
+            throw e;
+        }
+    }
+
+    /**
+     * Test IMAGE replication WITHOUT cast - documents Issue #202 bug.
+     * Expected behavior: Binary data doubles in size due to hex encoding.
+     * This test is disabled because it expects failure (known bug).
+     */
+    @Test
+    @Disabled("Known issue #202: IMAGE type causes hex encoding, data doubles in size")
+    void testImageReplicationWithoutCastExpectFailure() throws ParseException, IOException, SQLException {
+        setupImageTables();
+
+        String[] args = {
+                "--mode", ReplicationMode.COMPLETE.getModeText(),
+                "--source-connect", sqlserver.getJdbcUrl(),
+                "--source-user", sqlserver.getUsername(),
+                "--source-password", sqlserver.getPassword(),
+                "--source-table", "t_image_source",
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--sink-table", "t_image_sink"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+
+        // Verify row count matches
+        Statement postgresStmt = postgresConn.createStatement();
+        ResultSet countRs = postgresStmt.executeQuery("SELECT count(*) FROM t_image_sink");
+        countRs.next();
+        assertEquals(5, countRs.getInt(1), "Expected 5 rows replicated");
+
+        // Verify binary data is doubled in size (hex encoding bug)
+        Statement sqlserverStmt = sqlserverConn.createStatement();
+        ResultSet sourceRs = sqlserverStmt.executeQuery(
+            "SELECT id, DATALENGTH(image_col) as len FROM t_image_source WHERE image_col IS NOT NULL ORDER BY id");
+
+        ResultSet sinkRs = postgresStmt.executeQuery(
+            "SELECT id, LENGTH(image_col) as len FROM t_image_sink WHERE image_col IS NOT NULL ORDER BY id");
+
+        while (sourceRs.next() && sinkRs.next()) {
+            int id = sourceRs.getInt("id");
+            long sourceLen = sourceRs.getLong("len");
+            long sinkLen = sinkRs.getLong("len");
+
+            LOG.info("Row {}: Source length = {}, Sink length = {}", id, sourceLen, sinkLen);
+
+            // Assert that sink length is approximately 2x source length (hex encoding)
+            assertTrue(sinkLen > sourceLen * 1.9 && sinkLen < sourceLen * 2.1,
+                "Expected hex encoding to double size for id=" + id +
+                " (source=" + sourceLen + ", sink=" + sinkLen + ")");
+        }
+    }
+
+    /**
+     * Test IMAGE replication WITH cast workaround - validates Issue #202 solution.
+     * Expected behavior: Binary data lengths match exactly (no hex encoding).
+     */
+    @Test
+    void testImageReplicationWithCastWorkaround() throws ParseException, IOException, SQLException {
+        setupImageTables();
+
+        String[] args = {
+                "--mode", ReplicationMode.COMPLETE.getModeText(),
+                "--source-connect", sqlserver.getJdbcUrl(),
+                "--source-user", sqlserver.getUsername(),
+                "--source-password", sqlserver.getPassword(),
+                "--source-table", "t_image_source",
+                "--source-columns", "id,CAST(image_col AS varbinary(max)) as image_col,image_size,description",
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--sink-table", "t_image_sink"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+
+        // Verify row count matches
+        Statement postgresStmt = postgresConn.createStatement();
+        ResultSet countRs = postgresStmt.executeQuery("SELECT count(*) FROM t_image_sink");
+        countRs.next();
+        assertEquals(5, countRs.getInt(1), "Expected 5 rows replicated");
+
+        // Verify binary data lengths match exactly (workaround successful)
+        Statement sqlserverStmt = sqlserverConn.createStatement();
+        ResultSet sourceRs = sqlserverStmt.executeQuery(
+            "SELECT id, DATALENGTH(image_col) as len FROM t_image_source WHERE image_col IS NOT NULL ORDER BY id");
+
+        ResultSet sinkRs = postgresStmt.executeQuery(
+            "SELECT id, LENGTH(image_col) as len FROM t_image_sink WHERE image_col IS NOT NULL ORDER BY id");
+
+        while (sourceRs.next() && sinkRs.next()) {
+            int id = sourceRs.getInt("id");
+            long sourceLen = sourceRs.getLong("len");
+            long sinkLen = sinkRs.getLong("len");
+
+            LOG.info("Row {}: Source length = {}, Sink length = {} (MATCH)", id, sourceLen, sinkLen);
+
+            // Assert exact match (no hex encoding with cast workaround)
+            assertEquals(sourceLen, sinkLen,
+                "Binary length mismatch for id=" + id + " (source=" + sourceLen + ", sink=" + sinkLen + ")");
+        }
+
+        LOG.info("✓ IMAGE cast workaround validated: Binary data transferred correctly");
     }
 }
