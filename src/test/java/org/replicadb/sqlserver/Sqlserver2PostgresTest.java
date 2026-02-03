@@ -236,6 +236,7 @@ class Sqlserver2PostgresTest {
     /**
      * Test IMAGE replication WITH cast workaround - validates Issue #202 solution.
      * Expected behavior: Binary data lengths match exactly (no hex encoding).
+     * Uses source-query instead of source-columns to apply CAST on SQL Server side only.
      */
     @Test
     void testImageReplicationWithCastWorkaround() throws ParseException, IOException, SQLException {
@@ -246,8 +247,7 @@ class Sqlserver2PostgresTest {
                 "--source-connect", sqlserver.getJdbcUrl(),
                 "--source-user", sqlserver.getUsername(),
                 "--source-password", sqlserver.getPassword(),
-                "--source-table", "t_image_source",
-                "--source-columns", "id,CAST(image_col AS varbinary(max)) as image_col,image_size,description",
+                "--source-query", "SELECT id, CAST(image_col AS varbinary(max)) as image_col, image_size, description FROM t_image_source",
                 "--sink-connect", postgres.getJdbcUrl(),
                 "--sink-user", postgres.getUsername(),
                 "--sink-password", postgres.getPassword(),
