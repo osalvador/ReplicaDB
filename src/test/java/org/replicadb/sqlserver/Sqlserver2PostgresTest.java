@@ -237,6 +237,7 @@ class Sqlserver2PostgresTest {
      * Test IMAGE replication WITH cast workaround - validates Issue #202 solution.
      * Expected behavior: Binary data lengths match exactly (no hex encoding).
      * Uses source-query instead of source-columns to apply CAST on SQL Server side only.
+     * Note: SQL Server doesn't support parallel replication with custom queries, so jobs=1.
      */
     @Test
     void testImageReplicationWithCastWorkaround() throws ParseException, IOException, SQLException {
@@ -244,6 +245,7 @@ class Sqlserver2PostgresTest {
 
         String[] args = {
                 "--mode", ReplicationMode.COMPLETE.getModeText(),
+                "--jobs", "1",
                 "--source-connect", sqlserver.getJdbcUrl(),
                 "--source-user", sqlserver.getUsername(),
                 "--source-password", sqlserver.getPassword(),
@@ -251,7 +253,8 @@ class Sqlserver2PostgresTest {
                 "--sink-connect", postgres.getJdbcUrl(),
                 "--sink-user", postgres.getUsername(),
                 "--sink-password", postgres.getPassword(),
-                "--sink-table", "t_image_sink"
+                "--sink-table", "t_image_sink",
+                "--sink-columns", "id,image_col,image_size,description"
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
