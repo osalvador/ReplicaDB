@@ -724,10 +724,31 @@ public class PostgresqlManager extends SqlManager {
                             if (resultSet.wasNull()) {
                                 dos.writeInt(-1);
                             } else {
-                                BigDecimal decimal = resultSet.getBigDecimal(i);
-                                byte[] numericBytes = ByteConverter.numeric(decimal);
-                                dos.writeInt(numericBytes.length);
-                                dos.write(numericBytes);
+                                try {
+                                    BigDecimal decimal = resultSet.getBigDecimal(i);
+                                    if (decimal == null) {
+                                        dos.writeInt(-1);
+                                    } else {
+                                        // Validate BigDecimal before encoding
+                                        // ByteConverter.numeric() is strict and fails on edge cases
+                                        byte[] numericBytes = ByteConverter.numeric(decimal);
+                                        dos.writeInt(numericBytes.length);
+                                        dos.write(numericBytes);
+                                    }
+                                } catch (Exception e) {
+                                    // ByteConverter.numeric() can throw on invalid values
+                                    // Fallback to text encoding for problematic numeric values
+                                    LOG.warn("Binary encoding failed for NUMERIC column {} (value: {}), falling back to text: {}", 
+                                            rsmd.getColumnName(i), resultSet.getBigDecimal(i), e.getMessage());
+                                    String textValue = resultSet.getString(i);
+                                    if (textValue == null) {
+                                        dos.writeInt(-1);
+                                    } else {
+                                        byte[] textBytes = textValue.getBytes(StandardCharsets.UTF_8);
+                                        dos.writeInt(textBytes.length);
+                                        dos.write(textBytes);
+                                    }
+                                }
                             }
                             break;
                             
