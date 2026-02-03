@@ -8,6 +8,7 @@ import org.postgresql.copy.CopyIn;
 import org.replicadb.cli.ToolOptions;
 
 import java.io.*;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.ArrayList;
@@ -407,6 +408,8 @@ class PostgresqlManagerTest {
         @Override public void clearWarnings() {}
         @Override public String getCursorName() { return null; }
         @Override public Object getObject(String columnLabel) { return null; }
+        @Override public Object getObject(int columnIndex, java.util.Map<String, Class<?>> map) { return null; }
+        @Override public Object getObject(String columnLabel, java.util.Map<String, Class<?>> map) { return null; }
         @Override public int findColumn(String columnLabel) { return 0; }
         @Override public Reader getCharacterStream(int columnIndex) { return null; }
         @Override public Reader getCharacterStream(String columnLabel) { return null; }
@@ -533,6 +536,11 @@ class PostgresqlManagerTest {
         public void writeToCopy(byte[] data, int off, int len) throws SQLException {
             buffer.write(data, off, len);
         }
+        
+        @Override
+        public void writeToCopy(org.postgresql.util.ByteStreamWriter writer) throws SQLException {
+            // Not used in our tests
+        }
 
         @Override
         public long endCopy() throws SQLException {
@@ -569,6 +577,11 @@ class PostgresqlManagerTest {
         @Override
         public void flushCopy() throws SQLException {
             // No-op for mock
+        }
+        
+        @Override
+        public long getHandledRowCount() {
+            return 0;
         }
 
         public byte[] getWrittenData() {
