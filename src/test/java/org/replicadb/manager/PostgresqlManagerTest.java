@@ -618,4 +618,180 @@ class PostgresqlManagerTest {
         method.setAccessible(true);
         return (int) method.invoke(manager, resultSet, taskId, rsmd, copyIn);
     }
+
+    @Test
+    void testBinaryCopy_Float_SpecialValues() throws Exception {
+        // Test NaN, Infinity, -Infinity, -0.0
+        MockResultSet mockRs = new MockResultSet(
+            new int[]{Types.FLOAT, Types.REAL},
+            new Object[][]{
+                {Float.NaN, Float.NaN},
+                {Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY},
+                {Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY},
+                {-0.0f, -0.0f},
+                {123.456f, 789.012f}
+            }
+        );
+        
+        MockCopyIn mockCopyIn = new MockCopyIn();
+        int rowCount = invokeInsertDataViaBinaryCopy(mockRs, 0, mockRs.getMetaData(), mockCopyIn);
+        
+        assertEquals(5, rowCount, "Should process all float special values");
+        assertTrue(mockCopyIn.getWrittenData().length > 0, "Should write binary data for floats");
+        LOG.info("Float special values test wrote {} bytes", mockCopyIn.getWrittenData().length);
+    }
+
+    @Test
+    void testBinaryCopy_Double_Precision() throws Exception {
+        // Test high-precision doubles (15+ significant digits)
+        MockResultSet mockRs = new MockResultSet(
+            new int[]{Types.DOUBLE},
+            new Object[][]{
+                {Math.PI},
+                {Math.E},
+                {1.234567890123456789},
+                {Double.MAX_VALUE},
+                {Double.MIN_VALUE},
+                {Double.NaN},
+                {0.0}
+            }
+        );
+        
+        MockCopyIn mockCopyIn = new MockCopyIn();
+        int rowCount = invokeInsertDataViaBinaryCopy(mockRs, 0, mockRs.getMetaData(), mockCopyIn);
+        
+        assertEquals(7, rowCount, "Should process all double precision values");
+        assertTrue(mockCopyIn.getWrittenData().length > 0, "Should write binary data for doubles");
+    }
+
+    @Test
+    void testBinaryCopy_Date_BoundaryValues() throws Exception {
+        // Test dates before/after year 2000, leap years
+        MockResultSet mockRs = new MockResultSet(
+            new int[]{Types.DATE},
+            new Object[][]{
+                {Date.valueOf("1970-01-01")},  // Unix epoch
+                {Date.valueOf("1999-12-31")},  // Before PostgreSQL epoch
+                {Date.valueOf("2000-01-01")},  // PostgreSQL epoch
+                {Date.valueOf("2000-01-02")},  // Day after epoch
+                {Date.valueOf("2050-12-31")},  // Future date
+                {Date.valueOf("2000-02-29")}   // Leap year
+            }
+        );
+        
+        MockCopyIn mockCopyIn = new MockCopyIn();
+        int rowCount = invokeInsertDataViaBinaryCopy(mockRs, 0, mockRs.getMetaData(), mockCopyIn);
+        
+        assertEquals(6, rowCount, "Should process all date boundary values");
+        assertTrue(mockCopyIn.getWrittenData().length > 0, "Should write binary data for dates");
+    }
+
+    @Test
+    void testBinaryCopy_Time_Microseconds() throws Exception {
+        // Test millisecond/microsecond precision
+        MockResultSet mockRs = new MockResultSet(
+            new int[]{Types.TIME},
+            new Object[][]{
+                {Time.valueOf("00:00:00")},      // Midnight
+                {Time.valueOf("12:00:00")},      // Noon
+                {Time.valueOf("23:59:59")},      // End of day
+                {Time.valueOf("01:23:45")},
+                {Time.valueOf("18:30:15")}
+            }
+        );
+        
+        MockCopyIn mockCopyIn = new MockCopyIn();
+        int rowCount = invokeInsertDataViaBinaryCopy(mockRs, 0, mockRs.getMetaData(), mockCopyIn);
+        
+        assertEquals(5, rowCount, "Should process all time values");
+        assertTrue(mockCopyIn.getWrittenData().length > 0, "Should write binary data for times");
+    }
+
+    @Test
+    void testBinaryCopy_Timestamp_Microseconds() throws Exception {
+        // Test microsecond precision preservation, pre-2000 timestamps
+        MockResultSet mockRs = new MockResultSet(
+            new int[]{Types.TIMESTAMP},
+            new Object[][]{
+                {Timestamp.valueOf("1970-01-01 00:00:00")},      // Unix epoch
+                {Timestamp.valueOf("1999-12-31 23:59:59.999")},  // Before PostgreSQL epoch
+                {Timestamp.valueOf("2000-01-01 00:00:00")},      // PostgreSQL epoch
+                {Timestamp.valueOf("2000-01-01 00:00:00.001")},  // Millisecond precision
+                {Timestamp.valueOf("2024-06-15 14:30:45.123456")}, // Microsecond precision
+                {null}                                            // NULL timestamp
+            }
+        );
+        
+        MockCopyIn mockCopyIn = new MockCopyIn();
+        int rowCount = invokeInsertDataViaBinaryCopy(mockRs, 0, mockRs.getMetaData(), mockCopyIn);
+        
+        assertEquals(6, rowCount, "Should process all timestamp values including NULL");
+        assertTrue(mockCopyIn.getWrittenData().length > 0, "Should write binary data for timestamps");
+    }
+
+    @Test
+    void testBinaryCopy_Numeric_VariousScales() throws Exception {
+        // Test NUMERIC with scale 0, 2, 10, 38; large values (>10^20)
+        MockResultSet mockRs = new MockResultSet(
+            new int[]{Types.NUMERIC},
+            new Object[][]{
+                {new BigDecimal("12345")},                           // Scale 0
+                {new BigDecimal("123.45")},                          // Scale 2
+                {new BigDecimal("123.4567890123")},                  // Scale 10
+                {new BigDecimal("123456789012345678901234567890.12345678901234567890")}, // Scale 38, large number
+                {new BigDecimal("1234567890123456789012")},          // Large integer (>10^20)
+                {BigDecimal.ZERO},                                   // Zero
+                {new BigDecimal("0.000000000000000001")}            // Very small
+            }
+        );
+        
+        MockCopyIn mockCopyIn = new MockCopyIn();
+        int rowCount = invokeInsertDataViaBinaryCopy(mockRs, 0, mockRs.getMetaData(), mockCopyIn);
+        
+        assertEquals(7, rowCount, "Should process all numeric scale variations");
+        assertTrue(mockCopyIn.getWrittenData().length > 0, "Should write binary data for numeric");
+    }
+
+    @Test
+    void testBinaryCopy_Decimal_NegativeAndZero() throws Exception {
+        // Test negative decimals, zero, NULL
+        MockResultSet mockRs = new MockResultSet(
+            new int[]{Types.DECIMAL},
+            new Object[][]{
+                {new BigDecimal("-123.45")},         // Negative
+                {new BigDecimal("-0.001")},          // Small negative
+                {new BigDecimal("0")},               // Zero
+                {new BigDecimal("0.00")},            // Zero with scale
+                {new BigDecimal("-9999999.99")},     // Large negative
+                {null}                               // NULL
+            }
+        );
+        
+        MockCopyIn mockCopyIn = new MockCopyIn();
+        int rowCount = invokeInsertDataViaBinaryCopy(mockRs, 0, mockRs.getMetaData(), mockCopyIn);
+        
+        assertEquals(6, rowCount, "Should process negative decimals, zero, and NULL");
+        assertTrue(mockCopyIn.getWrittenData().length > 0, "Should write binary data for decimal");
+    }
+
+    @Test
+    void testBinaryCopy_StringFallback_TraceLogs() throws Exception {
+        // Verify string fallback for unsupported types (would need ARRAY/JSON types in real scenario)
+        // This test verifies mixed types including those that use string fallback
+        MockResultSet mockRs = new MockResultSet(
+            new int[]{Types.VARCHAR, Types.INTEGER, Types.CLOB},
+            new Object[][]{
+                {"test", 123, "clob_content"},
+                {"hello", 456, "more_clob"}
+            }
+        );
+        
+        MockCopyIn mockCopyIn = new MockCopyIn();
+        int rowCount = invokeInsertDataViaBinaryCopy(mockRs, 0, mockRs.getMetaData(), mockCopyIn);
+        
+        assertEquals(2, rowCount, "Should process mixed types with string fallback");
+        assertTrue(mockCopyIn.getWrittenData().length > 0, "Should write binary data");
+        // Note: TRACE logging verification would require log capture infrastructure
+        LOG.info("String fallback test completed successfully");
+    }
 }

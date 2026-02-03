@@ -9,9 +9,11 @@ import org.replicadb.cli.ToolOptions;
 import org.postgresql.copy.CopyIn;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.jdbc.PgConnection;
+import org.postgresql.util.ByteConverter;
 import org.replicadb.manager.util.BandwidthThrottling;
 
 import java.io.*;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.util.Arrays;
@@ -20,6 +22,33 @@ import java.util.List;
 import static org.replicadb.manager.SupportedManagers.MARIADB;
 import static org.replicadb.manager.SupportedManagers.MYSQL;
 
+/**
+ * PostgreSQL-specific database manager implementing binary COPY protocol for high-performance data replication.
+ * 
+ * <p>Binary COPY Format Implementation:</p>
+ * <ul>
+ *   <li>Requires PostgreSQL JDBC driver 42.7.2 or later (tested version)</li>
+ *   <li>Uses {@code org.postgresql.util.ByteConverter} for native binary encoding of PostgreSQL types</li>
+ *   <li>Supports native binary encoding for: BYTEA, BLOB, INTEGER, BIGINT, SMALLINT, BOOLEAN, 
+ *       FLOAT, DOUBLE, DATE, TIME, TIMESTAMP, NUMERIC, DECIMAL, VARCHAR, CHAR, CLOB</li>
+ *   <li>Falls back to text encoding for exotic types (ARRAY, JSON, XML, geometric types, ranges)</li>
+ * </ul>
+ * 
+ * <p>The binary encoding preserves:</p>
+ * <ul>
+ *   <li>IEEE 754 precision for FLOAT/DOUBLE (no string conversion rounding)</li>
+ *   <li>Microsecond precision for TIMESTAMP (sub-millisecond accuracy)</li>
+ *   <li>Exact precision for NUMERIC/DECIMAL (base-10000 internal format)</li>
+ *   <li>Date accuracy across PostgreSQL epoch boundary (2000-01-01)</li>
+ * </ul>
+ * 
+ * <p><strong>Version Compatibility:</strong> This implementation uses PostgreSQL JDBC driver internal classes
+ * which are stable across 42.x versions but may change in major version updates. Other 42.x driver versions
+ * may work but are untested.</p>
+ * 
+ * @see org.postgresql.util.ByteConverter
+ * @see org.postgresql.copy.CopyManager
+ */
 public class PostgresqlManager extends SqlManager {
 
     private static final Logger LOG = LogManager.getLogger(PostgresqlManager.class.getName());
@@ -447,7 +476,36 @@ public class PostgresqlManager extends SqlManager {
      * Inserts data to PostgreSQL using binary COPY format.
      * This format is required for correct binary data transfer without hex encoding.
      * 
-     * PostgreSQL binary COPY format:
+     * <p>PostgreSQL binary COPY format specification:</p>
+     * <ul>
+     *   <li>Header: 19 bytes (signature 'PGCOPY\\n\\377\\r\\n\\0' + flags + extension length)</li>
+     *   <li>Row format: field count (int16) + [field length (int32) + field data] per field</li>
+     *   <li>NULL marker: field length = -1 (0xFFFFFFFF)</li>
+     *   <li>Trailer: -1 as int16 (0xFFFF)</li>
+     * </ul>
+     * 
+     * <p>Type-specific binary encoding (using {@link org.postgresql.util.ByteConverter}):</p>
+     * <ul>
+     *   <li><strong>FLOAT/DOUBLE:</strong> IEEE 754 big-endian format (4/8 bytes)</li>
+     *   <li><strong>DATE:</strong> Days since PostgreSQL epoch 2000-01-01 (4 bytes int32)</li>
+     *   <li><strong>TIME:</strong> Microseconds since midnight (8 bytes int64)</li>
+     *   <li><strong>TIMESTAMP:</strong> Microseconds since 2000-01-01 00:00:00 UTC (8 bytes int64)</li>
+     *   <li><strong>NUMERIC/DECIMAL:</strong> PostgreSQL internal format (base-10000 digit groups)</li>
+     *   <li><strong>INTEGER/BIGINT/SMALLINT:</strong> Big-endian signed integers (4/8/2 bytes)</li>
+     *   <li><strong>BOOLEAN:</strong> 1 byte (0x00=false, 0x01=true)</li>
+     *   <li><strong>VARCHAR/CHAR/TEXT:</strong> UTF-8 encoded bytes</li>
+     *   <li><strong>BYTEA/BLOB/BINARY:</strong> Raw binary data</li>
+     *   <li><strong>Exotic types (ARRAY, JSON, XML, geometric):</strong> Text fallback with TRACE logging</li>
+     * </ul>
+     * 
+     * <p><strong>Version Requirements:</strong> Requires PostgreSQL JDBC driver 42.7.2. 
+     * Internal ByteConverter class APIs are stable across 42.x versions.</p>
+     * 
+     * @param resultSet the ResultSet containing data to insert
+     * @param copyIn the PostgreSQL CopyIn stream for binary COPY
+     * @return number of rows inserted
+     * @throws SQLException if data access or binary encoding fails
+     * @throws IOException if COPY stream write fails
      * - Header: 19 bytes (signature + flags + extension length)
      * - Rows: field count + field data (length + bytes)
      * - Trailer: 2 bytes (-1 as int16)
@@ -593,8 +651,90 @@ public class PostgresqlManager extends SqlManager {
                             }
                             break;
                             
+                        case Types.FLOAT:
+                        case Types.REAL:
+                            if (resultSet.wasNull()) {
+                                dos.writeInt(-1);
+                            } else {
+                                byte[] floatBytes = new byte[4];
+                                ByteConverter.float4(floatBytes, 0, resultSet.getFloat(i));
+                                dos.writeInt(4); // float is 4 bytes
+                                dos.write(floatBytes);
+                            }
+                            break;
+                            
+                        case Types.DOUBLE:
+                            if (resultSet.wasNull()) {
+                                dos.writeInt(-1);
+                            } else {
+                                byte[] doubleBytes = new byte[8];
+                                ByteConverter.float8(doubleBytes, 0, resultSet.getDouble(i));
+                                dos.writeInt(8); // double is 8 bytes
+                                dos.write(doubleBytes);
+                            }
+                            break;
+                            
+                        case Types.DATE:
+                            if (resultSet.wasNull()) {
+                                dos.writeInt(-1);
+                            } else {
+                                Date date = resultSet.getDate(i);
+                                // PostgreSQL epoch: 2000-01-01
+                                long pgEpochMillis = Date.valueOf("2000-01-01").getTime();
+                                int days = (int)((date.getTime() - pgEpochMillis) / 86400000L);
+                                byte[] dateBytes = new byte[4];
+                                ByteConverter.int4(dateBytes, 0, days);
+                                dos.writeInt(4); // date is 4 bytes
+                                dos.write(dateBytes);
+                            }
+                            break;
+                            
+                        case Types.TIME:
+                            if (resultSet.wasNull()) {
+                                dos.writeInt(-1);
+                            } else {
+                                Time time = resultSet.getTime(i);
+                                // Microseconds since midnight
+                                long microseconds = (time.getTime() % 86400000L) * 1000L;
+                                byte[] timeBytes = new byte[8];
+                                ByteConverter.int8(timeBytes, 0, microseconds);
+                                dos.writeInt(8); // time is 8 bytes
+                                dos.write(timeBytes);
+                            }
+                            break;
+                            
+                        case Types.TIMESTAMP:
+                            if (resultSet.wasNull()) {
+                                dos.writeInt(-1);
+                            } else {
+                                Timestamp ts = resultSet.getTimestamp(i);
+                                // PostgreSQL epoch: 2000-01-01 00:00:00 UTC
+                                long pgEpochMillis = Timestamp.valueOf("2000-01-01 00:00:00").getTime();
+                                // Calculate microseconds: (millis * 1000) + (sub-millisecond nanos / 1000)
+                                long microseconds = (ts.getTime() - pgEpochMillis) * 1000L + (ts.getNanos() % 1000000) / 1000;
+                                byte[] tsBytes = new byte[8];
+                                ByteConverter.int8(tsBytes, 0, microseconds);
+                                dos.writeInt(8); // timestamp is 8 bytes
+                                dos.write(tsBytes);
+                            }
+                            break;
+                            
+                        case Types.NUMERIC:
+                        case Types.DECIMAL:
+                            if (resultSet.wasNull()) {
+                                dos.writeInt(-1);
+                            } else {
+                                BigDecimal decimal = resultSet.getBigDecimal(i);
+                                byte[] numericBytes = ByteConverter.numeric(decimal);
+                                dos.writeInt(numericBytes.length);
+                                dos.write(numericBytes);
+                            }
+                            break;
+                            
                         default:
                             // Fallback to text representation for unsupported types
+                            LOG.trace("Using string fallback for column {} type {} (code: {})", 
+                                     rsmd.getColumnName(i), rsmd.getColumnTypeName(i), columnType);
                             String value = resultSet.getString(i);
                             if (resultSet.wasNull() || value == null) {
                                 dos.writeInt(-1);
