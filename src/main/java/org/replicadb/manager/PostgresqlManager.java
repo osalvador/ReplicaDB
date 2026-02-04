@@ -97,7 +97,12 @@ public class PostgresqlManager extends SqlManager {
             CopyManager copyManager = new CopyManager(copyOperationConnection);
             
             // Detect binary columns and choose appropriate COPY format
-            if (hasBinaryColumns(rsmd)) {
+            // IMPORTANT: Only use binary COPY for PostgreSQL-to-PostgreSQL replication
+            // Cross-database replication may have schema mismatches that binary format cannot handle
+            boolean isPostgresSource = options.getSourceConnect() != null && 
+                                      options.getSourceConnect().startsWith("jdbc:postgresql:");
+            
+            if (isPostgresSource && hasBinaryColumns(rsmd)) {
                 LOG.info("Binary columns detected, using COPY (FORMAT BINARY) for table {}", tableName);
                 String copyCmd = "COPY " + tableName + " (" + allColumns + ") FROM STDIN (FORMAT BINARY)";
                 copyIn = copyManager.copyIn(copyCmd);
