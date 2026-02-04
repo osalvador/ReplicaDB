@@ -711,13 +711,17 @@ public class PostgresqlManager extends SqlManager {
                                 dos.writeInt(-1);
                             } else {
                                 Date date = resultSet.getDate(i);
-                                // PostgreSQL epoch: 2000-01-01
-                                long pgEpochMillis = Date.valueOf("2000-01-01").getTime();
-                                int days = (int)((date.getTime() - pgEpochMillis) / 86400000L);
-                                byte[] dateBytes = new byte[4];
-                                ByteConverter.int4(dateBytes, 0, days);
-                                dos.writeInt(4); // date is 4 bytes
-                                dos.write(dateBytes);
+                                if (date == null) {
+                                    dos.writeInt(-1);
+                                } else {
+                                    // PostgreSQL epoch: 2000-01-01
+                                    long pgEpochMillis = Date.valueOf("2000-01-01").getTime();
+                                    int days = (int)((date.getTime() - pgEpochMillis) / 86400000L);
+                                    byte[] dateBytes = new byte[4];
+                                    ByteConverter.int4(dateBytes, 0, days);
+                                    dos.writeInt(4); // date is 4 bytes
+                                    dos.write(dateBytes);
+                                }
                             }
                             break;
                             
@@ -726,12 +730,16 @@ public class PostgresqlManager extends SqlManager {
                                 dos.writeInt(-1);
                             } else {
                                 Time time = resultSet.getTime(i);
-                                // Microseconds since midnight
-                                long microseconds = (time.getTime() % 86400000L) * 1000L;
-                                byte[] timeBytes = new byte[8];
-                                ByteConverter.int8(timeBytes, 0, microseconds);
-                                dos.writeInt(8); // time is 8 bytes
-                                dos.write(timeBytes);
+                                if (time == null) {
+                                    dos.writeInt(-1);
+                                } else {
+                                    // Microseconds since midnight
+                                    long microseconds = (time.getTime() % 86400000L) * 1000L;
+                                    byte[] timeBytes = new byte[8];
+                                    ByteConverter.int8(timeBytes, 0, microseconds);
+                                    dos.writeInt(8); // time is 8 bytes
+                                    dos.write(timeBytes);
+                                }
                             }
                             break;
                             
@@ -740,14 +748,18 @@ public class PostgresqlManager extends SqlManager {
                                 dos.writeInt(-1);
                             } else {
                                 Timestamp ts = resultSet.getTimestamp(i);
-                                // PostgreSQL epoch: 2000-01-01 00:00:00 UTC
-                                long pgEpochMillis = Timestamp.valueOf("2000-01-01 00:00:00").getTime();
-                                // Calculate microseconds: (millis * 1000) + (sub-millisecond nanos / 1000)
-                                long microseconds = (ts.getTime() - pgEpochMillis) * 1000L + (ts.getNanos() % 1000000) / 1000;
-                                byte[] tsBytes = new byte[8];
-                                ByteConverter.int8(tsBytes, 0, microseconds);
-                                dos.writeInt(8); // timestamp is 8 bytes
-                                dos.write(tsBytes);
+                                if (ts == null) {
+                                    dos.writeInt(-1);
+                                } else {
+                                    // PostgreSQL epoch: 2000-01-01 00:00:00 UTC
+                                    long pgEpochMillis = Timestamp.valueOf("2000-01-01 00:00:00").getTime();
+                                    // Calculate microseconds: (millis * 1000) + (sub-millisecond nanos / 1000)
+                                    long microseconds = (ts.getTime() - pgEpochMillis) * 1000L + (ts.getNanos() % 1000000) / 1000;
+                                    byte[] tsBytes = new byte[8];
+                                    ByteConverter.int8(tsBytes, 0, microseconds);
+                                    dos.writeInt(8); // timestamp is 8 bytes
+                                    dos.write(tsBytes);
+                                }
                             }
                             break;
                             

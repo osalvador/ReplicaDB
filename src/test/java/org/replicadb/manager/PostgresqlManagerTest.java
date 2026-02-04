@@ -33,7 +33,9 @@ class PostgresqlManagerTest {
             "--source-connect", "jdbc:postgresql://localhost:5432/test",
             "--source-table", "test_table",
             "--sink-connect", "jdbc:postgresql://localhost:5432/test",
-            "--sink-table", "test_table"
+            "--sink-table", "test_table",
+            "--fetch-size", "100",
+            "--jobs", "1"
         };
         
         try {
@@ -41,6 +43,7 @@ class PostgresqlManagerTest {
             manager = new PostgresqlManager(mockOptions, DataSourceType.SINK);
         } catch (Exception e) {
             LOG.error("Failed to initialize PostgresqlManager for testing", e);
+            fail("Setup failed: " + e.getMessage());
         }
     }
 
