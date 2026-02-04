@@ -28,7 +28,7 @@ jobs:
       run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
 
     - name: Build and Integration Tests
-      run: mvn -B package --file pom.xml -Dtest='Sqlserver2PostgresTest'
+      run: mvn -B package --file pom.xml -Dtest='!Oracle2OracleCrossVersionLobTest'
 
     - name: Clean Install
       run: |
