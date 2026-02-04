@@ -23,9 +23,9 @@ create table t_source
     c_numeric                    numeric(30, 15),
     c_decimal                    decimal(30, 15),
     /*approximate numerics:*/
-    c_real                       decimal(30, 15),
-    c_double_precision           decimal(30, 15),
-    c_float                      decimal(30, 15),
+    c_real                       real,
+    c_double_precision           float(53),
+    c_float                      float,
     /*binary strings:*/
     c_binary                     varbinary(35),
     c_binary_var                 varbinary(255),
