@@ -656,10 +656,26 @@ public class PostgresqlManager extends SqlManager {
                             if (resultSet.wasNull()) {
                                 dos.writeInt(-1);
                             } else {
-                                byte[] floatBytes = new byte[4];
-                                ByteConverter.float4(floatBytes, 0, resultSet.getFloat(i));
-                                dos.writeInt(4); // float is 4 bytes
-                                dos.write(floatBytes);
+                                try {
+                                    float floatValue = resultSet.getFloat(i);
+                                    // Validate float value before encoding
+                                    byte[] floatBytes = new byte[4];
+                                    ByteConverter.float4(floatBytes, 0, floatValue);
+                                    dos.writeInt(4); // float is 4 bytes
+                                    dos.write(floatBytes);
+                                } catch (Exception e) {
+                                    // Fallback to text encoding for problematic float values
+                                    LOG.warn("Binary encoding failed for FLOAT/REAL column {} (value: {}), falling back to text: {}", 
+                                            rsmd.getColumnName(i), resultSet.getFloat(i), e.getMessage());
+                                    String textValue = resultSet.getString(i);
+                                    if (textValue == null) {
+                                        dos.writeInt(-1);
+                                    } else {
+                                        byte[] textBytes = textValue.getBytes(StandardCharsets.UTF_8);
+                                        dos.writeInt(textBytes.length);
+                                        dos.write(textBytes);
+                                    }
+                                }
                             }
                             break;
                             
@@ -667,10 +683,26 @@ public class PostgresqlManager extends SqlManager {
                             if (resultSet.wasNull()) {
                                 dos.writeInt(-1);
                             } else {
-                                byte[] doubleBytes = new byte[8];
-                                ByteConverter.float8(doubleBytes, 0, resultSet.getDouble(i));
-                                dos.writeInt(8); // double is 8 bytes
-                                dos.write(doubleBytes);
+                                try {
+                                    double doubleValue = resultSet.getDouble(i);
+                                    // Validate double value before encoding
+                                    byte[] doubleBytes = new byte[8];
+                                    ByteConverter.float8(doubleBytes, 0, doubleValue);
+                                    dos.writeInt(8); // double is 8 bytes
+                                    dos.write(doubleBytes);
+                                } catch (Exception e) {
+                                    // Fallback to text encoding for problematic double values
+                                    LOG.warn("Binary encoding failed for DOUBLE column {} (value: {}), falling back to text: {}", 
+                                            rsmd.getColumnName(i), resultSet.getDouble(i), e.getMessage());
+                                    String textValue = resultSet.getString(i);
+                                    if (textValue == null) {
+                                        dos.writeInt(-1);
+                                    } else {
+                                        byte[] textBytes = textValue.getBytes(StandardCharsets.UTF_8);
+                                        dos.writeInt(textBytes.length);
+                                        dos.write(textBytes);
+                                    }
+                                }
                             }
                             break;
                             
