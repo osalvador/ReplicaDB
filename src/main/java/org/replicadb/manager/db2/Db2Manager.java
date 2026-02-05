@@ -86,8 +86,10 @@ public class Db2Manager extends SqlManager {
             return super.execute(baseQuery);
         }
 
-        String sqlCmd = "SELECT * FROM (SELECT SRC.*, MOD(ROW_NUMBER() OVER (ORDER BY 1), "
-            + this.options.getJobs() + ") AS RN FROM (" + baseQuery + ") SRC) PART WHERE RN = " + nThread;
+        String selectColumns = "*".equals(allColumns) ? "SRC.*" : allColumns;
+        String sqlCmd = "SELECT " + selectColumns + " FROM (SELECT " + selectColumns
+            + ", MOD(ROW_NUMBER() OVER (ORDER BY 1), " + this.options.getJobs()
+            + ") AS RN FROM (" + baseQuery + ") SRC) PART WHERE RN = " + nThread;
 
         LOG.debug("{}: Reading table with command: {}", Thread.currentThread().getName(), sqlCmd);
         return super.execute(sqlCmd);
