@@ -169,6 +169,8 @@ public class Db2Manager extends SqlManager {
                             ps.setTimestamp(i, resultSet.getTimestamp(i));
                             break;
                         case Types.BINARY:
+                        case Types.VARBINARY:
+                        case Types.LONGVARBINARY:
                             ps.setBytes(i, resultSet.getBytes(i));
                             break;
                         case Types.BLOB:
