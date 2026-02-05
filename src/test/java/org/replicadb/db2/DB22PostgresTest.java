@@ -27,6 +27,10 @@ class DB22PostgresTest {
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
     private static final int EXPECTED_ROWS = 4096;
+        private static final String COLUMN_LIST = "C_INTEGER,C_SMALLINT,C_BIGINT,C_NUMERIC,C_DECIMAL,C_REAL,"
+            + "C_DOUBLE_PRECISION,C_FLOAT,C_BINARY,C_BINARY_VAR,C_BINARY_LOB,C_BOOLEAN,C_CHARACTER,"
+            + "C_CHARACTER_VAR,C_CHARACTER_LOB,C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR,C_DATE,"
+            + "C_TIMESTAMP_WITHOUT_TIMEZONE,C_TIMESTAMP_WITH_TIMEZONE";
 
     private Connection db2Conn;
     private Connection postgresConn;
@@ -101,7 +105,9 @@ class DB22PostgresTest {
                 "--source-password", db2.getPassword(),
                 "--sink-connect", postgres.getJdbcUrl(),
                 "--sink-user", postgres.getUsername(),
-                "--sink-password", postgres.getPassword()
+                "--sink-password", postgres.getPassword(),
+                "--source-columns", COLUMN_LIST,
+                "--sink-columns", COLUMN_LIST
         };
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
@@ -118,7 +124,9 @@ class DB22PostgresTest {
                 "--sink-connect", postgres.getJdbcUrl(),
                 "--sink-user", postgres.getUsername(),
                 "--sink-password", postgres.getPassword(),
-                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
+                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
+                "--source-columns", COLUMN_LIST,
+                "--sink-columns", COLUMN_LIST
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
@@ -135,7 +143,9 @@ class DB22PostgresTest {
                 "--sink-connect", postgres.getJdbcUrl(),
                 "--sink-user", postgres.getUsername(),
                 "--sink-password", postgres.getPassword(),
-                "--mode", ReplicationMode.INCREMENTAL.getModeText()
+                "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+                "--source-columns", COLUMN_LIST,
+                "--sink-columns", COLUMN_LIST
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
@@ -153,7 +163,9 @@ class DB22PostgresTest {
                 "--sink-connect", postgres.getJdbcUrl(),
                 "--sink-user", postgres.getUsername(),
                 "--sink-password", postgres.getPassword(),
-                "--jobs", "4"
+                "--jobs", "4",
+                "--source-columns", COLUMN_LIST,
+                "--sink-columns", COLUMN_LIST
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
@@ -171,7 +183,9 @@ class DB22PostgresTest {
                 "--sink-user", postgres.getUsername(),
                 "--sink-password", postgres.getPassword(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
-                "--jobs", "4"
+                "--jobs", "4",
+                "--source-columns", COLUMN_LIST,
+                "--sink-columns", COLUMN_LIST
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
@@ -189,7 +203,9 @@ class DB22PostgresTest {
                 "--sink-user", postgres.getUsername(),
                 "--sink-password", postgres.getPassword(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
-                "--jobs", "4"
+                "--jobs", "4",
+                "--source-columns", COLUMN_LIST,
+                "--sink-columns", COLUMN_LIST
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
