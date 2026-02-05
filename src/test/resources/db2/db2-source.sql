@@ -25,7 +25,7 @@ create table t_source (
     /*Exact Numerics*/
                           C_INTEGER INTEGER not null,
                           C_SMALLINT SMALLINT,
-                          C_BIGINT NUMERIC(19)	,
+                          C_BIGINT BIGINT,
                           C_NUMERIC NUMERIC(16,10),
                           C_DECIMAL DECIMAL(16,10),
     /*Approximate Numerics:*/
