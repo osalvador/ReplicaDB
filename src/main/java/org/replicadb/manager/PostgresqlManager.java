@@ -21,6 +21,7 @@ import java.sql.*;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.replicadb.manager.SupportedManagers.DB2;
 import static org.replicadb.manager.SupportedManagers.MARIADB;
 import static org.replicadb.manager.SupportedManagers.MONGODB;
 import static org.replicadb.manager.SupportedManagers.MONGODBSRV;
@@ -476,11 +477,12 @@ public class PostgresqlManager extends SqlManager {
         boolean hasBinary = false;
         boolean hasFloatingPoint = false;
         
-        // Detect MySQL/MariaDB/MongoDB sources for special handling
+        // Detect MySQL/MariaDB/MongoDB/DB2 sources for special handling
         boolean isMySQL = MYSQL.isTheManagerTypeOf(options, DataSourceType.SOURCE) || 
                           MARIADB.isTheManagerTypeOf(options, DataSourceType.SOURCE);
         boolean isMongoDB = MONGODB.isTheManagerTypeOf(options, DataSourceType.SOURCE) ||
                             MONGODBSRV.isTheManagerTypeOf(options, DataSourceType.SOURCE);
+        boolean isDB2 = DB2.isTheManagerTypeOf(options, DataSourceType.SOURCE);
         
         // MongoDB BSON type system limitation: BSON types don't align with PostgreSQL binary format
         // - BSON only has 64-bit doubles (no 32-bit floats)
@@ -488,6 +490,14 @@ public class PostgresqlManager extends SqlManager {
         // - Use TEXT COPY for all MongoDB sources for reliable type conversion
         if (isMongoDB) {
             LOG.info("MongoDB source detected. Using text COPY for reliable BSON-to-SQL type conversion.");
+            return false;
+        }
+        
+        // DB2 JDBC driver limitation: wasNull() calls fail during binary COPY operations
+        // Error: "Invalid operation: No data is retrieved for OUT parameter. ERRORCODE=-4472"
+        // - Use TEXT COPY for all DB2 sources to avoid JDBC driver issues
+        if (isDB2) {
+            LOG.info("DB2 source detected. Using text COPY due to JDBC driver incompatibility with binary format.");
             return false;
         }
         
