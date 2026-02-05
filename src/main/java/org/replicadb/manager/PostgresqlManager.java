@@ -761,106 +761,86 @@ public class PostgresqlManager extends SqlManager {
                             break;
                             
                         case Types.DATE:
-                            if (resultSet.wasNull()) {
+                            Date date = resultSet.getDate(i);
+                            if (resultSet.wasNull() || date == null) {
                                 dos.writeInt(-1);
                             } else {
-                                Date date = resultSet.getDate(i);
-                                if (date == null) {
-                                    dos.writeInt(-1);
-                                } else {
-                                    // PostgreSQL epoch: 2000-01-01
-                                    long pgEpochMillis = Date.valueOf("2000-01-01").getTime();
-                                    int days = (int)((date.getTime() - pgEpochMillis) / 86400000L);
-                                    byte[] dateBytes = new byte[4];
-                                    ByteConverter.int4(dateBytes, 0, days);
-                                    dos.writeInt(4); // date is 4 bytes
-                                    dos.write(dateBytes);
-                                }
+                                // PostgreSQL epoch: 2000-01-01
+                                long pgEpochMillis = Date.valueOf("2000-01-01").getTime();
+                                int days = (int)((date.getTime() - pgEpochMillis) / 86400000L);
+                                byte[] dateBytes = new byte[4];
+                                ByteConverter.int4(dateBytes, 0, days);
+                                dos.writeInt(4); // date is 4 bytes
+                                dos.write(dateBytes);
                             }
                             break;
                             
                         case Types.TIME:
-                            if (resultSet.wasNull()) {
+                            Time time = resultSet.getTime(i);
+                            if (resultSet.wasNull() || time == null) {
                                 dos.writeInt(-1);
                             } else {
-                                Time time = resultSet.getTime(i);
-                                if (time == null) {
-                                    dos.writeInt(-1);
+                                String typeName = rsmd.getColumnTypeName(i);
+                                if ("timetz".equalsIgnoreCase(typeName)) {
+                                    // TIME WITH TIME ZONE: 12 bytes (8 bytes time + 4 bytes timezone offset)
+                                    // PostgreSQL stores as microseconds since midnight + timezone offset in seconds
+                                    long microseconds = (time.getTime() % 86400000L) * 1000L;
+                                    byte[] timeBytes = new byte[8];
+                                    ByteConverter.int8(timeBytes, 0, microseconds);
+                                    // Timezone offset: assuming UTC (0) for now since JDBC Time doesn't carry timezone
+                                    byte[] tzBytes = new byte[4];
+                                    ByteConverter.int4(tzBytes, 0, 0);
+                                    dos.writeInt(12); // 12 bytes total
+                                    dos.write(timeBytes);
+                                    dos.write(tzBytes);
                                 } else {
-                                    String typeName = rsmd.getColumnTypeName(i);
-                                    if ("timetz".equalsIgnoreCase(typeName)) {
-                                        // TIME WITH TIME ZONE: 12 bytes (8 bytes time + 4 bytes timezone offset)
-                                        // PostgreSQL stores as microseconds since midnight + timezone offset in seconds
-                                        long microseconds = (time.getTime() % 86400000L) * 1000L;
-                                        byte[] timeBytes = new byte[8];
-                                        ByteConverter.int8(timeBytes, 0, microseconds);
-                                        // Timezone offset: assuming UTC (0) for now since JDBC Time doesn't carry timezone
-                                        byte[] tzBytes = new byte[4];
-                                        ByteConverter.int4(tzBytes, 0, 0);
-                                        dos.writeInt(12); // 12 bytes total
-                                        dos.write(timeBytes);
-                                        dos.write(tzBytes);
-                                    } else {
-                                        // TIME WITHOUT TIME ZONE: 8 bytes (microseconds since midnight)
-                                        long microseconds = (time.getTime() % 86400000L) * 1000L;
-                                        byte[] timeBytes = new byte[8];
-                                        ByteConverter.int8(timeBytes, 0, microseconds);
-                                        dos.writeInt(8);
-                                        dos.write(timeBytes);
-                                    }
+                                    // TIME WITHOUT TIME ZONE: 8 bytes (microseconds since midnight)
+                                    long microseconds = (time.getTime() % 86400000L) * 1000L;
+                                    byte[] timeBytes = new byte[8];
+                                    ByteConverter.int8(timeBytes, 0, microseconds);
+                                    dos.writeInt(8);
+                                    dos.write(timeBytes);
                                 }
                             }
                             break;
                             
                         case Types.TIMESTAMP:
-                            if (resultSet.wasNull()) {
+                            Timestamp ts = resultSet.getTimestamp(i);
+                            if (resultSet.wasNull() || ts == null) {
                                 dos.writeInt(-1);
                             } else {
-                                Timestamp ts = resultSet.getTimestamp(i);
-                                if (ts == null) {
-                                    dos.writeInt(-1);
-                                } else {
-                                    // PostgreSQL epoch: 2000-01-01 00:00:00 UTC
-                                    long pgEpochMillis = Timestamp.valueOf("2000-01-01 00:00:00").getTime();
-                                    // Calculate microseconds: (millis * 1000) + (sub-millisecond nanos / 1000)
-                                    long microseconds = (ts.getTime() - pgEpochMillis) * 1000L + (ts.getNanos() % 1000000) / 1000;
-                                    byte[] tsBytes = new byte[8];
-                                    ByteConverter.int8(tsBytes, 0, microseconds);
-                                    dos.writeInt(8); // timestamp is 8 bytes
-                                    dos.write(tsBytes);
-                                }
+                                // PostgreSQL epoch: 2000-01-01 00:00:00 UTC
+                                long pgEpochMillis = Timestamp.valueOf("2000-01-01 00:00:00").getTime();
+                                // Calculate microseconds: (millis * 1000) + (sub-millisecond nanos / 1000)
+                                long microseconds = (ts.getTime() - pgEpochMillis) * 1000L + (ts.getNanos() % 1000000) / 1000;
+                                byte[] tsBytes = new byte[8];
+                                ByteConverter.int8(tsBytes, 0, microseconds);
+                                dos.writeInt(8); // timestamp is 8 bytes
+                                dos.write(tsBytes);
                             }
                             break;
                             
                         case Types.NUMERIC:
                         case Types.DECIMAL:
-                            if (resultSet.wasNull()) {
+                            BigDecimal decimal = resultSet.getBigDecimal(i);
+                            if (resultSet.wasNull() || decimal == null) {
                                 dos.writeInt(-1);
                             } else {
                                 try {
-                                    BigDecimal decimal = resultSet.getBigDecimal(i);
-                                    if (decimal == null) {
-                                        dos.writeInt(-1);
-                                    } else {
-                                        // Validate BigDecimal before encoding
-                                        // ByteConverter.numeric() is strict and fails on edge cases
-                                        byte[] numericBytes = ByteConverter.numeric(decimal);
-                                        dos.writeInt(numericBytes.length);
-                                        dos.write(numericBytes);
-                                    }
+                                    // Validate BigDecimal before encoding
+                                    // ByteConverter.numeric() is strict and fails on edge cases
+                                    byte[] numericBytes = ByteConverter.numeric(decimal);
+                                    dos.writeInt(numericBytes.length);
+                                    dos.write(numericBytes);
                                 } catch (Exception e) {
                                     // ByteConverter.numeric() can throw on invalid values
                                     // Fallback to text encoding for problematic numeric values
                                     LOG.warn("Binary encoding failed for NUMERIC column {} (value: {}), falling back to text: {}", 
-                                            rsmd.getColumnName(i), resultSet.getBigDecimal(i), e.getMessage());
-                                    String textValue = resultSet.getString(i);
-                                    if (textValue == null) {
-                                        dos.writeInt(-1);
-                                    } else {
-                                        byte[] textBytes = textValue.getBytes(StandardCharsets.UTF_8);
-                                        dos.writeInt(textBytes.length);
-                                        dos.write(textBytes);
-                                    }
+                                            rsmd.getColumnName(i), decimal, e.getMessage());
+                                    String textValue = decimal.toString();
+                                    byte[] textBytes = textValue.getBytes(StandardCharsets.UTF_8);
+                                    dos.writeInt(textBytes.length);
+                                    dos.write(textBytes);
                                 }
                             }
                             break;
