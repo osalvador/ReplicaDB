@@ -139,6 +139,8 @@ public class Db2Manager extends SqlManager {
                         case Types.CHAR:
                         case -15:
                         case Types.LONGVARCHAR:
+                        case Types.NVARCHAR:
+                        case Types.LONGNVARCHAR:
                             ps.setString(i, resultSet.getString(i));
                             break;
                         case Types.INTEGER:
@@ -192,11 +194,6 @@ public class Db2Manager extends SqlManager {
                             } else {
                                 ps.setString(i, boolVal ? "1" : "0");
                             }
-                            break;
-                        case Types.NVARCHAR:
-                        case Types.NCHAR:
-                        case Types.LONGNVARCHAR:
-                            ps.setString(i, resultSet.getString(i));
                             break;
                         case Types.SQLXML:
                             SQLXML sqlxmlData = resultSet.getSQLXML(i);
