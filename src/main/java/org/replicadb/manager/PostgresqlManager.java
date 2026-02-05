@@ -21,7 +21,6 @@ import java.sql.*;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.replicadb.manager.SupportedManagers.DB2;
 import static org.replicadb.manager.SupportedManagers.MARIADB;
 import static org.replicadb.manager.SupportedManagers.MONGODB;
 import static org.replicadb.manager.SupportedManagers.MONGODBSRV;
@@ -477,12 +476,11 @@ public class PostgresqlManager extends SqlManager {
         boolean hasBinary = false;
         boolean hasFloatingPoint = false;
         
-        // Detect MySQL/MariaDB/MongoDB/DB2 sources for special handling
+        // Detect MySQL/MariaDB/MongoDB sources for special handling
         boolean isMySQL = MYSQL.isTheManagerTypeOf(options, DataSourceType.SOURCE) || 
                           MARIADB.isTheManagerTypeOf(options, DataSourceType.SOURCE);
         boolean isMongoDB = MONGODB.isTheManagerTypeOf(options, DataSourceType.SOURCE) ||
                             MONGODBSRV.isTheManagerTypeOf(options, DataSourceType.SOURCE);
-        boolean isDB2 = DB2.isTheManagerTypeOf(options, DataSourceType.SOURCE);
         
         // MongoDB BSON type system limitation: BSON types don't align with PostgreSQL binary format
         // - BSON only has 64-bit doubles (no 32-bit floats)
@@ -490,14 +488,6 @@ public class PostgresqlManager extends SqlManager {
         // - Use TEXT COPY for all MongoDB sources for reliable type conversion
         if (isMongoDB) {
             LOG.info("MongoDB source detected. Using text COPY for reliable BSON-to-SQL type conversion.");
-            return false;
-        }
-        
-        // DB2 JDBC driver limitation: wasNull() calls fail during binary COPY operations
-        // Error: "Invalid operation: No data is retrieved for OUT parameter. ERRORCODE=-4472"
-        // - Use TEXT COPY for all DB2 sources to avoid JDBC driver issues
-        if (isDB2) {
-            LOG.info("DB2 source detected. Using text COPY due to JDBC driver incompatibility with binary format.");
             return false;
         }
         
@@ -705,48 +695,52 @@ public class PostgresqlManager extends SqlManager {
                             break;
                             
                         case Types.INTEGER:
+                            int intValue = resultSet.getInt(i);
                             if (resultSet.wasNull()) {
                                 dos.writeInt(-1);
                             } else {
                                 dos.writeInt(4); // int32 is 4 bytes
-                                dos.writeInt(resultSet.getInt(i));
+                                dos.writeInt(intValue);
                             }
                             break;
                             
                         case Types.BIGINT:
+                            long longValue = resultSet.getLong(i);
                             if (resultSet.wasNull()) {
                                 dos.writeInt(-1);
                             } else {
                                 dos.writeInt(8); // int64 is 8 bytes
-                                dos.writeLong(resultSet.getLong(i));
+                                dos.writeLong(longValue);
                             }
                             break;
                             
                         case Types.SMALLINT:
+                            short shortValue = resultSet.getShort(i);
                             if (resultSet.wasNull()) {
                                 dos.writeInt(-1);
                             } else {
                                 dos.writeInt(2); // int16 is 2 bytes
-                                dos.writeShort(resultSet.getShort(i));
+                                dos.writeShort(shortValue);
                             }
                             break;
                             
                         case Types.BOOLEAN:
                         case Types.BIT:
+                            boolean boolValue = resultSet.getBoolean(i);
                             if (resultSet.wasNull()) {
                                 dos.writeInt(-1);
                             } else {
                                 dos.writeInt(1); // boolean is 1 byte
-                                dos.writeByte(resultSet.getBoolean(i) ? 1 : 0);
+                                dos.writeByte(boolValue ? 1 : 0);
                             }
                             break;
                             
                         case Types.FLOAT:
                         case Types.REAL:
+                            float floatValue = resultSet.getFloat(i);
                             if (resultSet.wasNull()) {
                                 dos.writeInt(-1);
                             } else {
-                                float floatValue = resultSet.getFloat(i);
                                 byte[] floatBytes = new byte[4];
                                 ByteConverter.float4(floatBytes, 0, floatValue);
                                 dos.writeInt(4);
@@ -755,10 +749,10 @@ public class PostgresqlManager extends SqlManager {
                             break;
                             
                         case Types.DOUBLE:
+                            double doubleValue = resultSet.getDouble(i);
                             if (resultSet.wasNull()) {
                                 dos.writeInt(-1);
                             } else {
-                                double doubleValue = resultSet.getDouble(i);
                                 byte[] doubleBytes = new byte[8];
                                 ByteConverter.float8(doubleBytes, 0, doubleValue);
                                 dos.writeInt(8); // double is 8 bytes
