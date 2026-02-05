@@ -194,7 +194,9 @@ public class Db2Manager extends SqlManager {
                             }
                             break;
                         case Types.NVARCHAR:
-                            ps.setNString(i, resultSet.getNString(i));
+                        case Types.NCHAR:
+                        case Types.LONGNVARCHAR:
+                            ps.setString(i, resultSet.getString(i));
                             break;
                         case Types.SQLXML:
                             SQLXML sqlxmlData = resultSet.getSQLXML(i);

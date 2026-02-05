@@ -118,6 +118,7 @@ class DB22SqlserverTest {
                 "--sink-user", sqlserver.getUsername(),
                 "--sink-password", sqlserver.getPassword(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
+                "--sink-staging-schema", "dbo",
                 "--source-columns", COLUMN_LIST,
                 "--sink-columns", COLUMN_LIST
         };
@@ -137,6 +138,7 @@ class DB22SqlserverTest {
                 "--sink-user", sqlserver.getUsername(),
                 "--sink-password", sqlserver.getPassword(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+                "--sink-staging-schema", "dbo",
                 "--source-columns", COLUMN_LIST,
                 "--sink-columns", COLUMN_LIST
         };
@@ -176,6 +178,7 @@ class DB22SqlserverTest {
                 "--sink-password", sqlserver.getPassword(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
                 "--jobs", "4",
+                "--sink-staging-schema", "dbo",
                 "--source-columns", COLUMN_LIST,
                 "--sink-columns", COLUMN_LIST
         };
@@ -196,6 +199,7 @@ class DB22SqlserverTest {
                 "--sink-password", sqlserver.getPassword(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
                 "--jobs", "4",
+                "--sink-staging-schema", "dbo",
                 "--source-columns", COLUMN_LIST,
                 "--sink-columns", COLUMN_LIST
         };
