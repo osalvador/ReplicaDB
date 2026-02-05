@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
+import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbDB2Container;
 import org.replicadb.config.ReplicadbPostgresqlContainer;
@@ -16,7 +17,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -101,11 +101,66 @@ class Postgres2DB2Test {
         };
 
         ToolOptions options = new ToolOptions(args);
+        Assertions.assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+    }
 
-        // Using Standard JDBC Manager
-        Properties sinkConnectionParams = new Properties();
-        sinkConnectionParams.setProperty("driver", "com.ibm.db2.jcc.DB2Driver");
-        options.setSinkConnectionParams(sinkConnectionParams);
+    @Test
+    void testPostgres2Db2DBCompleteParallel() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", db2.getJdbcUrl(),
+                "--sink-user", db2.getUsername(),
+                "--sink-password", db2.getPassword(),
+                "--jobs", "4",
+                "--source-columns","C_INTEGER,C_SMALLINT,C_BIGINT,C_NUMERIC,C_DECIMAL,C_REAL,C_DOUBLE_PRECISION,C_FLOAT,C_BINARY,C_BINARY_VAR,C_BINARY_LOB,C_BOOLEAN,C_CHARACTER,C_CHARACTER_VAR,C_CHARACTER_LOB,C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR,C_DATE,C_TIME_WITHOUT_TIMEZONE,C_TIMESTAMP_WITHOUT_TIMEZONE,C_TIME_WITH_TIMEZONE,C_TIMESTAMP_WITH_TIMEZONE"
+        };
+
+        ToolOptions options = new ToolOptions(args);
+
+        Assertions.assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testPostgres2Db2DBIncremental() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", db2.getJdbcUrl(),
+                "--sink-user", db2.getUsername(),
+                "--sink-password", db2.getPassword(),
+                "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+                "--source-columns","C_INTEGER,C_SMALLINT,C_BIGINT,C_NUMERIC,C_DECIMAL,C_REAL,C_DOUBLE_PRECISION,C_FLOAT,C_BINARY,C_BINARY_VAR,C_BINARY_LOB,C_BOOLEAN,C_CHARACTER,C_CHARACTER_VAR,C_CHARACTER_LOB,C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR,C_DATE,C_TIME_WITHOUT_TIMEZONE,C_TIMESTAMP_WITHOUT_TIMEZONE,C_TIME_WITH_TIMEZONE,C_TIMESTAMP_WITH_TIMEZONE"
+        };
+
+        ToolOptions options = new ToolOptions(args);
+
+        Assertions.assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testPostgres2Db2DBIncrementalParallel() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", db2.getJdbcUrl(),
+                "--sink-user", db2.getUsername(),
+                "--sink-password", db2.getPassword(),
+                "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+                "--jobs", "4",
+                "--source-columns","C_INTEGER,C_SMALLINT,C_BIGINT,C_NUMERIC,C_DECIMAL,C_REAL,C_DOUBLE_PRECISION,C_FLOAT,C_BINARY,C_BINARY_VAR,C_BINARY_LOB,C_BOOLEAN,C_CHARACTER,C_CHARACTER_VAR,C_CHARACTER_LOB,C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR,C_DATE,C_TIME_WITHOUT_TIMEZONE,C_TIMESTAMP_WITHOUT_TIMEZONE,C_TIME_WITH_TIMEZONE,C_TIMESTAMP_WITH_TIMEZONE"
+        };
+
+        ToolOptions options = new ToolOptions(args);
 
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(TOTAL_SINK_ROWS, countSinkRows());

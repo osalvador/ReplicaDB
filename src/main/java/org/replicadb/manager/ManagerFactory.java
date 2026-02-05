@@ -3,6 +3,7 @@ package org.replicadb.manager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.manager.db2.Db2Manager;
 
 import static org.replicadb.manager.SupportedManagers.*;
 
@@ -60,6 +61,8 @@ public class ManagerFactory {
                 return new SqliteManager(options, dsType);
             } else if (MONGODB.isTheManagerTypeOf(options, dsType) || MONGODBSRV.isTheManagerTypeOf(options, dsType)) {
                 return new MongoDBManager(options, dsType);
+            } else if (DB2.isTheManagerTypeOf(options, dsType) || DB2_AS400.isTheManagerTypeOf(options, dsType)) {
+                return new Db2Manager(options, dsType);
             } else {
                 LOG.warn("The database with scheme {} was not found. Trying  with standard JDBC manager ", scheme);
                 return new StandardJDBCManager(options, dsType);

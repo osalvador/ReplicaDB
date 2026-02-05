@@ -17,7 +17,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -105,11 +104,6 @@ class DB22PostgresTest {
                 "--sink-password", postgres.getPassword()
         };
         ToolOptions options = new ToolOptions(args);
-        // Using Standard JDBC Manager
-        Properties sourceConnectionParams = new Properties();
-        sourceConnectionParams.setProperty("driver", "com.ibm.db2.jcc.DB2Driver");
-        options.setSourceConnectionParams(sourceConnectionParams);
-
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(EXPECTED_ROWS,countSinkRows());
     }
@@ -127,79 +121,78 @@ class DB22PostgresTest {
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
-        assertEquals(1, ReplicaDB.processReplica(options));
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+    }
 
+    @Test
+    void testDb22PostgresIncremental() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--mode", ReplicationMode.INCREMENTAL.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
 
     }
-//
-//    @Test
-//    void testDb22PostgresIncremental() throws ParseException, IOException, SQLException {
-//        String[] args = {
-//                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-//                "--source-connect", db2.getJdbcUrl(),
-//                "--source-user", db2.getUsername(),
-//                "--source-password", db2.getPassword(),
-//                "--sink-connect", postgres.getJdbcUrl(),
-//                "--sink-user", postgres.getUsername(),
-//                "--sink-password", postgres.getPassword(),
-//                "--mode", ReplicationMode.INCREMENTAL.getModeText()
-//        };
-//        ToolOptions options = new ToolOptions(args);
-//        assertEquals(0, ReplicaDB.processReplica(options));
-//        assertEquals(EXPECTED_ROWS,countSinkRows());
-//
-//    }
-//
-//    @Test
-//    void testDb22PostgresCompleteParallel() throws ParseException, IOException, SQLException {
-//        String[] args = {
-//                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-//                "--source-connect", db2.getJdbcUrl(),
-//                "--source-user", db2.getUsername(),
-//                "--source-password", db2.getPassword(),
-//                "--sink-connect", postgres.getJdbcUrl(),
-//                "--sink-user", postgres.getUsername(),
-//                "--sink-password", postgres.getPassword(),
-//                "--jobs", "4"
-//        };
-//        ToolOptions options = new ToolOptions(args);
-//        assertEquals(0, ReplicaDB.processReplica(options));
-//        assertEquals(EXPECTED_ROWS,countSinkRows());
-//    }
-//
-//    @Test
-//    void testDb22PostgresCompleteAtomicParallel() throws ParseException, IOException, SQLException {
-//        String[] args = {
-//                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-//                "--source-connect", db2.getJdbcUrl(),
-//                "--source-user", db2.getUsername(),
-//                "--source-password", db2.getPassword(),
-//                "--sink-connect", postgres.getJdbcUrl(),
-//                "--sink-user", postgres.getUsername(),
-//                "--sink-password", postgres.getPassword(),
-//                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
-//                "--jobs", "4"
-//        };
-//        ToolOptions options = new ToolOptions(args);
-//        assertEquals(0, ReplicaDB.processReplica(options));
-//        assertEquals(EXPECTED_ROWS,countSinkRows());
-//    }
-//
-//    @Test
-//    void testDb22PostgresIncrementalParallel() throws ParseException, IOException, SQLException {
-//        String[] args = {
-//                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-//                "--source-connect", db2.getJdbcUrl(),
-//                "--source-user", db2.getUsername(),
-//                "--source-password", db2.getPassword(),
-//                "--sink-connect", postgres.getJdbcUrl(),
-//                "--sink-user", postgres.getUsername(),
-//                "--sink-password", postgres.getPassword(),
-//                "--mode", ReplicationMode.INCREMENTAL.getModeText(),
-//                "--jobs", "4"
-//        };
-//        ToolOptions options = new ToolOptions(args);
-//        assertEquals(0, ReplicaDB.processReplica(options));
-//        assertEquals(EXPECTED_ROWS,countSinkRows());
-//    }
+
+    @Test
+    void testDb22PostgresCompleteParallel() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testDb22PostgresCompleteAtomicParallel() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
+                "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testDb22PostgresIncrementalParallel() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+                "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+    }
 }
