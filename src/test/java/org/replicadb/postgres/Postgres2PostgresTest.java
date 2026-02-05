@@ -284,4 +284,140 @@ class Postgres2PostgresTest {
         
         LOG.info("✅ All binary type precision validations passed");
     }
+
+    @Test
+    void testBinaryCopy_ByteaJsonXmlTypes() throws ParseException, IOException, SQLException {
+        // Test BYTEA columns with binary COPY (excluding JSON/XML/INTERVAL/ARRAY which force text mode)
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--source-columns", "c_integer,c_binary,c_binary_var,c_binary_lob",
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--sink-columns", "c_integer,c_binary,c_binary_var,c_binary_lob"
+        };
+        
+        LOG.info("Testing BYTEA types with binary COPY (JSON/XML excluded)...");
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+        
+        // Validate BYTEA data integrity
+        Statement sourceStmt = postgresConn.createStatement();
+        Statement sinkStmt = postgresConn.createStatement();
+        
+        ResultSet sourceRs = sourceStmt.executeQuery(
+            "SELECT c_integer, c_binary, c_binary_var, c_binary_lob " +
+            "FROM t_source WHERE c_integer = 100"
+        );
+        ResultSet sinkRs = sinkStmt.executeQuery(
+            "SELECT c_integer, c_binary, c_binary_var, c_binary_lob " +
+            "FROM t_sink WHERE c_integer = 100"
+        );
+        
+        assertTrue(sourceRs.next(), "Source should have row with c_integer=100");
+        assertTrue(sinkRs.next(), "Sink should have row with c_integer=100");
+        
+        // Validate BYTEA columns (binary data)
+        if (sourceRs.getBytes("c_binary") != null) {
+            assertArrayEquals(sourceRs.getBytes("c_binary"), sinkRs.getBytes("c_binary"),
+                            "BYTEA (c_binary) should match exactly");
+            LOG.info("✓ BYTEA (c_binary) validated with BINARY COPY: {} bytes", sourceRs.getBytes("c_binary").length);
+        }
+        
+        if (sourceRs.getBytes("c_binary_var") != null) {
+            assertArrayEquals(sourceRs.getBytes("c_binary_var"), sinkRs.getBytes("c_binary_var"),
+                            "BYTEA (c_binary_var) should match exactly");
+            LOG.info("✓ BYTEA (c_binary_var) validated with BINARY COPY: {} bytes", sourceRs.getBytes("c_binary_var").length);
+        }
+        
+        if (sourceRs.getBytes("c_binary_lob") != null) {
+            assertArrayEquals(sourceRs.getBytes("c_binary_lob"), sinkRs.getBytes("c_binary_lob"),
+                            "BYTEA (c_binary_lob) should match exactly");
+            LOG.info("✓ BYTEA (c_binary_lob) validated with BINARY COPY: {} bytes", sourceRs.getBytes("c_binary_lob").length);
+        }
+        
+        sourceRs.close();
+        sinkRs.close();
+        sourceStmt.close();
+        sinkStmt.close();
+        
+        LOG.info("✅ Binary COPY validation passed for BYTEA types");
+    }
+
+    @Test
+    void testTextCopy_JsonXmlTypes() throws ParseException, IOException, SQLException {
+        // Test that JSON/JSONB and XML types use text COPY (not binary)
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--source-columns", "c_integer,c_xml,c_json",
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--sink-columns", "c_integer,c_xml,c_json"
+        };
+        
+        LOG.info("Testing JSON/JSONB and XML types with text COPY...");
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+        
+        // Validate JSON and XML data integrity
+        Statement sourceStmt = postgresConn.createStatement();
+        Statement sinkStmt = postgresConn.createStatement();
+        
+        ResultSet sourceRs = sourceStmt.executeQuery(
+            "SELECT c_integer, c_xml, c_json FROM t_source WHERE c_integer = 100"
+        );
+        ResultSet sinkRs = sinkStmt.executeQuery(
+            "SELECT c_integer, c_xml, c_json FROM t_sink WHERE c_integer = 100"
+        );
+        
+        assertTrue(sourceRs.next(), "Source should have row with c_integer=100");
+        assertTrue(sinkRs.next(), "Sink should have row with c_integer=100");
+        
+        // Validate XML column
+        if (sourceRs.getSQLXML("c_xml") != null) {
+            String sourceXml = sourceRs.getSQLXML("c_xml").getString();
+            String sinkXml = sinkRs.getSQLXML("c_xml").getString();
+            assertEquals(sourceXml, sinkXml, "XML content should match exactly");
+            LOG.info("✓ XML validated with TEXT COPY (length: {} chars)", sourceXml.length());
+        }
+        
+        // Validate JSON/JSONB column
+        if (sourceRs.getString("c_json") != null) {
+            String sourceJson = sourceRs.getString("c_json");
+            String sinkJson = sinkRs.getString("c_json");
+            assertEquals(sourceJson, sinkJson, "JSON/JSONB content should match exactly");
+            LOG.info("✓ JSON/JSONB validated with TEXT COPY: {}", sourceJson.substring(0, Math.min(50, sourceJson.length())));
+        }
+        
+        sourceRs.close();
+        sinkRs.close();
+        sourceStmt.close();
+        sinkStmt.close();
+        
+        LOG.info("✅ Text COPY validation passed for JSON/JSONB and XML types");
+    }
+
+    private void assertArrayEquals(byte[] expected, byte[] actual, String message) {
+        if (expected == null && actual == null) return;
+        if (expected == null || actual == null) {
+            throw new AssertionError(message + " - One array is null");
+        }
+        if (expected.length != actual.length) {
+            throw new AssertionError(message + " - Array lengths differ: " + expected.length + " vs " + actual.length);
+        }
+        for (int i = 0; i < expected.length; i++) {
+            if (expected[i] != actual[i]) {
+                throw new AssertionError(message + " - Arrays differ at index " + i);
+            }
+        }
+    }
 }

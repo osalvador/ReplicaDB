@@ -1,5 +1,7 @@
 package org.replicadb.manager;
 
+import org.apache.commons.codec.DecoderException;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -20,18 +22,28 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.replicadb.manager.SupportedManagers.MARIADB;
+import static org.replicadb.manager.SupportedManagers.MONGODB;
+import static org.replicadb.manager.SupportedManagers.MONGODBSRV;
 import static org.replicadb.manager.SupportedManagers.MYSQL;
 
 /**
  * PostgreSQL-specific database manager implementing binary COPY protocol for high-performance data replication.
+ * Uses strict type separation: Binary COPY for simple types, TEXT COPY for complex types.
  * 
- * <p>Binary COPY Format Implementation:</p>
+ * <p>Binary COPY Format (simple types only):</p>
  * <ul>
  *   <li>Requires PostgreSQL JDBC driver 42.7.2 or later (tested version)</li>
  *   <li>Uses {@code org.postgresql.util.ByteConverter} for native binary encoding of PostgreSQL types</li>
  *   <li>Supports native binary encoding for: BYTEA, BLOB, INTEGER, BIGINT, SMALLINT, BOOLEAN, 
  *       FLOAT, DOUBLE, DATE, TIME, TIMESTAMP, NUMERIC, DECIMAL, VARCHAR, CHAR, CLOB</li>
- *   <li>Falls back to text encoding for exotic types (ARRAY, JSON, XML, geometric types, ranges)</li>
+ *   <li>Throws exception if complex types (ARRAY, JSON, XML, INTERVAL) are encountered (defensive check)</li>
+ * </ul>
+ * 
+ * <p>TEXT COPY Format (complex types):</p>
+ * <ul>
+ *   <li>Used for tables containing ARRAY, JSON, JSONB, XML, or INTERVAL columns</li>
+ *   <li>Handles PostgreSQL-specific type parsing and serialization</li>
+ *   <li>Determined automatically by {@link #shouldUseBinaryCopy(ResultSetMetaData)}</li>
  * </ul>
  * 
  * <p>The binary encoding preserves:</p>
@@ -96,8 +108,8 @@ public class PostgresqlManager extends SqlManager {
             PgConnection copyOperationConnection = this.connection.unwrap(PgConnection.class);
             CopyManager copyManager = new CopyManager(copyOperationConnection);
             
-            // Detect binary columns and choose appropriate COPY format
-            if (hasBinaryColumns(rsmd)) {
+            // Determine appropriate COPY format based on column types
+            if (shouldUseBinaryCopy(rsmd)) {
                 LOG.info("Binary columns detected, using COPY (FORMAT BINARY) for table {}", tableName);
                 String copyCmd = "COPY " + tableName + " (" + allColumns + ") FROM STDIN (FORMAT BINARY)";
                 copyIn = copyManager.copyIn(copyCmd);
@@ -111,8 +123,8 @@ public class PostgresqlManager extends SqlManager {
                         copyIn.cancelCopy();
                     }
                     this.connection.rollback();
-                    LOG.error("Error during binary COPY to table {}, processed {} rows. Check PostgreSQL version (requires 8.0+) and column types.", 
-                              tableName, totalRows, e);
+                    LOG.error("Error during binary COPY to table {}, processed {} rows. Binary COPY error: {}", 
+                              tableName, totalRows, e.getMessage());
                     throw e;
                 } finally {
                     if (copyIn != null && copyIn.isActive()) {
@@ -448,33 +460,101 @@ public class PostgresqlManager extends SqlManager {
     }
 
     /**
-     * Checks if the ResultSet contains any binary column types that require binary COPY format.
-     * Binary columns include BINARY, VARBINARY, LONGVARBINARY, and BLOB types.
+     * Determines whether to use binary COPY format based on column types.
+     * Returns false for complex types (ARRAY, JSON, JSONB, XML, INTERVAL) which require TEXT COPY.
+     * Returns true for simple types when BYTEA/BLOB columns are present, enabling binary transfer.
      *
      * @param rsmd ResultSetMetaData to analyze
-     * @return true if any column is a binary type, false otherwise
+     * @return true to use binary COPY format, false to use TEXT COPY format
      * @throws SQLException if metadata access fails
      */
-    private boolean hasBinaryColumns(ResultSetMetaData rsmd) throws SQLException {
+    private boolean shouldUseBinaryCopy(ResultSetMetaData rsmd) throws SQLException {
         if (rsmd == null) {
             return false;
         }
         
+        boolean hasBinary = false;
+        boolean hasFloatingPoint = false;
+        
+        // Detect MySQL/MariaDB/MongoDB sources for special handling
+        boolean isMySQL = MYSQL.isTheManagerTypeOf(options, DataSourceType.SOURCE) || 
+                          MARIADB.isTheManagerTypeOf(options, DataSourceType.SOURCE);
+        boolean isMongoDB = MONGODB.isTheManagerTypeOf(options, DataSourceType.SOURCE) ||
+                            MONGODBSRV.isTheManagerTypeOf(options, DataSourceType.SOURCE);
+        
+        // MongoDB BSON type system limitation: BSON types don't align with PostgreSQL binary format
+        // - BSON only has 64-bit doubles (no 32-bit floats)
+        // - BSON integers may have different byte order or format
+        // - Use TEXT COPY for all MongoDB sources for reliable type conversion
+        if (isMongoDB) {
+            LOG.info("MongoDB source detected. Using text COPY for reliable BSON-to-SQL type conversion.");
+            return false;
+        }
+        
+        // First check for complex types that MUST use text COPY
+        for (int i = 1; i <= rsmd.getColumnCount(); i++) {
+            int type = rsmd.getColumnType(i);
+            String typeName = rsmd.getColumnTypeName(i);
+            
+            // ARRAY types require complex binary encoding (dimensions, bounds, null bitmap)
+            // Text format {elem1,elem2} is simpler and reliable
+            if (type == Types.ARRAY) {
+                LOG.info("ARRAY type detected (column: {}, typeName: {}), using text COPY for safety", 
+                         rsmd.getColumnName(i), typeName);
+                return false;
+            }
+            
+            // XML type: binary format requires UTF-8 but text COPY is more reliable
+            if (type == Types.SQLXML || "xml".equalsIgnoreCase(typeName)) {
+                LOG.info("XML type detected (column: {}), using text COPY", 
+                         rsmd.getColumnName(i));
+                return false;
+            }
+            
+            // JSON/JSONB types: PostgreSQL binary format is complex (version byte + length + data)
+            // Text COPY handles JSON as simple text strings
+            if ("json".equalsIgnoreCase(typeName) || "jsonb".equalsIgnoreCase(typeName)) {
+                LOG.info("JSON/JSONB type detected (column: {}), using text COPY", 
+                         rsmd.getColumnName(i));
+                return false;
+            }
+            
+            // INTERVAL types require 16-byte binary struct (months, days, microseconds)
+            // Text COPY is more reliable for interval representation
+            if ("interval".equalsIgnoreCase(typeName)) {
+                LOG.info("INTERVAL type detected (column: {}), using text COPY", 
+                         rsmd.getColumnName(i));
+                return false;
+            }
+        }
+        
+        // Then check for binary types (BYTEA/BLOB) and floating-point types
         for (int i = 1; i <= rsmd.getColumnCount(); i++) {
             int type = rsmd.getColumnType(i);
             if (type == Types.BINARY || 
                 type == Types.VARBINARY || 
                 type == Types.LONGVARBINARY || 
                 type == Types.BLOB) {
-                return true;
+                hasBinary = true;
+            }
+            if (isMySQL && (type == Types.FLOAT || type == Types.DOUBLE || type == Types.REAL)) {
+                hasFloatingPoint = true;
             }
         }
-        return false;
+        
+        if (isMySQL && hasFloatingPoint) {
+            LOG.warn("MySQL source with FLOAT/DOUBLE columns detected. Falling back to text COPY " +
+                     "because binary COPY format is incompatible with MySQL floating-point representation.");
+            return false;  // Force TEXT COPY for MySQL with FLOAT columns
+        }
+        
+        return hasBinary;
     }
 
     /**
      * Inserts data to PostgreSQL using binary COPY format.
-     * This format is required for correct binary data transfer without hex encoding.
+     * Handles ONLY simple types (BYTEA, INTEGER, VARCHAR, etc.).
+     * Throws exception if complex types (ARRAY, JSON, XML, INTERVAL) are encountered.
      * 
      * <p>PostgreSQL binary COPY format specification:</p>
      * <ul>
@@ -656,26 +736,11 @@ public class PostgresqlManager extends SqlManager {
                             if (resultSet.wasNull()) {
                                 dos.writeInt(-1);
                             } else {
-                                try {
-                                    float floatValue = resultSet.getFloat(i);
-                                    // Validate float value before encoding
-                                    byte[] floatBytes = new byte[4];
-                                    ByteConverter.float4(floatBytes, 0, floatValue);
-                                    dos.writeInt(4); // float is 4 bytes
-                                    dos.write(floatBytes);
-                                } catch (Exception e) {
-                                    // Fallback to text encoding for problematic float values
-                                    LOG.warn("Binary encoding failed for FLOAT/REAL column {} (value: {}), falling back to text: {}", 
-                                            rsmd.getColumnName(i), resultSet.getFloat(i), e.getMessage());
-                                    String textValue = resultSet.getString(i);
-                                    if (textValue == null) {
-                                        dos.writeInt(-1);
-                                    } else {
-                                        byte[] textBytes = textValue.getBytes(StandardCharsets.UTF_8);
-                                        dos.writeInt(textBytes.length);
-                                        dos.write(textBytes);
-                                    }
-                                }
+                                float floatValue = resultSet.getFloat(i);
+                                byte[] floatBytes = new byte[4];
+                                ByteConverter.float4(floatBytes, 0, floatValue);
+                                dos.writeInt(4);
+                                dos.write(floatBytes);
                             }
                             break;
                             
@@ -683,26 +748,11 @@ public class PostgresqlManager extends SqlManager {
                             if (resultSet.wasNull()) {
                                 dos.writeInt(-1);
                             } else {
-                                try {
-                                    double doubleValue = resultSet.getDouble(i);
-                                    // Validate double value before encoding
-                                    byte[] doubleBytes = new byte[8];
-                                    ByteConverter.float8(doubleBytes, 0, doubleValue);
-                                    dos.writeInt(8); // double is 8 bytes
-                                    dos.write(doubleBytes);
-                                } catch (Exception e) {
-                                    // Fallback to text encoding for problematic double values
-                                    LOG.warn("Binary encoding failed for DOUBLE column {} (value: {}), falling back to text: {}", 
-                                            rsmd.getColumnName(i), resultSet.getDouble(i), e.getMessage());
-                                    String textValue = resultSet.getString(i);
-                                    if (textValue == null) {
-                                        dos.writeInt(-1);
-                                    } else {
-                                        byte[] textBytes = textValue.getBytes(StandardCharsets.UTF_8);
-                                        dos.writeInt(textBytes.length);
-                                        dos.write(textBytes);
-                                    }
-                                }
+                                double doubleValue = resultSet.getDouble(i);
+                                byte[] doubleBytes = new byte[8];
+                                ByteConverter.float8(doubleBytes, 0, doubleValue);
+                                dos.writeInt(8); // double is 8 bytes
+                                dos.write(doubleBytes);
                             }
                             break;
                             
@@ -733,12 +783,27 @@ public class PostgresqlManager extends SqlManager {
                                 if (time == null) {
                                     dos.writeInt(-1);
                                 } else {
-                                    // Microseconds since midnight
-                                    long microseconds = (time.getTime() % 86400000L) * 1000L;
-                                    byte[] timeBytes = new byte[8];
-                                    ByteConverter.int8(timeBytes, 0, microseconds);
-                                    dos.writeInt(8); // time is 8 bytes
-                                    dos.write(timeBytes);
+                                    String typeName = rsmd.getColumnTypeName(i);
+                                    if ("timetz".equalsIgnoreCase(typeName)) {
+                                        // TIME WITH TIME ZONE: 12 bytes (8 bytes time + 4 bytes timezone offset)
+                                        // PostgreSQL stores as microseconds since midnight + timezone offset in seconds
+                                        long microseconds = (time.getTime() % 86400000L) * 1000L;
+                                        byte[] timeBytes = new byte[8];
+                                        ByteConverter.int8(timeBytes, 0, microseconds);
+                                        // Timezone offset: assuming UTC (0) for now since JDBC Time doesn't carry timezone
+                                        byte[] tzBytes = new byte[4];
+                                        ByteConverter.int4(tzBytes, 0, 0);
+                                        dos.writeInt(12); // 12 bytes total
+                                        dos.write(timeBytes);
+                                        dos.write(tzBytes);
+                                    } else {
+                                        // TIME WITHOUT TIME ZONE: 8 bytes (microseconds since midnight)
+                                        long microseconds = (time.getTime() % 86400000L) * 1000L;
+                                        byte[] timeBytes = new byte[8];
+                                        ByteConverter.int8(timeBytes, 0, microseconds);
+                                        dos.writeInt(8);
+                                        dos.write(timeBytes);
+                                    }
                                 }
                             }
                             break;
@@ -793,6 +858,46 @@ public class PostgresqlManager extends SqlManager {
                                         dos.write(textBytes);
                                     }
                                 }
+                            }
+                            break;
+                            
+                        case Types.ARRAY:
+                        case Types.SQLXML:
+                            // Complex types should NEVER reach binary COPY path
+                            // shouldUseBinaryCopy() must return false for these types
+                            String complexColName = rsmd.getColumnName(i);
+                            String complexTypeName = rsmd.getColumnTypeName(i);
+                            LOG.error("Binary COPY does not support {} type (column: {}, type code: {})", 
+                                      complexTypeName, complexColName, columnType);
+                            throw new IllegalStateException(
+                                String.format("Binary COPY encountered unsupported type %s in column %s (type code: %d). " +
+                                              "This indicates a bug in shouldUseBinaryCopy() detection. " +
+                                              "Table should use TEXT COPY format.", 
+                                              complexTypeName, complexColName, columnType));
+                            
+                        case Types.OTHER:
+                            // Check for complex types that should use TEXT COPY
+                            String typeName = rsmd.getColumnTypeName(i);
+                            if ("json".equalsIgnoreCase(typeName) || 
+                                "jsonb".equalsIgnoreCase(typeName) ||
+                                "interval".equalsIgnoreCase(typeName)) {
+                                LOG.error("Binary COPY does not support {} type (column: {})", 
+                                          typeName, rsmd.getColumnName(i));
+                                throw new IllegalStateException(
+                                    String.format("Binary COPY encountered unsupported type %s in column %s. " +
+                                                  "This indicates a bug in shouldUseBinaryCopy() detection. " +
+                                                  "Table should use TEXT COPY format.", 
+                                                  typeName, rsmd.getColumnName(i)));
+                            }
+                            
+                            // Generic OTHER type - fallback to text for simple types
+                            String otherValue = resultSet.getString(i);
+                            if (resultSet.wasNull() || otherValue == null) {
+                                dos.writeInt(-1);
+                            } else {
+                                byte[] otherBytes = otherValue.getBytes(StandardCharsets.UTF_8);
+                                dos.writeInt(otherBytes.length);
+                                dos.write(otherBytes);
                             }
                             break;
                             

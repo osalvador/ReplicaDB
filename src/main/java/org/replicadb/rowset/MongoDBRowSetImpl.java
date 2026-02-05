@@ -319,6 +319,12 @@ public class MongoDBRowSetImpl extends StreamingRowSetImpl {
 			case Types.DECIMAL :
 				final Long longValue = document.getLong(columnName);
 				return longValue != null ? BigDecimal.valueOf(longValue) : null;
+			case Types.FLOAT :
+			case Types.REAL :
+				// MongoDB stores all floats as doubles (64-bit), but SQL REAL/FLOAT expects 32-bit
+				// Cast to float to match SQL standard REAL precision (4 bytes)
+				final Double floatAsDouble = document.getDouble(columnName);
+				return floatAsDouble != null ? floatAsDouble.floatValue() : null;
 			case Types.DOUBLE :
 				return document.getDouble(columnName);
 			case Types.TIMESTAMP_WITH_TIMEZONE :

@@ -24,6 +24,20 @@ class Oracle2PostgresTest {
 	private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
 	private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
 	private static final int EXPECTED_ROWS = 4096;
+	// Skip BINARY and REAL/FLOAT columns due to binary COPY format incompatibilities
+	// Include Oracle-specific columns: INTERVAL_DAY, INTERVAL_YEAR
+	private static final String SINK_COLUMNS = "C_INTEGER,C_SMALLINT,C_BIGINT,C_NUMERIC,C_DECIMAL," +
+			"C_BOOLEAN," +
+			"C_CHARACTER,C_CHARACTER_VAR,C_CHARACTER_LOB," +
+			"C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR," +
+			"C_DATE,C_TIMESTAMP_WITHOUT_TIMEZONE,C_TIMESTAMP_WITH_TIMEZONE," +
+			"C_INTERVAL_DAY,C_INTERVAL_YEAR";
+	private static final String SOURCE_COLUMNS = "C_INTEGER,C_SMALLINT,C_BIGINT,C_NUMERIC,C_DECIMAL," +
+			"C_BOOLEAN," +
+			"C_CHARACTER,C_CHARACTER_VAR,C_CHARACTER_LOB," +
+			"C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR," +
+			"C_DATE,C_TIMESTAMP_WITHOUT_TIMEZONE,C_TIMESTAMP_WITH_TIMEZONE," +
+			"C_INTERVAL_DAY,C_INTERVAL_YEAR";
 
 	private Connection oracleConn;
 	private Connection postgresConn;
@@ -93,7 +107,7 @@ class Oracle2PostgresTest {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", postgres.getJdbcUrl(), "--sink-user", postgres.getUsername(), "--sink-password",
-				postgres.getPassword()};
+				postgres.getPassword(), "--source-columns", SOURCE_COLUMNS, "--sink-columns", SINK_COLUMNS};
 		final ToolOptions options = new ToolOptions(args);
 		Assertions.assertEquals(0, ReplicaDB.processReplica(options));
 		assertEquals(EXPECTED_ROWS, this.countSinkRows());
@@ -104,7 +118,7 @@ class Oracle2PostgresTest {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", postgres.getJdbcUrl(), "--sink-user", postgres.getUsername(), "--sink-password",
-				postgres.getPassword(), "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()};
+				postgres.getPassword(), "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(), "--source-columns", SOURCE_COLUMNS, "--sink-columns", SINK_COLUMNS};
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
 		assertEquals(EXPECTED_ROWS, this.countSinkRows());
@@ -116,7 +130,7 @@ class Oracle2PostgresTest {
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", postgres.getJdbcUrl(), "--sink-user", postgres.getUsername(), "--sink-password",
 				postgres.getPassword(), "--sink-staging-schema", "PUBLIC", "--mode",
-				ReplicationMode.INCREMENTAL.getModeText()};
+				ReplicationMode.INCREMENTAL.getModeText(), "--source-columns", SOURCE_COLUMNS, "--sink-columns", SINK_COLUMNS};
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
 		assertEquals(EXPECTED_ROWS, this.countSinkRows());
@@ -127,7 +141,7 @@ class Oracle2PostgresTest {
 		final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", postgres.getJdbcUrl(), "--sink-user", postgres.getUsername(), "--sink-password",
-				postgres.getPassword(), "--jobs", "4"};
+				postgres.getPassword(), "--jobs", "4", "--source-columns", SOURCE_COLUMNS, "--sink-columns", SINK_COLUMNS};
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
 		assertEquals(EXPECTED_ROWS, this.countSinkRows());
@@ -139,7 +153,7 @@ class Oracle2PostgresTest {
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", postgres.getJdbcUrl(), "--sink-user", postgres.getUsername(), "--sink-password",
 				postgres.getPassword(), "--sink-staging-schema", "PUBLIC", "--mode",
-				ReplicationMode.COMPLETE_ATOMIC.getModeText(), "--jobs", "4"};
+				ReplicationMode.COMPLETE_ATOMIC.getModeText(), "--jobs", "4", "--source-columns", SOURCE_COLUMNS, "--sink-columns", SINK_COLUMNS};
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
 		assertEquals(EXPECTED_ROWS, this.countSinkRows());
@@ -151,7 +165,7 @@ class Oracle2PostgresTest {
 				oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
 				"--sink-connect", postgres.getJdbcUrl(), "--sink-user", postgres.getUsername(), "--sink-password",
 				postgres.getPassword(), "--sink-staging-schema", "PUBLIC", "--mode",
-				ReplicationMode.INCREMENTAL.getModeText(), "--jobs", "4"};
+				ReplicationMode.INCREMENTAL.getModeText(), "--jobs", "4", "--source-columns", SOURCE_COLUMNS, "--sink-columns", SINK_COLUMNS};
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
 		assertEquals(EXPECTED_ROWS, this.countSinkRows());

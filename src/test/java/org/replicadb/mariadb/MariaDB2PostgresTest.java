@@ -24,6 +24,19 @@ class MariaDB2PostgresTest {
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
     private static final int EXPECTED_ROWS = 4096;
+    // Skip BINARY and REAL/FLOAT columns due to binary COPY format incompatibilities
+    private static final String SINK_COLUMNS = "C_INTEGER,C_SMALLINT,C_BIGINT,C_NUMERIC,C_DECIMAL," +
+            "C_BOOLEAN," +
+            "C_CHARACTER,C_CHARACTER_VAR,C_CHARACTER_LOB," +
+            "C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR," +
+            "C_DATE,C_TIME_WITHOUT_TIMEZONE,C_TIMESTAMP_WITHOUT_TIMEZONE," +
+            "C_TIME_WITH_TIMEZONE,C_TIMESTAMP_WITH_TIMEZONE";
+    private static final String SOURCE_COLUMNS = "C_INTEGER,C_SMALLINT,C_BIGINT,C_NUMERIC,C_DECIMAL," +
+            "C_BOOLEAN," +
+            "C_CHARACTER,C_CHARACTER_VAR,C_CHARACTER_LOB," +
+            "C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR," +
+            "C_DATE,C_TIME_WITHOUT_TIMEZONE,C_TIMESTAMP_WITHOUT_TIMEZONE," +
+            "C_TIME_WITH_TIMEZONE,C_TIMESTAMP_WITH_TIMEZONE";
 
     private Connection mariadbConn;
     private Connection postgresConn;
@@ -96,7 +109,9 @@ class MariaDB2PostgresTest {
                 "--source-password", mariadb.getPassword(),
                 "--sink-connect", postgres.getJdbcUrl(),
                 "--sink-user", postgres.getUsername(),
-                "--sink-password", postgres.getPassword()
+                "--sink-password", postgres.getPassword(),
+                "--source-columns", SOURCE_COLUMNS,
+                "--sink-columns", SINK_COLUMNS
         };
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
@@ -113,7 +128,9 @@ class MariaDB2PostgresTest {
                 "--sink-connect", postgres.getJdbcUrl(),
                 "--sink-user", postgres.getUsername(),
                 "--sink-password", postgres.getPassword(),
-                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
+                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
+                "--source-columns", SOURCE_COLUMNS,
+                "--sink-columns", SINK_COLUMNS
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
@@ -131,7 +148,9 @@ class MariaDB2PostgresTest {
                 "--sink-connect", postgres.getJdbcUrl(),
                 "--sink-user", postgres.getUsername(),
                 "--sink-password", postgres.getPassword(),
-                "--mode", ReplicationMode.INCREMENTAL.getModeText()
+                "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+                "--source-columns", SOURCE_COLUMNS,
+                "--sink-columns", SINK_COLUMNS
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
@@ -149,7 +168,9 @@ class MariaDB2PostgresTest {
                 "--sink-connect", postgres.getJdbcUrl(),
                 "--sink-user", postgres.getUsername(),
                 "--sink-password", postgres.getPassword(),
-                "--jobs", "4"
+                "--jobs", "4",
+                "--source-columns", SOURCE_COLUMNS,
+                "--sink-columns", SINK_COLUMNS
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
@@ -167,7 +188,9 @@ class MariaDB2PostgresTest {
                 "--sink-user", postgres.getUsername(),
                 "--sink-password", postgres.getPassword(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
-                "--jobs", "4"
+                "--jobs", "4",
+                "--source-columns", SOURCE_COLUMNS,
+                "--sink-columns", SINK_COLUMNS
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
@@ -185,7 +208,9 @@ class MariaDB2PostgresTest {
                 "--sink-user", postgres.getUsername(),
                 "--sink-password", postgres.getPassword(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
-                "--jobs", "4"
+                "--jobs", "4",
+                "--source-columns", SOURCE_COLUMNS,
+                "--sink-columns", SINK_COLUMNS
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));

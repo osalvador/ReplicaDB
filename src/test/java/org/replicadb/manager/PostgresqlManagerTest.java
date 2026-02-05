@@ -221,6 +221,108 @@ class PostgresqlManagerTest {
         assertTrue(mockCopyIn.isEndCopyCalled(), "Should still call endCopy()");
     }
 
+    @Test
+    void testDefensiveCheck_ThrowsExceptionForArrayType() throws Exception {
+        // This test validates the defensive check in insertDataViaBinaryCopy()
+        // ARRAY types should never reach binary COPY if shouldUseBinaryCopy() works correctly
+        // This simulates a bug in type detection to verify defensive behavior
+        
+        MockResultSet mockRs = new MockResultSet(
+            new int[]{Types.VARCHAR, Types.ARRAY},  // ARRAY type should trigger defensive check
+            new String[]{"column1", "array_column"},
+            new String[]{"varchar", "_int4"},  // PostgreSQL type names
+            new Object[][]{
+                {"test", null}  // NULL to avoid actual array processing
+            }
+        );
+        
+        MockCopyIn mockCopyIn = new MockCopyIn();
+        
+        // Should throw IllegalStateException when encountering ARRAY type
+        // Reflection wraps it in InvocationTargetException
+        try {
+            invokeInsertDataViaBinaryCopy(mockRs, 0, mockRs.getMetaData(), mockCopyIn);
+            fail("Should throw IllegalStateException for ARRAY type in binary COPY");
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            // Unwrap the cause
+            Throwable cause = e.getCause();
+            assertTrue(cause instanceof IllegalStateException, 
+                       "Wrapped exception should be IllegalStateException");
+            
+            // Verify exception message contains diagnostic information
+            String message = cause.getMessage();
+            assertTrue(message.contains("Binary COPY"), "Exception message should mention Binary COPY");
+            assertTrue(message.contains("array_column") || message.contains("ARRAY"), 
+                       "Exception message should contain column name or type");
+            assertTrue(message.contains("shouldUseBinaryCopy"), 
+                       "Exception message should reference shouldUseBinaryCopy() method");
+            
+            LOG.info("✓ Defensive check correctly throws exception for ARRAY type: {}", message);
+        }
+    }
+
+    @Test
+    void testDefensiveCheck_ThrowsExceptionForSQLXMLType() throws Exception {
+        // Verify defensive check for SQLXML type
+        MockResultSet mockRs = new MockResultSet(
+            new int[]{Types.INTEGER, Types.SQLXML},
+            new String[]{"id", "xml_data"},
+            new String[]{"int4", "xml"},
+            new Object[][]{
+                {123, null}
+            }
+        );
+        
+        MockCopyIn mockCopyIn = new MockCopyIn();
+        
+        try {
+            invokeInsertDataViaBinaryCopy(mockRs, 0, mockRs.getMetaData(), mockCopyIn);
+            fail("Should throw IllegalStateException for SQLXML type in binary COPY");
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            assertTrue(cause instanceof IllegalStateException,
+                       "Wrapped exception should be IllegalStateException");
+            
+            String message = cause.getMessage();
+            assertTrue(message.contains("Binary COPY"), "Exception should mention Binary COPY");
+            assertTrue(message.contains("xml_data") || message.contains("XML"), 
+                       "Exception should reference XML type or column");
+            
+            LOG.info("✓ Defensive check correctly throws exception for SQLXML type");
+        }
+    }
+
+    @Test
+    void testDefensiveCheck_ThrowsExceptionForJSONType() throws Exception {
+        // Verify defensive check for JSON type (comes through as Types.OTHER)
+        MockResultSet mockRs = new MockResultSet(
+            new int[]{Types.VARCHAR, Types.OTHER},
+            new String[]{"name", "json_data"},
+            new String[]{"varchar", "json"},  // Type name is "json"
+            new Object[][]{
+                {"test", null}
+            }
+        );
+        
+        MockCopyIn mockCopyIn = new MockCopyIn();
+        
+        try {
+            invokeInsertDataViaBinaryCopy(mockRs, 0, mockRs.getMetaData(), mockCopyIn);
+            fail("Should throw IllegalStateException for JSON type in binary COPY");
+        } catch (java.lang.reflect.InvocationTargetException e) {
+            Throwable cause = e.getCause();
+            assertTrue(cause instanceof IllegalStateException,
+                       "Wrapped exception should be IllegalStateException");
+            
+            String message = cause.getMessage();
+            assertTrue(message.contains("Binary COPY"), "Exception should mention Binary COPY");
+            assertTrue(message.contains("json") || message.contains("JSON"), 
+                       "Exception should reference JSON type");
+            
+            LOG.info("✓ Defensive check correctly throws exception for JSON type");
+        }
+    }
+
     /**
      * Creates a mock ResultSetMetaData with the specified column types.
      */
@@ -262,12 +364,22 @@ class PostgresqlManagerTest {
      */
     private static class MockResultSet implements ResultSet {
         private final int[] columnTypes;
+        private final String[] columnNames;
+        private final String[] columnTypeNames;
         private final Object[][] rows;
         private int currentRow = -1;
         private boolean wasNull = false;
 
+        // Constructor for backward compatibility (existing tests)
         MockResultSet(int[] columnTypes, Object[][] rows) {
+            this(columnTypes, null, null, rows);
+        }
+
+        // Constructor with column names and type names for defensive check tests
+        MockResultSet(int[] columnTypes, String[] columnNames, String[] columnTypeNames, Object[][] rows) {
             this.columnTypes = columnTypes;
+            this.columnNames = columnNames;
+            this.columnTypeNames = columnTypeNames;
             this.rows = rows;
         }
 
@@ -282,6 +394,12 @@ class PostgresqlManagerTest {
             return new ResultSetMetaData() {
                 @Override public int getColumnCount() { return columnTypes.length; }
                 @Override public int getColumnType(int column) { return columnTypes[column - 1]; }
+                @Override public String getColumnName(int column) { 
+                    return columnNames != null ? columnNames[column - 1] : "col" + column; 
+                }
+                @Override public String getColumnTypeName(int column) { 
+                    return columnTypeNames != null ? columnTypeNames[column - 1] : "unknown"; 
+                }
                 @Override public boolean isAutoIncrement(int column) { return false; }
                 @Override public boolean isCaseSensitive(int column) { return false; }
                 @Override public boolean isSearchable(int column) { return false; }
@@ -289,14 +407,12 @@ class PostgresqlManagerTest {
                 @Override public int isNullable(int column) { return 0; }
                 @Override public boolean isSigned(int column) { return false; }
                 @Override public int getColumnDisplaySize(int column) { return 0; }
-                @Override public String getColumnLabel(int column) { return null; }
-                @Override public String getColumnName(int column) { return null; }
+                @Override public String getColumnLabel(int column) { return getColumnName(column); }
                 @Override public String getSchemaName(int column) { return null; }
                 @Override public int getPrecision(int column) { return 0; }
                 @Override public int getScale(int column) { return 0; }
                 @Override public String getTableName(int column) { return null; }
                 @Override public String getCatalogName(int column) { return null; }
-                @Override public String getColumnTypeName(int column) { return null; }
                 @Override public boolean isReadOnly(int column) { return false; }
                 @Override public boolean isWritable(int column) { return false; }
                 @Override public boolean isDefinitelyWritable(int column) { return false; }
@@ -597,12 +713,12 @@ class PostgresqlManagerTest {
     }
 
     /**
-     * Uses reflection to invoke the private hasBinaryColumns method.
+     * Uses reflection to invoke the private shouldUseBinaryCopy method.
      * This is necessary since the method is private and we're testing its logic directly.
      */
     private boolean invokeHasBinaryColumns(ResultSetMetaData rsmd) throws Exception {
         java.lang.reflect.Method method = PostgresqlManager.class.getDeclaredMethod(
-            "hasBinaryColumns", 
+            "shouldUseBinaryCopy", 
             ResultSetMetaData.class
         );
         method.setAccessible(true);
