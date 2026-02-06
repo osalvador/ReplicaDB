@@ -147,18 +147,38 @@ public class Db2Manager extends SqlManager {
                         case Types.INTEGER:
                         case Types.TINYINT:
                         case Types.SMALLINT:
-                            ps.setInt(i, resultSet.getInt(i));
+                            int intVal = resultSet.getInt(i);
+                            if (resultSet.wasNull()) {
+                                ps.setNull(i, rsmd.getColumnType(i));
+                            } else {
+                                ps.setInt(i, intVal);
+                            }
                             break;
                         case Types.BIGINT:
                         case Types.NUMERIC:
                         case Types.DECIMAL:
-                            ps.setBigDecimal(i, resultSet.getBigDecimal(i));
+                            java.math.BigDecimal bdVal = resultSet.getBigDecimal(i);
+                            if (resultSet.wasNull()) {
+                                ps.setNull(i, rsmd.getColumnType(i));
+                            } else {
+                                ps.setBigDecimal(i, bdVal);
+                            }
                             break;
                         case Types.DOUBLE:
-                            ps.setDouble(i, resultSet.getDouble(i));
+                            double dblVal = resultSet.getDouble(i);
+                            if (resultSet.wasNull()) {
+                                ps.setNull(i, Types.DOUBLE);
+                            } else {
+                                ps.setDouble(i, dblVal);
+                            }
                             break;
                         case Types.FLOAT:
-                            ps.setFloat(i, resultSet.getFloat(i));
+                            float fltVal = resultSet.getFloat(i);
+                            if (resultSet.wasNull()) {
+                                ps.setNull(i, Types.FLOAT);
+                            } else {
+                                ps.setFloat(i, fltVal);
+                            }
                             break;
                         case Types.DATE:
                             // Handle SQLite string-based dates that can't be parsed by DB2
@@ -186,16 +206,26 @@ public class Db2Manager extends SqlManager {
                         case Types.TIMESTAMP_WITH_TIMEZONE:
                         case -101:
                         case -102:
-                            ps.setTimestamp(i, resultSet.getTimestamp(i));
+                            java.sql.Timestamp tsVal = resultSet.getTimestamp(i);
+                            if (resultSet.wasNull()) {
+                                ps.setNull(i, Types.TIMESTAMP);
+                            } else {
+                                ps.setTimestamp(i, tsVal);
+                            }
                             break;
                         case Types.BINARY:
                         case Types.VARBINARY:
                         case Types.LONGVARBINARY:
-                            ps.setBytes(i, resultSet.getBytes(i));
+                            byte[] binBytes = resultSet.getBytes(i);
+                            if (resultSet.wasNull()) {
+                                ps.setNull(i, rsmd.getColumnType(i));
+                            } else {
+                                ps.setBytes(i, binBytes);
+                            }
                             break;
                         case Types.BLOB:
                             byte[] blobBytes = resultSet.getBytes(i);
-                            if (blobBytes == null) {
+                            if (resultSet.wasNull()) {
                                 ps.setNull(i, Types.BLOB);
                             } else {
                                 ps.setBytes(i, blobBytes);
@@ -225,7 +255,7 @@ public class Db2Manager extends SqlManager {
                             break;
                         case Types.SQLXML:
                             SQLXML sqlxmlData = resultSet.getSQLXML(i);
-                            if (sqlxmlData == null) {
+                            if (resultSet.wasNull()) {
                                 ps.setNull(i, Types.SQLXML);
                             } else {
                                 ps.setString(i, sqlxmlData.getString());
@@ -233,14 +263,28 @@ public class Db2Manager extends SqlManager {
                             break;
                         case Types.ARRAY:
                             Array arrayData = resultSet.getArray(i);
-                            ps.setArray(i, arrayData);
+                            if (resultSet.wasNull()) {
+                                ps.setNull(i, Types.ARRAY);
+                            } else {
+                                ps.setArray(i, arrayData);
+                            }
                             break;
                         case Types.OTHER:
                             String typeName = rsmd.getColumnTypeName(i);
                             if ("DECFLOAT".equalsIgnoreCase(typeName)) {
-                                ps.setBigDecimal(i, resultSet.getBigDecimal(i));
+                                java.math.BigDecimal decVal = resultSet.getBigDecimal(i);
+                                if (resultSet.wasNull()) {
+                                    ps.setNull(i, Types.DECIMAL);
+                                } else {
+                                    ps.setBigDecimal(i, decVal);
+                                }
                             } else {
-                                ps.setObject(i, resultSet.getObject(i));
+                                Object objVal = resultSet.getObject(i);
+                                if (resultSet.wasNull()) {
+                                    ps.setNull(i, Types.OTHER);
+                                } else {
+                                    ps.setObject(i, objVal);
+                                }
                             }
                             break;
                         default:
