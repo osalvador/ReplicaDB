@@ -149,7 +149,7 @@ public class Db2Manager extends SqlManager {
                         case Types.SMALLINT:
                             int intVal = resultSet.getInt(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, rsmd.getColumnType(i));
+                                ps.setNull(i, Types.INTEGER);
                             } else {
                                 ps.setInt(i, intVal);
                             }
@@ -159,7 +159,7 @@ public class Db2Manager extends SqlManager {
                         case Types.DECIMAL:
                             java.math.BigDecimal bdVal = resultSet.getBigDecimal(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, rsmd.getColumnType(i));
+                                ps.setNull(i, Types.DECIMAL);
                             } else {
                                 ps.setBigDecimal(i, bdVal);
                             }
@@ -218,7 +218,7 @@ public class Db2Manager extends SqlManager {
                         case Types.LONGVARBINARY:
                             byte[] binBytes = resultSet.getBytes(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, rsmd.getColumnType(i));
+                                ps.setNull(i, Types.VARBINARY);
                             } else {
                                 ps.setBytes(i, binBytes);
                             }
@@ -264,7 +264,7 @@ public class Db2Manager extends SqlManager {
                         case Types.ARRAY:
                             Array arrayData = resultSet.getArray(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, Types.ARRAY);
+                                ps.setNull(i, java.sql.Types.NULL);
                             } else {
                                 ps.setArray(i, arrayData);
                             }
@@ -281,7 +281,7 @@ public class Db2Manager extends SqlManager {
                             } else {
                                 Object objVal = resultSet.getObject(i);
                                 if (resultSet.wasNull()) {
-                                    ps.setNull(i, Types.OTHER);
+                                    ps.setNull(i, java.sql.Types.NULL);
                                 } else {
                                     ps.setObject(i, objVal);
                                 }
