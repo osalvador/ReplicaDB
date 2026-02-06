@@ -131,6 +131,7 @@ class DB22SqliteTest {
                 "--source-password", db2.getPassword(),
                 "--sink-connect", sqlite.getJdbcUrl(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+            "--sink-staging-schema", "main",
                 "--source-columns", COLUMN_LIST,
                 "--sink-columns", COLUMN_LIST
         };
@@ -185,6 +186,7 @@ class DB22SqliteTest {
                 "--sink-connect", sqlite.getJdbcUrl(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
                 "--jobs", "4",
+            "--sink-staging-schema", "main",
                 "--source-columns", COLUMN_LIST,
                 "--sink-columns", COLUMN_LIST
         };

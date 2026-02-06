@@ -106,6 +106,7 @@ class DB22DB2Test {
                 "--sink-user", db2.getUsername(),
                 "--sink-password", db2.getPassword(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
+            "--sink-staging-schema", db2.getUsername(),
                 "--source-columns", COLUMN_LIST,
                 "--sink-columns", COLUMN_LIST
         };
@@ -125,6 +126,7 @@ class DB22DB2Test {
                 "--sink-user", db2.getUsername(),
                 "--sink-password", db2.getPassword(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+            "--sink-staging-schema", db2.getUsername(),
                 "--source-columns", COLUMN_LIST,
                 "--sink-columns", COLUMN_LIST
         };
@@ -164,6 +166,7 @@ class DB22DB2Test {
                 "--sink-password", db2.getPassword(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
                 "--jobs", "4",
+            "--sink-staging-schema", db2.getUsername(),
                 "--source-columns", COLUMN_LIST,
                 "--sink-columns", COLUMN_LIST
         };
@@ -184,6 +187,7 @@ class DB22DB2Test {
                 "--sink-password", db2.getPassword(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
                 "--jobs", "4",
+            "--sink-staging-schema", db2.getUsername(),
                 "--source-columns", COLUMN_LIST,
                 "--sink-columns", COLUMN_LIST
         };

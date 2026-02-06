@@ -176,7 +176,6 @@ public class Db2Manager extends SqlManager {
                         case Types.BLOB:
                             Blob blobData = resultSet.getBlob(i);
                             ps.setBlob(i, blobData);
-                            if (blobData != null) blobData.free();
                             break;
                         case Types.CLOB:
                             String clobTypeName = rsmd.getColumnTypeName(i);
@@ -185,7 +184,6 @@ public class Db2Manager extends SqlManager {
                             } else {
                                 Clob clobData = resultSet.getClob(i);
                                 ps.setClob(i, clobData);
-                                if (clobData != null) clobData.free();
                             }
                             break;
                         case Types.BOOLEAN:
@@ -203,13 +201,11 @@ public class Db2Manager extends SqlManager {
                                 ps.setNull(i, Types.SQLXML);
                             } else {
                                 ps.setString(i, sqlxmlData.getString());
-                                sqlxmlData.free();
                             }
                             break;
                         case Types.ARRAY:
                             Array arrayData = resultSet.getArray(i);
                             ps.setArray(i, arrayData);
-                            if (arrayData != null) arrayData.free();
                             break;
                         case Types.OTHER:
                             String typeName = rsmd.getColumnTypeName(i);
