@@ -2,517 +2,239 @@
 applyTo: '**'
 ---
 
-# ReplicaDB: Technical Implementation Patterns
+# Technical Implementation Patterns
 
 ## Architectural Decisions and Rationale
 
-### Manager Factory Pattern Implementation
-**Why chosen**: Supports 15+ heterogeneous data sources with unified interface
-**Key benefits**: Runtime database selection, clean separation of concerns, extensible design
+**Manager Pattern (Database Abstraction Layer)**
+- **Why**: Supporting 15+ databases with different JDBC dialects, type systems, and performance optimizations requires isolated, database-specific logic
+- **Structure**: `ConnManager` (base) → `SqlManager` (SQL databases) → `OracleManager`, `PostgresqlManager`, etc.
+- **Registration**: `ManagerFactory` uses JDBC URL pattern matching to instantiate correct manager
 
-```java
-// Pattern: Database managers selected by JDBC URL scheme analysis
-public ConnManager accept(ToolOptions options, DataSourceType dsType) {
-    String scheme = extractScheme(options, dsType);
-    if (POSTGRES.isTheManagerTypeOf(options, dsType)) {
-        return new PostgresqlManager(options, dsType);
-    } else if (ORACLE.isTheManagerTypeOf(options, dsType)) {
-        return new OracleManager(options, dsType);
-    }
-    // Fallback to StandardJDBCManager for unknown databases
-    return new StandardJDBCManager(options, dsType);
-}
-```
+**Stateless Execution Model**
+- **Why**: CLI tool invoked by external schedulers should not maintain state between runs
+- **State Tracking**: Incremental mode uses database columns (timestamp/sequence), not local files
+- **Connection Lifecycle**: Acquire on job start, release on completion (no connection pooling in Phase 1)
 
-### Abstract SQL Manager Hierarchy
-**Why chosen**: JDBC databases share common patterns but need database-specific optimizations
-**Implementation**: Three-layer hierarchy (ConnManager → SqlManager → Database-specific)
+**Thread-Based Parallelism**
+- **Why**: Avoids external framework dependencies (Hadoop, Spark), deployable anywhere Java 11+ runs
+- **Model**: Main thread spawns N worker threads (ExecutorService), each with dedicated JDBC connection
+- **Partition Strategy**: Database-native hash functions (`ORA_HASH`, `HASH`) ensure even distribution
 
-```java
-// Base abstraction for all data sources
-public abstract class ConnManager {
-    public abstract ResultSet readTable(String tableName, String[] columns, int nThread);
-    public abstract int insertDataToTable(ResultSet resultSet, int taskId);
-    public abstract Connection getConnection();
-}
+## Package Structure and Boundaries
 
-// SQL-specific base class with common JDBC operations
-public abstract class SqlManager extends ConnManager {
-    protected Connection makeSourceConnection() throws SQLException { /* common logic */ }
-    protected ResultSet execute(String stmt, Integer fetchSize, Object... args) { /* shared implementation */ }
-}
-
-// Database-specific implementations
-public class PostgresqlManager extends SqlManager {
-    // PostgreSQL-specific optimizations and SQL dialect handling
-}
-```
-
-## Module/Package Structure
-
-### Core Package Organization
 ```
 org.replicadb/
-├── cli/                    # Command-line interface and option parsing
-├── config/                 # Configuration management and validation
-├── manager/                # Database connection managers
-│   ├── file/              # File system managers (CSV, ORC)
-│   └── [database]/        # Database-specific managers
-├── rowset/                # Custom ResultSet implementations
-└── time/                  # Timestamp and scheduling utilities
+├── cli/                    # Command-line argument parsing (ToolOptions, ReplicationMode)
+├── manager/                # Database-specific adapters (Manager pattern)
+│   ├── ConnManager.java    # Abstract base for all data sources
+│   ├── SqlManager.java     # Base for SQL databases (JDBC-based)
+│   ├── OracleManager.java  # Oracle-specific: hints, LOB handling, SDO_GEOMETRY
+│   ├── PostgresqlManager.java  # PostgreSQL-specific: COPY protocol, array types
+│   ├── file/               # File-based sources (CSV, ORC, Parquet)
+│   └── db2/                # DB2-specific (AS/400 support, EBCDIC handling)
+├── rowset/                 # ResultSet manipulation utilities
+├── config/                 # Sentry error tracking, logging configuration
+└── ReplicaDB.java          # Main entry point, job orchestration
 ```
 
-**Rationale**: Package boundaries follow functional responsibilities, making database-specific code easy to locate and maintain.
+**What Belongs Where**:
+- **Database-specific logic**: Always in `XYZManager` subclass, never in `SqlManager` or `ReplicaDB`
+- **Generic SQL logic**: `SqlManager` (e.g., metadata queries, column escaping)
+- **Cross-database patterns**: Helper classes in `rowset` package
+- **CLI parsing**: `cli/ToolOptions` with Apache Commons CLI
 
-### Manager Registration Pattern
-New database support requires:
-1. **Extend SqlManager** with database-specific class
-2. **Add scheme detection** in SupportedManagers enum
-3. **Register in ManagerFactory.accept()** method
-4. **Implement required abstract methods** (getDriverClass, readTable, insertDataToTable)
+## Base Patterns and Abstractions
 
-## Essential Java Patterns and Conventions
+### Manager Interface Contract
 
-### Connection Management Pattern
 ```java
-// Singleton connection pattern with lazy initialization
-@Override
-public Connection getConnection() throws SQLException {
-    if (this.connection == null) {
-        if (dsType.equals(DataSourceType.SOURCE)) {
-            this.connection = makeSourceConnection();
-        } else {
-            this.connection = makeSinkConnection();
-        }
-    }
-    return this.connection;
-}
-```
-
-### Resource Management Pattern
-```java
-// Always use try-with-resources or explicit release
-public void release() {
-    if (null != this.lastStatement) {
-        try {
-            this.lastStatement.close();
-        } catch (SQLException e) {
-            LOG.error("Exception closing executed Statement: " + e, e);
-        }
-        this.lastStatement = null;
+public abstract class ConnManager {
+    // Read partitioned data (returns ResultSet for streaming)
+    public abstract ResultSet readTable(String tableName, String[] columns, int nThread) throws Exception;
+    
+    // Insert data from ResultSet (batch insert logic)
+    public abstract int insertDataToTable(ResultSet resultSet, int taskId) throws Exception;
+    
+    // JDBC driver class name
+    public abstract String getDriverClass();
+    
+    // Column name escaping for SQL generation
+    public String escapeColName(String colName) {
+        return colName;  // Override for backticks, quotes, etc.
     }
 }
 ```
 
-### Error Handling Strategy
+**Key Extension Points**:
+- **readTable()**: Override to add database-specific hints, partition logic, or query optimizations
+- **insertDataToTable()**: Override for bulk APIs (PostgreSQL COPY, SQL Server Bulk Insert) over standard JDBC
+- **escapeColName()**: Override for identifier quoting rules (MySQL backticks, PostgreSQL double quotes, SQL Server brackets)
+
+### Example: Oracle-Specific Optimizations
+
 ```java
-// Database-specific error handling with context
-try {
-    // Database operation
-} catch (SQLException e) {
-    LOG.error("Database operation failed for table: " + tableName, e);
-    throw new RuntimeException("Replication failed: " + e.getMessage(), e);
+public class OracleManager extends SqlManager {
+    @Override
+    public ResultSet readTable(String tableName, String[] columns, int nThread) {
+        // Oracle hint to avoid index scans (faster full table scan for bulk transfer)
+        String sql = "SELECT /*+ NO_INDEX(" + tableName + ")*/ * FROM " + tableName 
+                   + " WHERE ORA_HASH(rowid, " + (options.getJobs() - 1) + ") = ?";
+        // Bind partition index: 0, 1, 2, ... (jobs-1)
+        return executeQuery(sql, nThread);
+    }
+    
+    @Override
+    public String escapeColName(String colName) {
+        // Oracle supports case-sensitive identifiers with double quotes
+        return options.getQuotedIdentifiers() ? "\"" + colName + "\"" : colName;
+    }
 }
 ```
 
-## Framework Integration Patterns
+### Example: PostgreSQL COPY Protocol
 
-### Maven Dependency Management
-```xml
-<!-- Pattern: Version properties for consistency -->
-<properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>11</maven.compiler.source>
-    <maven.compiler.target>11</maven.compiler.target>
-    <version.testContainers>1.21.3</version.testContainers>
-</properties>
-
-<!-- Database drivers bundled for convenience -->
-<dependency>
-    <groupId>org.postgresql</groupId>
-    <artifactId>postgresql</artifactId>
-    <version>42.7.2</version>
-</dependency>
+```java
+public class PostgresqlManager extends SqlManager {
+    @Override
+    public int insertDataToTable(ResultSet resultSet, int taskId) {
+        // Use PostgreSQL COPY for 10x faster inserts than standard JDBC
+        CopyManager copyManager = ((PGConnection) connection).getCopyAPI();
+        String copySQL = "COPY " + tableName + " FROM STDIN WITH (FORMAT binary)";
+        return copyManager.copyIn(copySQL, new ResultSetInputStream(resultSet));
+    }
+}
 ```
 
-### Log4j2 Integration Pattern
+## Error Handling Strategy
+
+**Exception Propagation**:
+- **Database errors**: Caught in worker threads, logged with task ID, propagated to main thread
+- **Type conversion errors**: Explicit exceptions (not silent failures) with source/target type details
+- **Connection errors**: Retry logic in `ConnManager.getConnection()` with exponential backoff
+
+**Transaction Management**:
+- **Source**: Read-only, auto-commit disabled (streaming large ResultSets)
+- **Sink**: Auto-commit disabled, manual commit after batch completion
+- **Rollback**: On any thread exception, all sink transactions rolled back
+
+**Logging Conventions**:
 ```java
-// Consistent logging pattern used across ALL manager classes
-private static final Logger LOG = LogManager.getLogger(ClassName.class.getName());
-
-// Thread-aware logging for parallel processing
-LOG.info("{}: Executing SQL statement: {}", Thread.currentThread().getName(), stmt);
-
-// Use structured logging with placeholders (NOT string concatenation)
-LOG.info("Total process time: {}ms", elapsed);
-LOG.trace("Trying with scheme: {}", scheme);
+LOG.info("TaskId-{}: Starting replication from {} to {}", taskId, sourceTable, sinkTable);
+LOG.error("TaskId-{}: Failed to insert batch: {}", taskId, e.getMessage(), e);
+LOG.debug("TaskId-{}: Fetched {} rows in {}ms", taskId, rowCount, elapsedMs);
 ```
 
 ## Testing Philosophy and Strategies
 
-### TestContainers Integration
-**Why**: Enables real database testing without external dependencies
-**Pattern**: Container-based integration tests for cross-database scenarios
+**TestContainers Integration Tests**:
+- **Why**: Database logic requires real databases, not mocks (JDBC driver quirks, SQL dialect differences)
+- **Pattern**: One container per database type (PostgreSQL, MySQL, Oracle Free, SQL Server, MongoDB)
+- **Lifecycle**: `@BeforeAll` starts container (reused across tests), `@AfterEach` truncates tables
 
 ```java
 @Testcontainers
-class Postgres2MySQLTest {
-    @Rule
-    public static MySQLContainer<ReplicadbMysqlContainer> mysql = ReplicadbMysqlContainer.getInstance();
+class Postgres2PostgresTest {
+    private static PostgreSQLContainer<ReplicadbPostgresqlContainer> postgres;
     
-    @Rule
-    public static PostgreSQLContainer<ReplicadbPostgresqlContainer> postgres = ReplicadbPostgresqlContainer.getInstance();
+    @BeforeAll
+    static void setUp() {
+        postgres = ReplicadbPostgresqlContainer.getInstance();  // Singleton pattern
+    }
     
     @Test
-    void testCompleteReplication() throws SQLException, ParseException, IOException {
-        // Test actual replication between live database containers
-        ToolOptions options = new ToolOptions(args);
-        int processedRows = ReplicaDB.processReplica(options);
-        assertEquals(TOTAL_SINK_ROWS, processedRows);
+    void testCompleteMode() throws Exception {
+        String[] args = {
+            "--source-connect", postgres.getJdbcUrl(),
+            "--source-table", "t_source",
+            "--sink-table", "t_sink",
+            "--mode", "complete",
+            "--jobs", "4"
+        };
+        assertEquals(0, ReplicaDB.processReplica(new ToolOptions(args)));
+        assertEquals(4097, countSinkRows());  // Verify row count
     }
 }
 ```
 
-### Test Naming Conventions
-- **Class pattern**: `{Source}2{Sink}Test` (e.g., `Postgres2MySQLTest`)
-- **Method pattern**: `test{Mode}Replication` (e.g., `testIncrementalReplication`)
-- **Integration tests**: Focus on cross-database compatibility
-- **Unit tests**: Minimal - most value in integration testing
+**Test Coverage Requirements**:
+- **New databases**: Test complete, incremental, parallel modes
+- **Data types**: Test all supported types (numeric, string, date/time, LOB, binary)
+- **Edge cases**: Null values, empty tables, single-row tables, Unicode, timezones
 
-### Test Data Strategy
-```
-src/test/resources/
-├── {database}/
-│   └── {database}-source.sql    # Source table setup
-├── sinks/
-│   └── {database}-sink.sql      # Target table DDL
-└── csv/
-    └── source.csv               # File format test data
-```
+**Test Data Organization**:
+- SQL fixtures: `src/test/resources/{database}/{database}-source.sql`
+- Sink schemas: `src/test/resources/sinks/{database}-sink.sql`
+- CSV test data: `src/test/resources/csv/`
 
-## Configuration Management Patterns
+## Configuration and Build Strategy
 
-### Property File Structure
+**Maven Multi-Profile Build**:
+- **Default**: Skips long-running tests (Oracle spatial, cross-version tests)
+- **CI Profile**: Runs all tests with Docker containers
+- **Dependencies**: `provided` scope for optional JDBC drivers (DB2, Denodo)
+
+**Property-Based Configuration**:
 ```properties
-# Hierarchical configuration with clear separators
-######################## ReplicadB General Options ########################
-mode=complete
+# replicadb.conf - supports environment variable substitution
+source.connect=jdbc:oracle:thin:@${ORACLE_HOST}:${ORACLE_PORT}:${ORACLE_SID}
+source.user=${ORACLE_USER}
+source.password=${ORACLE_PASSWORD}
+mode=incremental
 jobs=4
-fetch.size=5000
-
-############################# Source Options ##############################
-source.connect=jdbc:postgresql://localhost:5432/source
-source.user=postgres
-source.password=${POSTGRES_PASSWORD}
-source.table=employees
-
-############################# Sink Options ################################
-sink.connect=jdbc:mysql://localhost:3306/target
-sink.user=mysql
-sink.password=${MYSQL_PASSWORD}
-sink.table=employees
 ```
 
-### Environment Variable Integration
-```java
-// Pattern: Support environment variable substitution
-private String resolveProperty(String value) {
-    if (value != null && value.startsWith("${") && value.endsWith("}")) {
-        String envVar = value.substring(2, value.length() - 1);
-        return System.getenv(envVar);
-    }
-    return value;
-}
-```
+**JDBC Driver Management**:
+- **Bundled**: PostgreSQL, MySQL/MariaDB, Oracle, SQL Server, SQLite, Kafka
+- **User-Provided**: DB2, Denodo (licensing restrictions)
+- **Location**: `$REPLICADB_HOME/lib/` for custom drivers
 
-## Performance Requirements and Implementation
+## Performance Patterns and SLAs
 
-### Memory Management
-- **Streaming ResultSets**: Use `ResultSet.TYPE_FORWARD_ONLY` and configurable fetch sizes
-- **Connection pooling**: Single connection per thread to avoid overhead
-- **Large object handling**: Stream BLOBs/CLOBs without loading into memory
+**Target Metrics**:
+- **Small tables (<100K rows)**: Single thread (no parallelism overhead)
+- **Medium tables (100K-10M rows)**: 2-4 threads, sub-10 minute transfers
+- **Large tables (>10M rows)**: 4-8 threads, network bandwidth typically bottleneck
 
-### Throughput Optimization
-```java
-// Configurable fetch size for optimal performance
-statement.setFetchSize(options.getFetchSize()); // Default: 5000
+**Optimization Techniques**:
+- **Fetch size tuning**: `--fetch-size` controls JDBC cursor batch size (default 5000)
+- **Bandwidth throttling**: `--bandwidth-throttling` limits bytes/sec for network-constrained links
+- **Index management**: `--sink-disable-index` drops indexes before insert, rebuilds after
 
-// Bandwidth throttling implementation
-if (bandwidthRateLimiter != null) {
-    bandwidthRateLimiter.acquire(rowSize);
-}
-```
-
-### Parallel Processing Pattern
-```java
-// ExecutorService for parallel table processing
-ExecutorService replicaTasksService = Executors.newFixedThreadPool(options.getJobs());
-for (int i = 0; i < options.getJobs(); i++) {
-    Future<Integer> replicaTaskFuture = replicaTasksService.submit(new ReplicaTask(i));
-    replicaTasksFutures.add(replicaTaskFuture);
-}
-```
-
-## Database-Specific Implementation Patterns
-
-### Type Mapping Strategy
-```java
-// Handle database-specific type conversions
-switch (resultSet.getMetaData().getColumnType(i)) {
-    case Types.CLOB:
-        // Stream CLOB data for Oracle-to-Oracle replication
-        Reader reader = resultSet.getClob(i).getCharacterStream();
-        preparedStatement.setClob(i, reader);
-        break;
-    case Types.BLOB:
-        // Handle binary data appropriately
-        preparedStatement.setBytes(i, resultSet.getBytes(i));
-        break;
-}
-```
-
-### SQL Dialect Handling
-```java
-// Database-specific SQL generation
-@Override
-public String getInsertSQLCommand(String tableName, String allColumns, int columnsNumber) {
-    // PostgreSQL-specific INSERT with ON CONFLICT handling
-    return "INSERT INTO " + tableName + " (" + allColumns + ") VALUES (" + placeholders + ") ON CONFLICT DO NOTHING";
-}
-```
-
-## Integration Patterns
-
-### File System Integration
-```java
-// Abstraction for file-based sources/sinks
-public class LocalFileManager extends ConnManager {
-    @Override
-    public ResultSet readTable(String tableName, String[] columns, int nThread) {
-        // CSV/ORC file reading implementation
-    }
-}
-```
-
-## Code Generation and Utilities
-
-### When to Use Code Generation
-- **Avoid**: Don't use code generation for database managers
-- **Prefer**: Hand-written implementations for better error handling and debugging
-- **Exception**: Build-time generation acceptable for version information
-
-### Utility Classes Pattern
-```java
-// Static utility methods for common operations
-public class DatabaseUtils {
-    public static String[] getPrimaryKeys(Connection conn, String tableName) {
-        // Common primary key detection logic
-    }
-    
-    public static void validateConnection(Connection conn) throws SQLException {
-        // Standard connection validation
-    }
-}
-```
-
-## Development Workflow Guidelines
-
-### Build and Test Commands
-
-**Standard Development Build**
-```bash
-# Build with integration tests (excludes problematic Oracle LOB tests)
-mvn -B package --file pom.xml -Dtest='!Oracle2OracleCrossVersionLobTest'
-
-# Build without tests (faster development cycle)
-mvn -DskipTests -B package --file pom.xml
-
-# Clean build with dependency resolution
-mvn clean install -Dmaven.javadoc.skip=true -DskipTests -B -V
-```
-
-**Release Build**
-```bash
-# Full release with all dependencies
-mvn clean install -Dmaven.javadoc.skip=true -DskipTests -B -V -P release
-
-# Release without Oracle JDBC driver (licensing compliance)
-mvn clean install -Dmaven.javadoc.skip=true -DskipTests -B -V -P release-no-oracle
-```
-
-**Running Tests**
-```bash
-# Run all tests
-mvn test
-
-# Run specific test class
-mvn test -Dtest=MySQL2PostgresTest
-
-# Run tests with TestContainers (requires Docker)
-mvn test -Dtest='*2PostgresTest'
-```
-
-### Local Development Setup
-
-1. **Prerequisites**
-   - Java 11 JDK (LTS recommended)
-   - Maven 3.6+
-   - Docker (for TestContainers integration tests)
-   - Git
-
-2. **Initial Setup**
-   ```bash
-   git clone https://github.com/osalvador/ReplicaDB.git
-   cd ReplicaDB
-   mvn clean package -DskipTests
-   ```
-
-3. **Running ReplicaDB Locally**
-   ```bash
-   # After building, use the CLI wrapper scripts
-   ./bin/replicadb --options-file conf/replicadb.conf
-   
-   # Or run directly with Java
-   java -jar target/ReplicaDB-0.16.0.jar --source-connect jdbc:postgresql://...
-   ```
-
-### Release Process Workflow
-
-ReplicaDB uses an **automated release script** that handles version management:
-
-```bash
-# Create and publish a new release
-./release.sh 0.16.0
-```
-
-**What happens automatically:**
-1. Validates semantic versioning format (X.Y.Z)
-2. Updates `pom.xml` with new version
-3. Updates `README.md` installation instructions
-4. Creates git commit: `Release v0.16.0`
-5. Creates git tag: `v0.16.0`
-6. Pushes to origin/master
-7. GitHub Actions CI/CD triggered on tag push
-8. Builds release artifacts (JAR, tar.gz, zip)
-9. Publishes Docker images
-10. Creates GitHub release with assets
-
-**Manual steps** (if needed):
-```bash
-# Check current version
-mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec
-
-# View release history
-git tag -l "v*"
-
-# Build specific release profile
-mvn clean install -P release
-```
-
-### Continuous Integration Workflows
-
-**CT_Push.yml** (Continuous Testing on Push)
-- Triggers on: Push to master, Pull requests
-- Java: 11 with Adopt distribution
-- Tests: All except Oracle LOB cross-version tests
-- Builds: Standard release artifacts
-
-**CI_Release.yml** (Release Pipeline)
-- Triggers on: Git tags matching `v*`, Manual workflow_dispatch
-- Java: 11 with Adopt distribution
-- Profiles: `release` (full) and `release-no-oracle`
-- Outputs: JAR, tar.gz, zip archives, Docker images
-- Deployment: Automatic GitHub release creation
-
-### Debug and Development Tips
-
-**TestContainers Debugging**
-```java
-// Enable TestContainers logging
-@Testcontainers
-class MyTest {
-    static {
-        // Shows container startup logs
-        System.setProperty("testcontainers.reuse.enable", "true");
-    }
-}
-```
-
-**Logging Configuration**
-- Development: Edit `src/main/resources/log4j2.xml`
-- Testing: Edit `src/test/resources/log4j2-test.xml`
-- Runtime: Use `--verbose` CLI flag (TRACE, DEBUG, INFO, WARN, ERROR)
-
-```bash
-# Run with debug logging
-java -jar ReplicaDB.jar --verbose TRACE --options-file config.conf
-```
-
-**Maven Profiles**
-```xml
-<!-- pom.xml profiles available -->
-<profiles>
-    <profile>
-        <id>release</id>
-        <!-- Full release with all JDBC drivers including Oracle -->
-    </profile>
-    <profile>
-        <id>release-no-oracle</id>
-        <!-- Release excluding Oracle JDBC (licensing) -->
-    </profile>
-</profiles>
-```
-
-### IDE Configuration
-
-**IntelliJ IDEA**
-1. Import as Maven project
-2. Set SDK to Java 11
-3. Enable annotation processing (if using Lombok in future)
-4. Configure TestContainers plugin for better integration test experience
-
-**VS Code**
-1. Install Java Extension Pack
-2. Configure `java.configuration.runtimes` for Java 11
-3. Use integrated terminal for Maven commands
-4. TestContainers work out-of-the-box with Docker Desktop
-
-### Development Workflow Guidelines
-
-### Adding New Database Support
-1. **Create manager class** extending SqlManager
-2. **Implement abstract methods** with database-specific logic
-3. **Add scheme detection** in SupportedManagers
-4. **Register in ManagerFactory**
-5. **Create integration tests** with TestContainers
-6. **Update documentation** with connection examples
-
-### Performance Optimization Process
-1. **Profile with realistic data volumes** (not toy datasets)
-2. **Measure memory usage** under different fetch sizes
-3. **Test parallel processing** with actual database load
-4. **Validate bandwidth throttling** in network-constrained environments
-
-### Error Handling Best Practices
-- **Preserve original exceptions** in stack traces
-- **Log context information** (table names, row counts, connection details)
-- **Fail fast** on configuration errors
-- **Retry transient errors** with exponential backoff
+**Database-Specific Optimizations** (in Manager subclasses):
+- **Oracle**: `NO_INDEX` hint forces full table scan
+- **PostgreSQL**: Binary COPY protocol instead of INSERT statements
+- **SQL Server**: Bulk Insert API with batch retry logic for deadlocks
+- **MongoDB**: Aggregation pipeline optimization for complex queries
 
 ## Anti-Patterns to Avoid
 
-### Database Connection Anti-Patterns
-- **DON'T**: Create new connections per query
-- **DO**: Use singleton connection pattern with proper cleanup
+**DO NOT**:
+- Add database-specific logic to `SqlManager` or `ReplicaDB` (use `XYZManager` subclass)
+- Skip TestContainers tests (unit tests insufficient for database logic)
+- Break CLI argument compatibility (add new args, never remove/rename)
+- Use connection pooling in Phase 1 (stateless model, one job = one connection lifecycle)
+- Assume JDBC compliance (test actual driver behavior with TestContainers)
 
-### Memory Anti-Patterns
-- **DON'T**: Load entire ResultSet into memory
-- **DO**: Use streaming with appropriate fetch sizes
+**DO Instead**:
+- Isolate database logic: Create new Manager subclass
+- Test with real databases: Add TestContainers integration test
+- Extend CLI args: Add `--new-feature` flag with backward-compatible default
+- Optimize connections: Tune fetch size, batch size, connection properties
+- Handle driver quirks: Document exceptions in Manager class comments
 
-### Error Handling Anti-Patterns
-- **DON'T**: Catch and ignore SQLExceptions
-- **DO**: Log errors with context and propagate appropriately
+## Development Workflow Guidelines
 
-### Testing Anti-Patterns
-- **DON'T**: Use H2 or embedded databases for integration tests
-- **DO**: Test against actual database engines using TestContainers
+**Adding New Database Support**:
+1. Create `XYZManager extends SqlManager` in `org.replicadb.manager`
+2. Override `getDriverClass()`, `escapeColName()`, partition logic
+3. Register in `ManagerFactory` JDBC URL pattern switch statement
+4. Add TestContainers configuration in `src/test/java/org/replicadb/config`
+5. Create test fixtures in `src/test/resources/{database}/`
+6. Write integration tests covering complete/incremental/parallel modes
+
+**Fixing Type Mapping Issues**:
+1. Identify failing conversion in TestContainers test output
+2. Override `getSqlType()` or `setColumnValue()` in database Manager
+3. Add test case with specific data type to `{Database}2{Database}Test`
+4. Document limitation if no clean mapping exists (e.g., Oracle SDO_GEOMETRY → PostgreSQL without PostGIS)

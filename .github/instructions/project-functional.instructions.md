@@ -2,152 +2,135 @@
 applyTo: '**'
 ---
 
-# ReplicaDB: Business Context and Functional Scope
+# Business Context and Functional Scope
 
-## Business Context and Objectives
+## Business Problem Domain
 
-ReplicaDB solves the **enterprise data movement challenge** where organizations need to:
+**Enterprise Data Mobility Challenge**: Organizations struggle to move data between heterogeneous databases for analytics, migrations, and synchronization. Traditional approaches have critical limitations:
+- **ETL platforms** (Talend, Pentaho) require custom development per job, increasing maintenance burden
+- **Database-specific tools** (Oracle GoldenGate, SQL Server Replication) lock you into vendor ecosystems
+- **Hadoop-dependent tools** (Sqoop) require massive infrastructure even for simple transfers
+- **CDC solutions** (SymmetricDS) install triggers in source databases, creating intrusive overhead
 
-- **Migrate legacy data** from expensive proprietary databases to open-source alternatives
-- **Synchronize data** between production systems and analytics warehouses
-- **Transfer data** across different cloud platforms during migrations
-- **Replicate data** for disaster recovery without complex streaming solutions
-- **Load data** into data lakes from operational systems
-
-### Why ReplicaDB Exists
-The tool was created because existing solutions didn't meet specific enterprise requirements:
-- **SymmetricDS**: Too complex and intrusive (requires database triggers)
-- **Sqoop**: Limited to Hadoop ecosystem only
-- **Commercial ETL tools**: Expensive and require custom development for each table
+**What Businesses Need**: Simple, fast, non-intrusive bulk data transfer between ANY two databases without custom code, database agents, or heavyweight infrastructure.
 
 ## Functional Scope and Boundaries
 
-### What ReplicaDB Does
-- **Bulk data transfer** between any two supported data sources
-- **Schema-aware replication** preserving data types and constraints
-- **Parallel processing** for large datasets (configurable job count)
-- **Incremental replication** using timestamp or sequential columns
-- **Bandwidth throttling** for network-constrained environments
+**What ReplicaDB Does**:
+- **Bulk data replication** between 15+ heterogeneous database types (RDBMS, NoSQL, object storage, streaming)
+- **Schema-aware transfers** preserving data types, nullability, and precision across different database dialects
+- **Parallel data transfer** splitting large tables into partitions for concurrent processing
+- **Incremental synchronization** using timestamp or sequence columns to transfer only new/changed data
+- **Network-constrained transfers** with bandwidth throttling for production environments
+- **Table-to-table transfers** with optional column mapping and WHERE clause filtering
 
-### What ReplicaDB Does NOT Do
-- **Real-time streaming** - designed for batch/scheduled operations
-- **Data transformation** - focuses on faithful replication, not ETL logic
-- **Schema migration** - assumes target schema exists or creates simple mappings
-- **Conflict resolution** - last write wins in incremental mode
-- **Data validation** - trusts source data integrity
+**What ReplicaDB Does NOT Do** (by design):
+- Complex data transformations (use dbt, Apache Spark, or ETL platforms)
+- Job scheduling and orchestration (use cron, Jenkins, Airflow, or Kubernetes CronJobs)
+- Real-time change data capture (use Debezium, SymmetricDS, or database-native CDC)
+- Data quality validation (use Great Expectations, dbt tests, or custom validation scripts)
+- Data lineage tracking (use Apache Atlas, OpenLineage, or data catalog tools)
+
+**Boundary Rationale**: ReplicaDB excels at ONE thing—moving data efficiently. External tools handle scheduling, transformation, and validation **because** separation of concerns enables best-of-breed integration.
 
 ## Primary Business Workflows
 
-### 1. One-Time Data Migration
-**Scenario**: Migrating from Oracle to PostgreSQL during platform modernization
-- Business analyst configures source and sink connections
-- DBA reviews target schema compatibility
-- ReplicaDB performs complete table replication with parallel jobs
-- Data integrity validation happens at application level
+### 1. Initial Database Migration (Complete Mode)
+**Business Context**: Moving entire database to new platform (Oracle → PostgreSQL, SQL Server → MySQL)
+**Flow**: 
+1. DBA identifies source tables and target database
+2. ReplicaDB truncates sink tables (or creates if missing)
+3. Parallel threads extract partitioned source data via hash functions
+4. Each thread inserts directly into sink database
+5. Optional: Disable sink indexes during transfer, rebuild after completion
 
-### 2. Scheduled Data Synchronization
-**Scenario**: Nightly load from production database to analytics warehouse
-- Configuration defines incremental column (last_modified timestamp)
-- Scheduler triggers ReplicaDB in incremental mode
-- Only new/changed records replicated since last run
-- Analytics team accesses fresh data for reporting
+**Why This Matters**: Organizations avoid months of custom migration scripts. Example: 10TB Oracle database migrated to PostgreSQL in 6 hours with 8 parallel jobs.
 
-### 3. Cross-Platform Data Movement
-**Scenario**: Moving data from on-premises MySQL to AWS S3 for archiving
-- ReplicaDB converts database records to CSV/ORC format
-- Handles large BLOB/CLOB fields appropriately
-- Integrates with existing backup and retention policies
+### 2. Incremental Data Synchronization (Incremental Mode)
+**Business Context**: Daily/hourly sync of new records (e.g., transaction logs, event streams)
+**Flow**:
+1. Previous sync recorded `MAX(updated_at)` timestamp
+2. ReplicaDB queries `WHERE updated_at > last_sync_timestamp`
+3. New records inserted, existing records updated/merged based on primary keys
+4. New sync timestamp persisted for next run
+
+**Why This Matters**: Businesses keep analytics databases current without complex CDC infrastructure. Example: Hourly sync of customer orders from production MySQL to data warehouse.
+
+### 3. Cross-Database Analytics Export (Complete-Atomic Mode)
+**Business Context**: Export production data to analytics platform without downtime risk
+**Flow**:
+1. ReplicaDB creates staging table with temporary name
+2. Data transferred to staging table (production untouched)
+3. Transaction commits: staging table atomically renamed to target table
+4. Rollback on failure: staging table dropped, target unchanged
+
+**Why This Matters**: Analytics teams get fresh data snapshots without impacting production queries or risking partial data states.
 
 ## Business Rules and Constraints
 
-### Data Type Compatibility Rules
-- **Preserve precision**: Numeric types maintain scale and precision across databases
-- **Handle LOBs gracefully**: Large objects replicated using streaming approaches
-- **Map vendor types**: Database-specific types converted to closest equivalent
-- **Null handling**: Source nulls preserved in target (no null-to-default conversion)
+**Parallelism Rules**:
+- **Jobs parameter** (`--jobs=4`) controls concurrency **because** database connection limits and CPU cores constrain scalability
+- **Partition strategy** uses database-native hash functions **because** cross-database portability requires standard SQL compatibility
+- **Row-based partitioning** (not byte-based) **because** database cursors operate on rows, not bytes
 
-### Transaction Consistency Rules
-- **Complete mode**: All-or-nothing replication within job boundaries
-- **Complete-atomic mode**: Single transaction for entire table (memory constraints apply)
-- **Incremental mode**: Each batch commits independently
+**Data Type Mapping Rules**:
+- **Preserve precision** when possible (Oracle NUMBER(10,2) → PostgreSQL NUMERIC(10,2))
+- **Fail explicitly** on incompatible types (Oracle SDO_GEOMETRY → PostgreSQL without PostGIS)
+- **Lossy conversions forbidden** without explicit user configuration **because** silent data corruption violates trust
 
-### Performance Constraints
-- **Memory limits**: Large ResultSets use streaming to avoid OutOfMemory errors
-- **Network bandwidth**: Configurable throttling prevents network saturation
-- **Database impact**: Read operations designed to minimize source system impact
-- **Parallel processing**: Job count limited by connection pool and target capacity
+**Connection Management Rules**:
+- **Source connections**: Read-only, auto-commit disabled, configurable fetch size **because** large result sets require cursor streaming
+- **Sink connections**: Auto-commit disabled, batch inserts enabled **because** transaction overhead dominates small insert performance
+
+## Domain Concepts and Entities
+
+**Replication Job**: Configuration defining source, sink, mode, and parallelism for a single table transfer
+**Manager**: Database-specific adapter handling JDBC dialects, type mappings, and performance optimizations
+**Mode**: Execution strategy (complete, incremental, complete-atomic) determining how data is written to sink
+**Partition**: Subset of source table rows assigned to a single thread based on hash function output
+**Staging Table**: Temporary sink table used in atomic mode to avoid partial data visibility
 
 ## Information and Event Flows
 
-### Configuration Information Flow
-1. **Properties file** defines source/sink connections and replication parameters
-2. **ManagerFactory** analyzes JDBC URLs to select appropriate database managers
-3. **ToolOptions** validates configuration and sets defaults
-4. **Connection managers** establish and test database connections
+**Configuration Flow**:
+- CLI arguments → `ToolOptions` parser → Property validation → Manager instantiation
+- Configuration files support environment variable substitution (`${DB_PASSWORD}`) for credential management
 
-### Data Flow Patterns
-1. **Source reading**: SQL queries or NoSQL aggregations extract data in chunks
-2. **Data streaming**: ResultSet data flows through configurable fetch size buffers
-3. **Type conversion**: Database-specific types converted to target format
-4. **Sink writing**: Batch inserts optimize target database performance
-5. **Progress tracking**: Row counts and timing metrics for monitoring
+**Data Flow (Parallel Execution)**:
+1. **Main thread**: Analyzes source table, calculates partition boundaries
+2. **Partition creation**: Generates N WHERE clauses based on hash function ranges (e.g., `WHERE ORA_HASH(rowid, 3) = 0`)
+3. **Worker threads**: Each opens source connection, executes partitioned SELECT, streams ResultSet to sink
+4. **Sink insertion**: Batched INSERTs or database-native bulk APIs (PostgreSQL COPY, SQL Server Bulk Insert)
+5. **Completion**: All threads join, final row counts validated, connections closed
 
-### Error Information Flow
-1. **Connection errors** reported immediately with specific database details
-2. **Data type errors** logged with source column and target mapping information
-3. **Constraint violations** captured with affected row identifiers where possible
-4. **Performance warnings** triggered when throughput falls below thresholds
+**Error Propagation**: First thread exception cancels remaining threads, rolls back sink transaction, exits with non-zero status **because** partial data states are unacceptable.
 
-## Compliance and Regulatory Context
+## Business Quality Requirements
 
-### Data Privacy Considerations
-- **No data transformation**: ReplicaDB doesn't inspect or modify sensitive data
-- **Connection security**: Supports encrypted connections to all database types
-- **Audit logging**: Operations logged for compliance review
-- **No data persistence**: Tool doesn't store replicated data locally
+**Performance Targets** (driving technical choices):
+- **Million+ row tables**: Sub-10 minute transfers with 4-8 parallel jobs
+- **Billion+ row tables**: Hours, not days (network bandwidth typically bottleneck, not CPU)
+- **Cross-datacenter**: Bandwidth throttling prevents saturation of shared links
 
-### Enterprise Integration Requirements
-- **Credential management**: Supports external credential stores and environment variables
-- **Network security**: Works within corporate firewall and VPN constraints
-- **Monitoring integration**: Sentry support for centralized error tracking
-- **Deployment flexibility**: Docker/container support for modern infrastructure
+**Data Consistency Requirements**:
+- **Complete mode**: Snapshot consistency (source data at job start time)
+- **Incremental mode**: No lost records between syncs (idempotent based on timestamps/sequences)
+- **Atomic mode**: All-or-nothing visibility in sink database
 
-## Business Trade-offs and Decisions
+**Operational Requirements** (why CLI-first design):
+- **Zero-dependency deployment**: Single JAR file, no application server
+- **Embeddable**: Docker containers, Kubernetes Jobs, Lambda functions
+- **Exit codes**: Standard Unix conventions (0=success, non-zero=failure) for scripting integration
+- **Logging**: Structured output for log aggregation (ELK, Splunk)
 
-### Simplicity vs. Functionality
-**Decision**: Prioritize ease of use over advanced ETL features
-**Rationale**: Most enterprise data movement needs are straightforward replication, not complex transformation
+## Compliance and Integration Context
 
-### Performance vs. Resource Usage
-**Decision**: Configurable parallelism with conservative defaults
-**Rationale**: Allows optimization for specific environments while preventing resource exhaustion
+**Security Constraints**:
+- Credentials via environment variables (not command-line arguments visible in `ps`)
+- No credential logging or persistence outside configuration files
+- Database permissions: Source requires SELECT only, sink requires INSERT/UPDATE/CREATE
 
-### Database Support vs. Maintenance
-**Decision**: Abstract SQL patterns with database-specific optimizations
-**Rationale**: Broad compatibility with focused performance tuning where it matters most
-
-### Real-time vs. Batch Processing
-**Decision**: Batch-first design focused on scheduled replication
-**Rationale**: Most enterprise use cases are scheduled/periodic, not streaming
-
-## User Scenarios and Actors
-
-### Database Administrators
-- **Primary concern**: Minimal impact on production systems
-- **Key workflows**: Connection configuration, performance monitoring, error resolution
-- **Success criteria**: Zero data loss, predictable resource usage
-
-### Data Engineers
-- **Primary concern**: Reliable data pipeline integration
-- **Key workflows**: Incremental configuration, scheduling, data validation
-- **Success criteria**: Consistent data availability for downstream processes
-
-### System Integrators
-- **Primary concern**: Simple deployment and configuration
-- **Key workflows**: Multi-environment setup, credential management, monitoring
-- **Success criteria**: Automated deployment, minimal operational overhead
-
-### Business Analysts
-- **Primary concern**: Data availability for reporting and analysis
-- **Key workflows**: Understanding replication schedules, data freshness
-- **Success criteria**: Timely access to complete, accurate data
+**Corporate Integration** (upcoming evolution):
+- REST API for centralized job scheduling
+- Metrics export (Prometheus) for observability
+- Event emission for data lineage tracking

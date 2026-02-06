@@ -22,3 +22,4 @@ create_db_error.log
 .DS_Store
 .vscode
 implementation_plan.md
+*.log

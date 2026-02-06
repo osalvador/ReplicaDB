@@ -2,89 +2,84 @@
 applyTo: '**'
 ---
 
-# ReplicaDB: Enterprise Data Replication Tool
+# ReplicaDB Project Overview
 
 ## Business Purpose
 
-ReplicaDB solves the critical business problem of **efficient bulk data transfer between heterogeneous databases and data stores**. Unlike complex ETL tools, ReplicaDB provides a lightweight, cross-platform solution for organizations that need:
-
-- **High-performance data migration** without streaming replication complexity
-- **Multi-database compatibility** across SQL, NoSQL, and file systems
-- **Simple deployment** without remote agents or database modifications
-- **Cost-effective ETL/ELT processing** for analytics and data warehousing
+ReplicaDB solves the **enterprise data mobility problem**: organizations need to move large volumes of data between heterogeneous databases and storage systems for ETL/ELT workflows, data migrations, and synchronization tasks. Traditional solutions either require database agents (intrusive), are locked to specific ecosystems (Hadoop/Sqoop), or demand custom development for each job (Pentaho/Talend). ReplicaDB provides a **zero-agent, zero-custom-code, heterogeneous bulk data transfer** solution.
 
 ## Strategic Architectural Decisions
 
-### 1. Manager Factory Pattern
-**Why**: ReplicaDB chose the Manager Factory pattern to handle the complexity of supporting 15+ different database types and file formats. This decision enables:
-- **Uniform interface** across diverse data sources (Oracle, PostgreSQL, MongoDB, S3, Kafka)
-- **Runtime selection** of appropriate connection managers based on JDBC URL schemes
-- **Extensibility** for new data sources without core changes
+**1. Manager Pattern for Database Abstraction**
+- **Why**: Supporting 15+ heterogeneous data sources (Oracle, PostgreSQL, MySQL, SQL Server, MongoDB, S3, Kafka, etc.) requires clean separation of database-specific logic
+- **Impact**: Each database gets its own `Manager` class extending `SqlManager` or `ConnManager`, isolating JDBC dialects, data type mappings, and performance optimizations
+- **Trade-off**: More classes but eliminates conditional logic and makes adding new databases straightforward
 
-### 2. Abstract SQL Manager Hierarchy
-**Why**: SQL databases share common JDBC patterns, so ReplicaDB uses abstract base classes (SqlManager) with database-specific implementations. This architectural choice:
-- **Reduces code duplication** across similar database implementations
-- **Enables consistent behavior** for transactions, connection pooling, and error handling
-- **Simplifies maintenance** when adding JDBC-compliant databases
+**2. Native Parallelism with JDBC**
+- **Why**: Enterprises move millions/billions of rows, requiring parallel execution without external frameworks
+- **Approach**: Built-in thread pool with configurable `--jobs` parameter, data partitioning via database-native functions (`ORA_HASH`, `HASH`, `ROW_NUMBER`)
+- **Constraint**: Avoids Hadoop dependency (unlike Sqoop), making ReplicaDB deployable anywhere Java 11+ runs
 
-### 3. Non-Intrusive Design Philosophy
-**Why**: Unlike SymmetricDS or similar tools, ReplicaDB deliberately avoids installing triggers or agents in source databases because:
-- **Enterprise security requirements** often prohibit database modifications
-- **Operational simplicity** reduces maintenance overhead
-- **Cross-platform compatibility** works with any server that can run Java
+**3. CLI-First, Evolving to API**
+- **Why**: Started as CLI tool for batch/cron jobs (primary use case), now evolving to REST API for scheduling and monitoring
+- **Current State**: Pure CLI with configuration files; Phase 1 evolution adds Spring Boot API without breaking CLI compatibility
+- **Design Principle**: CLI remains first-class citizen with optimized startup (no Spring Boot overhead when running as CLI)
 
 ## Technology Context
 
-ReplicaDB is built on **Java 11 with Maven** for several strategic reasons:
-- **Enterprise compatibility**: Java 11 LTS ensures broad platform support in corporate environments
-- **JDBC ecosystem**: Leverages mature database driver ecosystem
-- **Container deployment**: Docker/Podman support with eclipse-temurin:11 base image
-- **Dependency management**: Maven handles complex driver dependencies automatically
-- **Automated releases**: GitHub Actions CI/CD with automated release script (`release.sh`)
+**Core Stack**:
+- **Java 11+**: Cross-platform compatibility, mature ecosystem, enterprise adoption
+- **Pure JDBC**: Direct database connectivity without ORM overhead or framework lock-in
+- **Maven**: Standard Java build tool with clear dependency management
+- **TestContainers**: Real database integration tests, not mocks
+
+**Why Java/JDBC**: Enterprise data pipelines require stability, performance, and compatibility with corporate environments where Java is standard. JDBC provides universal database connectivity without vendor lock-in.
 
 ## Decision Framework for AI
 
-### When adding new data sources:
-- **Extend existing patterns**: Use ManagerFactory registration and SqlManager inheritance
-- **Follow URL scheme detection**: Implement `isTheManagerTypeOf()` for automatic selection
-- **Maintain connection abstraction**: Override abstract methods in ConnManager hierarchy
+**When adding new database support**:
+1. Create `XYZManager extends SqlManager` in `org.replicadb.manager`
+2. Override type-specific methods (`escapeColName`, `getDriverClass`, data type mappings)
+3. Register in `ManagerFactory` via JDBC URL pattern matching
+4. Add TestContainers integration tests for complete/incremental/parallel modes
 
-### When modifying replication logic:
-- **Preserve mode compatibility**: Support complete, complete-atomic, and incremental modes
-- **Consider parallel processing**: Ensure thread safety in multi-job scenarios
-- **Handle bandwidth throttling**: Respect existing performance controls
+**When fixing bugs**:
+- For data type issues → investigate `SqlManager` type mapping and database-specific `Manager` overrides
+- For parallel execution issues → check partitioning logic in database-specific `Manager.readTable()`
+- For connection issues → review `ConnManager` connection lifecycle and `discardConnection()` implementations
 
-### When updating dependencies:
-- **Security first**: Dependabot automatically manages vulnerabilities
-- **Compatibility preservation**: Test against all supported database versions
-- **Container compatibility**: Verify Docker and Podman builds
+**When optimizing performance**:
+- Database-specific optimizations belong in `Manager` classes (e.g., Oracle hints, PostgreSQL COPY, SQL Server Bulk)
+- General parallelism tuning → adjust `--jobs` parameter and partition boundary calculations
+- Network optimization → `--bandwidth-throttling` for rate limiting
 
 ## Integration Philosophy
 
-ReplicaDB operates as a **data movement utility** in enterprise data architectures:
-- **Source of truth preservation**: Never modifies source data
-- **Transaction consistency**: Ensures atomic operations where configured
-- **Monitoring integration**: Sentry support for production observability
-- **Configuration-driven**: Property files enable infrastructure-as-code patterns
+ReplicaDB is a **point-to-point replication tool**, not an ETL platform:
+- **Operates between**: Any two supported data sources (source → sink)
+- **Does NOT**: Complex transformations, orchestration, scheduling (these belong in external tools)
+- **Integration Pattern**: Invoked by schedulers (cron, Jenkins, Airflow) or soon via REST API
+- **State Management**: Stateless execution model; state tracking via incremental mode using timestamps/sequences
 
 ## Quality Principles
 
-### Good Contributions
-- **Database-specific optimizations** in dedicated manager classes
-- **Configuration options** that enhance replication flexibility
-- **Performance improvements** that scale with data volume
-- **Test coverage** for cross-database scenarios
+**Good contributions**:
+- Preserve backward compatibility (CLI arguments, configuration files)
+- Add comprehensive TestContainers integration tests for new features
+- Follow Manager pattern for database-specific logic
+- Document performance characteristics and limitations
+- Use existing partitioning strategies before inventing new ones
 
-### Avoid
-- **Breaking changes** to configuration file format
-- **Dependencies** that conflict with enterprise security policies
-- **Platform-specific code** that reduces cross-platform compatibility
-- **Complex abstractions** that obscure database-specific behavior
+**Avoid**:
+- Breaking CLI argument compatibility
+- Adding dependencies that increase Docker image size unnecessarily
+- Database-specific logic in core `ReplicaDB` or `SqlManager` (belongs in `XYZManager`)
+- Skipping integration tests (unit tests alone are insufficient for database logic)
+- Hardcoding database-specific behavior without configuration options
 
-## Success Metrics
+## Evolution Path
 
-AI contributions should optimize for:
-- **Replication throughput** (rows per second across different database combinations)
-- **Memory efficiency** (handling large datasets without OOM errors)
-- **Configuration simplicity** (minimal setup for common use cases)
-- **Error diagnostics** (clear messages for connection and data type issues)
+**Current**: Pure CLI tool with extensive database support
+**Phase 1** (planned): Spring Boot API for job scheduling/monitoring while preserving CLI mode
+**Phase 2** (future): Kubernetes-native with Redis queue and horizontal worker scaling
+**Principle**: Each phase builds on previous without rewrites; CLI remains first-class forever
