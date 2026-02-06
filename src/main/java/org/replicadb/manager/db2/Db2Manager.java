@@ -126,6 +126,26 @@ public class Db2Manager extends SqlManager {
             .toArray(String[]::new);
 
         Map<String, Integer> sinkColumnTypes = getSinkColumnTypes(tableName);
+        if (LOG.isDebugEnabled()) {
+            StringBuilder mappingLog = new StringBuilder("DB2 sink mapping (index: sourceLabel -> sinkColumn/type): ");
+            for (int i = 1; i <= columnsNumber; i++) {
+                String columnLabel = rsmd.getColumnLabel(i);
+                String sinkColumnName = i - 1 < sinkColumnNames.length ? sinkColumnNames[i - 1] : columnLabel;
+                int fallbackType = rsmd.getColumnType(i);
+                int targetType = getSinkColumnType(sinkColumnTypes, sinkColumnName, fallbackType);
+                if (i > 1) {
+                    mappingLog.append(" | ");
+                }
+                mappingLog.append(i)
+                    .append(": ")
+                    .append(columnLabel)
+                    .append(" -> ")
+                    .append(sinkColumnName)
+                    .append("/")
+                    .append(targetType);
+            }
+            LOG.debug(mappingLog.toString());
+        }
 
         String sqlCdm = getInsertSQLCommand(tableName, allColumns, columnsNumber);
         PreparedStatement ps = this.getConnection().prepareStatement(sqlCdm);
