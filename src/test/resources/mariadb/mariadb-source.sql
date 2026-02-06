@@ -104,3 +104,29 @@ select
     CONVERT_TZ(current_time, '+00:00', '+02:00' ) as C_TIME_WITH_TIMEZONE,
     CONVERT_TZ(current_timestamp, '+00:00', '+02:00' ) as C_TIMESTAMP_WITH_TIMEZONE
 from generate_series_4k;
+
+-- Insert a row with all NULL values (except auto-increment) to test NULL handling
+insert into t_source (
+    C_SMALLINT,
+    C_BIGINT,
+    C_NUMERIC,
+    C_DECIMAL,
+    C_REAL ,
+    C_DOUBLE_PRECISION,
+    C_FLOAT,
+    C_BINARY,
+    C_BINARY_VAR,
+    C_BINARY_LOB,
+    C_BOOLEAN,
+    C_CHARACTER,
+    C_CHARACTER_VAR,
+    C_CHARACTER_LOB,
+    C_NATIONAL_CHARACTER,
+    C_NATIONAL_CHARACTER_VAR,
+    C_DATE,
+    C_TIME_WITHOUT_TIMEZONE,
+    C_TIMESTAMP_WITHOUT_TIMEZONE,
+    C_TIME_WITH_TIMEZONE ,
+    C_TIMESTAMP_WITH_TIMEZONE
+)
+values (null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null);

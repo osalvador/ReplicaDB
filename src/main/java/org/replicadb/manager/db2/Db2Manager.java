@@ -161,7 +161,26 @@ public class Db2Manager extends SqlManager {
                             ps.setFloat(i, resultSet.getFloat(i));
                             break;
                         case Types.DATE:
-                            ps.setDate(i, resultSet.getDate(i));
+                            // Handle SQLite string-based dates that can't be parsed by DB2
+                            try {
+                                java.sql.Date dateVal = resultSet.getDate(i);
+                                ps.setDate(i, dateVal);
+                            } catch (SQLException e) {
+                                // Fallback: If getDate() fails, try getString() and convert
+                                String dateStr = resultSet.getString(i);
+                                if (dateStr == null || resultSet.wasNull()) {
+                                    ps.setNull(i, Types.DATE);
+                                } else {
+                                    // Parse string date (YYYY-MM-DD) to java.sql.Date
+                                    try {
+                                        java.sql.Date parsedDate = java.sql.Date.valueOf(dateStr);
+                                        ps.setDate(i, parsedDate);
+                                    } catch (IllegalArgumentException iae) {
+                                        LOG.warn("Unable to parse date string '{}', setting NULL: {}", dateStr, iae.getMessage());
+                                        ps.setNull(i, Types.DATE);
+                                    }
+                                }
+                            }
                             break;
                         case Types.TIMESTAMP:
                         case Types.TIMESTAMP_WITH_TIMEZONE:
