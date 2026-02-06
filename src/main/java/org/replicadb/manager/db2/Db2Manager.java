@@ -86,8 +86,9 @@ public class Db2Manager extends SqlManager {
             return super.execute(baseQuery);
         }
 
-        String selectColumns = "*".equals(allColumns) ? "SRC.*" : allColumns;
-        String sqlCmd = "SELECT " + selectColumns + " FROM (SELECT " + selectColumns
+        String innerSelectColumns = "*".equals(allColumns) ? "SRC.*" : allColumns;
+        String outerSelectColumns = "*".equals(allColumns) ? "*" : allColumns;
+        String sqlCmd = "SELECT " + outerSelectColumns + " FROM (SELECT " + innerSelectColumns
             + ", MOD(ROW_NUMBER() OVER (ORDER BY 1), " + this.options.getJobs()
             + ") AS RN FROM (" + baseQuery + ") SRC) PART WHERE RN = " + nThread;
 
@@ -174,16 +175,24 @@ public class Db2Manager extends SqlManager {
                             ps.setBytes(i, resultSet.getBytes(i));
                             break;
                         case Types.BLOB:
-                            Blob blobData = resultSet.getBlob(i);
-                            ps.setBlob(i, blobData);
+                            byte[] blobBytes = resultSet.getBytes(i);
+                            if (blobBytes == null) {
+                                ps.setNull(i, Types.BLOB);
+                            } else {
+                                ps.setBytes(i, blobBytes);
+                            }
                             break;
                         case Types.CLOB:
                             String clobTypeName = rsmd.getColumnTypeName(i);
                             if ("JSON".equalsIgnoreCase(clobTypeName)) {
                                 ps.setString(i, resultSet.getString(i));
                             } else {
-                                Clob clobData = resultSet.getClob(i);
-                                ps.setClob(i, clobData);
+                                String clobValue = resultSet.getString(i);
+                                if (clobValue == null) {
+                                    ps.setNull(i, Types.CLOB);
+                                } else {
+                                    ps.setString(i, clobValue);
+                                }
                             }
                             break;
                         case Types.BOOLEAN:
