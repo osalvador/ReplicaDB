@@ -327,14 +327,24 @@ public class Db2Manager extends SqlManager {
                 ps.addBatch();
 
                 if (++count % batchSize == 0) {
-                    ps.executeBatch();
-                    this.getConnection().commit();
+                    try {
+                        ps.executeBatch();
+                        this.getConnection().commit();
+                    } catch (final SQLException batchException) {
+                        logBatchException(batchException);
+                        throw batchException;
+                    }
                 }
                 totalRows++;
             } while (resultSet.next());
         }
 
-        ps.executeBatch();
+        try {
+            ps.executeBatch();
+        } catch (final SQLException batchException) {
+            logBatchException(batchException);
+            throw batchException;
+        }
         ps.close();
 
         this.getConnection().commit();
@@ -383,6 +393,19 @@ public class Db2Manager extends SqlManager {
         String normalized = columnLabel.replace("\"", "").toUpperCase();
         Integer type = sinkColumnTypes.get(normalized);
         return type != null ? type : fallbackType;
+    }
+
+    private void logBatchException(SQLException exception) {
+        LOG.error("DB2 batch execution failed: {} (SQLState={}, errorCode={})",
+            exception.getMessage(), exception.getSQLState(), exception.getErrorCode());
+        SQLException next = exception.getNextException();
+        int index = 1;
+        while (next != null) {
+            LOG.error("DB2 batch next exception #{}: {} (SQLState={}, errorCode={})",
+                index, next.getMessage(), next.getSQLState(), next.getErrorCode());
+            next = next.getNextException();
+            index++;
+        }
     }
 
     /**
