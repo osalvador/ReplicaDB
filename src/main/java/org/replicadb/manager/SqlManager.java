@@ -167,6 +167,9 @@ public abstract class SqlManager extends ConnManager {
         // Close connection, ignore exceptions
         if (this.connection != null) {
             try {
+                if (DataSourceType.SOURCE.equals(this.dsType) && !this.getConnection().getAutoCommit()) {
+                    this.getConnection().rollback();
+                }
                 this.getConnection().close();
             } catch (Exception e) {
                 LOG.error(e);
