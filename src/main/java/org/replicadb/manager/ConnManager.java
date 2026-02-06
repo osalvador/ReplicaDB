@@ -198,10 +198,14 @@ public abstract class ConnManager {
 
         for (int i = 1; i <= columnsNumber; i++) {
             if (i > 1) columnNames.append(",");
+            String columnName = rsmd.getColumnLabel(i);
+            if (columnName == null || columnName.isEmpty()) {
+                columnName = rsmd.getColumnName(i);
+            }
             if (this.options.getQuotedIdentifiers())
-                columnNames.append("\"").append(rsmd.getColumnName(i)).append("\"");
+                columnNames.append("\"").append(columnName).append("\"");
             else
-                columnNames.append(rsmd.getColumnName(i));
+                columnNames.append(columnName);
         }
         return columnNames.toString();
     }
