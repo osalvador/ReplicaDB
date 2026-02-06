@@ -121,6 +121,9 @@ public class Db2Manager extends SqlManager {
 
         String allColumns = getAllSinkColumns(rsmd);
         int columnsNumber = rsmd.getColumnCount();
+        String[] sinkColumnNames = Arrays.stream(allColumns.split(","))
+            .map(name -> name.replace("\"", "").trim())
+            .toArray(String[]::new);
 
         Map<String, Integer> sinkColumnTypes = getSinkColumnTypes(tableName);
 
@@ -140,7 +143,9 @@ public class Db2Manager extends SqlManager {
 
                 for (int i = 1; i <= columnsNumber; i++) {
                     String columnLabel = rsmd.getColumnLabel(i);
-                    int targetType = getSinkColumnType(sinkColumnTypes, columnLabel, rsmd.getColumnType(i));
+                    String sinkColumnName = i - 1 < sinkColumnNames.length ? sinkColumnNames[i - 1] : columnLabel;
+                    int fallbackType = rsmd.getColumnType(i);
+                    int targetType = getSinkColumnType(sinkColumnTypes, sinkColumnName, fallbackType);
                     switch (targetType) {
                         case Types.VARCHAR:
                         case Types.CHAR:
