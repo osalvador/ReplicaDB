@@ -21,6 +21,8 @@ import java.sql.SQLXML;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * DB2-specific connection manager supporting DB2 LUW and DB2/i platforms.
@@ -120,6 +122,8 @@ public class Db2Manager extends SqlManager {
         String allColumns = getAllSinkColumns(rsmd);
         int columnsNumber = rsmd.getColumnCount();
 
+        Map<String, Integer> sinkColumnTypes = getSinkColumnTypes(tableName);
+
         String sqlCdm = getInsertSQLCommand(tableName, allColumns, columnsNumber);
         PreparedStatement ps = this.getConnection().prepareStatement(sqlCdm);
 
@@ -135,7 +139,9 @@ public class Db2Manager extends SqlManager {
                 bt.acquiere();
 
                 for (int i = 1; i <= columnsNumber; i++) {
-                    switch (rsmd.getColumnType(i)) {
+                    String columnLabel = rsmd.getColumnLabel(i);
+                    int targetType = getSinkColumnType(sinkColumnTypes, columnLabel, rsmd.getColumnType(i));
+                    switch (targetType) {
                         case Types.VARCHAR:
                         case Types.CHAR:
                         case -15:
@@ -149,7 +155,7 @@ public class Db2Manager extends SqlManager {
                         case Types.SMALLINT:
                             int intVal = resultSet.getInt(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, Types.INTEGER);
+                                ps.setNull(i, targetType);
                             } else {
                                 ps.setInt(i, intVal);
                             }
@@ -159,7 +165,7 @@ public class Db2Manager extends SqlManager {
                         case Types.DECIMAL:
                             java.math.BigDecimal bdVal = resultSet.getBigDecimal(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, Types.DECIMAL);
+                                ps.setNull(i, targetType);
                             } else {
                                 ps.setBigDecimal(i, bdVal);
                             }
@@ -167,7 +173,7 @@ public class Db2Manager extends SqlManager {
                         case Types.DOUBLE:
                             double dblVal = resultSet.getDouble(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, Types.DOUBLE);
+                                ps.setNull(i, targetType);
                             } else {
                                 ps.setDouble(i, dblVal);
                             }
@@ -175,7 +181,7 @@ public class Db2Manager extends SqlManager {
                         case Types.FLOAT:
                             float fltVal = resultSet.getFloat(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, Types.FLOAT);
+                                ps.setNull(i, targetType);
                             } else {
                                 ps.setFloat(i, fltVal);
                             }
@@ -189,7 +195,7 @@ public class Db2Manager extends SqlManager {
                                 // Fallback: If getDate() fails, try getString() and convert
                                 String dateStr = resultSet.getString(i);
                                 if (dateStr == null || resultSet.wasNull()) {
-                                    ps.setNull(i, Types.DATE);
+                                    ps.setNull(i, targetType);
                                 } else {
                                     // Parse string date (YYYY-MM-DD) to java.sql.Date
                                     try {
@@ -197,7 +203,7 @@ public class Db2Manager extends SqlManager {
                                         ps.setDate(i, parsedDate);
                                     } catch (IllegalArgumentException iae) {
                                         LOG.warn("Unable to parse date string '{}', setting NULL: {}", dateStr, iae.getMessage());
-                                        ps.setNull(i, Types.DATE);
+                                        ps.setNull(i, targetType);
                                     }
                                 }
                             }
@@ -208,7 +214,7 @@ public class Db2Manager extends SqlManager {
                         case -102:
                             java.sql.Timestamp tsVal = resultSet.getTimestamp(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, Types.TIMESTAMP);
+                                ps.setNull(i, targetType);
                             } else {
                                 ps.setTimestamp(i, tsVal);
                             }
@@ -218,7 +224,7 @@ public class Db2Manager extends SqlManager {
                         case Types.LONGVARBINARY:
                             byte[] binBytes = resultSet.getBytes(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, Types.VARBINARY);
+                                ps.setNull(i, targetType);
                             } else {
                                 ps.setBytes(i, binBytes);
                             }
@@ -226,7 +232,7 @@ public class Db2Manager extends SqlManager {
                         case Types.BLOB:
                             byte[] blobBytes = resultSet.getBytes(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, Types.BLOB);
+                                ps.setNull(i, targetType);
                             } else {
                                 ps.setBytes(i, blobBytes);
                             }
@@ -238,7 +244,7 @@ public class Db2Manager extends SqlManager {
                             } else {
                                 String clobValue = resultSet.getString(i);
                                 if (clobValue == null) {
-                                    ps.setNull(i, Types.CLOB);
+                                    ps.setNull(i, targetType);
                                 } else {
                                     ps.setString(i, clobValue);
                                 }
@@ -248,7 +254,7 @@ public class Db2Manager extends SqlManager {
                         case Types.BIT:
                             boolean boolVal = resultSet.getBoolean(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, Types.CHAR);
+                                ps.setNull(i, targetType);
                             } else {
                                 ps.setString(i, boolVal ? "1" : "0");
                             }
@@ -256,7 +262,7 @@ public class Db2Manager extends SqlManager {
                         case Types.SQLXML:
                             SQLXML sqlxmlData = resultSet.getSQLXML(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, Types.SQLXML);
+                                ps.setNull(i, targetType);
                             } else {
                                 ps.setString(i, sqlxmlData.getString());
                             }
@@ -264,7 +270,7 @@ public class Db2Manager extends SqlManager {
                         case Types.ARRAY:
                             Array arrayData = resultSet.getArray(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, java.sql.Types.NULL);
+                                ps.setNull(i, targetType);
                             } else {
                                 ps.setArray(i, arrayData);
                             }
@@ -274,14 +280,14 @@ public class Db2Manager extends SqlManager {
                             if ("DECFLOAT".equalsIgnoreCase(typeName)) {
                                 java.math.BigDecimal decVal = resultSet.getBigDecimal(i);
                                 if (resultSet.wasNull()) {
-                                    ps.setNull(i, Types.DECIMAL);
+                                    ps.setNull(i, targetType);
                                 } else {
                                     ps.setBigDecimal(i, decVal);
                                 }
                             } else {
                                 Object objVal = resultSet.getObject(i);
                                 if (resultSet.wasNull()) {
-                                    ps.setNull(i, java.sql.Types.NULL);
+                                    ps.setNull(i, targetType);
                                 } else {
                                     ps.setObject(i, objVal);
                                 }
@@ -308,6 +314,43 @@ public class Db2Manager extends SqlManager {
 
         this.getConnection().commit();
         return totalRows;
+    }
+
+    private Map<String, Integer> getSinkColumnTypes(String tableName) throws SQLException {
+        Map<String, Integer> columnTypes = new HashMap<>();
+        String schemaName = null;
+        String resolvedTableName = tableName;
+
+        if (resolvedTableName != null && resolvedTableName.contains(".")) {
+            String[] parts = resolvedTableName.split("\\.", 2);
+            schemaName = parts[0].replace("\"", "");
+            resolvedTableName = parts[1];
+        }
+
+        if (resolvedTableName != null) {
+            resolvedTableName = resolvedTableName.replace("\"", "");
+        }
+
+        ResultSet columns = this.getConnection().getMetaData()
+            .getColumns(null, schemaName, resolvedTableName, null);
+        while (columns.next()) {
+            String columnName = columns.getString("COLUMN_NAME");
+            int dataType = columns.getInt("DATA_TYPE");
+            if (columnName != null) {
+                columnTypes.put(columnName.toUpperCase(), dataType);
+            }
+        }
+        columns.close();
+        return columnTypes;
+    }
+
+    private int getSinkColumnType(Map<String, Integer> sinkColumnTypes, String columnLabel, int fallbackType) {
+        if (columnLabel == null) {
+            return fallbackType;
+        }
+        String normalized = columnLabel.replace("\"", "").toUpperCase();
+        Integer type = sinkColumnTypes.get(normalized);
+        return type != null ? type : fallbackType;
     }
 
     /**
