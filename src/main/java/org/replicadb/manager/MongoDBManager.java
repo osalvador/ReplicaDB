@@ -25,7 +25,9 @@ import org.replicadb.rowset.MongoDBRowSetImpl;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -244,6 +246,7 @@ public class MongoDBManager extends SqlManager {
 		final List<WriteModel<Document>> writeOperations = new ArrayList<>();
 		// unordered bulk write
 		final BulkWriteOptions bulkWriteOptions = new BulkWriteOptions().ordered(false);
+		final Map<String, String> primaryKeyNormalizationMap = buildPrimaryKeyNormalizationMap();
 
 		if (resultSet != null && resultSet.next()) {
 			// Create Bandwidth Throttling
@@ -259,33 +262,35 @@ public class MongoDBManager extends SqlManager {
 					final Document document = new Document();
 					for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
 						final String columnName = resultSet.getMetaData().getColumnLabel(i);
+						final String normalizedColumnName = normalizePrimaryKeyName(primaryKeyNormalizationMap,
+								columnName);
 						switch (resultSet.getMetaData().getColumnType(i)) {
 							case -104 : // Oracle INTERVALDS
 							case -103 : // Oracle INTERVALYM
 							case Types.SQLXML :
-								document.put(columnName, resultSet.getString(i));
+								document.put(normalizedColumnName, resultSet.getString(i));
 								break;
 							case Types.TIMESTAMP :
 							case Types.TIMESTAMP_WITH_TIMEZONE :
 							case -101 :
 							case -102 :
-								document.put(columnName, resultSet.getTimestamp(i));
+								document.put(normalizedColumnName, resultSet.getTimestamp(i));
 								break;
 							case Types.BINARY :
 							case Types.VARBINARY :
 							case Types.LONGVARBINARY :
-								document.put(columnName, resultSet.getBytes(i));
+								document.put(normalizedColumnName, resultSet.getBytes(i));
 								break;
 							case Types.BLOB :
 								final Blob blobData = resultSet.getBlob(i);
 								if (blobData != null) {
-									document.put(columnName, blobData.getBytes(1, (int) blobData.length()));
+									document.put(normalizedColumnName, blobData.getBytes(1, (int) blobData.length()));
 									blobData.free();
 								}
 								break;
 							case Types.CLOB :
 								final Clob clobData = resultSet.getClob(i);
-								document.put(columnName, this.clobToString(clobData));
+								document.put(normalizedColumnName, this.clobToString(clobData));
 								if (clobData != null)
 									clobData.free();
 								break;
@@ -295,16 +300,16 @@ public class MongoDBManager extends SqlManager {
 									final PGobject pgObject = (PGobject) object;
 									// if Document.parse fails, will be saved as a string
 									try {
-										document.put(columnName, Document.parse(pgObject.getValue()));
+										document.put(normalizedColumnName, Document.parse(pgObject.getValue()));
 									} catch (final Exception e) {
-										document.put(columnName, pgObject.getValue());
+										document.put(normalizedColumnName, pgObject.getValue());
 									}
 								} else {
-									document.put(columnName, object);
+									document.put(normalizedColumnName, object);
 								}
 								break;
 							default :
-								document.put(columnName, resultSet.getObject(i));
+								document.put(normalizedColumnName, resultSet.getObject(i));
 								break;
 						}
 					}
@@ -501,6 +506,27 @@ public class MongoDBManager extends SqlManager {
 		}
 		LOG.info("Primary key fields: {}", primaryKeys);
 		this.primaryKeys = primaryKeys;
+	}
+
+	private Map<String, String> buildPrimaryKeyNormalizationMap() {
+		final Map<String, String> normalizationMap = new HashMap<>();
+		if (this.primaryKeys == null) {
+			return normalizationMap;
+		}
+		for (final String key : this.primaryKeys) {
+			if (key != null) {
+				normalizationMap.put(key.toLowerCase(), key);
+			}
+		}
+		return normalizationMap;
+	}
+
+	private String normalizePrimaryKeyName(Map<String, String> normalizationMap, String columnName) {
+		if (columnName == null || normalizationMap.isEmpty()) {
+			return columnName;
+		}
+		String normalized = normalizationMap.get(columnName.toLowerCase());
+		return normalized != null ? normalized : columnName;
 	}
 
 	/**
