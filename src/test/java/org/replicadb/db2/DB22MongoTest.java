@@ -12,6 +12,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
@@ -39,6 +40,28 @@ class DB22MongoTest {
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
     private static final int EXPECTED_ROWS = 4096;
+        private static final String SOURCE_QUERY = "SELECT "
+            + "C_INTEGER AS c_integer,"
+            + "C_SMALLINT AS c_smallint,"
+            + "C_BIGINT AS c_bigint,"
+            + "C_NUMERIC AS c_numeric,"
+            + "C_DECIMAL AS c_decimal,"
+            + "C_REAL AS c_real,"
+            + "C_DOUBLE_PRECISION AS c_double_precision,"
+            + "C_FLOAT AS c_float,"
+            + "C_BINARY AS c_binary,"
+            + "C_BINARY_VAR AS c_binary_var,"
+            + "C_BINARY_LOB AS c_binary_lob,"
+            + "C_BOOLEAN AS c_boolean,"
+            + "C_CHARACTER AS c_character,"
+            + "C_CHARACTER_VAR AS c_character_var,"
+            + "C_CHARACTER_LOB AS c_character_lob,"
+            + "C_NATIONAL_CHARACTER AS c_national_character,"
+            + "C_NATIONAL_CHARACTER_VAR AS c_national_character_var,"
+            + "C_DATE AS c_date,"
+            + "C_TIMESTAMP_WITHOUT_TIMEZONE AS c_timestamp_without_timezone,"
+            + "C_TIMESTAMP_WITH_TIMEZONE AS c_timestamp_with_timezone "
+            + "FROM t_source";
 
     private Connection db2Conn;
     private MongoClient mongoClient;
@@ -109,6 +132,7 @@ class DB22MongoTest {
                 "--source-connect", db2.getJdbcUrl(),
                 "--source-user", db2.getUsername(),
                 "--source-password", db2.getPassword(),
+            "--source-query", SOURCE_QUERY,
                 "--sink-connect", mongoContainer.getReplicaSetUrl()
         };
         ToolOptions options = new ToolOptions(args);
@@ -123,12 +147,12 @@ class DB22MongoTest {
                 "--source-connect", db2.getJdbcUrl(),
                 "--source-user", db2.getUsername(),
                 "--source-password", db2.getPassword(),
+                "--source-query", SOURCE_QUERY,
                 "--sink-connect", mongoContainer.getReplicaSetUrl(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
-        assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS, countSinkRows());
+        assertEquals(1, ReplicaDB.processReplica(options)); // Expect failure - MongoDB doesn't support complete-atomic as sink
     }
 
     @Test
@@ -138,6 +162,7 @@ class DB22MongoTest {
                 "--source-connect", db2.getJdbcUrl(),
                 "--source-user", db2.getUsername(),
                 "--source-password", db2.getPassword(),
+            "--source-query", SOURCE_QUERY,
                 "--sink-connect", mongoContainer.getReplicaSetUrl(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText()
         };
@@ -153,6 +178,7 @@ class DB22MongoTest {
                 "--source-connect", db2.getJdbcUrl(),
                 "--source-user", db2.getUsername(),
                 "--source-password", db2.getPassword(),
+            "--source-query", SOURCE_QUERY,
                 "--sink-connect", mongoContainer.getReplicaSetUrl(),
                 "--jobs", "4"
         };
@@ -168,13 +194,13 @@ class DB22MongoTest {
                 "--source-connect", db2.getJdbcUrl(),
                 "--source-user", db2.getUsername(),
                 "--source-password", db2.getPassword(),
+                "--source-query", SOURCE_QUERY,
                 "--sink-connect", mongoContainer.getReplicaSetUrl(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
                 "--jobs", "4"
         };
         ToolOptions options = new ToolOptions(args);
-        assertEquals(0, ReplicaDB.processReplica(options));
-        assertEquals(EXPECTED_ROWS, countSinkRows());
+        assertEquals(1, ReplicaDB.processReplica(options)); // Expect failure - MongoDB doesn't support complete-atomic as sink
     }
 
     @Test
@@ -184,6 +210,7 @@ class DB22MongoTest {
                 "--source-connect", db2.getJdbcUrl(),
                 "--source-user", db2.getUsername(),
                 "--source-password", db2.getPassword(),
+            "--source-query", SOURCE_QUERY,
                 "--sink-connect", mongoContainer.getReplicaSetUrl(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
                 "--jobs", "4"

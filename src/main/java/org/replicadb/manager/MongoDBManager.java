@@ -258,7 +258,7 @@ public class MongoDBManager extends SqlManager {
 					// iterate columns
 					final Document document = new Document();
 					for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
-						final String columnName = resultSet.getMetaData().getColumnName(i);
+						final String columnName = resultSet.getMetaData().getColumnLabel(i);
 						switch (resultSet.getMetaData().getColumnType(i)) {
 							case -104 : // Oracle INTERVALDS
 							case -103 : // Oracle INTERVALYM
@@ -605,6 +605,44 @@ public class MongoDBManager extends SqlManager {
 		}
 	}
 
+	/**
+	 * Validates that all documents in the staging collection have non-null values
+	 * for the merge key fields. MongoDB's $merge with sparse indexes will fail if
+	 * any document has null/missing values in the 'on' fields.
+	 *
+	 * @param stagingCollection
+	 *            the staging collection to validate
+	 * @param mergeKeyFields
+	 *            the fields used as merge keys
+	 * @throws IllegalStateException
+	 *             if any document has null merge key values
+	 */
+	private void validateStagingDataForMerge(MongoCollection<Document> stagingCollection,
+			List<String> mergeKeyFields) {
+		// Build query to find documents with null/missing merge key fields
+		final List<Document> orConditions = new ArrayList<>();
+		for (final String field : mergeKeyFields) {
+			orConditions.add(new Document(field, new Document("$exists", false)));
+			orConditions.add(new Document(field, null));
+		}
+
+		final Document nullCheckQuery = new Document("$or", orConditions);
+		final long docsWithNullKeys = stagingCollection.countDocuments(nullCheckQuery);
+
+		if (docsWithNullKeys > 0) {
+			LOG.error("Found {} documents in staging collection with null/missing merge key fields: {}",
+					docsWithNullKeys, mergeKeyFields);
+			throw new IllegalStateException(String.format(
+					"Staging collection contains %d documents with null or missing values in merge key fields %s. "
+							+ "All merge key fields must be non-null for incremental mode. "
+							+ "Verify that source query includes these fields with proper aliases to match the sink collection's unique index.",
+					docsWithNullKeys, mergeKeyFields));
+		}
+
+		LOG.info("Validated {} documents in staging collection have non-null merge key fields {}",
+				stagingCollection.countDocuments(), mergeKeyFields);
+	}
+
 	@Override
 	protected void mergeStagingTable() throws Exception {
 
@@ -621,6 +659,10 @@ public class MongoDBManager extends SqlManager {
 			// 'on' fields
 			LOG.info("Validating unique index on sink collection for merge operation");
 			this.ensureUniqueIndexExists(sinkCollection, this.primaryKeys);
+
+			// Validate staging data has non-null values for merge keys
+			LOG.info("Validating staging collection data for merge operation");
+			this.validateStagingDataForMerge(sinkStagingCollection, this.primaryKeys);
 
 			String aggregationQuery = "[ {$project: {_id:0}},{$merge:{ into:\"${SINK_COLLECTION}\", on:[${PRIMARY_KEYS}], whenMatched: \"replace\", whenNotMatched: \"insert\" }} ]";
 			aggregationQuery = aggregationQuery.replace("${SINK_COLLECTION}", this.getSinkTableName());
