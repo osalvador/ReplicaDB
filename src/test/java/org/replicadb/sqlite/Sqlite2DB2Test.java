@@ -31,6 +31,10 @@ class Sqlite2DB2Test {
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
     private static final int EXPECTED_ROWS = 4097;
+    private static final String COLUMN_LIST = "C_INTEGER,C_SMALLINT,C_BIGINT,C_NUMERIC,C_DECIMAL,C_REAL,"
+            + "C_DOUBLE_PRECISION,C_FLOAT,C_BINARY,C_BINARY_VAR,C_BINARY_LOB,C_BOOLEAN,C_CHARACTER,"
+            + "C_CHARACTER_VAR,C_CHARACTER_LOB,C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR,C_DATE,"
+            + "C_TIME_WITHOUT_TIMEZONE,C_TIMESTAMP_WITHOUT_TIMEZONE,C_TIME_WITH_TIMEZONE,C_TIMESTAMP_WITH_TIMEZONE";
 
     private Connection sqliteConn;
     private Connection db2Conn;
@@ -88,8 +92,10 @@ class Sqlite2DB2Test {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", sqlite.getJdbcUrl(),
                 "--sink-connect", db2.getJdbcUrl(),
-                "--sink-user", db2.getUsername(),
-                "--sink-password", db2.getPassword()
+            "--sink-user", db2.getUsername(),
+            "--sink-password", db2.getPassword(),
+            "--source-columns", COLUMN_LIST,
+            "--sink-columns", COLUMN_LIST
         };
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
@@ -104,7 +110,9 @@ class Sqlite2DB2Test {
                 "--sink-connect", db2.getJdbcUrl(),
                 "--sink-user", db2.getUsername(),
                 "--sink-password", db2.getPassword(),
-                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
+            "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
+            "--source-columns", COLUMN_LIST,
+            "--sink-columns", COLUMN_LIST
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
@@ -120,7 +128,9 @@ class Sqlite2DB2Test {
                 "--sink-connect", db2.getJdbcUrl(),
                 "--sink-user", db2.getUsername(),
                 "--sink-password", db2.getPassword(),
-                "--mode", ReplicationMode.INCREMENTAL.getModeText()
+            "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+            "--source-columns", COLUMN_LIST,
+            "--sink-columns", COLUMN_LIST
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
@@ -136,7 +146,9 @@ class Sqlite2DB2Test {
                 "--sink-connect", db2.getJdbcUrl(),
                 "--sink-user", db2.getUsername(),
                 "--sink-password", db2.getPassword(),
-                "--jobs", "4"
+            "--jobs", "4",
+            "--source-columns", COLUMN_LIST,
+            "--sink-columns", COLUMN_LIST
         };
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
@@ -152,7 +164,9 @@ class Sqlite2DB2Test {
                 "--sink-user", db2.getUsername(),
                 "--sink-password", db2.getPassword(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
-                "--jobs", "4"
+            "--jobs", "4",
+            "--source-columns", COLUMN_LIST,
+            "--sink-columns", COLUMN_LIST
         };
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
@@ -168,7 +182,9 @@ class Sqlite2DB2Test {
                 "--sink-user", db2.getUsername(),
                 "--sink-password", db2.getPassword(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
-                "--jobs", "4"
+            "--jobs", "4",
+            "--source-columns", COLUMN_LIST,
+            "--sink-columns", COLUMN_LIST
         };
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));

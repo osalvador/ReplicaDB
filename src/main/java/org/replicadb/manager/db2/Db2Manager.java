@@ -356,6 +356,13 @@ public class Db2Manager extends SqlManager {
             resolvedTableName = resolvedTableName.replace("\"", "");
         }
 
+        if (schemaName != null) {
+            schemaName = schemaName.toUpperCase();
+        }
+        if (resolvedTableName != null) {
+            resolvedTableName = resolvedTableName.toUpperCase();
+        }
+
         ResultSet columns = this.getConnection().getMetaData()
             .getColumns(null, schemaName, resolvedTableName, null);
         while (columns.next()) {
