@@ -35,6 +35,30 @@ class Sqlite2DB2Test {
             + "C_DOUBLE_PRECISION,C_FLOAT,C_BINARY,C_BINARY_VAR,C_BINARY_LOB,C_BOOLEAN,C_CHARACTER,"
             + "C_CHARACTER_VAR,C_CHARACTER_LOB,C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR,C_DATE,"
             + "C_TIME_WITHOUT_TIMEZONE,C_TIMESTAMP_WITHOUT_TIMEZONE,C_TIME_WITH_TIMEZONE,C_TIMESTAMP_WITH_TIMEZONE";
+    private static final String SOURCE_QUERY = "SELECT "
+            + "C_INTEGER,"
+            + "C_SMALLINT,"
+            + "C_BIGINT,"
+            + "CAST(C_NUMERIC / 1000000000000.0 AS DECIMAL(30,15)) AS C_NUMERIC,"
+            + "CAST(C_DECIMAL / 1000000000000.0 AS DECIMAL(30,15)) AS C_DECIMAL,"
+            + "CAST(C_REAL / 1000000000.0 AS DECIMAL(30,15)) AS C_REAL,"
+            + "CAST(C_DOUBLE_PRECISION / 1000000000.0 AS DECIMAL(30,15)) AS C_DOUBLE_PRECISION,"
+            + "CAST(C_FLOAT / 1000000000.0 AS DECIMAL(30,15)) AS C_FLOAT,"
+            + "C_BINARY,"
+            + "C_BINARY_VAR,"
+            + "C_BINARY_LOB,"
+            + "C_BOOLEAN,"
+            + "C_CHARACTER,"
+            + "C_CHARACTER_VAR,"
+            + "C_CHARACTER_LOB,"
+            + "C_NATIONAL_CHARACTER,"
+            + "C_NATIONAL_CHARACTER_VAR,"
+            + "C_DATE,"
+            + "C_TIME_WITHOUT_TIMEZONE,"
+            + "C_TIMESTAMP_WITHOUT_TIMEZONE,"
+            + "C_TIME_WITH_TIMEZONE,"
+            + "C_TIMESTAMP_WITH_TIMEZONE "
+            + "FROM t_source";
 
     private Connection sqliteConn;
     private Connection db2Conn;
@@ -94,6 +118,7 @@ class Sqlite2DB2Test {
                 "--sink-connect", db2.getJdbcUrl(),
             "--sink-user", db2.getUsername(),
             "--sink-password", db2.getPassword(),
+            "--source-query", SOURCE_QUERY,
             "--source-columns", COLUMN_LIST,
             "--sink-columns", COLUMN_LIST
         };
@@ -111,6 +136,7 @@ class Sqlite2DB2Test {
                 "--sink-user", db2.getUsername(),
                 "--sink-password", db2.getPassword(),
             "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
+            "--source-query", SOURCE_QUERY,
             "--source-columns", COLUMN_LIST,
             "--sink-columns", COLUMN_LIST
         };
@@ -129,6 +155,7 @@ class Sqlite2DB2Test {
                 "--sink-user", db2.getUsername(),
                 "--sink-password", db2.getPassword(),
             "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+            "--source-query", SOURCE_QUERY,
             "--source-columns", COLUMN_LIST,
             "--sink-columns", COLUMN_LIST
         };
@@ -147,6 +174,7 @@ class Sqlite2DB2Test {
                 "--sink-user", db2.getUsername(),
                 "--sink-password", db2.getPassword(),
             "--jobs", "4",
+            "--source-query", SOURCE_QUERY,
             "--source-columns", COLUMN_LIST,
             "--sink-columns", COLUMN_LIST
         };
@@ -165,6 +193,7 @@ class Sqlite2DB2Test {
                 "--sink-password", db2.getPassword(),
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
             "--jobs", "4",
+            "--source-query", SOURCE_QUERY,
             "--source-columns", COLUMN_LIST,
             "--sink-columns", COLUMN_LIST
         };
@@ -183,6 +212,7 @@ class Sqlite2DB2Test {
                 "--sink-password", db2.getPassword(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
             "--jobs", "4",
+            "--source-query", SOURCE_QUERY,
             "--source-columns", COLUMN_LIST,
             "--sink-columns", COLUMN_LIST
         };
