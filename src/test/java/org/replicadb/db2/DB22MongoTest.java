@@ -39,7 +39,7 @@ class DB22MongoTest {
     private static final Logger LOG = LogManager.getLogger(DB22MongoTest.class);
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-    private static final int EXPECTED_ROWS = 4096;
+    private static final int EXPECTED_ROWS = 4097;
         private static final String SOURCE_QUERY = "SELECT "
             + "C_INTEGER AS c_integer,"
             + "C_SMALLINT AS c_smallint,"

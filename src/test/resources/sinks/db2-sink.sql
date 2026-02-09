@@ -18,15 +18,15 @@ create table t_sink
     C_BOOLEAN                    CHAR(1),
     /*Character Strings:*/
     C_CHARACTER                  CHAR(35),
-    C_CHARACTER_VAR              varchar(255),
+    C_CHARACTER_VAR              varchar(1024),
     C_CHARACTER_LOB              CLOB,
     C_NATIONAL_CHARACTER         NCHAR(35),
-    C_NATIONAL_CHARACTER_VAR     NVARCHAR(255),
+    C_NATIONAL_CHARACTER_VAR     NVARCHAR(1024),
     /*Datetimes:*/
     C_DATE                       DATE,
-    C_TIME_WITHOUT_TIMEZONE      varchar(100) /*not supported*/,
+    C_TIME_WITHOUT_TIMEZONE      varchar(512) /*not supported*/,
     C_TIMESTAMP_WITHOUT_TIMEZONE TIMESTAMP,
-    C_TIME_WITH_TIMEZONE         varchar(100) /*not supported*/,
+    C_TIME_WITH_TIMEZONE         varchar(512) /*not supported*/,
     C_TIMESTAMP_WITH_TIMEZONE    TIMESTAMP,
     /*Intervals:*/
     C_INTERVAL_DAY               CLOB/*not supported*/,

@@ -12,7 +12,7 @@ public class ToolOptions {
 
     private static final Logger LOG = LogManager.getLogger(ToolOptions.class.getName());
     private static final int DEFAULT_JOBS = 4;
-    private static final int DEFAULT_FETCH_SIZE = 5000;
+    private static final int DEFAULT_FETCH_SIZE = 100;
     private static final String DEFAULT_MODE = ReplicationMode.COMPLETE.getModeText();
 
     private String sourceConnect;
