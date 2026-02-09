@@ -28,13 +28,13 @@ jobs:
       run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
 
     - name: Build and tests (exclude Oracle cross-version)
-      run: mvn -B package --file pom.xml -Dtest='*Test' -DexcludedTests='Oracle2OracleCrossVersionTest,Oracle2OracleCrossVersionLobTest'
+      run: mvn -B -q package --file pom.xml -Dtest='*Test' -DexcludedTests='Oracle2OracleCrossVersionTest,Oracle2OracleCrossVersionLobTest' -Dsurefire.useFile=true -Dsurefire.printSummary=false -DtrimStackTrace=true
 
     - name: Clean Install
       run: |
         export REPLICADB_RELEASE_VERSION=${{ env.version }}
         echo ${REPLICADB_RELEASE_VERSION}  
-        mvn clean install -Dmaven.javadoc.skip=true -DskipTests -B -V -P release 
+        mvn clean install -Dmaven.javadoc.skip=true -DskipTests -B -q -P release 
         cp ./target/ReplicaDB-*.jar . 
         mkdir lib
         echo ${REPLICADB_RELEASE_VERSION} 
