@@ -851,7 +851,7 @@ public class PostgresqlManager extends SqlManager {
                             // shouldUseBinaryCopy() must return false for these types
                             String complexColName = rsmd.getColumnName(i);
                             String complexTypeName = rsmd.getColumnTypeName(i);
-                            LOG.error("Binary COPY does not support {} type (column: {}, type code: {})", 
+                            LOG.warn("Binary COPY does not support {} type (column: {}, type code: {})", 
                                       complexTypeName, complexColName, columnType);
                             throw new IllegalStateException(
                                 String.format("Binary COPY encountered unsupported type %s in column %s (type code: %d). " +
@@ -865,7 +865,7 @@ public class PostgresqlManager extends SqlManager {
                             if ("json".equalsIgnoreCase(typeName) || 
                                 "jsonb".equalsIgnoreCase(typeName) ||
                                 "interval".equalsIgnoreCase(typeName)) {
-                                LOG.error("Binary COPY does not support {} type (column: {})", 
+                                LOG.warn("Binary COPY does not support {} type (column: {})", 
                                           typeName, rsmd.getColumnName(i));
                                 throw new IllegalStateException(
                                     String.format("Binary COPY encountered unsupported type %s in column %s. " +
