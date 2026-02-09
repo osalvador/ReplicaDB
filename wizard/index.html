@@ -152,6 +152,8 @@
                                     <option value="mysql">MySQL</option>
                                     <option value="mariadb">MariaDB</option>
                                     <option value="postgres">PostgreSQL</option>
+                                    <option value="db2">DB2 LUW</option>
+                                    <option value="db2i">DB2 for i</option>
                                     <option value="sqlite">SQLite</option>
                                     <option value="sqlserver">SQLServer</option>
                                     <option value="denodo">Denodo</option>
@@ -506,6 +508,8 @@
                                     <option value="mysql">MySQL</option>
                                     <option value="mariadb">MariaDB</option>
                                     <option value="postgres">PostgreSQL</option>
+                                    <option value="db2">DB2 LUW</option>
+                                    <option value="db2i">DB2 for i</option>
                                     <option value="sqlite">SQLite</option>
                                     <option value="sqlserver">SQL Server</option>
                                     <!--<option value="s3">Amazon S3</option>-->
@@ -1052,6 +1056,12 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
             case "postgres":
                 return "jdbc:postgresql://" + host + ":" + port + "/" + database;
                 break;
+            case "db2":
+                return "jdbc:db2://" + host + ":" + port + "/" + database;
+                break;
+            case "db2i":
+                return "jdbc:as400://" + host + ":" + port + "/" + database;
+                break;
             case "sqlite":
                 return "jdbc:sqlite:/" + sqliteFilePath;
                 break;
@@ -1187,6 +1197,8 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
                 case "mysql":
                 case "mariadb":
                 case "postgres":
+                case "db2":
+                case "db2i":
                 case "sqlserver":
                 case "denodo":
                     $('#CardSourceConnectionSettings').show("slow");
@@ -1216,6 +1228,8 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
                 case "mysql":
                 case "mariadb":
                 case "postgres":
+                case "db2":
+                case "db2i":
                     $('#CardSinkDisableEscape').show("slow");
                 case "oracle":
                     $('#CardSinkConnectionSettings').show("slow");

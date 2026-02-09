@@ -47,6 +47,7 @@ layout: page
   - [4.7 MSSQL Server Connector](#47-mssql-server-connector)
   - [4.8 SQLite Connector](#48-sqlite-connector)
   - [4.9 MongoDB Connector](#49-mongodb-connector)
+  - [4.10 DB2 Connector](#410-db2-connector)
 - [5. Troubleshooting](#5-troubleshooting)
   - [5.1 Connection Failures](#51-connection-failures)
   - [5.2 Permission Errors](#52-permission-errors)
@@ -338,6 +339,7 @@ ReplicaDB supports bandwidth throttling to prevent network saturation during lar
 - Oracle (Source/Sink)
 - PostgreSQL (Source/Sink)
 - MySQL/MariaDB (Source/Sink)
+- DB2 (Source/Sink)
 - MongoDB (Source/Sink)
 - SQLite (Source/Sink)
 - Kafka (Sink only)
@@ -627,6 +629,7 @@ $ replicadb --mode=complete -j=4 \
 - 4.2 [Oracle Connector](#42-oracle-connector)
 - 4.3 [PostgreSQL Connector](#43-postgresql-connector)
 - 4.4 [Denodo Connector](#44-denodo-connector)
+- 4.10 [DB2 Connector](#410-db2-connector)
 
 <br>
 ## 4.1 CSV files Connector
@@ -1554,6 +1557,50 @@ sink.columns=sku, document
 
 You can also replicate from Postgres jsonb to MongoDB using the `jsonb` data type. ReplicaDB will automatically convert the jsonb data type to a MongoDB document.
 
+<br>
+## 4.10 DB2 Connector
+
+ReplicaDB supports IBM DB2 LUW and DB2 for i (AS/400) as source and sink databases.
+
+**JDBC URL formats**
+
+- **DB2 LUW (IBM JCC driver)**: `jdbc:db2://<host>:<port>/<database>`
+- **DB2 for i (JTOpen driver)**: `jdbc:as400://<host>:<port>/<database>`
+
+**Driver classes**
+
+- DB2 LUW: `com.ibm.db2.jcc.DB2Driver`
+- DB2 for i: `com.ibm.as400.access.AS400JDBCDriver`
+
+**Example (DB2 LUW)**
+
+```properties
+source.connect=jdbc:db2://db2-host:50000/sample
+source.user=db2user
+source.password=db2pass
+source.table=public.t_source
+
+sink.connect=jdbc:db2://db2-host:50000/sample
+sink.user=db2user
+sink.password=db2pass
+sink.table=public.t_sink
+```
+
+**Example (DB2 for i)**
+
+```properties
+source.connect=jdbc:as400://as400-host:446/sample
+source.user=db2user
+source.password=db2pass
+source.table=QGPL.T_SOURCE
+
+sink.connect=jdbc:as400://as400-host:446/sample
+sink.user=db2user
+sink.password=db2pass
+sink.table=QGPL.T_SINK
+```
+
+<br>
 # 5. Troubleshooting
 
 This section covers common issues and their solutions when using ReplicaDB.
