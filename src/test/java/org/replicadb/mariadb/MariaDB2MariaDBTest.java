@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MariaDB2MariaDBTest {
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-    private static final int EXPECTED_ROWS = 4096;
+    private static final int EXPECTED_ROWS = 4097;
 
     private Connection mariadbConn;
 

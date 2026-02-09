@@ -8,13 +8,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.orc.OrcFile;
 import org.apache.orc.Reader;
 import org.bson.Document;
-import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbMongodbContainer;
 import org.replicadb.manager.file.FileFormats;
 import org.replicadb.manager.file.FileManager;
+import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.File;
@@ -39,11 +39,14 @@ class Mongo2OrcFileTest {
     private MongoClient mongoClient;
     private String mongoDatabaseName;
 
-    @Rule
-    public static ReplicadbMongodbContainer mongoContainer = ReplicadbMongodbContainer.getInstance();
+    @Container
+    public static final ReplicadbMongodbContainer mongoContainer = ReplicadbMongodbContainer.getInstance();
 
     @BeforeAll
     static void setUp() {
+        if (!mongoContainer.isRunning()) {
+            mongoContainer.start();
+        }
     }
 
     @BeforeEach

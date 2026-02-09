@@ -4,12 +4,12 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import org.apache.commons.cli.ParseException;
 import org.bson.Document;
-import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbMongodbContainer;
+import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.IOException;
@@ -28,12 +28,15 @@ class Mongo2MongoTest {
     private MongoClient mongoClient;
     private String mongoDatabaseName;
 
-    @Rule
-    public static ReplicadbMongodbContainer mongoContainer = ReplicadbMongodbContainer.getInstance();
+    @Container
+    public static final ReplicadbMongodbContainer mongoContainer = ReplicadbMongodbContainer.getInstance();
 
 
     @BeforeAll
     static void setUp(){
+        if (!mongoContainer.isRunning()) {
+            mongoContainer.start();
+        }
     }
 
     @BeforeEach

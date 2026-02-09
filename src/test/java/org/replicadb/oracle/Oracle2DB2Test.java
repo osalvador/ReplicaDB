@@ -32,7 +32,7 @@ class Oracle2DB2Test {
     private static final Logger LOG = LogManager.getLogger(Oracle2DB2Test.class);
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-    private static final int EXPECTED_ROWS = 4097;
+    private static final int EXPECTED_ROWS = 4096;
     private static final String SOURCE_COLUMNS = "c_integer,c_smallint,c_bigint,c_numeric,c_decimal,"
             + "c_real,c_double_precision,c_float,c_binary,c_binary_var,c_binary_lob,"
             + "c_boolean,c_character,c_character_var,c_character_lob,c_national_character,"

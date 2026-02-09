@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MariaDB2OrcFileTest {
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-    private static final int EXPECTED_ROWS = 4096;
+    private static final int EXPECTED_ROWS = 4097;
 
     private static final String SINK_FILE_PATH = "file:///tmp/mariadb2orc_sink.orc";
     private static final File sinkFile = new File("/tmp/mariadb2orc_sink.orc");

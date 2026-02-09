@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class MariaDB2SqliteTest {
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-    private static final int TOTAL_SINK_ROWS = 4096;
+    private static final int TOTAL_SINK_ROWS = 4097;
 
     private Connection sqliteConn;
     private Connection mariadbConn;

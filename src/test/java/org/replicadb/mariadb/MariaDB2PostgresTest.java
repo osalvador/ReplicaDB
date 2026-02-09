@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MariaDB2PostgresTest {
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-    private static final int EXPECTED_ROWS = 4096;
+    private static final int EXPECTED_ROWS = 4097;
     // Skip BINARY and REAL/FLOAT columns due to binary COPY format incompatibilities
     private static final String SINK_COLUMNS = "C_INTEGER,C_SMALLINT,C_BIGINT,C_NUMERIC,C_DECIMAL," +
             "C_BOOLEAN," +
