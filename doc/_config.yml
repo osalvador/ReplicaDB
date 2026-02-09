@@ -1,0 +1,56 @@
+# name of the software
+name: ReplicaDB
+
+project:
+    #version: 0.8.9
+    download_url: https://github.com/osalvador/ReplicaDB/releases
+
+license:
+    software: Apache License 2.0
+    software_url: https://www.apache.org/licenses/LICENSE-2.0
+
+    docs: CC BY 3.0
+    docs_url: http://creativecommons.org/licenses/by/3.0/
+
+links:
+    header:
+      - title: GitHub
+        url: https://github.com/osalvador/ReplicaDB
+    footer:
+      - title: GitHub
+        url: https://github.com/osalvador/ReplicaDB
+      - title: Issues
+        url: https://github.com/osalvador/ReplicaDB/issues
+
+ui:
+    header:
+        color1: "#080331"
+        color2: "#2fb873"
+        trianglify: true
+
+social:
+    github:
+        user: osalvador
+        repo: ReplicaDB
+    twitter:
+        enabled: false
+        via:
+        hash:
+        account:
+    facebook:
+        enabled: false
+        profileUrl:
+
+analytics:
+    google: UA-131235447-1
+
+
+url: "https://osalvador.github.io/ReplicaDB"
+plugins:
+  - jekyll-sitemap
+
+# Build settings
+markdown: kramdown
+exclude:
+    - Gemfile
+    - Gemfile.lock
