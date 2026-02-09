@@ -265,35 +265,41 @@ public class MongoDBManager extends SqlManager {
 					final Document document = new Document();
 					for (int i = 1; i <= resultSet.getMetaData().getColumnCount(); i++) {
 						final String columnName = resultSet.getMetaData().getColumnLabel(i);
+						// Normalize column names: prioritize primary key normalization, otherwise lowercase for consistency
+						// SQL databases (especially DB2) return uppercase column names even with lowercase AS aliases
 						final String normalizedColumnName = normalizePrimaryKeyName(primaryKeyNormalizationMap,
 								columnName);
+						// If not a primary key, ensure lowercase for MongoDB consistency
+						final String finalColumnName = normalizedColumnName.equals(columnName) 
+								? columnName.toLowerCase() 
+								: normalizedColumnName;
 						switch (resultSet.getMetaData().getColumnType(i)) {
 							case -104 : // Oracle INTERVALDS
 							case -103 : // Oracle INTERVALYM
 							case Types.SQLXML :
-								document.put(normalizedColumnName, resultSet.getString(i));
+								document.put(finalColumnName, resultSet.getString(i));
 								break;
 							case Types.TIMESTAMP :
 							case Types.TIMESTAMP_WITH_TIMEZONE :
 							case -101 :
 							case -102 :
-								document.put(normalizedColumnName, resultSet.getTimestamp(i));
+								document.put(finalColumnName, resultSet.getTimestamp(i));
 								break;
 							case Types.BINARY :
 							case Types.VARBINARY :
 							case Types.LONGVARBINARY :
-								document.put(normalizedColumnName, resultSet.getBytes(i));
+								document.put(finalColumnName, resultSet.getBytes(i));
 								break;
 							case Types.BLOB :
 								final Blob blobData = resultSet.getBlob(i);
 								if (blobData != null) {
-									document.put(normalizedColumnName, blobData.getBytes(1, (int) blobData.length()));
+									document.put(finalColumnName, blobData.getBytes(1, (int) blobData.length()));
 									blobData.free();
 								}
 								break;
 							case Types.CLOB :
 								final Clob clobData = resultSet.getClob(i);
-								document.put(normalizedColumnName, this.clobToString(clobData));
+								document.put(finalColumnName, this.clobToString(clobData));
 								if (clobData != null)
 									clobData.free();
 								break;
@@ -303,16 +309,16 @@ public class MongoDBManager extends SqlManager {
 									final PGobject pgObject = (PGobject) object;
 									// if Document.parse fails, will be saved as a string
 									try {
-										document.put(normalizedColumnName, Document.parse(pgObject.getValue()));
+										document.put(finalColumnName, Document.parse(pgObject.getValue()));
 									} catch (final Exception e) {
-										document.put(normalizedColumnName, pgObject.getValue());
+										document.put(finalColumnName, pgObject.getValue());
 									}
 								} else {
-									document.put(normalizedColumnName, object);
+									document.put(finalColumnName, object);
 								}
 								break;
 							default :
-								document.put(normalizedColumnName, resultSet.getObject(i));
+								document.put(finalColumnName, resultSet.getObject(i));
 								break;
 						}
 					}

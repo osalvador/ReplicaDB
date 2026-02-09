@@ -20,6 +20,10 @@ import java.sql.SQLException;
 import java.sql.SQLXML;
 import java.sql.Statement;
 import java.sql.Types;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -212,7 +216,7 @@ public class Db2Manager extends SqlManager {
                             }
                             break;
                         case Types.DATE:
-                            // Handle SQLite string-based dates that can't be parsed by DB2
+                            // Handle SQLite/MongoDB string-based dates that can't be parsed by DB2
                             try {
                                 java.sql.Date dateVal = resultSet.getDate(i);
                                 ps.setDate(i, dateVal);
@@ -222,11 +226,19 @@ public class Db2Manager extends SqlManager {
                                 if (dateStr == null || resultSet.wasNull()) {
                                     ps.setNull(i, targetType);
                                 } else {
-                                    // Parse string date (YYYY-MM-DD) to java.sql.Date
+                                    // Parse string date - support both SQL (YYYY-MM-DD) and ISO 8601 (YYYY-MM-DDTHH:MM:SSZ) formats
                                     try {
-                                        java.sql.Date parsedDate = java.sql.Date.valueOf(dateStr);
+                                        java.sql.Date parsedDate;
+                                        if (dateStr.contains("T")) {
+                                            // ISO 8601 format from MongoDB: 2011-01-06T23:17:37Z
+                                            LocalDateTime ldt = LocalDateTime.parse(dateStr, DateTimeFormatter.ISO_DATE_TIME);
+                                            parsedDate = java.sql.Date.valueOf(ldt.toLocalDate());
+                                        } else {
+                                            // Standard SQL date format: YYYY-MM-DD
+                                            parsedDate = java.sql.Date.valueOf(dateStr);
+                                        }
                                         ps.setDate(i, parsedDate);
-                                    } catch (IllegalArgumentException iae) {
+                                    } catch (IllegalArgumentException | DateTimeParseException iae) {
                                         LOG.warn("Unable to parse date string '{}', setting NULL: {}", dateStr, iae.getMessage());
                                         ps.setNull(i, targetType);
                                     }

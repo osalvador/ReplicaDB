@@ -50,12 +50,36 @@ class DB22DB2Test {
     @BeforeEach
     void before() throws SQLException {
         this.db2Conn = DriverManager.getConnection(db2.getJdbcUrl(), db2.getUsername(), db2.getPassword());
+        this.db2Conn.setAutoCommit(true); // Ensure auto-commit is enabled for cleanup
     }
 
     @AfterEach
-    void tearDown() throws SQLException {
-        db2Conn.createStatement().execute("DELETE t_sink");
-        this.db2Conn.close();
+    void tearDown() {
+        try {
+            if (db2Conn != null && !db2Conn.isClosed()) {
+                try {
+                    // Attempt to delete sink data
+                    db2Conn.createStatement().execute("DELETE FROM t_sink");
+                    db2Conn.commit(); // Explicit commit
+                } catch (SQLException e) {
+                    LOG.warn("Failed to delete t_sink data: {} (SQLCODE: {}, SQLSTATE: {})", 
+                            e.getMessage(), e.getErrorCode(), e.getSQLState());
+                    try {
+                        db2Conn.rollback(); // Rollback on error
+                    } catch (SQLException rollbackEx) {
+                        LOG.error("Failed to rollback: {}", rollbackEx.getMessage());
+                    }
+                } finally {
+                    try {
+                        db2Conn.close();
+                    } catch (SQLException closeEx) {
+                        LOG.error("Failed to close connection: {}", closeEx.getMessage());
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOG.error("Error in tearDown: {}", e.getMessage());
+        }
     }
 
     public int countSinkRows() throws SQLException {
