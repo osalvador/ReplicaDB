@@ -15,7 +15,7 @@ create table t_sink
     C_BINARY_VAR                 BLOB,
     C_BINARY_LOB                 BLOB,
     /*Boolean:*/
-    C_BOOLEAN                    CHAR(1),
+    C_BOOLEAN                    VARCHAR(5),
     /*Character Strings:*/
     C_CHARACTER                  CHAR(35),
     C_CHARACTER_VAR              varchar(1024),
