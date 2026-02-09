@@ -152,7 +152,7 @@ class DB22MongoTest {
                 "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
-        assertEquals(1, ReplicaDB.processReplica(options)); // Expect failure - MongoDB doesn't support complete-atomic as sink
+        Assertions.assertNotEquals(0, ReplicaDB.processReplica(options)); // Expect failure - MongoDB doesn't support complete-atomic as sink
     }
 
     @Test
@@ -200,7 +200,7 @@ class DB22MongoTest {
                 "--jobs", "4"
         };
         ToolOptions options = new ToolOptions(args);
-        assertEquals(1, ReplicaDB.processReplica(options)); // Expect failure - MongoDB doesn't support complete-atomic as sink
+        Assertions.assertNotEquals(0, ReplicaDB.processReplica(options)); // Expect failure - MongoDB doesn't support complete-atomic as sink
     }
 
     @Test

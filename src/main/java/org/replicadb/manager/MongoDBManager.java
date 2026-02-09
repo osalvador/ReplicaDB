@@ -243,6 +243,9 @@ public class MongoDBManager extends SqlManager {
 		final String collectionName = this.getInsertDataCollection();
 
 		final MongoCollection<Document> sinkCollection = this.sinkDatabase.getCollection(collectionName);
+		if (ReplicationMode.INCREMENTAL.getModeText().equals(this.options.getMode())) {
+			this.ensurePrimaryKeysInitialized(sinkCollection);
+		}
 		final List<WriteModel<Document>> writeOperations = new ArrayList<>();
 		// unordered bulk write
 		final BulkWriteOptions bulkWriteOptions = new BulkWriteOptions().ordered(false);
@@ -333,6 +336,13 @@ public class MongoDBManager extends SqlManager {
 		}
 
 		return totalRows;
+	}
+
+	private void ensurePrimaryKeysInitialized(MongoCollection<Document> sinkCollection) {
+		if (this.primaryKeys == null || this.primaryKeys.isEmpty()) {
+			final List<String> primaryKeys = this.getUniqueIndexFields(sinkCollection);
+			this.setPrimaryKeys(primaryKeys);
+		}
 	}
 
 	private String getInsertDataCollection() {
