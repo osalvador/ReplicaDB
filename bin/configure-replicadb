@@ -60,6 +60,15 @@ REPLICADB_CLASSPATH=${REPLICADB_CONF_DIR}:${REPLICADB_CLASSPATH}
 add_to_classpath ${REPLICADB_JAR_DIR}
 
 # -----------------------------------------------------------------------------
+#  Detect OS platform
+# -----------------------------------------------------------------------------
+
+darwin=false
+case "$(uname)" in
+  Darwin*) darwin=true ;;
+esac
+
+# -----------------------------------------------------------------------------
 #  Set JAVA_HOME or JRE_HOME if not already set
 # -----------------------------------------------------------------------------
 
