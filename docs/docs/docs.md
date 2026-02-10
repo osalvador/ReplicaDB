@@ -11,6 +11,7 @@ layout: page
     - [Complete](#complete)
     - [Complete Atomic](#complete-atomic)
     - [Incremental](#incremental)
+    - [Deprecated Modes](#deprecated-modes)
   - [2.2 Controlling Parallelism](#22-controlling-parallelism)
 - [3. Command Line Arguments](#3-command-line-arguments)
   - [3.1 Using Options Files to Pass Arguments](#31-using-options-files-to-pass-arguments)
@@ -20,7 +21,13 @@ layout: page
   - [3.5 Bandwidth Throttling](#35-bandwidth-throttling)
   - [3.6 Data Type Transformations in Source Queries](#36-data-type-transformations-in-source-queries)
     - [3.6.1 JSON Type Transformations](#361-json-type-transformations)
+      - [MySQL/MariaDB to SQL Server](#mysqlmariadb-to-sql-server)
+      - [PostgreSQL to MySQL/MariaDB](#postgresql-to-mysqlmariadb)
+      - [Oracle to PostgreSQL](#oracle-to-postgresql)
+      - [MongoDB to Relational Databases](#mongodb-to-relational-databases)
     - [3.6.2 LOB Type Transformations](#362-lob-type-transformations)
+      - [CLOB to VARCHAR](#clob-to-varchar)
+      - [BLOB to Binary/VARBINARY](#blob-to-binaryvarbinary)
     - [3.6.3 Numeric Precision Transformations](#363-numeric-precision-transformations)
     - [3.6.4 Date/Time Format Transformations](#364-datetime-format-transformations)
     - [3.6.5 Custom Transformations](#365-custom-transformations)
@@ -35,7 +42,16 @@ layout: page
     - [4.1.4 Predefined Quote Modes](#414-predefined-quote-modes)
     - [4.1.5 Extra parameters](#415-extra-parameters)
     - [4.1.6 Replication Mode](#416-replication-mode)
+  - [4.1.7 ORC File Format Support](#417-orc-file-format-support)
+    - [Using ORC Files as Source](#using-orc-files-as-source)
+    - [Using ORC Files as Sink](#using-orc-files-as-sink)
+    - [ORC File Format Characteristics](#orc-file-format-characteristics)
+    - [Supported Data Types](#supported-data-types)
+    - [Replication Mode Restrictions](#replication-mode-restrictions)
+    - [Limitations and Notes](#limitations-and-notes)
+    - [Performance Considerations](#performance-considerations)
   - [4.2 Oracle Connector](#42-oracle-connector)
+    - [4.2.1 Connection String Formats](#421-connection-string-formats)
   - [4.3 PostgreSQL Connector](#43-postgresql-connector)
   - [4.4 Denodo Connector](#44-denodo-connector)
   - [4.5 Amazon S3 Connector](#45-amazon-s3-connector)
@@ -57,14 +73,38 @@ layout: page
 - [6. Performance Tuning](#6-performance-tuning)
   - [6.1 Optimal Parallelism](#61-optimal-parallelism)
   - [6.2 Fetch Size Optimization](#62-fetch-size-optimization)
+    - [Why the Default is 100](#why-the-default-is-100)
+    - [Why Higher Values Can Hurt](#why-higher-values-can-hurt)
+    - [Understanding Memory Impact](#understanding-memory-impact)
+    - [Guidelines by Scenario](#guidelines-by-scenario)
+    - [How to Diagnose Fetch Size Problems](#how-to-diagnose-fetch-size-problems)
+    - [Examples](#examples)
   - [6.3 Network Optimization](#63-network-optimization)
+    - [Bandwidth Throttling](#bandwidth-throttling)
+    - [Network Proximity](#network-proximity)
   - [6.4 Database-Specific Optimizations](#64-database-specific-optimizations)
+    - [Oracle](#oracle)
+    - [PostgreSQL](#postgresql)
+    - [MySQL/MariaDB](#mysqlmariadb)
+    - [MongoDB](#mongodb)
   - [6.5 Performance Monitoring](#65-performance-monitoring)
 - [7. Architecture](#7-architecture)
   - [7.1 Overview](#71-overview)
   - [7.2 Core Components](#72-core-components)
+    - [Connection Layer](#connection-layer)
+    - [Data Reader (Source Manager)](#data-reader-source-manager)
+    - [Data Writer (Sink Manager)](#data-writer-sink-manager)
+    - [Flow Control](#flow-control)
+    - [State Management](#state-management)
   - [7.3 Data Flow](#73-data-flow)
+    - [Complete Mode](#complete-mode)
+    - [Complete-Atomic Mode](#complete-atomic-mode)
+    - [Incremental Mode](#incremental-mode)
   - [7.4 Design Principles](#74-design-principles)
+    - [Convention Over Configuration](#convention-over-configuration)
+    - [Database-Agnostic Interface](#database-agnostic-interface)
+    - [Performance-First Design](#performance-first-design)
+    - [Simplicity](#simplicity)
 
 {::comment}
     3.7. Controlling transaction isolation
@@ -144,6 +184,24 @@ So data is available in the sink table during the replication process.
 
 ![ReplicaDB Mode Incremental](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Mode_Incremental.png){:class="img-responsive"}
 
+### Deprecated Modes
+
+**CDC Mode (Removed)**
+
+The CDC (Change Data Capture) mode has been deprecated and removed from ReplicaDB. This mode previously required database triggers and maintained internal state, which increased complexity and maintenance overhead.
+
+**Migration Path**: If you were using CDC mode, migrate to `incremental` mode with the `--source-where` parameter to filter changed records:
+
+```bash
+# Instead of CDC mode, use incremental with timestamp filtering
+replicadb --mode=incremental \
+  --source-table=source_table \
+  --source-where="modified_date > TO_DATE('2026-01-01', 'YYYY-MM-DD')" \
+  --sink-table=sink_table
+```
+
+Store and manage the last synchronization timestamp in your orchestration layer (cron, Airflow, Jenkins) rather than relying on ReplicaDB to track state.
+
 <br>
 ## 2.2 Controlling Parallelism    
 
@@ -166,7 +224,7 @@ usage: replicadb [OPTIONS]
 
 | Argument                                                | Description                                                                                              | Default            |
 |---------------------------------------------------------|----------------------------------------------------------------------------------------------------------|--------------------|
-| `--fetch-size <fetch-size>`                             | Number of entries to read from database at once.                                                         | `5000`             |
+| `--fetch-size <fetch-size>`                             | Number of entries to read from database at once.                                                         | `100`              |
 | `-h`,`--help`                                           | Print this help screen                                                                                   |                    |
 | `-j`,`--jobs <n>`                                       | Use n jobs to replicate in parallel.                                                                     | `4`                |
 | `--mode <mode>`                                         | Specifies the replication mode. The allowed values are `complete`, `complete-atomic` or `incremental`    | `complete`         |
@@ -995,6 +1053,9 @@ Unlike in a database, the replication mode for a CSV file as sink has a slight d
 - **complete**: Create a new file. If the file exists it is overwritten with the new data.
 - **incremental**: Add the new data to the existing file. If the file does not exist, it creates it.
 
+**Unsupported Modes**:
+- **complete-atomic**: Not supported for CSV files. The atomic transaction semantics cannot be applied to file-based sinks.
+
 > The `firstRecordAsHeader=true` parameter is not supported on `incremental` mode.
 
 **Example**
@@ -1012,6 +1073,110 @@ source.table=schema.table_name
 
 ############################# Sink Options #############################
 sink.connect=file:///Users/osalvador/Downloads/file.csv
+```
+
+<br>
+## 4.1.7 ORC File Format Support
+
+ReplicaDB supports reading from and writing to Apache ORC (Optimized Row Columnar) files, which provide efficient columnar storage with built-in compression and encoding optimizations.
+
+### Using ORC Files as Source
+
+To read from an ORC file, specify the file path with `file://` protocol and set the source file format:
+
+```properties
+############################# Source Options #############################
+source.connect=file:///path/to/data.orc
+source.file-format=orc
+```
+
+**Command-line example**:
+
+```bash
+replicadb --mode=complete \
+  --source-connect="file:///Users/data/input.orc" \
+  --source-file-format=orc \
+  --sink-connect="jdbc:postgresql://localhost/mydb" \
+  --sink-table=target_table
+```
+
+### Using ORC Files as Sink
+
+To write data to an ORC file:
+
+```properties
+############################# Sink Options #############################
+sink.connect=file:///path/to/output.orc
+sink.file-format=orc
+```
+
+**Command-line example**:
+
+```bash
+replicadb --mode=complete \
+  --source-connect="jdbc:oracle:thin:@host:1521:sid" \
+  --source-user=myuser \
+  --source-password=mypass \
+  --source-table=source_table \
+  --sink-connect="file:///Users/data/output.orc" \
+  --sink-file-format=orc
+```
+
+### ORC File Format Characteristics
+
+- **Columnar Storage**: ORC stores data by columns rather than rows, enabling efficient compression and query performance
+- **Built-in Compression**: Supports ZLIB, SNAPPY, and LZO compression algorithms
+- **Type System**: Rich type system including complex types (structs, maps, arrays)
+- **Predicate Pushdown**: Metadata allows skipping irrelevant data blocks during reads
+- **ACID Support**: Designed for Hadoop ecosystem with transactional semantics
+
+### Supported Data Types
+
+ORC files support all standard SQL data types:
+- Numeric: TINYINT, SMALLINT, INT, BIGINT, FLOAT, DOUBLE, DECIMAL
+- String: STRING, VARCHAR, CHAR
+- Date/Time: DATE, TIMESTAMP
+- Binary: BINARY
+- Boolean: BOOLEAN
+- Complex: STRUCT, MAP, ARRAY, UNION
+
+### Replication Mode Restrictions
+
+- **complete**: ✅ Supported - Creates new ORC file, overwrites if exists
+- **incremental**: ✅ Supported - Appends data to existing ORC file
+- **complete-atomic**: ❌ Not supported - Atomic transactions not applicable to file-based sinks
+
+### Limitations and Notes
+
+1. **Parallel Processing**: When using ORC files as source, `--jobs` must be set to `1` (single-threaded reads)
+2. **Schema Evolution**: Schema must match between source and existing sink ORC file when using incremental mode
+3. **File Format**: Only CSV and ORC file formats are fully implemented.
+4. **Compression**: Default compression settings are used; custom compression parameters are not currently configurable via command-line
+
+### Performance Considerations
+
+- **Reading**: ORC's columnar format and compression make it faster than CSV for analytical queries
+- **Writing**: Initial write may be slower than CSV due to compression overhead, but file sizes are typically 60-70% smaller
+- **Memory**: ORC operations may require more memory than CSV due to columnar buffering
+
+**Example: Oracle to ORC to PostgreSQL Pipeline**
+
+```bash
+# Step 1: Extract from Oracle to ORC file
+replicadb --mode=complete \
+  --source-connect="jdbc:oracle:thin:@prod:1521:orcl" \
+  --source-user=extract_user \
+  --source-table=sales_data \
+  --sink-connect="file:///data/staging/sales_data.orc" \
+  --sink-file-format=orc
+
+# Step 2: Load from ORC file to PostgreSQL
+replicadb --mode=complete \
+  --source-connect="file:///data/staging/sales_data.orc" \
+  --source-file-format=orc \
+  --sink-connect="jdbc:postgresql://warehouse:5432/analytics" \
+  --sink-user=load_user \
+  --sink-table=sales_data
 ```
 
 <br>
@@ -1664,7 +1829,7 @@ ERROR PostgresqlManager: permission denied for table
 
 **Solutions**:
 - Increase JVM memory: Set `JAVA_OPTS="-Xmx2g"` before running ReplicaDB
-- Reduce fetch size: `--fetch-size=1000` (default is 5000)
+- Reduce fetch size: `--fetch-size=50` (default is 100)
 - Reduce parallelism: `--jobs=2` (default is 4)
 - Monitor memory usage during replication
 
@@ -1691,7 +1856,7 @@ replicadb --options-file config.conf
 - No bandwidth throttling on constrained networks
 
 **Solutions**:
-- **Optimize fetch size**: Test values between 1000-10000 based on row size
+- **Optimize fetch size**: The default of 100 works well for most scenarios. Increase to 200-500 only for narrow tables on high-latency networks. Reduce to 50 for wide tables or high parallelism.
 - **Adjust parallelism**: 
   - Local databases: `--jobs=8` to `--jobs=16`
   - Remote databases: `--jobs=4` to `--jobs=8`
@@ -1780,29 +1945,103 @@ replicadb --jobs=4 --source-connect=... --sink-connect=...
 
 ## 6.2 Fetch Size Optimization
 
-The `--fetch-size` parameter determines how many rows are read from the database in each batch.
+The `--fetch-size` parameter controls how many rows are buffered in memory when reading from the source database. In ReplicaDB this same value is also used as the JDBC batch size for sink inserts, so it affects both read and write performance.
 
-**Default**: 5000 rows
+**Default**: 100 rows  
+**Recommended range**: 50–500
 
-**Guidelines**:
-- **Large rows** (many columns or LOBs): 1000-2000 rows
-- **Small rows** (few columns): 10000-20000 rows
-- **Memory constrained**: 1000-3000 rows
-- **High bandwidth**: 10000-15000 rows
+### Why the Default is 100
 
-**Impact**:
-- Smaller fetch size = more network round trips
-- Larger fetch size = more memory per job
-- Total memory ≈ fetch_size × row_size × jobs
+The default of 100 is based on industry-wide JDBC benchmarking and database vendor guidance:
 
-**Example**:
-```bash
-# For tables with large VARCHAR or BLOB columns
-replicadb --fetch-size=2000 --jobs=4 ...
+- **Oracle JDBC** defaults to only 10 rows per fetch, which is optimized for OLTP but terrible for bulk transfers. Increasing to 100 yields roughly 10× fewer network round-trips.
+- **PostgreSQL JDBC** fetches the entire ResultSet into memory by default (when autocommit is on). With cursors enabled, their documentation examples use 50 as a reference value.
+- **Hibernate ORM** recommends JDBC batch sizes "between 10 and 50" and uses 25 in its code examples.
+- **Practitioner consensus** converges on 50–200 as the sweet spot for bulk data operations, with diminishing returns beyond 500.
 
-# For tables with few small columns
-replicadb --fetch-size=15000 --jobs=8 ...
+At 100, ReplicaDB sits at the empirical sweet spot where network round-trips are reduced 10× compared to driver defaults, while memory consumption and GC pressure remain bounded.
+
+### Why Higher Values Can Hurt
+
+Increasing fetch size beyond 500 often provides little benefit and can actively degrade performance:
+
+- **Oracle pre-allocates memory** based on `max_possible_column_width × fetch_size`, not actual data size. A table with `VARCHAR2(4000)` columns reserves 4000 bytes per column per row in the fetch buffer, even if actual values average 20 bytes. This makes large fetch sizes disproportionately expensive for wide tables.
+- **GC pressure increases** with larger buffers, causing periodic pauses that reduce throughput.
+- **Diminishing returns**: benchmarks show ~10% improvement going from 10 to 100, but less than 2% improvement going from 100 to 1000.
+- **MySQL JDBC** does not use fetch size in the traditional sense — it either streams row-by-row or fetches everything at once. The `useCursorFetch=true` mode supports fetch size but is not the default behavior.
+
+### Understanding Memory Impact
+
+Fetch size directly controls memory per job because the database driver must hold all fetched rows in memory. The total memory footprint is calculated as:
+
 ```
+Total memory = fetch_size × average_row_size × number_of_jobs
+```
+
+**Example**: With `--fetch-size=100`, `--jobs=4`, and 1KB average row size:
+- Memory per job: 100 × 1KB = 100 KB
+- Total across all jobs: 100 KB × 4 = 400 KB (very low)
+
+With `--fetch-size=500` and the same parameters:
+- Memory per job: 500 × 1KB = 500 KB
+- Total across all jobs: 500 KB × 4 = 2 MB (still very reasonable)
+
+> **Important**: For Oracle, the *actual* memory used can be much higher than `row_count × average_data_size` because the driver allocates based on *declared* column widths, not actual data. A table with 10 `VARCHAR2(4000)` columns at fetch size 500 could allocate up to 10 × 4000 × 500 = 20 MB per connection, regardless of actual data.
+
+### Guidelines by Scenario
+
+{:.table}
+
+| Scenario | Recommended Fetch Size | Rationale |
+|----------|----------------------|-----------|
+| **Default / general use** | `100` (default) | Best balance for most workloads |
+| **Wide tables** (many columns, large VARCHAR) | `50–100` | Oracle/SQL Server pre-allocate based on max column widths |
+| **Narrow tables** (few numeric/small text columns) | `200–500` | Small rows allow buffering more with minimal memory |
+| **Memory constrained** (<2GB heap) | `50` | Reduce memory pressure, especially with multiple jobs |
+| **High parallelism** (>8 jobs) | `50–100` | Keep per-job memory low as total = fetch_size × jobs |
+| **High-latency network** (cross-datacenter) | `200–500` | Reduce round-trips to compensate for network latency |
+
+### How to Diagnose Fetch Size Problems
+
+**Symptom**: Replication is slow with low CPU and network usage
+- **Cause**: Fetch size too low, causing excessive network round-trips
+- **Fix**: Increase `--fetch-size` by 50% increments (e.g., 100 → 150 → 200)
+
+**Symptom**: OutOfMemoryError or gradual slowdown over time
+- **Cause**: Fetch size too high for available heap, especially with wide tables
+- **Fix**: Reduce `--fetch-size` to 50 and increase cautiously
+
+**Symptom**: Performance degrades when increasing `--jobs`
+- **Cause**: Total memory = fetch_size × jobs exceeds available heap
+- **Fix**: Reduce `--fetch-size` proportionally when adding jobs
+  - Rule of thumb: if doubling jobs, halve fetch size to maintain same memory pressure
+
+
+
+### Examples
+
+```bash
+# Default: suitable for most workloads
+replicadb --fetch-size=100 --jobs=4 ...
+
+# Narrow rows, high-latency network: buffer more to reduce round-trips
+replicadb --fetch-size=300 --jobs=4 ...
+
+# Wide Oracle table (many VARCHAR2 columns): keep fetch size conservative
+replicadb --fetch-size=50 --jobs=4 ...
+
+# High parallelism: reduce fetch size to keep total memory bounded
+replicadb --fetch-size=50 --jobs=12 ...
+```
+
+**Important**: When adjusting parallelism, recalculate fetch size:
+```bash
+# If increasing from 4 to 8 jobs, consider reducing fetch size
+# Old: --fetch-size=200 --jobs=4  (total: 200×4 = 800 row buffers)
+# New: --fetch-size=100 --jobs=8  (total: 100×8 = 800 row buffers) — same memory
+```
+
+> **Note**: Values above 500 are generally not recommended. Benchmarks across Oracle, PostgreSQL, and Hibernate consistently show diminishing returns beyond this point, with increased risk of memory issues on wide tables.
 
 ## 6.3 Network Optimization
 
@@ -1865,7 +2104,7 @@ replicadb --bandwidth-throttling=0 ...
 - Connection pool saturation
 
 **Diagnostic Approach**:
-1. Start with defaults (`--jobs=4`, `--fetch-size=5000`)
+1. Start with defaults (`--jobs=4`, `--fetch-size=100`)
 2. Run test replication and measure baseline
 3. Adjust one parameter at a time
 4. Monitor bottleneck (CPU, network, or I/O)
@@ -1873,14 +2112,14 @@ replicadb --bandwidth-throttling=0 ...
 
 **Example Baseline Test**:
 ```bash
-# Test 1: Baseline
+# Test 1: Baseline (default fetch size)
 time replicadb --mode=complete --verbose ...
 
 # Test 2: More parallelism
 time replicadb --mode=complete --jobs=8 --verbose ...
 
-# Test 3: Larger fetch size
-time replicadb --mode=complete --jobs=8 --fetch-size=10000 --verbose ...
+# Test 3: Slightly larger fetch size (for narrow rows)
+time replicadb --mode=complete --jobs=8 --fetch-size=200 --verbose ...
 ```
 
 **Expected Performance**:
