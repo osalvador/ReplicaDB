@@ -107,3 +107,33 @@ select
     INTERVAL '12-2' YEAR TO MONTH C_INTERVAL_YEAR,
     XMLTYPE('<xml>hi</xml>') as C_XML
 from generate_series_4k;
+
+-- Add NULL test row (following DB2 pattern - row 4096)
+insert into t_source (
+    C_INTEGER,
+    C_SMALLINT,
+    C_BIGINT,
+    C_NUMERIC,
+    C_DECIMAL,
+    C_REAL,
+    C_DOUBLE_PRECISION,
+    C_FLOAT,
+    C_BINARY,
+    C_BINARY_VAR,
+    C_BINARY_LOB,
+    C_BOOLEAN,
+    C_CHARACTER,
+    C_CHARACTER_VAR,
+    C_CHARACTER_LOB,
+    C_NATIONAL_CHARACTER,
+    C_NATIONAL_CHARACTER_VAR,
+    C_DATE,
+    C_TIMESTAMP_WITHOUT_TIMEZONE,
+    C_TIMESTAMP_WITH_TIMEZONE,
+    C_INTERVAL_DAY,
+    C_INTERVAL_YEAR,
+    C_XML
+)
+values (4096, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+
+commit;

@@ -486,7 +486,12 @@ public abstract class SqlManager extends ConnManager {
      * @throws SQLException
      */
     public void dropStagingTable() throws SQLException {
-        // TODO: Do not drop stagging table if it's defined by user.
+        // Only drop staging table if it was created automatically
+        if (options.getSinkStagingTable() != null && !options.getSinkStagingTable().isEmpty()) {
+            LOG.info("Skipping staging table drop because it is user-defined: {}", getQualifiedStagingTableName());
+            return;
+        }
+        
         Statement statement = this.getConnection().createStatement();
         String sql = "DROP TABLE " + getQualifiedStagingTableName();
         LOG.info("Dropping staging table with this command: {}", sql);

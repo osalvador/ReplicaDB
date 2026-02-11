@@ -15,7 +15,21 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-
+/**
+ * Oracle-specific database manager with optimizations for Oracle Database.
+ * 
+ * <p><b>NULL Handling:</b> This class correctly preserves NULL values for all data types
+ * during replication by checking {@code ResultSet.wasNull()} after calling primitive getters
+ * (getInt, getDouble, getFloat, etc.) and calling {@code PreparedStatement.setNull()} when
+ * NULL is detected. This prevents silent conversion of NULL to default values like 0, 0.0,
+ * false, or epoch dates.</p>
+ * 
+ * <p>Fixes Issue #51: NULL INTEGER values from Denodo were incorrectly converted to 0 in Oracle
+ * sink tables. The fix applies to all primitive and temporal types: INTEGER, BIGINT, DOUBLE,
+ * FLOAT, DATE, TIMESTAMP, VARCHAR, and BINARY.</p>
+ * 
+ * @see <a href="https://github.com/osalvador/ReplicaDB/issues/51">Issue #51</a>
+ */
 public class OracleManager extends SqlManager {
 
     private static final Logger LOG = LogManager.getLogger(OracleManager.class.getName());
@@ -124,7 +138,35 @@ public class OracleManager extends SqlManager {
         stmt.close();
     }
 
-
+    /**
+     * Inserts data from a ResultSet into the Oracle sink table.
+     * 
+     * <p><b>NULL Handling Pattern:</b> For primitive types (int, double, float, etc.), this method
+     * stores the value first, then checks {@code resultSet.wasNull()} to detect SQL NULL. If NULL
+     * is detected, it calls {@code ps.setNull(columnIndex, sqlType)} instead of setting the primitive
+     * value. This prevents NULL from being silently converted to primitive defaults (0, 0.0, false).</p>
+     * 
+     * <p>Example pattern for INTEGER:</p>
+     * <pre>{@code
+     * case Types.INTEGER:
+     *     int intValue = resultSet.getInt(i);
+     *     if (resultSet.wasNull()) {
+     *         ps.setNull(i, Types.INTEGER);  // Preserve NULL
+     *     } else {
+     *         ps.setInt(i, intValue);        // Set actual value
+     *     }
+     *     break;
+     * }</pre>
+     * 
+     * <p>This pattern is applied consistently for all primitive and temporal types to ensure
+     * data integrity during replication. See Issue #51 for original problem report.</p>
+     * 
+     * @param resultSet The source data to insert
+     * @param taskId The parallel task identifier
+     * @return Number of rows inserted
+     * @throws SQLException If database operation fails
+     * @throws IOException If I/O operation fails
+     */
     @Override
     public int insertDataToTable(ResultSet resultSet, int taskId) throws SQLException, IOException {
 
@@ -169,38 +211,78 @@ public class OracleManager extends SqlManager {
                         case Types.VARCHAR:
                         case Types.CHAR:
                         case Types.LONGVARCHAR:
-                            ps.setString(i, resultSet.getString(i));
+                            String strVal = resultSet.getString(i);
+                            if (resultSet.wasNull() || strVal == null) {
+                                ps.setNull(i, Types.VARCHAR);
+                            } else {
+                                ps.setString(i, strVal);
+                            }
                             break;
                         case Types.INTEGER:
                         case Types.TINYINT:
                         case Types.SMALLINT:
-                            ps.setInt(i, resultSet.getInt(i));
+                            int intVal = resultSet.getInt(i);
+                            if (resultSet.wasNull()) {
+                                ps.setNull(i, Types.INTEGER);
+                            } else {
+                                ps.setInt(i, intVal);
+                            }
                             break;
                         case Types.BIGINT:
                         case Types.NUMERIC:
                         case Types.DECIMAL:
-                            ps.setBigDecimal(i, resultSet.getBigDecimal(i));
+                            java.math.BigDecimal bdVal = resultSet.getBigDecimal(i);
+                            if (resultSet.wasNull() || bdVal == null) {
+                                ps.setNull(i, Types.NUMERIC);
+                            } else {
+                                ps.setBigDecimal(i, bdVal);
+                            }
                             break;
                         case Types.DOUBLE:
-                            ps.setDouble(i, resultSet.getDouble(i));
+                            double doubleVal = resultSet.getDouble(i);
+                            if (resultSet.wasNull()) {
+                                ps.setNull(i, Types.DOUBLE);
+                            } else {
+                                ps.setDouble(i, doubleVal);
+                            }
                             break;
                         case Types.FLOAT:
                         case Types.REAL:
-                            ps.setFloat(i, resultSet.getFloat(i));
+                            float floatVal = resultSet.getFloat(i);
+                            if (resultSet.wasNull()) {
+                                ps.setNull(i, Types.FLOAT);
+                            } else {
+                                ps.setFloat(i, floatVal);
+                            }
                             break;
                         case Types.DATE:
-                            ps.setDate(i, resultSet.getDate(i));
+                            java.sql.Date dateVal = resultSet.getDate(i);
+                            if (resultSet.wasNull() || dateVal == null) {
+                                ps.setNull(i, Types.DATE);
+                            } else {
+                                ps.setDate(i, dateVal);
+                            }
                             break;
                         case Types.TIMESTAMP:
                         case Types.TIMESTAMP_WITH_TIMEZONE:
                         case -101:
                         case -102:
-                            ps.setTimestamp(i, resultSet.getTimestamp(i));
+                            java.sql.Timestamp tsVal = resultSet.getTimestamp(i);
+                            if (resultSet.wasNull() || tsVal == null) {
+                                ps.setNull(i, Types.TIMESTAMP);
+                            } else {
+                                ps.setTimestamp(i, tsVal);
+                            }
                             break;
                         case Types.BINARY:
                         case Types.VARBINARY:
                         case Types.LONGVARBINARY:
-                            ps.setBytes(i, resultSet.getBytes(i));
+                            byte[] bytesVal = resultSet.getBytes(i);
+                            if (resultSet.wasNull() || bytesVal == null) {
+                                ps.setNull(i, Types.BINARY);
+                            } else {
+                                ps.setBytes(i, bytesVal);
+                            }
                             break;
                         case Types.BLOB:
                             // Stream BLOB without loading into memory

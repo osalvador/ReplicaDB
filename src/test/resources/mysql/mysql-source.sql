@@ -26,7 +26,7 @@ create table t_source (
     C_DOUBLE_PRECISION DOUBLE PRECISION,
     C_FLOAT FLOAT,
     /*Binary Strings:*/
-    C_BINARY BINARY(35),
+    C_BINARY BINARY(35) NULL,
     C_BINARY_VAR VARBINARY(255),
     C_BINARY_LOB LONGBLOB,
     /*Boolean:*/
@@ -40,9 +40,9 @@ create table t_source (
     /*Datetimes:*/
     C_DATE DATE,
     C_TIME_WITHOUT_TIMEZONE TIME,
-    C_TIMESTAMP_WITHOUT_TIMEZONE TIMESTAMP,
+    C_TIMESTAMP_WITHOUT_TIMEZONE TIMESTAMP NULL,
     C_TIME_WITH_TIMEZONE TIME,
-    C_TIMESTAMP_WITH_TIMEZONE TIMESTAMP,
+    C_TIMESTAMP_WITH_TIMEZONE TIMESTAMP NULL,
     --         /*Intervals:*/
     --         INTERVAL DAY /*not supported*/
     --         INTERVAL YEAR /*not supported*/

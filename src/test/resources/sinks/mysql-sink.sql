@@ -11,7 +11,7 @@ create table t_sink
     C_DOUBLE_PRECISION           DOUBLE PRECISION,
     C_FLOAT                      FLOAT,
     /*Binary Strings:*/
-    C_BINARY                     BINARY(35),
+    C_BINARY                     BINARY(35) NULL,
     C_BINARY_VAR                 VARBINARY(255),
     C_BINARY_LOB                 BLOB,
     /*Boolean:*/
@@ -25,9 +25,9 @@ create table t_sink
     /*Datetimes:*/
     C_DATE                       DATE,
     C_TIME_WITHOUT_TIMEZONE      TIME,
-    C_TIMESTAMP_WITHOUT_TIMEZONE TIMESTAMP,
+    C_TIMESTAMP_WITHOUT_TIMEZONE TIMESTAMP NULL,
     C_TIME_WITH_TIMEZONE         TIME,
-    C_TIMESTAMP_WITH_TIMEZONE    TIMESTAMP,
+    C_TIMESTAMP_WITH_TIMEZONE    TIMESTAMP NULL,
     /*Intervals:*/
     C_INTERVAL_DAY               text/*not supported*/,
     C_INTERVAL_YEAR              text/*not supported*/,

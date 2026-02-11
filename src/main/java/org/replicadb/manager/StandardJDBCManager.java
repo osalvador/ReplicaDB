@@ -9,7 +9,20 @@ import org.replicadb.manager.util.BandwidthThrottling;
 import java.io.IOException;
 import java.sql.*;
 
-
+/**
+ * Generic JDBC manager for databases without specialized implementations.
+ * Used as fallback when no database-specific manager is available.
+ * 
+ * <p><b>NULL Handling:</b> Correctly preserves NULL values for all data types by checking
+ * {@code ResultSet.wasNull()} after primitive getters and calling {@code PreparedStatement.setNull()}
+ * when NULL is detected. Prevents silent NULL-to-default-value conversions.</p>
+ * 
+ * <p>Includes explicit handling for BOOLEAN and NVARCHAR types in addition to standard
+ * primitive types (INTEGER, BIGINT, DOUBLE, FLOAT, DATE, TIMESTAMP, VARCHAR, BINARY).</p>
+ * 
+ * @see OracleManager For detailed NULL handling pattern documentation
+ * @see <a href="https://github.com/osalvador/ReplicaDB/issues/51">Issue #51</a>
+ */
 public class StandardJDBCManager extends SqlManager {
 
    private static final Logger LOG = LogManager.getLogger(StandardJDBCManager.class.getName());
@@ -114,35 +127,77 @@ public class StandardJDBCManager extends SqlManager {
                   case Types.VARCHAR:
                   case Types.CHAR:
                   case Types.LONGVARCHAR:
-                     ps.setString(i, resultSet.getString(i));
+                     String strVal = resultSet.getString(i);
+                     if (resultSet.wasNull() || strVal == null) {
+                        ps.setNull(i, Types.VARCHAR);
+                     } else {
+                        ps.setString(i, strVal);
+                     }
                      break;
                   case Types.INTEGER:
                   case Types.TINYINT:
                   case Types.SMALLINT:
-                     ps.setInt(i, resultSet.getInt(i));
+                     int intVal = resultSet.getInt(i);
+                     if (resultSet.wasNull()) {
+                        ps.setNull(i, Types.INTEGER);
+                     } else {
+                        ps.setInt(i, intVal);
+                     }
                      break;
                   case Types.BIGINT:
                   case Types.NUMERIC:
                   case Types.DECIMAL:
-                     ps.setBigDecimal(i, resultSet.getBigDecimal(i));
+                     java.math.BigDecimal bdVal = resultSet.getBigDecimal(i);
+                     if (resultSet.wasNull() || bdVal == null) {
+                        ps.setNull(i, Types.NUMERIC);
+                     } else {
+                        ps.setBigDecimal(i, bdVal);
+                     }
                      break;
                   case Types.DOUBLE:
-                     ps.setDouble(i, resultSet.getDouble(i));
+                     double doubleVal = resultSet.getDouble(i);
+                     if (resultSet.wasNull()) {
+                        ps.setNull(i, Types.DOUBLE);
+                     } else {
+                        ps.setDouble(i, doubleVal);
+                     }
                      break;
                   case Types.FLOAT:
-                     ps.setFloat(i, resultSet.getFloat(i));
+                     float floatVal = resultSet.getFloat(i);
+                     if (resultSet.wasNull()) {
+                        ps.setNull(i, Types.FLOAT);
+                     } else {
+                        ps.setFloat(i, floatVal);
+                     }
                      break;
                   case Types.DATE:
-                     ps.setDate(i, resultSet.getDate(i));
+                     java.sql.Date dateVal = resultSet.getDate(i);
+                     if (resultSet.wasNull() || dateVal == null) {
+                        ps.setNull(i, Types.DATE);
+                     } else {
+                        ps.setDate(i, dateVal);
+                     }
                      break;
                   case Types.TIMESTAMP:
                   case Types.TIMESTAMP_WITH_TIMEZONE:
                   case -101:
                   case -102:
-                     ps.setTimestamp(i, resultSet.getTimestamp(i));
+                     java.sql.Timestamp tsVal = resultSet.getTimestamp(i);
+                     if (resultSet.wasNull() || tsVal == null) {
+                        ps.setNull(i, Types.TIMESTAMP);
+                     } else {
+                        ps.setTimestamp(i, tsVal);
+                     }
                      break;
                   case Types.BINARY:
-                     ps.setBytes(i, resultSet.getBytes(i));
+                  case Types.VARBINARY:
+                  case Types.LONGVARBINARY:
+                     byte[] bytesVal = resultSet.getBytes(i);
+                     if (resultSet.wasNull() || bytesVal == null) {
+                        ps.setNull(i, rsmd.getColumnType(i));
+                     } else {
+                        ps.setBytes(i, bytesVal);
+                     }
                      break;
                   case Types.BLOB:
                      Blob blobData = resultSet.getBlob(i);
@@ -155,10 +210,20 @@ public class StandardJDBCManager extends SqlManager {
                      if (clobData != null) clobData.free();
                      break;
                   case Types.BOOLEAN:
-                     ps.setBoolean(i, resultSet.getBoolean(i));
+                     boolean boolVal = resultSet.getBoolean(i);
+                     if (resultSet.wasNull()) {
+                        ps.setNull(i, Types.BOOLEAN);
+                     } else {
+                        ps.setBoolean(i, boolVal);
+                     }
                      break;
                   case Types.NVARCHAR:
-                     ps.setNString(i, resultSet.getNString(i));
+                     String nStrVal = resultSet.getNString(i);
+                     if (resultSet.wasNull() || nStrVal == null) {
+                        ps.setNull(i, Types.NVARCHAR);
+                     } else {
+                        ps.setNString(i, nStrVal);
+                     }
                      break;
                   case Types.SQLXML:
                      SQLXML sqlxmlData = resultSet.getSQLXML(i);
