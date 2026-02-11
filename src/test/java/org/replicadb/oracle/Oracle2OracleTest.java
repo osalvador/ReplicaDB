@@ -25,7 +25,7 @@ class Oracle2OracleTest {
     private static final Logger LOG = LogManager.getLogger(Oracle2OracleTest.class);
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-    private static final int EXPECTED_ROWS = 4096;
+    private static final int EXPECTED_ROWS = 4097;
 
     private Connection oracleConn;
     private static ReplicadbOracleContainer oracle;

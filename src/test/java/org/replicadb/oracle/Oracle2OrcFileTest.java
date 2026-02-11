@@ -30,7 +30,7 @@ class Oracle2OrcFileTest {
     private static final Logger LOG = LogManager.getLogger(Oracle2OrcFileTest.class);
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
     private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-    private static final int EXPECTED_ROWS = 4096;
+    private static final int EXPECTED_ROWS = 4097;
 
     private static final String SINK_FILE_PATH = "file:///tmp/oracle2orc_sink.orc";
     private static final File sinkFile = new File("/tmp/oracle2orc_sink.orc");

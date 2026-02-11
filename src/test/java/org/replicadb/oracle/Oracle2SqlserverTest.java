@@ -23,7 +23,7 @@ class Oracle2SqlserverTest {
 	private static final Logger LOG = LogManager.getLogger(Oracle2SqlserverTest.class);
 	private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
 	private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-	private static final int EXPECTED_ROWS = 4096;
+	private static final int EXPECTED_ROWS = 4097;
 	// Oracle source doesn't have c_time_without_timezone, so we exclude it from mapping
 	private static final String SOURCE_COLUMNS = "c_integer,c_smallint,c_bigint,c_numeric,c_decimal,"
 			+ "c_real,c_double_precision,c_float,c_binary,c_binary_var,c_binary_lob,"

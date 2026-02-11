@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class Oracle2MongoTest {
 	private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
 	private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
-	private static final int TOTAL_SINK_ROWS = 4096;
+	private static final int TOTAL_SINK_ROWS = 4097;
 	// Base columns without XML
 	private static final String SOURCE_COLUMNS_BASE = "c_integer as \"c_integer\"" + ",c_smallint as \"c_smallint\""
 			+ ",c_bigint as \"c_bigint\"" + ",c_numeric as \"c_numeric\"" + ",c_decimal as \"c_decimal\""
