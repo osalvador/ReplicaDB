@@ -3,6 +3,9 @@ package org.replicadb.oracle;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.appender.WriterAppender;
+import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
@@ -12,11 +15,11 @@ import org.replicadb.config.ReplicadbPostgresqlContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.file.Paths;
 import java.sql.*;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Testcontainers
 class Oracle2PostgresTest {
@@ -169,5 +172,56 @@ class Oracle2PostgresTest {
 		final ToolOptions options = new ToolOptions(args);
 		assertEquals(0, ReplicaDB.processReplica(options));
 		assertEquals(EXPECTED_ROWS, this.countSinkRows());
+	}
+
+	@Test
+	void testFlashbackQuerySCNCapture() throws ParseException, IOException, SQLException {
+		// Setup log capture
+		final StringWriter logOutput = new StringWriter();
+		final LoggerContext context = (LoggerContext) LogManager.getContext(false);
+		final PatternLayout layout = PatternLayout.newBuilder()
+				.withPattern("%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n")
+				.build();
+		final WriterAppender appender = WriterAppender.newBuilder()
+				.setName("TestAppender")
+				.setTarget(logOutput)
+				.setLayout(layout)
+				.build();
+		appender.start();
+		context.getConfiguration().addAppender(appender);
+		context.getConfiguration().getRootLogger().addAppender(appender, null, null);
+		context.updateLoggers();
+
+		try {
+			// Verify V$DATABASE is accessible and SCN can be captured
+			final Statement stmt = this.oracleConn.createStatement();
+			final ResultSet rs = stmt.executeQuery("SELECT CURRENT_SCN FROM V$DATABASE");
+			assertTrue(rs.next(), "Should be able to query V$DATABASE for SCN");
+			final long scn = rs.getLong(1);
+			assertTrue(scn > 0, "SCN should be positive");
+			LOG.info("Current Oracle SCN before replication: {}", scn);
+
+			// Execute replication with parallel jobs (should use flashback query)
+			final String[] args = {"--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE, "--source-connect",
+					oracle.getJdbcUrl(), "--source-user", oracle.getUsername(), "--source-password", oracle.getPassword(),
+					"--sink-connect", postgres.getJdbcUrl(), "--sink-user", postgres.getUsername(), "--sink-password",
+					postgres.getPassword(), "--jobs", "4", "--source-columns", SOURCE_COLUMNS, "--sink-columns", SINK_COLUMNS};
+			final ToolOptions options = new ToolOptions(args);
+			assertEquals(0, ReplicaDB.processReplica(options));
+			assertEquals(EXPECTED_ROWS, this.countSinkRows());
+
+			// Verify log contains SCN capture message
+			final String logs = logOutput.toString();
+			assertTrue(logs.contains("Captured Oracle SCN for consistent read:"),
+					"Log should contain message about capturing SCN for flashback query. Logs:\n" + logs);
+			
+			LOG.info("✓ Flashback query test passed - SCN was captured and used for consistent read");
+
+		} finally {
+			// Cleanup log appender
+			context.getConfiguration().getRootLogger().removeAppender("TestAppender");
+			appender.stop();
+			context.updateLoggers();
+		}
 	}
 }

@@ -19,6 +19,7 @@ import java.util.List;
 public class OracleManager extends SqlManager {
 
     private static final Logger LOG = LogManager.getLogger(OracleManager.class.getName());
+    private Long oracleSourceScn = null;  // SCN for flashback query consistency
 
     public OracleManager(ToolOptions opts, DataSourceType dsType) {
         super(opts);
@@ -70,6 +71,12 @@ public class OracleManager extends SqlManager {
                     " FROM " +
                     escapeTableName(tableName);
 
+            // Apply flashback query if SCN was captured
+            if (this.oracleSourceScn != null) {
+                sqlCmd += " AS OF SCN " + this.oracleSourceScn;
+                LOG.debug("Using flashback query with SCN {}", this.oracleSourceScn);
+            }
+
             if (options.getJobs() == 1)
                 sqlCmd = sqlCmd + " where 0 = ?";
             else
@@ -78,7 +85,25 @@ public class OracleManager extends SqlManager {
 
         }
 
-        return super.execute(sqlCmd, (Object) nThread);
+        try {
+            return super.execute(sqlCmd, (Object) nThread);
+        } catch (SQLException e) {
+            // Handle flashback-specific errors
+            if (e.getErrorCode() == 8181) {
+                // ORA-08181: specified number is not a valid system change number
+                LOG.error("Flashback query failed: SCN {} is too old (outside undo retention window). " +
+                          "Recommendation: Increase Oracle UNDO_RETENTION parameter or run replication " +
+                          "during lower activity periods.", this.oracleSourceScn);
+                throw e;
+            } else if (e.getErrorCode() == 1555) {
+                // ORA-01555: should not occur with flashback, but defensive check
+                LOG.error("ORA-01555 occurred despite flashback query. This suggests insufficient " +
+                          "undo retention. Current SCN: {}", this.oracleSourceScn);
+                throw e;
+            }
+            // Propagate other SQLExceptions
+            throw e;
+        }
     }
 
     public void oracleAlterSession(Boolean directRead) throws SQLException {
@@ -422,7 +447,24 @@ public class OracleManager extends SqlManager {
     }
 
     @Override
-    public void preSourceTasks() {}
+    public void preSourceTasks() {
+        // Capture SCN for flashback query to prevent ORA-01555 on large tables
+        try {
+            Statement stmt = getConnection().createStatement();
+            ResultSet rs = stmt.executeQuery("SELECT CURRENT_SCN FROM V$DATABASE");
+            if (rs.next()) {
+                this.oracleSourceScn = rs.getLong(1);
+                LOG.info("Captured Oracle SCN for consistent read: {}", oracleSourceScn);
+            }
+            rs.close();
+            stmt.close();
+        } catch (SQLException e) {
+            // Graceful fallback if V$DATABASE is inaccessible (insufficient privileges)
+            LOG.warn("Could not capture Oracle SCN (V$DATABASE not accessible). " +
+                     "Flashback query disabled. Error: {}", e.getMessage());
+            this.oracleSourceScn = null;
+        }
+    }
 
     @Override
     public void postSourceTasks() {}

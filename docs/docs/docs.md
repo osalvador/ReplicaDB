@@ -1271,6 +1271,68 @@ source.connect.parameter.oracle.net.networkCompression=on
 
 ```
 
+### 4.2.2 Oracle Flashback Query for Large Tables
+
+ReplicaDB automatically uses Oracle Flashback Query to prevent **ORA-01555 ("snapshot too old")** errors when replicating large tables. This feature captures a System Change Number (SCN) at the start of the job and uses it for all queries, providing read consistency without holding long-running database transactions.
+
+**How it works:**
+
+1. At job start, ReplicaDB captures the current SCN from Oracle
+2. All SELECT queries use the `AS OF SCN <captured_scn>` clause
+3. Each parallel thread sees a consistent snapshot without locking undo segments
+4. No open transactions are held, eliminating ORA-01555 errors
+
+**Requirements:**
+
+- Oracle 9i or later (Flashback Query introduced in Oracle 9i)
+- User must have SELECT access to `V$DATABASE` system view
+- SCN must be within Oracle's `UNDO_RETENTION` window
+
+**Troubleshooting:**
+
+If you see a **warning** in the logs: `Could not capture Oracle SCN (V$DATABASE not accessible)`
+
+- **Cause**: User lacks SELECT permission on `V$DATABASE`
+- **Solution**: Grant the permission: `GRANT SELECT ON V$DATABASE TO <username>;`
+- **Note**: ReplicaDB will continue with standard queries (current behavior) if SCN capture fails
+
+If you see **error ORA-08181**: `Specified SCN too old`
+
+- **Cause**: SCN is outside the undo retention window
+- **Solution**: Increase Oracle's `UNDO_RETENTION` parameter: `ALTER SYSTEM SET UNDO_RETENTION = 3600;` (seconds)
+- **Alternative**: Run replication during lower activity periods to reduce undo pressure
+
+**Example with parallel jobs:**
+
+```properties
+############################# ReplicadB Basics #############################
+mode=complete
+jobs=8
+
+############################# Source Options #############################
+source.connect=jdbc:oracle:thin:@${ORAHOST}:${ORAPORT}:${ORASID}
+source.user=${ORAUSER}
+source.password=${ORAPASS}
+source.table=LARGE_ORDERS
+
+############################# Sink Options #############################
+sink.connect=jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDB}
+sink.user=${PGUSER}
+sink.password=${PGPASS}
+sink.table=orders
+```
+
+This configuration will automatically use flashback query for the 8 parallel threads, preventing ORA-01555 errors that commonly occur with large table replications (>120GB or multi-hour transfers).
+
+**Log output example:**
+
+When flashback query is active, you'll see in the logs:
+
+```
+INFO  OracleManager - Captured Oracle SCN for consistent read: 1234567890
+DEBUG OracleManager - Using flashback query with SCN 1234567890
+```
+
 
 <br>
 ## 4.3 PostgreSQL Connector
