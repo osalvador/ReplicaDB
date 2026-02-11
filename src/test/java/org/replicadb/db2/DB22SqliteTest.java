@@ -58,6 +58,7 @@ class DB22SqliteTest {
 
     @AfterEach
     void tearDown() throws SQLException {
+        // Use DELETE for SQLite (no TRUNCATE support), but it's the sink so less critical
         sqliteConn.createStatement().execute("DELETE FROM t_sink");
         this.db2Conn.close();
         this.sqliteConn.close();

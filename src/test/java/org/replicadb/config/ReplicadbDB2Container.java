@@ -38,8 +38,22 @@ public class ReplicadbDB2Container extends Db2Container {
    public void start () {
       super.start();
 
-      // Creating Database
+      // Creating Database and configuring transaction logs
       try (Connection con = DriverManager.getConnection(container.getJdbcUrl(), container.getUsername(), container.getPassword())) {
+         LOG.info("Configuring DB2 transaction log sizes to prevent SQLCODE=-964 errors");
+         try (java.sql.Statement stmt = con.createStatement()) {
+            // Increase transaction log sizes to avoid "out of space" errors during tests
+            // LOGFILSIZ: Size of each log file (in 4KB pages)
+            // LOGPRIMARY: Number of primary log files
+            // LOGSECOND: Number of secondary log files that can be allocated
+            stmt.execute("UPDATE DB CFG FOR testdb USING LOGFILSIZ 10240");
+            stmt.execute("UPDATE DB CFG FOR testdb USING LOGPRIMARY 20");
+            stmt.execute("UPDATE DB CFG FOR testdb USING LOGSECOND 20");
+            LOG.info("DB2 log configuration updated successfully");
+         } catch (SQLException e) {
+            LOG.warn("Failed to update DB2 log configuration (may not be critical): {}", e.getMessage());
+         }
+
          LOG.info("Creating Db2 tables");
          ScriptRunner runner = new ScriptRunner(con, false, true);
          runner.runScript(new BufferedReader(new FileReader(RESOURCE_DIR + DB2_SINK_FILE)));

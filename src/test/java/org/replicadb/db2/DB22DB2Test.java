@@ -58,11 +58,11 @@ class DB22DB2Test {
         try {
             if (db2Conn != null && !db2Conn.isClosed()) {
                 try {
-                    // Attempt to delete sink data
-                    db2Conn.createStatement().execute("DELETE FROM t_sink");
+                    // Use TRUNCATE instead of DELETE - faster and uses less transaction log space
+                    db2Conn.createStatement().execute("TRUNCATE TABLE t_sink IMMEDIATE");
                     db2Conn.commit(); // Explicit commit
                 } catch (SQLException e) {
-                    LOG.warn("Failed to delete t_sink data: {} (SQLCODE: {}, SQLSTATE: {})", 
+                    LOG.warn("Failed to truncate t_sink: {} (SQLCODE: {}, SQLSTATE: {})", 
                             e.getMessage(), e.getErrorCode(), e.getSQLState());
                     try {
                         db2Conn.rollback(); // Rollback on error
