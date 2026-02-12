@@ -16,9 +16,21 @@ on:
       - 'docs/**'
 
 jobs:
-  build:
-
+  integration:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        source:
+          - db2
+          - mariadb
+          - mysql
+          - oracle
+          - postgres
+          - sqlite
+          - sqlserver
+          - mongo
+    name: Integration (${{ matrix.source }})
 
     steps:
     - uses: actions/checkout@v3
@@ -33,8 +45,48 @@ jobs:
     - name: Get version
       run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
 
-    - name: Build and tests (exclude Oracle cross-version)
-      run: mvn -B -q package --file pom.xml -Dtest='*Test' -Dtest='!Oracle2OracleCrossVersionLobTest'
+    - name: Integration tests (exclude Oracle cross-version)
+      run: mvn -B -q test --file pom.xml -Dtest="org/replicadb/${{ matrix.source }}/*Test,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest"
+
+  non_integration:
+    runs-on: ubuntu-latest
+    name: Non-integration tests
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK 11
+      uses: actions/setup-java@v4
+      with:
+        java-version: '11'
+        distribution: 'adopt'
+        server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
+        settings-path: ${{ github.workspace }} # location for the settings.xml file
+
+    - name: Get version
+      run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
+
+    - name: Non-integration tests (exclude Oracle cross-version)
+      run: mvn -B -q test --file pom.xml -Dtest="org/replicadb/cli/*Test,org/replicadb/manager/*Test,org/replicadb/config/*Test,org/replicadb/rowset/*Test,org/replicadb/file/*Test,org/replicadb/ReplicaDBTest,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest"
+
+  package:
+    runs-on: ubuntu-latest
+    needs:
+      - integration
+      - non_integration
+    name: Package release
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK 11
+      uses: actions/setup-java@v4
+      with:
+        java-version: '11'
+        distribution: 'adopt'
+        server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
+        settings-path: ${{ github.workspace }} # location for the settings.xml file
+
+    - name: Get version
+      run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
 
     - name: Clean Install
       run: |
