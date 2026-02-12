@@ -108,6 +108,11 @@ public class LocalFileManager extends SqlManager {
     public void postSourceTasks() {/*Not implemented*/}
 
     @Override
+    protected String mapJdbcTypeToNativeDDL(String columnName, int jdbcType, int precision, int scale) {
+        throw new UnsupportedOperationException("Local files do not support SQL DDL. Use --sink-auto-create only with SQL databases.");
+    }
+
+    @Override
     public void preSourceTasks() {
         if (options.getJobs() > 1)
             throw new IllegalArgumentException("Only one job is allowed when reading from a file. Jobs parameter must be set to 1. jobs=1");

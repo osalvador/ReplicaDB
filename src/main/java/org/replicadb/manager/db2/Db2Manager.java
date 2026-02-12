@@ -536,6 +536,88 @@ public class Db2Manager extends SqlManager {
         }
     }
 
+    @Override
+    protected String mapJdbcTypeToNativeDDL(String columnName, int jdbcType, int precision, int scale) {
+        switch (jdbcType) {
+            // Character types
+            case Types.CHAR:
+                return precision > 0 && precision <= 254 ? "CHAR(" + precision + ")" : "CHAR(254)";
+            case Types.VARCHAR:
+            case Types.LONGVARCHAR:
+                if (precision <= 0 || precision > 32672) {
+                    return "VARCHAR(32672)";
+                }
+                return "VARCHAR(" + precision + ")";
+            case Types.NCHAR:
+                return precision > 0 && precision <= 127 ? "GRAPHIC(" + precision + ")" : "GRAPHIC(127)";
+            case Types.NVARCHAR:
+            case Types.LONGNVARCHAR:
+                if (precision <= 0 || precision > 16336) {
+                    return "VARGRAPHIC(16336)";
+                }
+                return "VARGRAPHIC(" + precision + ")";
+            
+            // Numeric types
+            case Types.TINYINT:
+            case Types.SMALLINT:
+                return "SMALLINT";
+            case Types.INTEGER:
+                return "INTEGER";
+            case Types.BIGINT:
+                return "BIGINT";
+            case Types.DECIMAL:
+            case Types.NUMERIC:
+                if (precision > 0 && scale >= 0) {
+                    return "DECIMAL(" + Math.min(precision, 31) + "," + Math.min(scale, 31) + ")";
+                }
+                return "DECIMAL(31,0)";
+            case Types.REAL:
+                return "REAL";
+            case Types.FLOAT:
+            case Types.DOUBLE:
+                return "DOUBLE";
+            
+            // Date/Time types
+            case Types.DATE:
+                return "DATE";
+            case Types.TIME:
+            case Types.TIME_WITH_TIMEZONE:
+                return "TIME";
+            case Types.TIMESTAMP:
+            case Types.TIMESTAMP_WITH_TIMEZONE:
+                return "TIMESTAMP";
+            
+            // Binary types
+            case Types.BINARY:
+                return precision > 0 && precision <= 254 ? "CHAR(" + precision + ") FOR BIT DATA" : "CHAR(254) FOR BIT DATA";
+            case Types.VARBINARY:
+            case Types.LONGVARBINARY:
+                if (precision <= 0 || precision > 32672) {
+                    return "VARCHAR(32672) FOR BIT DATA";
+                }
+                return "VARCHAR(" + precision + ") FOR BIT DATA";
+            case Types.BLOB:
+                return "BLOB(1M)";
+            
+            // Other types
+            case Types.BOOLEAN:
+            case Types.BIT:
+                return "SMALLINT";
+            case Types.CLOB:
+                return "CLOB(1M)";
+            case Types.NCLOB:
+                return "DBCLOB(524288)";
+            case Types.ROWID:
+                return "VARCHAR(40)";
+            case Types.SQLXML:
+                return "XML";
+            
+            default:
+                LOG.warn("Unmapped JDBC type {} for column '{}', defaulting to VARCHAR(32672)", jdbcType, columnName);
+                return "VARCHAR(32672)";
+        }
+    }
+
     /**
      * DB2-specific pre-source tasks. No-op for DB2.
      *
@@ -543,7 +625,9 @@ public class Db2Manager extends SqlManager {
      */
     @Override
     public void preSourceTasks() throws Exception {
-        // Not necessary for DB2.
+        // Call parent to probe source metadata if auto-create is enabled
+        super.preSourceTasks();
+        // No other DB2-specific pre-source tasks needed.
     }
 
     /**

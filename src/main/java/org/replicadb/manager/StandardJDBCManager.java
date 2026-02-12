@@ -288,6 +288,91 @@ public class StandardJDBCManager extends SqlManager {
    }
 
    @Override
+   protected String mapJdbcTypeToNativeDDL(String columnName, int jdbcType, int precision, int scale) {
+      // Generic ANSI SQL types - use portable, widely-supported syntax
+      switch (jdbcType) {
+         // Character types
+         case Types.CHAR:
+            return precision > 0 && precision <= 2000 ? "CHAR(" + precision + ")" : "CHAR(255)";
+         case Types.VARCHAR:
+         case Types.LONGVARCHAR:
+            if (precision <= 0 || precision > 4000) {
+               return "VARCHAR(4000)";
+            }
+            return "VARCHAR(" + precision + ")";
+         case Types.NCHAR:
+            return precision > 0 && precision <= 2000 ? "NCHAR(" + precision + ")" : "NCHAR(255)";
+         case Types.NVARCHAR:
+         case Types.LONGNVARCHAR:
+            if (precision <= 0 || precision > 4000) {
+               return "NVARCHAR(4000)";
+            }
+            return "NVARCHAR(" + precision + ")";
+         
+         // Numeric types
+         case Types.TINYINT:
+            return "SMALLINT";
+         case Types.SMALLINT:
+            return "SMALLINT";
+         case Types.INTEGER:
+            return "INTEGER";
+         case Types.BIGINT:
+            return "BIGINT";
+         case Types.DECIMAL:
+         case Types.NUMERIC:
+            if (precision > 0 && scale >= 0) {
+               return "DECIMAL(" + Math.min(precision, 38) + "," + Math.min(scale, 38) + ")";
+            }
+            return "DECIMAL(18,0)";
+         case Types.REAL:
+            return "REAL";
+         case Types.FLOAT:
+            return "FLOAT";
+         case Types.DOUBLE:
+            return "DOUBLE PRECISION";
+         
+         // Date/Time types
+         case Types.DATE:
+            return "DATE";
+         case Types.TIME:
+         case Types.TIME_WITH_TIMEZONE:
+            return "TIME";
+         case Types.TIMESTAMP:
+         case Types.TIMESTAMP_WITH_TIMEZONE:
+            return "TIMESTAMP";
+         
+         // Binary types
+         case Types.BINARY:
+            return precision > 0 && precision <= 2000 ? "BINARY(" + precision + ")" : "BINARY(255)";
+         case Types.VARBINARY:
+         case Types.LONGVARBINARY:
+            if (precision <= 0 || precision > 4000) {
+               return "VARBINARY(4000)";
+            }
+            return "VARBINARY(" + precision + ")";
+         case Types.BLOB:
+            return "BLOB";
+         
+         // Other types
+         case Types.BOOLEAN:
+         case Types.BIT:
+            return "BOOLEAN";
+         case Types.CLOB:
+            return "CLOB";
+         case Types.NCLOB:
+            return "NCLOB";
+         case Types.ROWID:
+            return "VARCHAR(40)";
+         case Types.SQLXML:
+            return "CLOB";
+         
+         default:
+            LOG.warn("Unmapped JDBC type {} for column '{}', defaulting to VARCHAR(4000)", jdbcType, columnName);
+            return "VARCHAR(4000)";
+      }
+   }
+
+   @Override
    protected void createStagingTable () throws SQLException {
       // Not necessary
    }
@@ -297,7 +382,9 @@ public class StandardJDBCManager extends SqlManager {
    }
    @Override
    public void preSourceTasks () throws Exception {
-      // Not necessary
+      // Call parent to probe source metadata if auto-create is enabled
+      super.preSourceTasks();
+      // No other StandardJDBC-specific pre-source tasks needed.
    }
    @Override
    protected void mergeStagingTable () throws Exception {

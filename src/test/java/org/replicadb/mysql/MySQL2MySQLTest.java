@@ -221,4 +221,114 @@ class MySQL2MySQLTest {
         assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(EXPECTED_ROWS, countSinkRows());
     }
+
+    // Helper methods for auto-create tests
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, tableName, new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    private int countRows(Connection conn, String tableName) throws SQLException {
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
+        rs.next();
+        return rs.getInt(1);
+    }
+
+    @Test
+    void testMySQL2MySQLAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_mysql2mysql";
+        
+        // Verify table doesn't exist
+        Assertions.assertFalse(tableExists(mysqlConn, sinkTable), "Sink table should not exist before test");
+        
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", mysqlJdbcUrl,
+                "--source-user", mysql.getUsername(),
+                "--source-password", mysql.getPassword(),
+                "--sink-connect", mysqlJdbcUrl,
+                "--sink-user", mysql.getUsername(),
+                "--sink-password", mysql.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-auto-create", "true",
+                "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        
+        // Verify table was created and populated
+        assertTrue(tableExists(mysqlConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(mysqlConn, sinkTable));
+        LOG.info("Successfully replicated {} rows to auto-created MySQL table", EXPECTED_ROWS);
+        
+        // Cleanup
+        mysqlConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testMySQL2MySQLAutoCreateIncrementalMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_incremental_mysql2mysql";
+        
+        // Verify table doesn't exist
+        Assertions.assertFalse(tableExists(mysqlConn, sinkTable), "Sink table should not exist before test");
+        
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", mysqlJdbcUrl,
+                "--source-user", mysql.getUsername(),
+                "--source-password", mysql.getPassword(),
+                "--sink-connect", mysqlJdbcUrl,
+                "--sink-user", mysql.getUsername(),
+                "--sink-password", mysql.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-staging-schema", mysql.getDatabaseName(),
+                "--sink-auto-create", "true",
+                "--mode", ReplicationMode.INCREMENTAL.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        
+        // Verify table was created with primary key
+        assertTrue(tableExists(mysqlConn, sinkTable), "Sink table should exist after auto-create");
+        DatabaseMetaData meta = mysqlConn.getMetaData();
+        ResultSet pks = meta.getPrimaryKeys(null, null, sinkTable);
+        assertTrue(pks.next(), "Table should have a primary key");
+        String pkColumn = pks.getString("COLUMN_NAME");
+        LOG.info("Primary key columns: {}", pkColumn);
+        assertEquals(EXPECTED_ROWS, countRows(mysqlConn, sinkTable));
+        
+        // Run again to test merge functionality
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countRows(mysqlConn, sinkTable), "Row count should remain the same after merge");
+        LOG.info("Incremental mode merge successful - row count unchanged: {}", EXPECTED_ROWS);
+        
+        // Cleanup
+        mysqlConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testMySQL2MySQLAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+        // Use existing t_sink table
+        assertTrue(tableExists(mysqlConn, "t_sink"), "t_sink table should exist");
+        
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", mysqlJdbcUrl,
+                "--source-user", mysql.getUsername(),
+                "--source-password", mysql.getPassword(),
+                "--sink-connect", mysqlJdbcUrl,
+                "--sink-user", mysql.getUsername(),
+                "--sink-password", mysql.getPassword(),
+                "--sink-table", "t_sink",
+                "--sink-auto-create", "true",
+                "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+        LOG.info("Auto-create correctly skipped for existing table, {} rows replicated", EXPECTED_ROWS);
+    }
 }

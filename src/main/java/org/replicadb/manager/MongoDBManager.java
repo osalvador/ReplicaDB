@@ -370,6 +370,11 @@ public class MongoDBManager extends SqlManager {
 	}
 
 	@Override
+	protected String mapJdbcTypeToNativeDDL(String columnName, int jdbcType, int precision, int scale) {
+		throw new UnsupportedOperationException("MongoDB does not support SQL DDL. Use --sink-auto-create only with SQL databases.");
+	}
+
+	@Override
 	public void preSourceTasks() throws Exception {
 		long totalRows = 0;
 

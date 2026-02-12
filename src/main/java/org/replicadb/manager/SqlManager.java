@@ -6,10 +6,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.manager.util.ColumnDescriptor;
 
 import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -34,6 +36,7 @@ public abstract class SqlManager extends ConnManager {
     private TimedSemaphore bandwidthRateLimiter;
     private int rowSize = 0;
     private long fetchs = 0L;
+    private boolean sinkTableJustCreated = false;
 
     /**
      * Constructs the SqlManager.
@@ -504,6 +507,11 @@ public abstract class SqlManager extends ConnManager {
     @Override
     public Future<Integer> preSinkTasks(ExecutorService executor) throws Exception {
 
+        // Auto-create sink table if enabled and table doesn't exist
+        if (options.isSinkAutoCreate()) {
+            autoCreateSinkTable();
+        }
+
         // Create staging table
         // If mode is not COMPLETE
         if (!options.getMode().equals(ReplicationMode.COMPLETE.getModeText())) {
@@ -511,11 +519,15 @@ public abstract class SqlManager extends ConnManager {
             // Only create staging table if it is not defined by the user
             if (options.getSinkStagingTable() == null || options.getSinkStagingTable().isEmpty()) {
 
-                // If the staging parameters have not been defined then the table is created in the public schema
+                // If the staging parameters have not been defined then use the sink table's schema
                 if (options.getSinkStagingSchema() == null || options.getSinkStagingSchema().isEmpty()) {
-                    // TODO: This is only valid for PostgreSQL
-                    LOG.warn("No staging schema is defined, setting it as PUBLIC");
-                    options.setSinkStagingSchema("public");
+                    String sinkSchema = getSchemaFromQualifiedTableName(getSinkTableName());
+                    if (sinkSchema != null && !sinkSchema.isEmpty()) {
+                        LOG.debug("No staging schema defined, using sink table schema: {}", sinkSchema);
+                        options.setSinkStagingSchema(sinkSchema);
+                    } else {
+                        LOG.debug("No staging schema defined and no schema in sink table name, letting JDBC driver use default");
+                    }
                 }
                 this.createStagingTable();
             }
@@ -525,9 +537,11 @@ public abstract class SqlManager extends ConnManager {
         if (options.getMode().equals(ReplicationMode.COMPLETE_ATOMIC.getModeText())) {
             return atomicDeleteSinkTable(executor);
         } else {
-            // Truncate sink table if it is enabled
-            if (!options.isSinkDisableTruncate()) {
+            // Truncate sink table if it is enabled and the table was not just created
+            if (!options.isSinkDisableTruncate() && !sinkTableJustCreated) {
                 this.truncateTable();
+            } else if (sinkTableJustCreated) {
+                LOG.debug("Skipping truncate because table was just created");
             }
 
             return null;
@@ -671,6 +685,247 @@ public abstract class SqlManager extends ConnManager {
             return rs.getBlob(columnIndex);
         } catch (SQLFeatureNotSupportedException e) {
             return null;
+        }
+    }
+
+    /**
+     * Default implementation of preSourceTasks that probes source metadata when auto-create is enabled.
+     * Concrete managers can override this and call super.preSourceTasks() if needed.
+     */
+    @Override
+    public void preSourceTasks() throws Exception {
+        if (options.isSinkAutoCreate()) {
+            probeSourceMetadata();
+        }
+    }
+
+    /**
+     * Probes source metadata by executing a lightweight query (SELECT * WHERE 1=0)
+     * and extracts column metadata and primary keys.
+     */
+    protected void probeSourceMetadata() throws SQLException {
+        LOG.info("Probing source metadata for auto-create...");
+        
+        String probeQuery;
+        if (options.getSourceTable() != null && !options.getSourceTable().isEmpty()) {
+            // Table-based source
+            probeQuery = "SELECT * FROM " + escapeTableName(options.getSourceTable()) + " WHERE 1=0";
+        } else if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
+            // Query-based source
+            probeQuery = "SELECT * FROM (" + options.getSourceQuery() + ") tmp WHERE 1=0";
+        } else {
+            throw new IllegalArgumentException("Either source-table or source-query must be specified for auto-create");
+        }
+
+        Statement stmt = null;
+        ResultSet rs = null;
+        try {
+            stmt = this.getConnection().createStatement();
+            rs = stmt.executeQuery(probeQuery);
+            
+            ResultSetMetaData rsmd = rs.getMetaData();
+            int columnCount = rsmd.getColumnCount();
+            
+            List<ColumnDescriptor> columnDescriptors = new ArrayList<>();
+            for (int i = 1; i <= columnCount; i++) {
+                String columnName = rsmd.getColumnName(i);
+                int jdbcType = rsmd.getColumnType(i);
+                int precision = rsmd.getPrecision(i);
+                int scale = rsmd.getScale(i);
+                int nullable = rsmd.isNullable(i);
+                
+                columnDescriptors.add(new ColumnDescriptor(columnName, jdbcType, precision, scale, nullable));
+            }
+            
+            options.setSourceColumnDescriptors(columnDescriptors);
+            LOG.info("Captured {} column descriptors from source", columnCount);
+            
+            // Get primary keys (only for table-based source)
+            if (options.getSourceTable() != null && !options.getSourceTable().isEmpty()) {
+                String table = getTableNameFromQualifiedTableName(options.getSourceTable());
+                String schema = getSchemaFromQualifiedTableName(options.getSourceTable());
+                
+                DatabaseMetaData metaData = this.getConnection().getMetaData();
+                ResultSet pkResults = metaData.getPrimaryKeys(null, schema, table);
+                
+                if (pkResults != null) {
+                    try {
+                        ArrayList<String> pkList = new ArrayList<>();
+                        while (pkResults.next()) {
+                            pkList.add(pkResults.getString("COLUMN_NAME"));
+                        }
+                        
+                        if (!pkList.isEmpty()) {
+                            // Sort by KEY_SEQ - re-query with ordering
+                            pkResults = metaData.getPrimaryKeys(null, schema, table);
+                            pkList.clear();
+                            while (pkResults.next()) {
+                                int keySeq = pkResults.getInt("KEY_SEQ");
+                                String colName = pkResults.getString("COLUMN_NAME");
+                                // Ensure we have the right size
+                                while (pkList.size() < keySeq) {
+                                    pkList.add(null);
+                                }
+                                pkList.set(keySeq - 1, colName);
+                            }
+                            
+                            String[] pks = pkList.toArray(new String[0]);
+                            options.setSourcePrimaryKeys(pks);
+                            LOG.info("Captured {} primary key columns from source", pks.length);
+                        } else {
+                            LOG.warn("No primary keys found on source table");
+                        }
+                    } finally {
+                        pkResults.close();
+                    }
+                }
+            } else {
+                LOG.info("Source is a custom query, no primary keys available");
+            }
+            
+        } finally {
+            if (rs != null) try { rs.close(); } catch (SQLException e) { /* ignore */ }
+            if (stmt != null) try { stmt.close(); } catch (SQLException e) { /* ignore */ }
+        }
+    }
+
+    /**
+     * Checks if the sink table exists using DatabaseMetaData.getTables()
+     * with three-case-variant retry (as-is, UPPERCASE, lowercase).
+     */
+    protected boolean sinkTableExists() throws SQLException {
+        String tableName = getSinkTableName();
+        String table = getTableNameFromQualifiedTableName(tableName);
+        String schema = getSchemaFromQualifiedTableName(tableName);
+        
+        DatabaseMetaData metaData = this.getConnection().getMetaData();
+        
+        // Try as-is
+        ResultSet rs = metaData.getTables(null, schema, table, new String[]{"TABLE"});
+        try {
+            if (rs.next()) {
+                LOG.debug("Table exists: schema={}, table={}", schema, table);
+                return true;
+            }
+        } finally {
+            rs.close();
+        }
+        
+        // Try UPPERCASE
+        String tableUpper = table != null ? table.toUpperCase() : null;
+        String schemaUpper = schema != null ? schema.toUpperCase() : null;
+        rs = metaData.getTables(null, schemaUpper, tableUpper, new String[]{"TABLE"});
+        try {
+            if (rs.next()) {
+                LOG.debug("Table exists (uppercase): schema={}, table={}", schemaUpper, tableUpper);
+                return true;
+            }
+        } finally {
+            rs.close();
+        }
+        
+        // Try lowercase
+        String tableLower = table != null ? table.toLowerCase() : null;
+        String schemaLower = schema != null ? schema.toLowerCase() : null;
+        rs = metaData.getTables(null, schemaLower, tableLower, new String[]{"TABLE"});
+        try {
+            if (rs.next()) {
+                LOG.debug("Table exists (lowercase): schema={}, table={}", schemaLower, tableLower);
+                return true;
+            }
+        } finally {
+            rs.close();
+        }
+        
+        LOG.debug("Table does not exist: {}", tableName);
+        return false;
+    }
+
+    /**
+     * Abstract method to map JDBC type codes to database-native DDL type fragments.
+     * Each manager must implement this with its database-specific type mappings.
+     */
+    protected abstract String mapJdbcTypeToNativeDDL(String columnName, int jdbcType, int precision, int scale);
+
+    /**
+     * Generates CREATE TABLE DDL from column descriptors and primary keys.
+     */
+    protected String generateCreateTableDDL(String tableName, List<ColumnDescriptor> columns, String[] primaryKeys) {
+        StringBuilder ddl = new StringBuilder();
+        ddl.append("CREATE TABLE ").append(escapeTableName(tableName)).append(" (\n");
+        
+        for (int i = 0; i < columns.size(); i++) {
+            ColumnDescriptor col = columns.get(i);
+            ddl.append("  ").append(escapeColName(col.getColumnName())).append(" ");
+            ddl.append(mapJdbcTypeToNativeDDL(col.getColumnName(), col.getJdbcType(), col.getPrecision(), col.getScale()));
+            
+            // Add NOT NULL if the column is not nullable
+            if (col.getNullable() == ResultSetMetaData.columnNoNulls) {
+                ddl.append(" NOT NULL");
+            }
+            
+            if (i < columns.size() - 1 || (primaryKeys != null && primaryKeys.length > 0)) {
+                ddl.append(",");
+            }
+            ddl.append("\n");
+        }
+        
+        // Add PRIMARY KEY constraint if present
+        if (primaryKeys != null && primaryKeys.length > 0) {
+            ddl.append("  PRIMARY KEY (");
+            for (int i = 0; i < primaryKeys.length; i++) {
+                ddl.append(escapeColName(primaryKeys[i]));
+                if (i < primaryKeys.length - 1) {
+                    ddl.append(", ");
+                }
+            }
+            ddl.append(")\n");
+        }
+        
+        ddl.append(")");
+        return ddl.toString();
+    }
+
+    /**
+     * Auto-creates the sink table if it doesn't exist, using source metadata.
+     */
+    protected void autoCreateSinkTable() throws SQLException {
+        String tableName = getSinkTableName();
+        
+        if (sinkTableExists()) {
+            LOG.info("Sink table {} already exists, skipping auto-create", tableName);
+            return;
+        }
+        
+        LOG.info("Sink table {} does not exist, creating it...", tableName);
+        
+        List<ColumnDescriptor> sourceColumns = options.getSourceColumnDescriptors();
+        String[] sourcePKs = options.getSourcePrimaryKeys();
+        
+        if (sourceColumns == null || sourceColumns.isEmpty()) {
+            throw new IllegalStateException("Source column descriptors not available. Probe may have failed.");
+        }
+        
+        // Warn if incremental mode but no PKs
+        if (options.getMode().equals(ReplicationMode.INCREMENTAL.getModeText())) {
+            if (sourcePKs == null || sourcePKs.length == 0) {
+                LOG.warn("Incremental mode requires primary keys, but none are available. " +
+                        "The table will be created without a PRIMARY KEY constraint, and replication will likely fail during merge.");
+            }
+        }
+        
+        String ddl = generateCreateTableDDL(tableName, sourceColumns, sourcePKs);
+        LOG.info("Executing DDL:\n{}", ddl);
+        
+        Statement stmt = null;
+        try {
+            stmt = this.getConnection().createStatement();
+            stmt.execute(ddl);
+            this.getConnection().commit();
+            sinkTableJustCreated = true;
+            LOG.info("Successfully created sink table {}", tableName);
+        } finally {
+            if (stmt != null) try { stmt.close(); } catch (SQLException e) { /* ignore */ }
         }
     }
 

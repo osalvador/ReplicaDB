@@ -21,6 +21,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -69,6 +70,20 @@ class DB22MySQLTest {
     public int countSinkRows() throws SQLException {
         Statement stmt = mysqlConn.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT count(*) FROM t_sink");
+        rs.next();
+        return rs.getInt(1);
+    }
+
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, tableName, new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    private int countRows(Connection conn, String tableName) throws SQLException {
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
         rs.next();
         return rs.getInt(1);
     }
@@ -215,6 +230,80 @@ class DB22MySQLTest {
                 "--sink-staging-schema", mysql.getDatabaseName(),
                 "--source-columns", COLUMN_LIST,
                 "--sink-columns", COLUMN_LIST
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testDb22MySQLAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_db22mysql";
+        Assertions.assertFalse(tableExists(mysqlConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--sink-connect", mysql.getJdbcUrl(),
+                "--sink-user", mysql.getUsername(),
+                "--sink-password", mysql.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-auto-create",
+                "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(mysqlConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(mysqlConn, sinkTable));
+
+        mysqlConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testDb22MySQLAutoCreateCompleteAtomicMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_db22mysql_atomic";
+        Assertions.assertFalse(tableExists(mysqlConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--sink-connect", mysql.getJdbcUrl(),
+                "--sink-user", mysql.getUsername(),
+                "--sink-password", mysql.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-staging-schema", mysql.getDatabaseName(),
+                "--sink-auto-create",
+                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(mysqlConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(mysqlConn, sinkTable));
+
+        mysqlConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testDb22MySQLAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink";
+
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--sink-connect", mysql.getJdbcUrl(),
+                "--sink-user", mysql.getUsername(),
+                "--sink-password", mysql.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-auto-create",
+                "--source-columns", COLUMN_LIST,
+                "--sink-columns", COLUMN_LIST,
+                "--mode", ReplicationMode.COMPLETE.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));

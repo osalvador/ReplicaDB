@@ -17,6 +17,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -65,6 +66,20 @@ class DB22SqlserverTest {
     public int countSinkRows() throws SQLException {
         Statement stmt = sqlserverConn.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT count(*) FROM t_sink");
+        rs.next();
+        return rs.getInt(1);
+    }
+
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, tableName, new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    private int countRows(Connection conn, String tableName) throws SQLException {
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
         rs.next();
         return rs.getInt(1);
     }
@@ -202,6 +217,86 @@ class DB22SqlserverTest {
                 "--sink-staging-schema", "dbo",
                 "--source-columns", COLUMN_LIST,
                 "--sink-columns", COLUMN_LIST
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testDB22SqlserverAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_db22sqlserver";
+        Assertions.assertFalse(tableExists(sqlserverConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", db2.getJdbcUrl(),
+            "--source-user", db2.getUsername(),
+            "--source-password", db2.getPassword(),
+            "--sink-connect", sqlserver.getJdbcUrl(),
+            "--sink-user", sqlserver.getUsername(),
+            "--sink-password", sqlserver.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-auto-create", "true",
+            "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(sqlserverConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(sqlserverConn, sinkTable));
+
+        // Cleanup
+        sqlserverConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testDB22SqlserverAutoCreateIncrementalMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_db22sqlserver_incr";
+        Assertions.assertFalse(tableExists(sqlserverConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", db2.getJdbcUrl(),
+            "--source-user", db2.getUsername(),
+            "--source-password", db2.getPassword(),
+            "--sink-connect", sqlserver.getJdbcUrl(),
+            "--sink-user", sqlserver.getUsername(),
+            "--sink-password", sqlserver.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-staging-schema", "dbo",
+            "--sink-auto-create", "true",
+            "--mode", ReplicationMode.INCREMENTAL.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(sqlserverConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(sqlserverConn, sinkTable));
+
+        // Test merge by running again
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countRows(sqlserverConn, sinkTable), "Row count should remain same after merge");
+
+        // Cleanup
+        sqlserverConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testDB22SqlserverAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink"; // Use existing table
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", db2.getJdbcUrl(),
+            "--source-user", db2.getUsername(),
+            "--source-password", db2.getPassword(),
+            "--sink-connect", sqlserver.getJdbcUrl(),
+            "--sink-user", sqlserver.getUsername(),
+            "--sink-password", sqlserver.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-auto-create", "true",
+            "--source-columns", COLUMN_LIST,
+            "--sink-columns", COLUMN_LIST,
+            "--mode", ReplicationMode.COMPLETE.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));

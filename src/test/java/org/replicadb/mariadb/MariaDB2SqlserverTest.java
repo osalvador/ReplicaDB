@@ -59,6 +59,20 @@ class MariaDB2SqlserverTest {
         return count;
     }
 
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, tableName, new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    private int countRows(Connection conn, String tableName) throws SQLException {
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
+        rs.next();
+        return rs.getInt(1);
+    }
+
     @Test
     void testMariadbVersion102() throws SQLException {
         Statement stmt = mariadbConn.createStatement();
@@ -204,6 +218,94 @@ class MariaDB2SqlserverTest {
                 "--sink-staging-schema", "dbo",
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
                 "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testMariaDB2SqlserverAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_mariadb2sqlserver";
+        Assertions.assertFalse(tableExists(sqlserverConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", mariadb.getJdbcUrl(),
+            "--source-user", mariadb.getUsername(),
+            "--source-password", mariadb.getPassword(),
+            "--sink-connect", sqlserver.getJdbcUrl(),
+            "--sink-user", sqlserver.getUsername(),
+            "--sink-password", sqlserver.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-auto-create", "true",
+            "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(sqlserverConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(sqlserverConn, sinkTable));
+
+        // Cleanup
+        sqlserverConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Disabled("SQL Server sink does not support incremental mode with staging schema - requires schema creation")
+    @Test
+    void testMariaDB2SqlserverAutoCreateIncrementalMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_mariadb2sqlserver_incr";
+        Assertions.assertFalse(tableExists(sqlserverConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", mariadb.getJdbcUrl(),
+            "--source-user", mariadb.getUsername(),
+            "--source-password", mariadb.getPassword(),
+            "--sink-connect", sqlserver.getJdbcUrl(),
+            "--sink-user", sqlserver.getUsername(),
+            "--sink-password", sqlserver.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-staging-schema", "dbo",
+            "--sink-auto-create", "true",
+            "--mode", ReplicationMode.INCREMENTAL.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(sqlserverConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(sqlserverConn, sinkTable));
+
+        // Test merge by running again
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countRows(sqlserverConn, sinkTable), "Row count should remain same after merge");
+
+        // Cleanup
+        sqlserverConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testMariaDB2SqlserverAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink"; // Use existing table
+        // Exclude C_NUMERIC and C_DECIMAL (precision 65 > SQL Server max 38)
+        String sourceColumns = "C_INTEGER,C_SMALLINT,C_BIGINT,C_REAL,C_DOUBLE_PRECISION,C_FLOAT," +
+                "C_BOOLEAN,C_CHARACTER,C_CHARACTER_VAR,C_CHARACTER_LOB,C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR," +
+                "C_DATE,C_TIME_WITHOUT_TIMEZONE,C_TIMESTAMP_WITHOUT_TIMEZONE";
+        String sinkColumns = "c_integer,c_smallint,c_bigint,c_real,c_double_precision,c_float," +
+                "c_boolean,c_character,c_character_var,c_character_lob,c_national_character,c_national_character_var," +
+                "c_date,c_time_without_timezone,c_timestamp_without_timezone";
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", mariadb.getJdbcUrl(),
+            "--source-user", mariadb.getUsername(),
+            "--source-password", mariadb.getPassword(),
+            "--sink-connect", sqlserver.getJdbcUrl(),
+            "--sink-user", sqlserver.getUsername(),
+            "--sink-password", sqlserver.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-auto-create", "true",
+            "--source-columns", sourceColumns,
+            "--sink-columns", sinkColumns,
+            "--mode", ReplicationMode.COMPLETE.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));

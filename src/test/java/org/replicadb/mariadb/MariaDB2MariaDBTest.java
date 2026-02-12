@@ -166,4 +166,110 @@ class MariaDB2MariaDBTest {
         assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(EXPECTED_ROWS, countSinkRows());
     }
+
+    // Helper methods for auto-create tests
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, tableName, new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    private int countRows(Connection conn, String tableName) throws SQLException {
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
+        rs.next();
+        return rs.getInt(1);
+    }
+
+    @Test
+    void testMariaDB2MariaDBAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_mariadb2mariadb";
+        
+        // Verify table doesn't exist
+        Assertions.assertFalse(tableExists(mariadbConn, sinkTable), "Sink table should not exist before test");
+        
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", mariadb.getJdbcUrl(),
+                "--source-user", mariadb.getUsername(),
+                "--source-password", mariadb.getPassword(),
+                "--sink-connect", mariadb.getJdbcUrl(),
+                "--sink-user", mariadb.getUsername(),
+                "--sink-password", mariadb.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-auto-create", "true",
+                "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        
+        // Verify table was created and populated
+        assertTrue(tableExists(mariadbConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(mariadbConn, sinkTable));
+        
+        // Cleanup
+        mariadbConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testMariaDB2MariaDBAutoCreateIncrementalMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_incremental_mariadb2mariadb";
+        
+        // Verify table doesn't exist
+        Assertions.assertFalse(tableExists(mariadbConn, sinkTable), "Sink table should not exist before test");
+        
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", mariadb.getJdbcUrl(),
+                "--source-user", mariadb.getUsername(),
+                "--source-password", mariadb.getPassword(),
+                "--sink-connect", mariadb.getJdbcUrl(),
+                "--sink-user", mariadb.getUsername(),
+                "--sink-password", mariadb.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-staging-schema", mariadb.getDatabaseName(),
+                "--sink-auto-create", "true",
+                "--mode", ReplicationMode.INCREMENTAL.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        
+        // Verify table was created with primary key
+        assertTrue(tableExists(mariadbConn, sinkTable), "Sink table should exist after auto-create");
+        DatabaseMetaData meta = mariadbConn.getMetaData();
+        ResultSet pks = meta.getPrimaryKeys(null, null, sinkTable);
+        assertTrue(pks.next(), "Table should have a primary key");
+        String pkColumn = pks.getString("COLUMN_NAME");
+        assertEquals(EXPECTED_ROWS, countRows(mariadbConn, sinkTable));
+        
+        // Run again to test merge functionality
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countRows(mariadbConn, sinkTable), "Row count should remain the same after merge");
+        
+        // Cleanup
+        mariadbConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testMariaDB2MariaDBAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+        // Use existing t_sink table
+        assertTrue(tableExists(mariadbConn, "t_sink"), "t_sink table should exist");
+        
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", mariadb.getJdbcUrl(),
+                "--source-user", mariadb.getUsername(),
+                "--source-password", mariadb.getPassword(),
+                "--sink-connect", mariadb.getJdbcUrl(),
+                "--sink-user", mariadb.getUsername(),
+                "--sink-password", mariadb.getPassword(),
+                "--sink-table", "t_sink",
+                "--sink-auto-create", "true",
+                "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+    }
 }

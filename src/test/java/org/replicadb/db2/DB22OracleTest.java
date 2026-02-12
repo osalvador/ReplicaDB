@@ -19,6 +19,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -65,6 +66,20 @@ class DB22OracleTest {
     public int countSinkRows() throws SQLException {
         Statement stmt = oracleConn.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT count(*) FROM t_sink");
+        rs.next();
+        return rs.getInt(1);
+    }
+
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, tableName.toUpperCase(), new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    private int countRows(Connection conn, String tableName) throws SQLException {
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
         rs.next();
         return rs.getInt(1);
     }
@@ -211,6 +226,81 @@ class DB22OracleTest {
                 "--sink-staging-schema", oracle.getUsername(),
                 "--source-columns", COLUMN_LIST,
                 "--sink-columns", COLUMN_LIST
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testDb22OracleAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "T_SINK_AUTOCREATE_DB22ORACLE";
+        Assertions.assertFalse(tableExists(oracleConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--sink-connect", oracle.getJdbcUrl(),
+                "--sink-user", oracle.getUsername(),
+                "--sink-password", oracle.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-auto-create",
+                "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(oracleConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(oracleConn, sinkTable));
+
+        // Cleanup
+        oracleConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testDb22OracleAutoCreateCompleteAtomicMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "T_SINK_AUTOCREATE_DB22ORACLE_ATOMIC";
+        Assertions.assertFalse(tableExists(oracleConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--sink-connect", oracle.getJdbcUrl(),
+                "--sink-user", oracle.getUsername(),
+                "--sink-password", oracle.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-auto-create",
+                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(oracleConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(oracleConn, sinkTable));
+
+        // Cleanup
+        oracleConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testDb22OracleAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+        String sinkTable = "T_SINK"; // Use existing table
+
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--sink-connect", oracle.getJdbcUrl(),
+                "--sink-user", oracle.getUsername(),
+                "--sink-password", oracle.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-auto-create",
+                "--source-columns", COLUMN_LIST,
+                "--sink-columns", COLUMN_LIST,
+                "--mode", ReplicationMode.COMPLETE.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));

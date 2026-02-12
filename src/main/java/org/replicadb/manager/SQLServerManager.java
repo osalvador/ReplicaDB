@@ -645,6 +645,89 @@ public class SQLServerManager extends SqlManager {
 
 
    @Override
+   protected String mapJdbcTypeToNativeDDL(String columnName, int jdbcType, int precision, int scale) {
+      switch (jdbcType) {
+         // Character types
+         case java.sql.Types.CHAR:
+            return precision > 0 && precision <= 8000 ? "CHAR(" + precision + ")" : "CHAR(255)";
+         case java.sql.Types.VARCHAR:
+         case java.sql.Types.LONGVARCHAR:
+            if (precision <= 0 || precision > 8000) {
+               return "VARCHAR(MAX)";
+            }
+            return "VARCHAR(" + precision + ")";
+         case java.sql.Types.NCHAR:
+            return precision > 0 && precision <= 4000 ? "NCHAR(" + precision + ")" : "NCHAR(255)";
+         case java.sql.Types.NVARCHAR:
+         case java.sql.Types.LONGNVARCHAR:
+            if (precision <= 0 || precision > 4000) {
+               return "NVARCHAR(MAX)";
+            }
+            return "NVARCHAR(" + precision + ")";
+         
+         // Numeric types
+         case java.sql.Types.TINYINT:
+            return "TINYINT";
+         case java.sql.Types.SMALLINT:
+            return "SMALLINT";
+         case java.sql.Types.INTEGER:
+            return "INT";
+         case java.sql.Types.BIGINT:
+            return "BIGINT";
+         case java.sql.Types.DECIMAL:
+         case java.sql.Types.NUMERIC:
+            if (precision > 0 && scale >= 0) {
+               return "DECIMAL(" + Math.min(precision, 38) + "," + Math.min(scale, 38) + ")";
+            }
+            return "DECIMAL(18,0)";
+         case java.sql.Types.REAL:
+            return "REAL";
+         case java.sql.Types.FLOAT:
+         case java.sql.Types.DOUBLE:
+            return "FLOAT";
+         
+         // Date/Time types
+         case java.sql.Types.DATE:
+            return "DATE";
+         case java.sql.Types.TIME:
+         case java.sql.Types.TIME_WITH_TIMEZONE:
+            return "TIME";
+         case java.sql.Types.TIMESTAMP:
+         case java.sql.Types.TIMESTAMP_WITH_TIMEZONE:
+            return "DATETIME2";
+         
+         // Binary types
+         case java.sql.Types.BINARY:
+            return precision > 0 && precision <= 8000 ? "BINARY(" + precision + ")" : "BINARY(255)";
+         case java.sql.Types.VARBINARY:
+         case java.sql.Types.LONGVARBINARY:
+            if (precision <= 0 || precision > 8000) {
+               return "VARBINARY(MAX)";
+            }
+            return "VARBINARY(" + precision + ")";
+         case java.sql.Types.BLOB:
+            return "VARBINARY(MAX)";
+         
+         // Other types
+         case java.sql.Types.BOOLEAN:
+         case java.sql.Types.BIT:
+            return "BIT";
+         case java.sql.Types.CLOB:
+            return "VARCHAR(MAX)";
+         case java.sql.Types.NCLOB:
+            return "NVARCHAR(MAX)";
+         case java.sql.Types.ROWID:
+            return "UNIQUEIDENTIFIER";
+         case java.sql.Types.SQLXML:
+            return "XML";
+         
+         default:
+            LOG.warn("Unmapped JDBC type {} for column '{}', defaulting to NVARCHAR(MAX)", jdbcType, columnName);
+            return "NVARCHAR(MAX)";
+      }
+   }
+
+   @Override
    public void preSourceTasks () {/*Not implemented*/}
 
    @Override

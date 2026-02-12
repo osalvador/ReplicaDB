@@ -374,7 +374,9 @@ public class PostgresqlManager extends SqlManager {
     }
 
     @Override
-    public void preSourceTasks() throws SQLException {
+    public void preSourceTasks() throws Exception {
+        // Call parent to probe source metadata if auto-create is enabled
+        super.preSourceTasks();
 
         if (this.options.getJobs() != 1) {
 
@@ -918,6 +920,77 @@ public class PostgresqlManager extends SqlManager {
         
         copyIn.endCopy();
         return totalRows;
+    }
+
+    @Override
+    protected String mapJdbcTypeToNativeDDL(String columnName, int jdbcType, int precision, int scale) {
+        switch (jdbcType) {
+            case Types.INTEGER:
+            case Types.TINYINT:
+            case Types.SMALLINT:
+                return "INTEGER";
+            case Types.BIGINT:
+                return "BIGINT";
+            case Types.FLOAT:
+            case Types.DOUBLE:
+                return "DOUBLE PRECISION";
+            case Types.REAL:
+                return "REAL";
+            case Types.NUMERIC:
+            case Types.DECIMAL:
+                // Special case: Oracle REAL/DOUBLE PRECISION/FLOAT come through as NUMERIC with scale=-127
+                // Map based on precision: REAL (p=63), DOUBLE PRECISION (p=126), or FLOAT (other)
+                if (scale == -127) {
+                    if (precision == 63) {
+                        return "REAL";
+                    } else if (precision == 126) {
+                        return "DOUBLE PRECISION";
+                    } else {
+                        return "DOUBLE PRECISION";  // Default to DOUBLE PRECISION for other Oracle FLOATs
+                    }
+                }
+                if (precision > 0) {
+                    return "NUMERIC(" + precision + ", " + scale + ")";
+                } else {
+                    return "NUMERIC";
+                }
+            case Types.VARCHAR:
+            case Types.NVARCHAR:
+            case Types.LONGVARCHAR:
+                if (precision > 0 && precision <= 10485760) {
+                    return "VARCHAR(" + precision + ")";
+                } else {
+                    return "TEXT";  // Fallback when precision is 0, undefined, or exceeds PostgreSQL limit
+                }
+            case Types.CHAR:
+            case Types.NCHAR:
+                if (precision > 0 && precision <= 10485760) {
+                    return "CHAR(" + precision + ")";
+                } else {
+                    return "TEXT";  // Fallback when precision exceeds PostgreSQL limit
+                }
+            case Types.BOOLEAN:
+            case Types.BIT:
+                return "BOOLEAN";
+            case Types.DATE:
+                return "DATE";
+            case Types.TIME:
+            case Types.TIME_WITH_TIMEZONE:
+                return "TIME";
+            case Types.TIMESTAMP:
+            case Types.TIMESTAMP_WITH_TIMEZONE:
+                return "TIMESTAMP";
+            case Types.BINARY:
+            case Types.VARBINARY:
+            case Types.LONGVARBINARY:
+            case Types.BLOB:
+                return "BYTEA";
+            case Types.CLOB:
+                return "TEXT";
+            default:
+                LOG.warn("Unmapped JDBC type {} for column {}, using TEXT as fallback", jdbcType, columnName);
+                return "TEXT";
+        }
     }
 
 

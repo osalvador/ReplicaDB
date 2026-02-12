@@ -4,8 +4,10 @@ import org.apache.commons.cli.*;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.replicadb.manager.util.ColumnDescriptor;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Properties;
 
 public class ToolOptions {
@@ -36,6 +38,7 @@ public class ToolOptions {
     private Boolean sinkDisableEscape = false;
     private Boolean sinkDisableIndex = false;
     private Boolean sinkDisableTruncate = false;
+    private Boolean sinkAutoCreate = false;
     private Boolean sinkAnalyze = false;
 
 
@@ -53,6 +56,9 @@ public class ToolOptions {
     private Properties sourceConnectionParams;
     private Properties sinkConnectionParams;
     private String sentryDsn;
+
+    private List<ColumnDescriptor> sourceColumnDescriptors;
+    private String[] sourcePrimaryKeys;
 
     private Options options;
 
@@ -207,6 +213,13 @@ public class ToolOptions {
                         .build()
         );
 
+        options.addOption(
+                Option.builder()
+                        .longOpt("sink-auto-create")
+                        .desc("Automatically create the sink table if it does not exist.")
+                        .build()
+        );
+
 
         options.addOption(
                 Option.builder()
@@ -340,6 +353,7 @@ public class ToolOptions {
             if (line.hasOption("sink-disable-index")) setSinkDisableIndexNotNull(true);
             if (line.hasOption("sink-disable-escape")) setSinkDisableEscapeNotNull(true);
             if (line.hasOption("sink-disable-truncate")) setSinkDisableTruncateNotNull(true);
+            if (line.hasOption("sink-auto-create")) setSinkAutoCreateNotNull(true);
             if (line.hasOption("sink-analyze")) setSinkAnalyzeNotNull(true);
             if (line.hasOption("quoted-identifiers")) setQuotedIdentifiers(true);
 
@@ -458,6 +472,7 @@ public class ToolOptions {
         setSinkDisableIndex(Boolean.parseBoolean(prop.getProperty("sink.disable.index")));
         setSinkDisableEscape(Boolean.parseBoolean(prop.getProperty("sink.disable.escape")));
         setSinkDisableTruncate(Boolean.parseBoolean(prop.getProperty("sink.disable.truncate")));
+        setSinkAutoCreate(Boolean.parseBoolean(prop.getProperty("sink.auto.create")));
         setSinkUser(prop.getProperty("sink.user"));
         setSinkPassword(prop.getProperty("sink.password"));
         setSinkTable(prop.getProperty("sink.table"));
@@ -761,6 +776,19 @@ public class ToolOptions {
             this.sinkDisableTruncate = sinkDisableTruncate;
     }
 
+    public Boolean isSinkAutoCreate() {
+        return sinkAutoCreate;
+    }
+
+    public void setSinkAutoCreate(Boolean sinkAutoCreate) {
+        this.sinkAutoCreate = sinkAutoCreate;
+    }
+
+    private void setSinkAutoCreateNotNull(Boolean sinkAutoCreate) {
+        if (sinkAutoCreate != null)
+            this.sinkAutoCreate = sinkAutoCreate;
+    }
+
 
     public Boolean getSinkAnalyze() {
         return sinkAnalyze;
@@ -875,6 +903,7 @@ public class ToolOptions {
                 ",\n\tsinkDisableEscape=" + sinkDisableEscape +
                 ",\n\tsinkDisableIndex=" + sinkDisableIndex +
                 ",\n\tsinkDisableTruncate=" + sinkDisableTruncate +
+                ",\n\tsinkAutoCreate=" + sinkAutoCreate +
                 ",\n\tsinkAnalyze=" + sinkAnalyze +
                 ",\n\tjobs=" + jobs +
                 ",\n\tBandwidthThrottling=" + bandwidthThrottling +
@@ -955,6 +984,22 @@ public class ToolOptions {
 
     public void setSentryDsn(String sentryDsn) {
         this.sentryDsn = sentryDsn;
+    }
+
+    public List<ColumnDescriptor> getSourceColumnDescriptors() {
+        return sourceColumnDescriptors;
+    }
+
+    public void setSourceColumnDescriptors(List<ColumnDescriptor> sourceColumnDescriptors) {
+        this.sourceColumnDescriptors = sourceColumnDescriptors;
+    }
+
+    public String[] getSourcePrimaryKeys() {
+        return sourcePrimaryKeys;
+    }
+
+    public void setSourcePrimaryKeys(String[] sourcePrimaryKeys) {
+        this.sourcePrimaryKeys = sourcePrimaryKeys;
     }
 
 }

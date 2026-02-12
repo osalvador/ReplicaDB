@@ -300,4 +300,128 @@ class MySQL2PostgresTest {
         assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(EXPECTED_ROWS, countSinkRows());
     }
+
+    // Helper methods for auto-create tests
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, tableName.toUpperCase(), new String[]{"TABLE"})) {
+            if (rs.next()) return true;
+        }
+        try (ResultSet rs = meta.getTables(null, null, tableName.toLowerCase(), new String[]{"TABLE"})) {
+            if (rs.next()) return true;
+        }
+        try (ResultSet rs = meta.getTables(null, null, tableName, new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    private int countRows(Connection conn, String tableName) throws SQLException {
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
+        rs.next();
+        return rs.getInt(1);
+    }
+
+    @Test
+    void testMySQL2PostgresAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_mysql2pg";
+        
+        // Verify table doesn't exist
+        Assertions.assertFalse(tableExists(postgresConn, sinkTable), "Sink table should not exist before test");
+        
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", mysql.getJdbcUrl(),
+                "--source-user", mysql.getUsername(),
+                "--source-password", mysql.getPassword(),
+                "--source-columns", SOURCE_COLUMNS,
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-columns", SINK_COLUMNS,
+                "--sink-auto-create", "true",
+                "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        
+        // Verify table was created and populated
+        assertTrue(tableExists(postgresConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(postgresConn, sinkTable));
+        LOG.info("Successfully replicated {} rows to auto-created PostgreSQL table", EXPECTED_ROWS);
+        
+        // Cleanup
+        postgresConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testMySQL2PostgresAutoCreateIncrementalMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_incremental_mysql2pg";
+        
+        // Verify table doesn't exist
+        Assertions.assertFalse(tableExists(postgresConn, sinkTable), "Sink table should not exist before test");
+        
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", mysql.getJdbcUrl(),
+                "--source-user", mysql.getUsername(),
+                "--source-password", mysql.getPassword(),
+                "--source-columns", SOURCE_COLUMNS,
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-columns", SINK_COLUMNS,
+                "--sink-auto-create", "true",
+                "--mode", ReplicationMode.INCREMENTAL.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        
+        // Verify table was created with primary key
+        assertTrue(tableExists(postgresConn, sinkTable), "Sink table should exist after auto-create");
+        DatabaseMetaData meta = postgresConn.getMetaData();
+        ResultSet pks = meta.getPrimaryKeys(null, null, sinkTable);
+        if (!pks.next()) {
+            pks = meta.getPrimaryKeys(null, null, sinkTable.toLowerCase());
+        }
+        assertTrue(pks.next(), "Table should have a primary key");
+        String pkColumn = pks.getString("COLUMN_NAME");
+        LOG.info("Primary key columns: {}", pkColumn);
+        assertEquals(EXPECTED_ROWS, countRows(postgresConn, sinkTable));
+        
+        // Run again to test merge functionality
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countRows(postgresConn, sinkTable), "Row count should remain the same after merge");
+        LOG.info("Incremental mode merge successful - row count unchanged: {}", EXPECTED_ROWS);
+        
+        // Cleanup
+        postgresConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testMySQL2PostgresAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+        // Use existing T_SINK table
+        assertTrue(tableExists(postgresConn, "T_SINK"), "T_SINK table should exist");
+        
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", mysql.getJdbcUrl(),
+                "--source-user", mysql.getUsername(),
+                "--source-password", mysql.getPassword(),
+                "--source-columns", SOURCE_COLUMNS,
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--sink-table", "T_SINK",
+                "--sink-columns", SINK_COLUMNS,
+                "--sink-auto-create", "true",
+                "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+        LOG.info("Auto-create correctly skipped for existing table, {} rows replicated", EXPECTED_ROWS);
+    }
 }

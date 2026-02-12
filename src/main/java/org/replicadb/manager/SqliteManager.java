@@ -371,7 +371,69 @@ public class SqliteManager extends SqlManager {
 	}
 
 	@Override
+	protected String mapJdbcTypeToNativeDDL(String columnName, int jdbcType, int precision, int scale) {
+		// SQLite has a very simple type system with flexible type affinity
+		switch (jdbcType) {
+			// All text types map to TEXT
+			case Types.CHAR:
+			case Types.VARCHAR:
+			case Types.LONGVARCHAR:
+			case Types.NCHAR:
+			case Types.NVARCHAR:
+			case Types.LONGNVARCHAR:
+			case Types.CLOB:
+			case Types.NCLOB:
+			case Types.SQLXML:
+			case Types.ROWID:
+				return "TEXT";
+			
+			// All integer types map to INTEGER
+			case Types.TINYINT:
+			case Types.SMALLINT:
+			case Types.INTEGER:
+			case Types.BIGINT:
+			case Types.BOOLEAN:
+			case Types.BIT:
+				return "INTEGER";
+			
+			// Decimal/numeric types map to REAL
+			case Types.DECIMAL:
+			case Types.NUMERIC:
+			case Types.REAL:
+			case Types.FLOAT:
+			case Types.DOUBLE:
+				return "REAL";
+			
+			// Date/time types stored as TEXT (ISO 8601 strings)
+			case Types.DATE:
+			case Types.TIME:
+			case Types.TIME_WITH_TIMEZONE:
+			case Types.TIMESTAMP:
+			case Types.TIMESTAMP_WITH_TIMEZONE:
+				return "TEXT";
+			
+			// Binary types map to BLOB
+			case Types.BINARY:
+			case Types.VARBINARY:
+			case Types.LONGVARBINARY:
+			case Types.BLOB:
+				return "BLOB";
+			
+			default:
+				LOG.warn("Unmapped JDBC type {} for column '{}', defaulting to TEXT", jdbcType, columnName);
+				return "TEXT";
+		}
+	}
+
+	@Override
 	public void preSourceTasks() throws SQLException {
+		// Call parent to probe source metadata if auto-create is enabled
+		try {
+			super.preSourceTasks();
+		} catch (Exception e) {
+			throw new SQLException("Failed to probe source metadata", e);
+		}
+		
 		// Because chunkSize is static it's required to initialize it
 		// when the unit tests are running
 		chunkSize = 0L;

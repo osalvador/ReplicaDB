@@ -58,6 +58,20 @@ class Sqlserver2SqliteTest {
         return rs.getInt(1);
     }
 
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, tableName, new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    private int countRows(Connection conn, String tableName) throws SQLException {
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
+        rs.next();
+        return rs.getInt(1);
+    }
+
     @Test
     void testSqlserverVersion2019() throws SQLException {
         Statement stmt = sqlserverConn.createStatement();
@@ -110,6 +124,47 @@ class Sqlserver2SqliteTest {
                 "--source-password", sqlserver.getPassword(),
                 "--sink-connect", sqlite.getJdbcUrl(),
                 "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testSqlserver2SqliteAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_sqlserver2sqlite";
+        Assertions.assertFalse(tableExists(sqliteConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", sqlserver.getJdbcUrl(),
+            "--source-user", sqlserver.getUsername(),
+            "--source-password", sqlserver.getPassword(),
+            "--sink-connect", sqlite.getJdbcUrl(),
+            "--sink-table", sinkTable,
+            "--sink-auto-create", "true"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(sqliteConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(sqliteConn, sinkTable));
+
+        // Cleanup
+        sqliteConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testSqlserver2SqliteAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink"; // Use existing table
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", sqlserver.getJdbcUrl(),
+            "--source-user", sqlserver.getUsername(),
+            "--source-password", sqlserver.getPassword(),
+            "--sink-connect", sqlite.getJdbcUrl(),
+            "--sink-table", sinkTable,
+            "--sink-auto-create", "true"
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));

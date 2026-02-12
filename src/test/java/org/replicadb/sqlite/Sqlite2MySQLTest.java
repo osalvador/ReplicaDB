@@ -57,6 +57,20 @@ class Sqlite2MySQLTest {
         return rs.getInt(1);
     }
 
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, tableName, new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    private int countRows(Connection conn, String tableName) throws SQLException {
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
+        rs.next();
+        return rs.getInt(1);
+    }
+
 
 
     @Test
@@ -150,6 +164,81 @@ class Sqlite2MySQLTest {
                 "--sink-staging-schema", mysql.getDatabaseName(),
                 "--mode", ReplicationMode.INCREMENTAL.getModeText(),
                 "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+    }
+
+    @Disabled("SQLite JDBC driver reports TIME columns with incorrect JDBC type, causing type mapping issues. Auto-create from SQLite sources requires manual column specification.")
+    @Test
+    void testSqlite2MySQLAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_sqlite2mysql";
+        Assertions.assertFalse(tableExists(mysqlConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", sqlite.getJdbcUrl(),
+            "--sink-connect", mysql.getJdbcUrl(),
+            "--sink-user", mysql.getUsername(),
+            "--sink-password", mysql.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-auto-create", "true",
+            "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        Assertions.assertTrue(tableExists(mysqlConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(TOTAL_SINK_ROWS, countRows(mysqlConn, sinkTable));
+
+        // Cleanup
+        mysqlConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Disabled("SQLite JDBC driver reports TIME columns with incorrect JDBC type, causing type mapping issues. Auto-create from SQLite sources requires manual column specification.")
+    @Test
+    void testSqlite2MySQLAutoCreateIncrementalMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_sqlite2mysql_incr";
+        Assertions.assertFalse(tableExists(mysqlConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", sqlite.getJdbcUrl(),
+            "--sink-connect", mysql.getJdbcUrl(),
+            "--sink-user", mysql.getUsername(),
+            "--sink-password", mysql.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-staging-schema", mysql.getDatabaseName(),
+            "--sink-auto-create", "true",
+            "--mode", ReplicationMode.INCREMENTAL.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        Assertions.assertTrue(tableExists(mysqlConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(TOTAL_SINK_ROWS, countRows(mysqlConn, sinkTable));
+
+        // Test merge by running again
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(TOTAL_SINK_ROWS, countRows(mysqlConn, sinkTable), "Row count should remain same after merge");
+
+        // Cleanup
+        mysqlConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Disabled("SQLite JDBC driver reports TIME columns with incorrect JDBC type, causing type mapping issues. Auto-create from SQLite sources requires manual column specification.")
+    @Test
+    void testSqlite2MySQLAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink"; // Use existing table
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", sqlite.getJdbcUrl(),
+            "--sink-connect", mysql.getJdbcUrl(),
+            "--sink-user", mysql.getUsername(),
+            "--sink-password", mysql.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-auto-create", "true",
+            "--mode", ReplicationMode.COMPLETE.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));

@@ -336,6 +336,13 @@ public class MySQLManager extends SqlManager {
 
    @Override
    public void preSourceTasks () throws SQLException {
+      // Call parent to probe source metadata if auto-create is enabled
+      try {
+          super.preSourceTasks();
+      } catch (Exception e) {
+          throw new SQLException("Failed to probe source metadata", e);
+      }
+      
       // Because chunkSize is static it's required to initialize it
       // when the unit tests are running
       chunkSize = 0L;
@@ -353,11 +360,16 @@ public class MySQLManager extends SqlManager {
             sql = sql + "( " + this.options.getSourceQuery() + " ) as REPLICADB_TABLE";
 
          } else {
-
+            // Source table
             sql = sql + this.options.getSourceTable();
-            // Source Where
-            if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
-               sql = sql + " WHERE " + options.getSourceWhere();
+         }
+         // Source Where
+         if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
+            if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
+               // SourceWhere should not be used when query is set
+               LOG.warn("source-where is ignored when source-query is specified.");
+            } else {
+               sql = sql + " WHERE " + this.options.getSourceWhere();
             }
          }
 
@@ -406,5 +418,80 @@ public class MySQLManager extends SqlManager {
       return returnData;
    }
 
+   @Override
+   protected String mapJdbcTypeToNativeDDL(String columnName, int jdbcType, int precision, int scale) {
+       switch (jdbcType) {
+           case Types.INTEGER:
+               return "INT";
+           case Types.TINYINT:
+               return "TINYINT";
+           case Types.SMALLINT:
+               return "SMALLINT";
+           case Types.BIGINT:
+               return "BIGINT";
+           case Types.FLOAT:
+           case Types.REAL:
+               return "FLOAT";
+           case Types.DOUBLE:
+               return "DOUBLE";
+            case Types.NUMERIC:
+            case Types.DECIMAL:
+                // Special case: Oracle REAL/DOUBLE PRECISION/FLOAT come through as NUMERIC with scale=-127
+                // Map based on precision: FLOAT (p=63), DOUBLE (p=126), or DOUBLE (other)
+                if (scale == -127) {
+                    if (precision == 63) {
+                        return "FLOAT";
+                    } else {
+                        return "DOUBLE";  // For precision=126 or other Oracle FLOATs
+                    }
+                }
+                if (precision > 0) {
+                    return "DECIMAL(" + precision + ", " + scale + ")";
+                } else {
+                    return "DECIMAL";
+                }
+           case Types.VARCHAR:
+           case Types.NVARCHAR:
+           case Types.LONGVARCHAR:
+               if (precision > 16383) {
+                   return "LONGTEXT";
+               } else if (precision > 0) {
+                   return "VARCHAR(" + precision + ")";
+               } else {
+                   return "LONGTEXT";
+               }
+           case Types.CHAR:
+           case Types.NCHAR:
+               return "CHAR(" + precision + ")";
+           case Types.BOOLEAN:
+           case Types.BIT:
+               return "BOOLEAN";
+           case Types.DATE:
+               return "DATE";
+           case Types.TIME:
+           case Types.TIME_WITH_TIMEZONE:
+               return "TIME";
+           case Types.TIMESTAMP:
+           case Types.TIMESTAMP_WITH_TIMEZONE:
+               return "DATETIME";
+           case Types.BINARY:
+           case Types.VARBINARY:
+           case Types.LONGVARBINARY:
+               if (precision > 65535) {
+                   return "LONGBLOB";
+               } else if (precision > 0) {
+                   return "VARBINARY(" + precision + ")";
+               } else {
+                   return "LONGBLOB";
+               }
+           case Types.BLOB:
+               return "LONGBLOB";
+           case Types.CLOB:
+               return "LONGTEXT";
+           default:
+               LOG.warn("Unmapped JDBC type {} for column {}, using LONGTEXT as fallback", jdbcType, columnName);
+               return "LONGTEXT";
+       }
+   }
 
 }

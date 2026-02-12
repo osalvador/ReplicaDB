@@ -60,6 +60,20 @@ class Sqlserver2MySQLTest {
         return rs.getInt(1);
     }
 
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, tableName, new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    private int countRows(Connection conn, String tableName) throws SQLException {
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
+        rs.next();
+        return rs.getInt(1);
+    }
+
     @Test
     void testSqlserverVersion2019() throws SQLException {
         Statement stmt = sqlserverConn.createStatement();
@@ -152,6 +166,84 @@ class Sqlserver2MySQLTest {
                 "--sink-user", mysql.getUsername(),
                 "--sink-password", mysql.getPassword(),
                 "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testSqlserver2MySQLAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_sqlserver2mysql";
+        Assertions.assertFalse(tableExists(mysqlConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", sqlserver.getJdbcUrl(),
+            "--source-user", sqlserver.getUsername(),
+            "--source-password", sqlserver.getPassword(),
+            "--sink-connect", mysql.getJdbcUrl(),
+            "--sink-user", mysql.getUsername(),
+            "--sink-password", mysql.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-auto-create", "true",
+            "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(mysqlConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(mysqlConn, sinkTable));
+
+        // Cleanup
+        mysqlConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testSqlserver2MySQLAutoCreateIncrementalMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_sqlserver2mysql_incr";
+        Assertions.assertFalse(tableExists(mysqlConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", sqlserver.getJdbcUrl(),
+            "--source-user", sqlserver.getUsername(),
+            "--source-password", sqlserver.getPassword(),
+            "--sink-connect", mysql.getJdbcUrl(),
+            "--sink-user", mysql.getUsername(),
+            "--sink-password", mysql.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-staging-schema", "test",
+            "--sink-auto-create", "true",
+            "--mode", ReplicationMode.INCREMENTAL.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(mysqlConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(mysqlConn, sinkTable));
+
+        // Test merge by running again
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countRows(mysqlConn, sinkTable), "Row count should remain same after merge");
+
+        // Cleanup
+        mysqlConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testSqlserver2MySQLAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink"; // Use existing table
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", sqlserver.getJdbcUrl(),
+            "--source-user", sqlserver.getUsername(),
+            "--source-password", sqlserver.getPassword(),
+            "--sink-connect", mysql.getJdbcUrl(),
+            "--sink-user", mysql.getUsername(),
+            "--sink-password", mysql.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-auto-create", "true",
+            "--mode", ReplicationMode.COMPLETE.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));

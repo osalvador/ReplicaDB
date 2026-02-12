@@ -59,6 +59,20 @@ class Sqlserver2OracleTest {
         return rs.getInt(1);
     }
 
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, tableName.toUpperCase(), new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    private int countRows(Connection conn, String tableName) throws SQLException {
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
+        rs.next();
+        return rs.getInt(1);
+    }
+
     @Test
     void testSqlserverVersion2019() throws SQLException {
         Statement stmt = sqlserverConn.createStatement();
@@ -151,6 +165,84 @@ class Sqlserver2OracleTest {
                 "--sink-user", oracle.getUsername(),
                 "--sink-password", oracle.getPassword(),
                 "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testSqlserver2OracleAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_sqlserver2oracle";
+        Assertions.assertFalse(tableExists(oracleConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", sqlserver.getJdbcUrl(),
+            "--source-user", sqlserver.getUsername(),
+            "--source-password", sqlserver.getPassword(),
+            "--sink-connect", oracle.getJdbcUrl(),
+            "--sink-user", oracle.getUsername(),
+            "--sink-password", oracle.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-auto-create", "true",
+            "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(oracleConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(oracleConn, sinkTable));
+
+        // Cleanup
+        oracleConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testSqlserver2OracleAutoCreateIncrementalMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_sqlserver2oracle_incr";
+        Assertions.assertFalse(tableExists(oracleConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", sqlserver.getJdbcUrl(),
+            "--source-user", sqlserver.getUsername(),
+            "--source-password", sqlserver.getPassword(),
+            "--sink-connect", oracle.getJdbcUrl(),
+            "--sink-user", oracle.getUsername(),
+            "--sink-password", oracle.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-staging-schema", oracle.getUsername(),
+            "--sink-auto-create", "true",
+            "--mode", ReplicationMode.INCREMENTAL.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(oracleConn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(EXPECTED_ROWS, countRows(oracleConn, sinkTable));
+
+        // Test merge by running again
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countRows(oracleConn, sinkTable), "Row count should remain same after merge");
+
+        // Cleanup
+        oracleConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testSqlserver2OracleAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink"; // Use existing table
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", sqlserver.getJdbcUrl(),
+            "--source-user", sqlserver.getUsername(),
+            "--source-password", sqlserver.getPassword(),
+            "--sink-connect", oracle.getJdbcUrl(),
+            "--sink-user", oracle.getUsername(),
+            "--sink-password", oracle.getPassword(),
+            "--sink-table", sinkTable,
+            "--sink-auto-create", "true",
+            "--mode", ReplicationMode.COMPLETE.getModeText()
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));

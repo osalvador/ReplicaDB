@@ -69,6 +69,20 @@ class Postgres2DB2Test {
         return count;
     }
 
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, tableName.toUpperCase(), new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    private int countRows(Connection conn, String tableName) throws SQLException {
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
+        rs.next();
+        return rs.getInt(1);
+    }
+
 
     @Test
     void testDb2Connection () throws SQLException {
@@ -211,6 +225,81 @@ class Postgres2DB2Test {
 
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testPostgres2Db2AutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "T_SINK_AUTOCREATE_POSTGRES2DB2";
+        Assertions.assertFalse(tableExists(db2Conn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", db2.getJdbcUrl(),
+                "--sink-user", db2.getUsername(),
+                "--sink-password", db2.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-auto-create",
+                "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(db2Conn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(TOTAL_SINK_ROWS, countRows(db2Conn, sinkTable));
+
+        // Cleanup
+        db2Conn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testPostgres2Db2AutoCreateCompleteAtomicMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "T_SINK_AUTOCREATE_POSTGRES2DB2_ATOMIC";
+        Assertions.assertFalse(tableExists(db2Conn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", db2.getJdbcUrl(),
+                "--sink-user", db2.getUsername(),
+                "--sink-password", db2.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-auto-create",
+                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertTrue(tableExists(db2Conn, sinkTable), "Sink table should exist after auto-create");
+        assertEquals(TOTAL_SINK_ROWS, countRows(db2Conn, sinkTable));
+
+        // Cleanup
+        db2Conn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
+
+    @Test
+    void testPostgres2Db2AutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+        String sinkTable = "T_SINK"; // Use existing table
+
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", db2.getJdbcUrl(),
+                "--sink-user", db2.getUsername(),
+                "--sink-password", db2.getPassword(),
+                "--sink-table", sinkTable,
+                "--sink-auto-create",
+                "--source-columns", COLUMN_LIST,
+                "--sink-columns", COLUMN_LIST,
+                "--mode", ReplicationMode.COMPLETE.getModeText()
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(TOTAL_SINK_ROWS, countSinkRows());
     }
 

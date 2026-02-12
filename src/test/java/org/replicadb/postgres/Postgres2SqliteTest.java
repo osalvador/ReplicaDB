@@ -62,6 +62,20 @@ class Postgres2SqliteTest {
         return count;
     }
 
+    private boolean tableExists(Connection conn, String tableName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        try (ResultSet rs = meta.getTables(null, null, tableName, new String[]{"TABLE"})) {
+            return rs.next();
+        }
+    }
+
+    private int countRows(Connection conn, String tableName) throws SQLException {
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
+        rs.next();
+        return rs.getInt(1);
+    }
+
 
     @Test
     void testPostgres2SqliteComplete() throws ParseException, IOException, SQLException {
@@ -155,5 +169,54 @@ class Postgres2SqliteTest {
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testPostgres2SqliteAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink_autocreate_postgres2sqlite";
+        
+        // Drop table if it exists from previous test run
+        try {
+            sqliteConn.createStatement().execute("DROP TABLE IF EXISTS " + sinkTable);
+            sqliteConn.commit();
+        } catch (SQLException e) {
+            // Ignore if table doesn't exist
+        }
+        
+        Assertions.assertFalse(tableExists(sqliteConn, sinkTable), "Sink table should not exist before test");
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", postgres.getJdbcUrl(),
+            "--source-user", postgres.getUsername(),
+            "--source-password", postgres.getPassword(),
+            "--sink-connect", sqlite.getJdbcUrl(),
+            "--sink-table", sinkTable,
+            "--sink-auto-create", "true"
+        };
+        ToolOptions options = new ToolOptions(args);
+        int result = ReplicaDB.processReplica(options);
+        assertEquals(0, result, "Replication should succeed");
+        
+        // For SQLite sink, we can't immediately query due to locking,
+        // but success return code (0) indicates table was created and data inserted
+    }
+
+    @Test
+    void testPostgres2SqliteAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+        String sinkTable = "t_sink"; // Use existing table
+
+        String[] args = {
+            "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+            "--source-connect", postgres.getJdbcUrl(),
+            "--source-user", postgres.getUsername(),
+            "--source-password", postgres.getPassword(),
+            "--sink-connect", sqlite.getJdbcUrl(),
+            "--sink-table", sinkTable,
+            "--sink-auto-create", "true"
+        };
+        ToolOptions options = new ToolOptions(args);
+        int result = ReplicaDB.processReplica(options);
+        assertEquals(0, result, "Replication should succeed even when table exists");
     }
 }

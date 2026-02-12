@@ -99,7 +99,18 @@ public class DenodoManager extends SqlManager {
 
 
     @Override
+    protected String mapJdbcTypeToNativeDDL(String columnName, int jdbcType, int precision, int scale) {
+        throw new UnsupportedOperationException("Denodo is not supported as a sink for table creation. Use --sink-auto-create only with SQL databases.");
+    }
+
+    @Override
     public void preSourceTasks() throws SQLException {
+        // Call parent to probe source metadata if auto-create is enabled
+        try {
+            super.preSourceTasks();
+        } catch (Exception e) {
+            throw new SQLException("Failed to probe source metadata", e);
+        }
 
         // Only calculate the chunk size when parallel execution is active
         if (this.options.getJobs() != 1) {

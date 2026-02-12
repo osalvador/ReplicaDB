@@ -529,7 +529,10 @@ public class OracleManager extends SqlManager {
     }
 
     @Override
-    public void preSourceTasks() {
+    public void preSourceTasks() throws Exception {
+        // Call parent to probe source metadata if auto-create is enabled
+        super.preSourceTasks();
+        
         // Capture SCN for flashback query to prevent ORA-01555 on large tables
         try {
             Statement stmt = getConnection().createStatement();
@@ -671,5 +674,91 @@ public class OracleManager extends SqlManager {
             }
         }
         openStreams.clear();
+    }
+
+    @Override
+    protected String mapJdbcTypeToNativeDDL(String columnName, int jdbcType, int precision, int scale) {
+        switch (jdbcType) {
+            case Types.INTEGER:
+            case Types.TINYINT:
+            case Types.SMALLINT:
+                return "NUMBER(10)";
+            case Types.BIGINT:
+                return "NUMBER(19)";
+            case Types.FLOAT:
+            case Types.DOUBLE:
+                return "BINARY_DOUBLE";
+            case Types.REAL:
+                return "BINARY_FLOAT";
+            case Types.NUMERIC:
+            case Types.DECIMAL:
+                // Oracle NUMBER without precision means generic number
+                if (precision == 0 && scale == -127) {
+                    return "NUMBER";
+                } 
+                // Oracle uses negative scale (-127) to indicate floating-point approximation
+                // REAL/DOUBLE PRECISION/FLOAT are reported as NUMBER with precision 63/126 and scale -127
+                // Map these to native binary float types instead of invalid NUMBER syntax
+                else if (scale == -127) {
+                    if (precision <= 63) {
+                        return "BINARY_FLOAT";
+                    } else {
+                        return "BINARY_DOUBLE";
+                    }
+                } 
+                else if (precision > 0) {
+                    return "NUMBER(" + precision + ", " + scale + ")";
+                } else {
+                    return "NUMBER";
+                }
+            case Types.VARCHAR:
+            case Types.NVARCHAR:
+            case Types.LONGVARCHAR:
+                if (precision > 4000) {
+                    return "CLOB";
+                } else if (precision > 0) {
+                    return "VARCHAR2(" + precision + ")";
+                } else {
+                    return "CLOB";
+                }
+            case Types.CHAR:
+            case Types.NCHAR:
+                return "CHAR(" + precision + ")";
+            case Types.BOOLEAN:
+            case Types.BIT:
+                return "NUMBER(1)";
+            case Types.DATE:
+                return "DATE";
+            case Types.TIME:
+            case Types.TIME_WITH_TIMEZONE:
+            case Types.TIMESTAMP:
+            case Types.TIMESTAMP_WITH_TIMEZONE:
+                return "TIMESTAMP";
+            case Types.BINARY:
+            case Types.VARBINARY:
+            case Types.LONGVARBINARY:
+                if (precision > 2000) {
+                    return "BLOB";
+                } else if (precision > 0) {
+                    return "RAW(" + precision + ")";
+                } else {
+                    return "BLOB";
+                }
+            case Types.BLOB:
+                return "BLOB";
+            case Types.CLOB:
+                return "CLOB";
+            // Oracle-specific INTERVAL types
+            case -104:  // INTERVAL DAY TO SECOND
+                return "INTERVAL DAY TO SECOND";
+            case -103:  // INTERVAL YEAR TO MONTH
+                return "INTERVAL YEAR TO MONTH";
+            // Oracle XMLType
+            case 2009:  // SQLXML / XMLType
+                return "XMLTYPE";
+            default:
+                LOG.warn("Unmapped JDBC type {} for column {}, using CLOB as fallback", jdbcType, columnName);
+                return "CLOB";
+        }
     }
 }

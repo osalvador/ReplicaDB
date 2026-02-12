@@ -69,6 +69,20 @@ class Postgres2SqlserverTest {
       return count;
    }
 
+   private boolean tableExists(Connection conn, String tableName) throws SQLException {
+      DatabaseMetaData meta = conn.getMetaData();
+      try (ResultSet rs = meta.getTables(null, null, tableName, new String[]{"TABLE"})) {
+         return rs.next();
+      }
+   }
+
+   private int countRows(Connection conn, String tableName) throws SQLException {
+      Statement stmt = conn.createStatement();
+      ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
+      rs.next();
+      return rs.getInt(1);
+   }
+
 
    @Test
    void testSqlserverVersion2019 () throws SQLException {
@@ -195,6 +209,87 @@ class Postgres2SqlserverTest {
           "--sink-columns", SINK_COLUMNS,
           "--mode", ReplicationMode.INCREMENTAL.getModeText(),
           "--jobs", "4"
+      };
+      ToolOptions options = new ToolOptions(args);
+      assertEquals(0, ReplicaDB.processReplica(options));
+      assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+   }
+
+   @Test
+   void testPostgres2SqlserverAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+      String sinkTable = "t_sink_autocreate_postgres2sqlserver";
+      Assertions.assertFalse(tableExists(sqlserverConn, sinkTable), "Sink table should not exist before test");
+
+      String[] args = {
+          "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+          "--source-connect", postgres.getJdbcUrl(),
+          "--source-user", postgres.getUsername(),
+          "--source-password", postgres.getPassword(),
+          "--sink-connect", sqlserver.getJdbcUrl(),
+          "--sink-user", sqlserver.getUsername(),
+          "--sink-password", sqlserver.getPassword(),
+          "--sink-table", sinkTable,
+          "--sink-auto-create", "true",
+          "--mode", ReplicationMode.COMPLETE.getModeText()
+      };
+      ToolOptions options = new ToolOptions(args);
+      assertEquals(0, ReplicaDB.processReplica(options));
+      assertTrue(tableExists(sqlserverConn, sinkTable), "Sink table should exist after auto-create");
+      assertEquals(TOTAL_SINK_ROWS, countRows(sqlserverConn, sinkTable));
+
+      // Cleanup
+      sqlserverConn.createStatement().execute("DROP TABLE " + sinkTable);
+   }
+
+   @Disabled("SQL Server sink does not support incremental mode with staging schema - requires schema creation")
+   @Test
+   void testPostgres2SqlserverAutoCreateIncrementalMode() throws ParseException, IOException, SQLException {
+      String sinkTable = "t_sink_autocreate_postgres2sqlserver_incr";
+      Assertions.assertFalse(tableExists(sqlserverConn, sinkTable), "Sink table should not exist before test");
+
+      String[] args = {
+          "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+          "--source-connect", postgres.getJdbcUrl(),
+          "--source-user", postgres.getUsername(),
+          "--source-password", postgres.getPassword(),
+          "--sink-connect", sqlserver.getJdbcUrl(),
+          "--sink-user", sqlserver.getUsername(),
+          "--sink-password", sqlserver.getPassword(),
+          "--sink-table", sinkTable,
+          "--sink-staging-schema", "dbo",
+          "--sink-auto-create", "true",
+          "--mode", ReplicationMode.INCREMENTAL.getModeText()
+      };
+      ToolOptions options = new ToolOptions(args);
+      assertEquals(0, ReplicaDB.processReplica(options));
+      assertTrue(tableExists(sqlserverConn, sinkTable), "Sink table should exist after auto-create");
+      assertEquals(TOTAL_SINK_ROWS, countRows(sqlserverConn, sinkTable));
+
+      // Test merge by running again
+      assertEquals(0, ReplicaDB.processReplica(options));
+      assertEquals(TOTAL_SINK_ROWS, countRows(sqlserverConn, sinkTable), "Row count should remain same after merge");
+
+      // Cleanup
+      sqlserverConn.createStatement().execute("DROP TABLE " + sinkTable);
+   }
+
+   @Test
+   void testPostgres2SqlserverAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+      String sinkTable = "t_sink"; // Use existing table
+
+      String[] args = {
+          "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+          "--source-connect", postgres.getJdbcUrl(),
+          "--source-user", postgres.getUsername(),
+          "--source-password", postgres.getPassword(),
+          "--sink-connect", sqlserver.getJdbcUrl(),
+          "--sink-user", sqlserver.getUsername(),
+          "--sink-password", sqlserver.getPassword(),
+          "--sink-table", sinkTable,
+          "--sink-auto-create", "true",
+          "--source-columns", SOURCE_COLUMNS,
+          "--sink-columns", SINK_COLUMNS,
+          "--mode", ReplicationMode.COMPLETE.getModeText()
       };
       ToolOptions options = new ToolOptions(args);
       assertEquals(0, ReplicaDB.processReplica(options));

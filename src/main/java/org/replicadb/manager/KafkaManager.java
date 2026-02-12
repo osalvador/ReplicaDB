@@ -199,6 +199,11 @@ public class KafkaManager extends SqlManager {
     protected void mergeStagingTable() {/*Not implemented*/}
 
     @Override
+    protected String mapJdbcTypeToNativeDDL(String columnName, int jdbcType, int precision, int scale) {
+        throw new UnsupportedOperationException("Kafka does not support SQL DDL. Use --sink-auto-create only with SQL databases.");
+    }
+
+    @Override
     public void preSourceTasks() {/*Not implemented*/}
 
     @Override
