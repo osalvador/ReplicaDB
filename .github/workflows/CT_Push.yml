@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DOCKER_API_VERSION: "1.44"
+      TESTCONTAINERS_CONFIG_FILE: src/test/resources/testcontainers-ci.properties
     strategy:
       fail-fast: false
       matrix:
@@ -55,6 +56,7 @@ jobs:
     name: Non-integration tests
     env:
       DOCKER_API_VERSION: "1.44"
+      TESTCONTAINERS_CONFIG_FILE: src/test/resources/testcontainers-ci.properties
 
     steps:
     - uses: actions/checkout@v3
