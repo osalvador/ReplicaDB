@@ -49,7 +49,7 @@ jobs:
       run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
 
     - name: Integration tests (exclude Oracle cross-version)
-      run: mvn -B -q test --file pom.xml -Dtest="org/replicadb/${{ matrix.source }}/*Test,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest"
+      run: mvn -B -q test --file pom.xml -Ddocker.api.version=1.44 -Dtest="org/replicadb/${{ matrix.source }}/*Test,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest"
 
   non_integration:
     runs-on: ubuntu-latest
@@ -72,7 +72,7 @@ jobs:
       run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
 
     - name: Non-integration tests (exclude Oracle cross-version)
-      run: mvn -B -q test --file pom.xml -Dtest="org/replicadb/cli/*Test,org/replicadb/manager/*Test,org/replicadb/config/*Test,org/replicadb/rowset/*Test,org/replicadb/file/*Test,org/replicadb/ReplicaDBTest,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest"
+      run: mvn -B -q test --file pom.xml -Ddocker.api.version=1.44 -Dtest="org/replicadb/cli/*Test,org/replicadb/manager/*Test,org/replicadb/config/*Test,org/replicadb/rowset/*Test,org/replicadb/file/*Test,org/replicadb/ReplicaDBTest,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest"
 
   package:
     runs-on: ubuntu-latest
