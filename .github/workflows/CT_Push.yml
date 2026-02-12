@@ -18,6 +18,8 @@ on:
 jobs:
   integration:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_API_VERSION: "1.44"
     strategy:
       fail-fast: false
       matrix:
@@ -51,6 +53,8 @@ jobs:
   non_integration:
     runs-on: ubuntu-latest
     name: Non-integration tests
+    env:
+      DOCKER_API_VERSION: "1.44"
 
     steps:
     - uses: actions/checkout@v3
