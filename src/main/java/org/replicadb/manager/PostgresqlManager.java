@@ -69,7 +69,7 @@ public class PostgresqlManager extends SqlManager {
 
     private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
 
-    private static Long chunkSize = 0L;
+    private Long chunkSize = 0L;
 
     /**
      * Constructs the SqlManager.
