@@ -474,16 +474,19 @@ public class MySQLManager extends SqlManager {
            case Types.TIMESTAMP:
            case Types.TIMESTAMP_WITH_TIMEZONE:
                return "DATETIME";
-           case Types.BINARY:
-           case Types.VARBINARY:
-           case Types.LONGVARBINARY:
-               if (precision > 65535) {
-                   return "LONGBLOB";
-               } else if (precision > 0) {
-                   return "VARBINARY(" + precision + ")";
-               } else {
-                   return "LONGBLOB";
-               }
+            case Types.BINARY:
+            case Types.VARBINARY:
+            case Types.LONGVARBINARY:
+                // MariaDB/MySQL have row size limit of ~65KB for all columns combined
+                // Use BLOB types for large binary data to avoid "Column length too big" errors
+                // Conservative threshold: use BLOB for columns > 16KB to leave room for other columns
+                if (precision > 16384) {
+                    return "LONGBLOB";
+                } else if (precision > 0) {
+                    return "VARBINARY(" + precision + ")";
+                } else {
+                    return "LONGBLOB";
+                }
            case Types.BLOB:
                return "LONGBLOB";
            case Types.CLOB:

@@ -382,13 +382,17 @@ class MySQL2PostgresTest {
         // Verify table was created with primary key
         assertTrue(tableExists(postgresConn, sinkTable), "Sink table should exist after auto-create");
         DatabaseMetaData meta = postgresConn.getMetaData();
-        ResultSet pks = meta.getPrimaryKeys(null, null, sinkTable);
-        if (!pks.next()) {
-            pks = meta.getPrimaryKeys(null, null, sinkTable.toLowerCase());
+        ResultSet pks = meta.getPrimaryKeys(null, "public", sinkTable);
+        boolean hasResults = pks.next();
+        if (!hasResults) {
+            pks.close();
+            pks = meta.getPrimaryKeys(null, "public", sinkTable.toLowerCase());
+            hasResults = pks.next();
         }
-        assertTrue(pks.next(), "Table should have a primary key");
+        assertTrue(hasResults, "Table should have a primary key");
         String pkColumn = pks.getString("COLUMN_NAME");
         LOG.info("Primary key columns: {}", pkColumn);
+        pks.close();
         assertEquals(EXPECTED_ROWS, countRows(postgresConn, sinkTable));
         
         // Run again to test merge functionality
