@@ -162,7 +162,7 @@ public abstract class ConnManager {
                 LOG.debug("Qualifying sink table name with connection schema: {}.{}", schema, tableName);
                 return schema + "." + tableName;
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             LOG.debug("Could not retrieve schema from connection: {}", e.getMessage());
         }
         
