@@ -258,6 +258,15 @@ public class Db2Manager extends SqlManager {
                                 }
                             }
                             break;
+                        case Types.TIME:
+                        case Types.TIME_WITH_TIMEZONE:
+                            java.sql.Time timeVal = resultSet.getTime(i);
+                            if (resultSet.wasNull()) {
+                                ps.setNull(i, targetType);
+                            } else {
+                                ps.setTime(i, timeVal);
+                            }
+                            break;
                         case Types.TIMESTAMP:
                         case Types.TIMESTAMP_WITH_TIMEZONE:
                         case -101:
