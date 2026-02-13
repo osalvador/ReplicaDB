@@ -72,11 +72,15 @@ public class ReplicadbDB2Container extends Db2Container {
       super(IMAGE_NAME);
       // Accept IBM DB2 license
       this.addEnv("LICENSE", "accept");
+      // Explicitly set database name (Testcontainers default is "testdb")
+      this.addEnv("DBNAME", "testdb");
       // Startup optimization environment variables to reduce initialization time
       this.addEnv("AUTOCONFIG", "false");        // Skip automatic configuration (saves 1-2 min)
       this.addEnv("ARCHIVE_LOGS", "false");      // Disable archive logging (saves 30-60 sec)
       this.addEnv("TEXT_SEARCH", "false");       // Disable text search indexing (minor improvement)
-      this.addEnv("SAMPLEDB", "false");          // Don't create sample database
+      this.addEnv("SAMPLEDB", "false");          // Don't create sample database with sample data
+      // Set longer startup timeout for ARM64 emulation (default is 120 seconds, not enough)
+      this.withStartupTimeout(java.time.Duration.ofMinutes(20));
    }
 
    public static ReplicadbDB2Container getInstance() {
