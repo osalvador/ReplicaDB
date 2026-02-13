@@ -182,11 +182,24 @@ public class Db2Manager extends SqlManager {
                         case Types.INTEGER:
                         case Types.TINYINT:
                         case Types.SMALLINT:
-                            int intVal = resultSet.getInt(i);
-                            if (resultSet.wasNull()) {
-                                ps.setNull(i, targetType);
+                            // Check if source is boolean (PostgreSQL returns boolean as BIT/BOOLEAN type)
+                            int sourceType = rsmd.getColumnType(i);
+                            if (sourceType == Types.BOOLEAN || sourceType == Types.BIT) {
+                                // Source is boolean, convert to 0/1
+                                boolean boolVal = resultSet.getBoolean(i);
+                                if (resultSet.wasNull()) {
+                                    ps.setNull(i, targetType);
+                                } else {
+                                    ps.setInt(i, boolVal ? 1 : 0);
+                                }
                             } else {
-                                ps.setInt(i, intVal);
+                                // Source is numeric
+                                int intVal = resultSet.getInt(i);
+                                if (resultSet.wasNull()) {
+                                    ps.setNull(i, targetType);
+                                } else {
+                                    ps.setInt(i, intVal);
+                                }
                             }
                             break;
                         case Types.BIGINT:
