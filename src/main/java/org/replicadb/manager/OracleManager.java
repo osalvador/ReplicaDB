@@ -260,7 +260,9 @@ public class OracleManager extends SqlManager {
                             if (resultSet.wasNull() || dateVal == null) {
                                 ps.setNull(i, Types.DATE);
                             } else {
-                                ps.setDate(i, dateVal);
+                                // Use UTC calendar for consistent date handling across databases
+                                java.util.Calendar cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+                                ps.setDate(i, dateVal, cal);
                             }
                             break;
                         case Types.TIMESTAMP:
@@ -271,7 +273,9 @@ public class OracleManager extends SqlManager {
                             if (resultSet.wasNull() || tsVal == null) {
                                 ps.setNull(i, Types.TIMESTAMP);
                             } else {
-                                ps.setTimestamp(i, tsVal);
+                                // Use UTC calendar for consistent timestamp handling across databases
+                                java.util.Calendar cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+                                ps.setTimestamp(i, tsVal, cal);
                             }
                             break;
                         case Types.BINARY:
@@ -353,12 +357,17 @@ public class OracleManager extends SqlManager {
                             break;
                         case Types.TIME:
                         case Types.TIME_WITH_TIMEZONE:
-                            // Oracle doesn't have TIME type, store as string
+                            // Oracle doesn't have a TIME-only type
+                            // When auto-create maps TIME to TIMESTAMP, convert Time to Timestamp
+                            // When explicit column type is VARCHAR, store as string
                             java.sql.Time timeData = resultSet.getTime(i);
-                            if (timeData != null) {
-                                ps.setString(i, timeData.toString());
+                            if (timeData == null || resultSet.wasNull()) {
+                                ps.setNull(i, Types.TIMESTAMP);
                             } else {
-                                ps.setNull(i, Types.VARCHAR);
+                                // Convert TIME to TIMESTAMP by setting date portion to epoch (1970-01-01)
+                                java.sql.Timestamp tsFromTime = new java.sql.Timestamp(timeData.getTime());
+                                java.util.Calendar cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+                                ps.setTimestamp(i, tsFromTime, cal);
                             }
                             break;
                         // Oracle INTERVAL types (not in standard java.sql.Types)

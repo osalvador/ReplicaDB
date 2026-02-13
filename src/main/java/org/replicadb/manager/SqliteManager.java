@@ -54,7 +54,7 @@ public class SqliteManager extends SqlManager {
 				// Set busy timeout to 30 seconds to handle lock contention
 				// SQLite will retry for this duration instead of failing immediately
 				stmt.execute("PRAGMA busy_timeout = 30000");
-				LOG.debug("Set SQLite busy_timeout to 30000ms for lock handling");
+				LOG.info("Set SQLite busy_timeout to 30000ms for lock handling");
 				
 				// Enable WAL mode if user explicitly requests it in connection URL
 				// WAL (Write-Ahead Logging) improves concurrency for read-heavy workloads
