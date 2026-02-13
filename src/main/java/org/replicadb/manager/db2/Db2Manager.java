@@ -590,7 +590,18 @@ public class Db2Manager extends SqlManager {
             case Types.DECIMAL:
             case Types.NUMERIC:
                 if (precision > 0 && scale >= 0) {
-                    return "DECIMAL(" + Math.min(precision, 31) + "," + Math.min(scale, 31) + ")";
+                    // DB2 max precision is 31, and scale must be less than precision
+                    int cappedPrecision = Math.min(precision, 31);
+                    int cappedScale;
+                    if (precision > 31) {
+                        // Maintain ratio: scale / precision when downscaling
+                        double ratio = (double) scale / precision;
+                        cappedScale = Math.max(0, Math.min((int)(cappedPrecision * ratio), cappedPrecision - 1));
+                    } else {
+                        // Ensure scale < precision (DB2 requirement)
+                        cappedScale = Math.min(scale, cappedPrecision - 1);
+                    }
+                    return "DECIMAL(" + cappedPrecision + "," + cappedScale + ")";
                 }
                 return "DECIMAL(31,0)";
             case Types.REAL:

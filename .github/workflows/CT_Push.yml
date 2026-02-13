@@ -18,6 +18,7 @@ on:
 jobs:
   integration:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       TESTCONTAINERS_CONFIG_FILE: src/test/resources/testcontainers-ci.properties
       DOCKER_HOST: unix:///var/run/docker.sock
@@ -53,7 +54,7 @@ jobs:
       run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
 
     - name: Integration tests (exclude Oracle cross-version)
-      run: mvn -B -q test --file pom.xml -Dtest="org/replicadb/${{ matrix.source }}/*Test,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest"
+      run: mvn -B -q test --file pom.xml -Dtest="org/replicadb/${{ matrix.source }}/*Test,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest" -Dsurefire.timeout=600
 
   non_integration:
     runs-on: ubuntu-latest
