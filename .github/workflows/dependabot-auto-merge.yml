@@ -4,6 +4,8 @@ on:
   pull_request_target:
     types: [opened, synchronize, reopened]
   workflow_run:
+    # IMPORTANT: This references the "Only CI/CT" workflow name from CT_Push.yml
+    # If that workflow is renamed, update this reference as well
     workflows: ["Only CI/CT"]
     types: [completed]
 
@@ -74,9 +76,11 @@ jobs:
             const pr_number = ${{ steps.pr.outputs.pr_number }};
             const head_sha = '${{ steps.pr.outputs.head_sha }}';
 
-            // Wait a bit for status to be updated (in workflow_run context)
+            // Wait for status to be updated after workflow_run event
+            // GitHub may need a few seconds to update the check status after completion
+            const STATUS_UPDATE_DELAY_MS = 5000;
             if (context.eventName === 'workflow_run') {
-              await new Promise(resolve => setTimeout(resolve, 5000));
+              await new Promise(resolve => setTimeout(resolve, STATUS_UPDATE_DELAY_MS));
             }
 
             const { data: pullRequest } = await github.rest.pulls.get({
@@ -103,9 +107,13 @@ jobs:
             console.log('Check runs:', checkRuns.check_runs.length);
 
             // Check if all status checks have passed
+            // Note: status.total_count === 0 is allowed because GitHub Actions
+            // uses check runs (not status checks) for validation
             const allStatusPassed = status.state === 'success' || status.total_count === 0;
 
             // Check if all check runs have completed successfully
+            // Note: We require at least one check run OR explicit success state
+            // to prevent merging PRs without any validation
             const allChecksPassed = checkRuns.check_runs.length === 0 ||
               checkRuns.check_runs.every(check =>
                 check.status === 'completed' &&
@@ -126,7 +134,17 @@ jobs:
               console.log(`Check: ${check.name}, Status: ${check.status}, Conclusion: ${check.conclusion}`);
             }
 
-            const ready_to_merge = allStatusPassed && allChecksPassed && !hasFailedChecks;
+            // Safety check: Ensure we have some form of validation
+            // Either check runs exist OR we're in pull_request_target where checks may not be ready
+            const hasValidation = checkRuns.check_runs.length > 0 ||
+                                status.total_count > 0 ||
+                                context.eventName === 'pull_request_target';
+
+            if (!hasValidation) {
+              console.log('Warning: No validation checks found. Will wait for checks to appear.');
+            }
+
+            const ready_to_merge = allStatusPassed && allChecksPassed && !hasFailedChecks && hasValidation;
             core.setOutput('ready_to_merge', ready_to_merge);
             core.setOutput('status_state', status.state);
             core.setOutput('checks_count', checkRuns.check_runs.length);

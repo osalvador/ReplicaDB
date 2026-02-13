@@ -36,7 +36,7 @@ You can test the workflow logic by:
 
 ### Scenario 1: CI Tests Pass
 1. Dependabot creates/updates PR
-2. CT_Push.yml workflow runs integration tests
+2. "Only CI/CT" workflow (CT_Push.yml) runs integration tests
 3. All tests pass (integration + non-integration)
 4. Auto-merge workflow triggers
 5. Workflow approves the PR
@@ -44,7 +44,7 @@ You can test the workflow logic by:
 
 ### Scenario 2: CI Tests Fail
 1. Dependabot creates/updates PR
-2. CT_Push.yml workflow runs integration tests
+2. "Only CI/CT" workflow (CT_Push.yml) runs integration tests
 3. Some tests fail
 4. Auto-merge workflow triggers
 5. Workflow detects failed checks
@@ -53,7 +53,7 @@ You can test the workflow logic by:
 
 ### Scenario 3: CI Tests Pending
 1. Dependabot creates/updates PR
-2. CT_Push.yml workflow is still running
+2. "Only CI/CT" workflow (CT_Push.yml) is still running
 3. Auto-merge workflow triggers
 4. Workflow detects pending checks
 5. Waits for workflow_run trigger
