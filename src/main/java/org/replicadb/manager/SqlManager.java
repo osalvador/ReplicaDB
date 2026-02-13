@@ -707,12 +707,14 @@ public abstract class SqlManager extends ConnManager {
         LOG.info("Probing source metadata for auto-create...");
         
         String probeQuery;
-        if (options.getSourceTable() != null && !options.getSourceTable().isEmpty()) {
-            // Table-based source
-            probeQuery = "SELECT * FROM " + escapeTableName(options.getSourceTable()) + " WHERE 1=0";
-        } else if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
+        // Prioritize source-query over source-table for metadata probing
+        // (both can be set: query for data, table for PK metadata)
+        if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
             // Query-based source
             probeQuery = "SELECT * FROM (" + options.getSourceQuery() + ") tmp WHERE 1=0";
+        } else if (options.getSourceTable() != null && !options.getSourceTable().isEmpty()) {
+            // Table-based source
+            probeQuery = "SELECT * FROM " + escapeTableName(options.getSourceTable()) + " WHERE 1=0";
         } else {
             throw new IllegalArgumentException("Either source-table or source-query must be specified for auto-create");
         }
@@ -745,10 +747,68 @@ public abstract class SqlManager extends ConnManager {
                 String table = getTableNameFromQualifiedTableName(options.getSourceTable());
                 String schema = getSchemaFromQualifiedTableName(options.getSourceTable());
                 
-                DatabaseMetaData metaData = this.getConnection().getMetaData();
-                ResultSet pkResults = metaData.getPrimaryKeys(null, schema, table);
+                LOG.debug("Probing primary keys for schema='{}', table='{}'", schema, table);
                 
-                if (pkResults != null) {
+                DatabaseMetaData metaData = this.getConnection().getMetaData();
+                ResultSet pkResults = null;
+                boolean foundPKs = false;
+                String effectiveSchema = schema;
+                String effectiveTable = table;
+                
+                // Try as-is first
+                try {
+                    pkResults = metaData.getPrimaryKeys(null, schema, table);
+                    if (pkResults != null && pkResults.next()) {
+                        foundPKs = true;
+                        LOG.debug("Found PKs using original case: schema='{}', table='{}'", schema, table);
+                    }
+                    if (pkResults != null) pkResults.close();
+                } catch (SQLException e) {
+                    LOG.debug("Error querying PKs with original case: {}", e.getMessage());
+                    if (pkResults != null) try { pkResults.close(); } catch (SQLException ex) { /* ignore */ }
+                }
+                
+                // Try uppercase if not found
+                if (!foundPKs) {
+                    String tableUpper = table != null ? table.toUpperCase() : null;
+                    String schemaUpper = schema != null ? schema.toUpperCase() : null;
+                    try {
+                        pkResults = metaData.getPrimaryKeys(null, schemaUpper, tableUpper);
+                        if (pkResults != null && pkResults.next()) {
+                            foundPKs = true;
+                            effectiveSchema = schemaUpper;
+                            effectiveTable = tableUpper;
+                            LOG.debug("Found PKs using uppercase: schema='{}', table='{}'", schemaUpper, tableUpper);
+                        }
+                        if (pkResults != null) pkResults.close();
+                    } catch (SQLException e) {
+                        LOG.debug("Error querying PKs with uppercase: {}", e.getMessage());
+                        if (pkResults != null) try { pkResults.close(); } catch (SQLException ex) { /* ignore */ }
+                    }
+                }
+                
+                // Try lowercase if still not found
+                if (!foundPKs) {
+                    String tableLower = table != null ? table.toLowerCase() : null;
+                    String schemaLower = schema != null ? schema.toLowerCase() : null;
+                    try {
+                        pkResults = metaData.getPrimaryKeys(null, schemaLower, tableLower);
+                        if (pkResults != null && pkResults.next()) {
+                            foundPKs = true;
+                            effectiveSchema = schemaLower;
+                            effectiveTable = tableLower;
+                            LOG.debug("Found PKs using lowercase: schema='{}', table='{}'", schemaLower, tableLower);
+                        }
+                        if (pkResults != null) pkResults.close();
+                    } catch (SQLException e) {
+                        LOG.debug("Error querying PKs with lowercase: {}", e.getMessage());
+                        if (pkResults != null) try { pkResults.close(); } catch (SQLException ex) { /* ignore */ }
+                    }
+                }
+                
+                // If found, re-query with the effective case variant and process results
+                if (foundPKs) {
+                    pkResults = metaData.getPrimaryKeys(null, effectiveSchema, effectiveTable);
                     try {
                         ArrayList<String> pkList = new ArrayList<>();
                         while (pkResults.next()) {
@@ -757,7 +817,8 @@ public abstract class SqlManager extends ConnManager {
                         
                         if (!pkList.isEmpty()) {
                             // Sort by KEY_SEQ - re-query with ordering
-                            pkResults = metaData.getPrimaryKeys(null, schema, table);
+                            pkResults.close();
+                            pkResults = metaData.getPrimaryKeys(null, effectiveSchema, effectiveTable);
                             pkList.clear();
                             while (pkResults.next()) {
                                 int keySeq = pkResults.getInt("KEY_SEQ");
@@ -773,11 +834,13 @@ public abstract class SqlManager extends ConnManager {
                             options.setSourcePrimaryKeys(pks);
                             LOG.info("Captured {} primary key columns from source", pks.length);
                         } else {
-                            LOG.warn("No primary keys found on source table");
+                            LOG.warn("No primary keys found on source table after trying multiple case variants");
                         }
                     } finally {
-                        pkResults.close();
+                        if (pkResults != null) pkResults.close();
                     }
+                } else {
+                    LOG.warn("No primary keys found on source table after trying multiple case variants");
                 }
             } else {
                 LOG.info("Source is a custom query, no primary keys available");
@@ -914,7 +977,9 @@ public abstract class SqlManager extends ConnManager {
             }
         }
         
-        String ddl = generateCreateTableDDL(tableName, sourceColumns, sourcePKs);
+        // Use qualified table name for CREATE TABLE to ensure proper schema placement
+        String qualifiedTableName = getQualifiedSinkTableName();
+        String ddl = generateCreateTableDDL(qualifiedTableName, sourceColumns, sourcePKs);
         LOG.info("Executing DDL:\n{}", ddl);
         
         Statement stmt = null;
@@ -923,7 +988,7 @@ public abstract class SqlManager extends ConnManager {
             stmt.execute(ddl);
             this.getConnection().commit();
             sinkTableJustCreated = true;
-            LOG.info("Successfully created sink table {}", tableName);
+            LOG.info("Successfully created sink table {}", qualifiedTableName);
         } finally {
             if (stmt != null) try { stmt.close(); } catch (SQLException e) { /* ignore */ }
         }

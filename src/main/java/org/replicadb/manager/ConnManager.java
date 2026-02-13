@@ -140,6 +140,36 @@ public abstract class ConnManager {
 
     }
 
+    /**
+     * Returns a schema-qualified sink table name for CREATE TABLE statements.
+     * If the sink table name already contains a schema (schema.table), returns it as-is.
+     * Otherwise, attempts to qualify it with the connection's current schema.
+     * 
+     * @return schema-qualified table name, or unqualified name if no schema can be determined
+     */
+    public String getQualifiedSinkTableName() {
+        String tableName = getSinkTableName();
+        
+        // If already qualified (contains a dot), return as-is
+        if (tableName.contains(".")) {
+            return tableName;
+        }
+        
+        // Try to get schema from connection metadata
+        try {
+            String schema = this.getConnection().getSchema();
+            if (schema != null && !schema.isEmpty()) {
+                LOG.debug("Qualifying sink table name with connection schema: {}.{}", schema, tableName);
+                return schema + "." + tableName;
+            }
+        } catch (SQLException e) {
+            LOG.debug("Could not retrieve schema from connection: {}", e.getMessage());
+        }
+        
+        // Fallback: return unqualified name
+        return tableName;
+    }
+
     public String getSinkStagingTableName() {
 
         if (options.getSinkStagingTable() != null && !options.getSinkStagingTable().isEmpty()) {

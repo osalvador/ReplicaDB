@@ -728,7 +728,10 @@ public class SQLServerManager extends SqlManager {
    }
 
    @Override
-   public void preSourceTasks () {/*Not implemented*/}
+   public void preSourceTasks () throws Exception {
+      // Call parent to probe source metadata if auto-create is enabled
+      super.preSourceTasks();
+   }
 
    @Override
    public void postSourceTasks () {/*Not implemented*/}
