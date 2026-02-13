@@ -11,8 +11,10 @@ import org.replicadb.manager.util.ColumnDescriptor;
 import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -745,14 +747,21 @@ public abstract class SqlManager extends ConnManager {
         LOG.info("Probing source metadata for auto-create...");
         
         String probeQuery;
+        // Determine columns to probe - respect --source-columns if specified
+        String columnsToProbe = "*";
+        if (options.getSourceColumns() != null && !options.getSourceColumns().isEmpty()) {
+            columnsToProbe = options.getSourceColumns();
+            LOG.info("Using specified source-columns for metadata probing: {}", columnsToProbe);
+        }
+        
         // Prioritize source-query over source-table for metadata probing
         // (both can be set: query for data, table for PK metadata)
         if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
             // Query-based source
-            probeQuery = "SELECT * FROM (" + options.getSourceQuery() + ") tmp WHERE 1=0";
+            probeQuery = "SELECT " + columnsToProbe + " FROM (" + options.getSourceQuery() + ") tmp WHERE 1=0";
         } else if (options.getSourceTable() != null && !options.getSourceTable().isEmpty()) {
             // Table-based source
-            probeQuery = "SELECT * FROM " + escapeTableName(options.getSourceTable()) + " WHERE 1=0";
+            probeQuery = "SELECT " + columnsToProbe + " FROM " + escapeTableName(options.getSourceTable()) + " WHERE 1=0";
         } else {
             throw new IllegalArgumentException("Either source-table or source-query must be specified for auto-create");
         }
@@ -767,6 +776,7 @@ public abstract class SqlManager extends ConnManager {
             int columnCount = rsmd.getColumnCount();
             
             List<ColumnDescriptor> columnDescriptors = new ArrayList<>();
+            Set<String> columnNames = new HashSet<>();
             for (int i = 1; i <= columnCount; i++) {
                 String columnName = rsmd.getColumnName(i);
                 int jdbcType = rsmd.getColumnType(i);
@@ -775,6 +785,7 @@ public abstract class SqlManager extends ConnManager {
                 int nullable = rsmd.isNullable(i);
                 
                 columnDescriptors.add(new ColumnDescriptor(columnName, jdbcType, precision, scale, nullable));
+                columnNames.add(columnName.toUpperCase());
             }
             
             options.setSourceColumnDescriptors(columnDescriptors);
@@ -868,9 +879,26 @@ public abstract class SqlManager extends ConnManager {
                                 pkList.set(keySeq - 1, colName);
                             }
                             
-                            String[] pks = pkList.toArray(new String[0]);
-                            options.setSourcePrimaryKeys(pks);
-                            LOG.info("Captured {} primary key columns from source", pks.length);
+                            // Filter primary keys to only include columns in the probed column list
+                            List<String> filteredPkList = new ArrayList<>();
+                            for (String pk : pkList) {
+                                if (pk != null && columnNames.contains(pk.toUpperCase())) {
+                                    filteredPkList.add(pk);
+                                } else if (pk != null) {
+                                    LOG.warn("Primary key column '{}' is not in the source-columns list and will be excluded", pk);
+                                }
+                            }
+                            
+                            if (!filteredPkList.isEmpty()) {
+                                String[] pks = filteredPkList.toArray(new String[0]);
+                                options.setSourcePrimaryKeys(pks);
+                                LOG.info("Captured {} primary key columns from source (after filtering)", pks.length);
+                            } else {
+                                LOG.warn("No primary keys remain after filtering by source-columns");
+                                if (options.getMode() != null && options.getMode().toLowerCase().contains("incremental")) {
+                                    LOG.warn("Incremental mode requires primary keys, but all PK columns were excluded by --source-columns");
+                                }
+                            }
                         } else {
                             LOG.warn("No primary keys found on source table after trying multiple case variants");
                         }
