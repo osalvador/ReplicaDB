@@ -1,0 +1,272 @@
+name: Dependabot Auto-Merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+  workflow_run:
+    # IMPORTANT: This references the "Only CI/CT" workflow name from CT_Push.yml
+    # If that workflow is renamed, update this reference as well
+    workflows: ["Only CI/CT"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get PR details
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let pullRequest;
+
+            // Handle pull_request_target event
+            if (context.payload.pull_request) {
+              pullRequest = context.payload.pull_request;
+            }
+            // Handle workflow_run event
+            else if (context.payload.workflow_run) {
+              const workflowRun = context.payload.workflow_run;
+
+              // Get PRs associated with this workflow run
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                head: `${workflowRun.head_repository.owner.login}:${workflowRun.head_branch}`
+              });
+
+              if (prs.length === 0) {
+                console.log('No open PR found for this workflow run');
+                return null;
+              }
+
+              pullRequest = prs[0];
+            } else {
+              console.log('Unknown event type');
+              return null;
+            }
+
+            // Check if PR is from Dependabot
+            if (pullRequest.user.login !== 'dependabot[bot]') {
+              console.log(`PR is not from Dependabot (user: ${pullRequest.user.login})`);
+              core.setOutput('is_dependabot', 'false');
+              return null;
+            }
+
+            core.setOutput('is_dependabot', 'true');
+            core.setOutput('pr_number', pullRequest.number);
+            core.setOutput('pr_state', pullRequest.state);
+            core.setOutput('head_sha', pullRequest.head.sha);
+
+            console.log(`Found Dependabot PR #${pullRequest.number}`);
+            return pullRequest;
+
+      - name: Check CI status
+        id: check_status
+        if: steps.pr.outputs.is_dependabot == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = ${{ steps.pr.outputs.pr_number }};
+            const head_sha = '${{ steps.pr.outputs.head_sha }}';
+
+            // Wait for status to be updated after workflow_run event
+            // GitHub may need a few seconds to update the check status after completion
+            const STATUS_UPDATE_DELAY_MS = 5000;
+            if (context.eventName === 'workflow_run') {
+              await new Promise(resolve => setTimeout(resolve, STATUS_UPDATE_DELAY_MS));
+            }
+
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr_number
+            });
+
+            // Get the combined status for the PR
+            const { data: status } = await github.rest.repos.getCombinedStatusForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: head_sha
+            });
+
+            // Get check runs for the PR
+            const { data: checkRuns } = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: head_sha
+            });
+
+            console.log('Combined status:', status.state);
+            console.log('Check runs:', checkRuns.check_runs.length);
+
+            // Check if all status checks have passed
+            // Note: status.total_count === 0 is allowed because GitHub Actions
+            // uses check runs (not status checks) for validation
+            const allStatusPassed = status.state === 'success' || status.total_count === 0;
+
+            // Check if all check runs have completed successfully
+            // Note: We require at least one check run OR explicit success state
+            // to prevent merging PRs without any validation
+            const allChecksPassed = checkRuns.check_runs.length === 0 ||
+              checkRuns.check_runs.every(check =>
+                check.status === 'completed' &&
+                (check.conclusion === 'success' || check.conclusion === 'skipped')
+              );
+
+            const hasFailedChecks = checkRuns.check_runs.some(check =>
+              check.status === 'completed' &&
+              (check.conclusion === 'failure' || check.conclusion === 'cancelled')
+            );
+
+            console.log('All status passed:', allStatusPassed);
+            console.log('All checks passed:', allChecksPassed);
+            console.log('Has failed checks:', hasFailedChecks);
+
+            // Check runs details
+            for (const check of checkRuns.check_runs) {
+              console.log(`Check: ${check.name}, Status: ${check.status}, Conclusion: ${check.conclusion}`);
+            }
+
+            // Safety check: Ensure we have some form of validation
+            // Either check runs exist OR we're in pull_request_target where checks may not be ready
+            const hasValidation = checkRuns.check_runs.length > 0 ||
+                                status.total_count > 0 ||
+                                context.eventName === 'pull_request_target';
+
+            if (!hasValidation) {
+              console.log('Warning: No validation checks found. Will wait for checks to appear.');
+            }
+
+            const ready_to_merge = allStatusPassed && allChecksPassed && !hasFailedChecks && hasValidation;
+            core.setOutput('ready_to_merge', ready_to_merge);
+            core.setOutput('status_state', status.state);
+            core.setOutput('checks_count', checkRuns.check_runs.length);
+            core.setOutput('has_failed_checks', hasFailedChecks);
+
+            return ready_to_merge;
+
+      - name: Wait for checks (if needed)
+        if: steps.pr.outputs.is_dependabot == 'true' && steps.check_status.outputs.ready_to_merge != 'true' && steps.check_status.outputs.has_failed_checks != 'true'
+        run: |
+          echo "CI checks are not ready yet. Status: ${{ steps.check_status.outputs.status_state }}"
+          echo "Number of check runs: ${{ steps.check_status.outputs.checks_count }}"
+          echo "Workflow will retry when checks complete."
+
+      - name: Report failed checks
+        if: steps.pr.outputs.is_dependabot == 'true' && steps.check_status.outputs.has_failed_checks == 'true'
+        run: |
+          echo "⚠️ Some CI checks have failed. Not merging PR."
+          echo "Status: ${{ steps.check_status.outputs.status_state }}"
+          echo "Number of check runs: ${{ steps.check_status.outputs.checks_count }}"
+
+      - name: Approve PR
+        if: steps.pr.outputs.is_dependabot == 'true' && steps.check_status.outputs.ready_to_merge == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = ${{ steps.pr.outputs.pr_number }};
+
+            // Check if already approved
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr_number
+            });
+
+            const alreadyApproved = reviews.some(review =>
+              review.state === 'APPROVED' &&
+              review.user.login === 'github-actions[bot]'
+            );
+
+            if (alreadyApproved) {
+              console.log(`PR #${pr_number} is already approved`);
+              return;
+            }
+
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr_number,
+              event: 'APPROVE',
+              body: '✅ Auto-approving Dependabot PR after successful CI tests.'
+            });
+
+            console.log(`Approved PR #${pr_number}`);
+
+      - name: Enable auto-merge
+        if: steps.pr.outputs.is_dependabot == 'true' && steps.check_status.outputs.ready_to_merge == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr_number = ${{ steps.pr.outputs.pr_number }};
+
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr_number
+            });
+
+            // Check if already merged
+            if (pullRequest.merged) {
+              console.log(`PR #${pr_number} is already merged`);
+              return;
+            }
+
+            // Try to merge directly
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr_number,
+                merge_method: 'squash',
+                commit_title: pullRequest.title,
+                commit_message: `${pullRequest.title}\n\nAuto-merged by Dependabot workflow after successful CI tests.`
+              });
+              console.log(`✅ Successfully merged PR #${pr_number}`);
+            } catch (mergeError) {
+              console.log('Could not merge directly:', mergeError.message);
+
+              // Try to enable auto-merge using GraphQL as fallback
+              const mutation = `
+                mutation($pullRequestId: ID!) {
+                  enablePullRequestAutoMerge(input: {
+                    pullRequestId: $pullRequestId,
+                    mergeMethod: SQUASH
+                  }) {
+                    pullRequest {
+                      autoMergeRequest {
+                        enabledAt
+                      }
+                    }
+                  }
+                }
+              `;
+
+              try {
+                await github.graphql(mutation, {
+                  pullRequestId: pullRequest.node_id
+                });
+                console.log(`✅ Enabled auto-merge for PR #${pr_number}`);
+              } catch (error) {
+                console.log('Could not enable auto-merge:', error.message);
+                throw error;
+              }
+            }
+
+      - name: Summary
+        if: always() && steps.pr.outputs.is_dependabot == 'true'
+        run: |
+          echo "### Dependabot Auto-Merge Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- PR Number: #${{ steps.pr.outputs.pr_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Ready to Merge: ${{ steps.check_status.outputs.ready_to_merge }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Has Failed Checks: ${{ steps.check_status.outputs.has_failed_checks }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Status State: ${{ steps.check_status.outputs.status_state }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Check Runs: ${{ steps.check_status.outputs.checks_count }}" >> $GITHUB_STEP_SUMMARY
