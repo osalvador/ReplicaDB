@@ -421,14 +421,6 @@ public class PostgresqlManager extends SqlManager {
                 this.connection.rollback();
                 throw e;
             }
-        } else {
-            // Even when jobs==1, commit the transaction after metadata probing
-            // to ensure clean transaction state for data reading
-            try {
-                this.getConnection().commit();
-            } catch (SQLException e) {
-                LOG.debug("Could not commit after preSourceTasks: {}", e.getMessage());
-            }
         }
 
     }
