@@ -89,6 +89,36 @@ public class SqliteManager extends SqlManager {
 		}
 	}
 
+	/**
+	 * Override close() to ensure SQLite releases all locks before closing connection.
+	 * Executes WAL checkpoint to flush any pending writes and release locks on the database file.
+	 * This prevents "database is locked" errors when other connections try to access the database
+	 * immediately after this connection closes.
+	 */
+	@Override
+	public void close() throws SQLException {
+		try {
+			Connection conn = this.getConnection();
+			if (conn != null && !conn.isClosed()) {
+				try (Statement stmt = conn.createStatement()) {
+					// Force a WAL checkpoint to flush any pending writes
+					// This releases write locks on the database file
+					stmt.execute("PRAGMA wal_checkpoint(TRUNCATE)");
+					LOG.debug("Executed WAL checkpoint before closing SQLite connection");
+				} catch (SQLException e) {
+					// Log but don't fail close if checkpoint fails
+					// The database might not be in WAL mode, or checkpoint might not be needed
+					LOG.debug("Could not execute WAL checkpoint: " + e.getMessage());
+				}
+			}
+		} catch (SQLException e) {
+			LOG.debug("Error during SQLite connection cleanup: " + e.getMessage());
+		} finally {
+			// Always call parent close() to properly release the connection
+			super.close();
+		}
+	}
+
 	@Override
 	public String getDriverClass() {
 		return JdbcDrivers.SQLITE.getDriverClass();

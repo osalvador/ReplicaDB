@@ -149,8 +149,8 @@ class Sqlserver2SqliteTest {
         assertTrue(tableExists(sqliteConn, sinkTable), "Sink table should exist after auto-create");
         assertEquals(EXPECTED_ROWS, countRows(sqliteConn, sinkTable));
 
-        // Cleanup
-        sqliteConn.createStatement().execute("DROP TABLE " + sinkTable);
+        // Note: No cleanup needed - test database file is deleted between test runs
+        // Attempting to DROP TABLE here causes SQLITE_LOCKED errors due to connection pooling
     }
 
     @Test
