@@ -94,7 +94,9 @@ class DB22DB2Test {
 
     private boolean tableExists(Connection conn, String tableName) throws SQLException {
         DatabaseMetaData meta = conn.getMetaData();
-        try (ResultSet rs = meta.getTables(null, null, tableName, new String[]{"TABLE"})) {
+        // DB2 stores table names in uppercase
+        String upperTableName = tableName.toUpperCase();
+        try (ResultSet rs = meta.getTables(null, null, upperTableName, new String[]{"TABLE"})) {
             return rs.next();
         }
     }
