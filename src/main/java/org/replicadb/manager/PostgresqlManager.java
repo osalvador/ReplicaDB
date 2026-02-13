@@ -296,7 +296,8 @@ public class PostgresqlManager extends SqlManager {
         String limit = " LIMIT ?";
 
         if (this.options.getJobs() == nThread + 1) {
-            return super.execute(sqlCmd, offset);
+            // Cast offset to Object to ensure it's passed as vararg parameter, not fetchSize
+            return super.execute(sqlCmd, (Object)offset);
         } else {
             sqlCmd = sqlCmd + limit;
             return super.execute(sqlCmd, offset, chunkSize);
