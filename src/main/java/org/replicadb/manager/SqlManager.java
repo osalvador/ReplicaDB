@@ -132,6 +132,14 @@ public abstract class SqlManager extends ConnManager {
 
         LOG.info("{}: Executing SQL statement: {}",Thread.currentThread().getName(), stmt);
 
+        // NEW: Add connection state logging
+        Connection conn = this.getConnection();
+        LOG.debug("{}: Connection state - autoCommit: {}, transactionIsolation: {}, isClosed: {}", 
+                  Thread.currentThread().getName(),
+                  conn.getAutoCommit(),
+                  conn.getTransactionIsolation(),
+                  conn.isClosed());
+
         PreparedStatement statement = this.getConnection().prepareStatement(stmt, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
 
         if (fetchSize != null) {
@@ -145,14 +153,44 @@ public abstract class SqlManager extends ConnManager {
             }
         }
 
-        StringBuilder sb = new StringBuilder();
-        for (Object o : args) {
-            sb.append(o.toString())
-                    .append(", ");
+        // NEW: Enhanced parameter logging with types
+        if (null != args && args.length > 0) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("Parameters bound [count=").append(args.length).append("]: ");
+            for (int i = 0; i < args.length; i++) {
+                Object arg = args[i];
+                sb.append("param").append(i+1).append("=")
+                  .append(arg == null ? "NULL" : arg.toString())
+                  .append(" (type=")
+                  .append(arg == null ? "null" : arg.getClass().getSimpleName())
+                  .append(")");
+                if (i < args.length - 1) sb.append(", ");
+            }
+            LOG.info("{}: {}", Thread.currentThread().getName(), sb);
+        } else {
+            LOG.info("{}: No parameters to bind", Thread.currentThread().getName());
         }
-        LOG.info("{}: With args: {}",Thread.currentThread().getName() , sb);
 
-        return statement.executeQuery();
+        ResultSet resultSet = statement.executeQuery();
+        
+        // NEW: Log ResultSet metadata immediately after execution
+        try {
+            ResultSetMetaData rsmd = resultSet.getMetaData();
+            int colCount = rsmd.getColumnCount();
+            LOG.debug("{}: ResultSet returned with {} columns", Thread.currentThread().getName(), colCount);
+            
+            // Log column names for debugging
+            StringBuilder colNames = new StringBuilder("Columns: ");
+            for (int i = 1; i <= colCount; i++) {
+                colNames.append(rsmd.getColumnName(i));
+                if (i < colCount) colNames.append(", ");
+            }
+            LOG.debug("{}: {}", Thread.currentThread().getName(), colNames);
+        } catch (SQLException e) {
+            LOG.warn("{}: Could not retrieve ResultSet metadata: {}", Thread.currentThread().getName(), e.getMessage());
+        }
+        
+        return resultSet;
     }
 
     /**

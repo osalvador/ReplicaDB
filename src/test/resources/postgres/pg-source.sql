@@ -58,6 +58,8 @@ create table if not exists t_source
 );
 
 truncate table t_source;;
+-- Reset the serial sequence to ensure c_integer starts at 1
+ALTER SEQUENCE t_source_c_integer_seq RESTART WITH 1;
 
 insert into t_source (
     /*C_INTEGER, auto incremented*/

@@ -264,6 +264,14 @@ public class PostgresqlManager extends SqlManager {
     @Override
     public ResultSet readTable(String tableName, String[] columns, int nThread) throws SQLException {
 
+        // NEW: Log method entry with key parameters
+        LOG.info("{}: readTable called - tableName: {}, nThread: {}, jobs: {}, chunkSize: {}",
+                 Thread.currentThread().getName(),
+                 tableName,
+                 nThread,
+                 this.options.getJobs(),
+                 chunkSize);
+
         // If table name parameter is null get it from options
         tableName = tableName == null ? this.options.getSourceTable() : tableName;
 
@@ -271,12 +279,25 @@ public class PostgresqlManager extends SqlManager {
         String allColumns = this.options.getSourceColumns() == null ? "*" : this.options.getSourceColumns();
 
         long offset = nThread * chunkSize;
+        
+        // NEW: Log offset calculation details
+        LOG.debug("{}: Offset calculation - nThread: {} * chunkSize: {} = offset: {}",
+                  Thread.currentThread().getName(),
+                  nThread,
+                  chunkSize,
+                  offset);
+        
         String sqlCmd;
 
         // Read table with source-query option specified
         if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
             sqlCmd = "SELECT  * FROM (" +
                     options.getSourceQuery() + ") as T1 OFFSET ? ";
+            
+            // NEW: Log the source query being wrapped
+            LOG.info("{}: Using source-query wrapped in subquery. Original query: {}",
+                     Thread.currentThread().getName(),
+                     options.getSourceQuery());
         } else {
 
             sqlCmd = "SELECT " +
@@ -295,11 +316,65 @@ public class PostgresqlManager extends SqlManager {
 
         String limit = " LIMIT ?";
 
+        // NEW: Pre-verification - count rows that SHOULD be returned
+        if (LOG.isDebugEnabled()) {
+            try {
+                String verifyQuery;
+                if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
+                    verifyQuery = "SELECT COUNT(*) FROM (" + options.getSourceQuery() + ") as T1";
+                } else {
+                    verifyQuery = "SELECT COUNT(*) FROM " + escapeTableName(tableName);
+                    if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
+                        verifyQuery = verifyQuery + " WHERE " + options.getSourceWhere();
+                    }
+                }
+                
+                LOG.debug("{}: Pre-verification query: {}", Thread.currentThread().getName(), verifyQuery);
+                Statement verifyStmt = this.getConnection().createStatement();
+                ResultSet verifyRs = verifyStmt.executeQuery(verifyQuery);
+                if (verifyRs.next()) {
+                    long expectedRows = verifyRs.getLong(1);
+                    LOG.info("{}: Pre-verification: Source query should return {} rows (before OFFSET/LIMIT)",
+                             Thread.currentThread().getName(),
+                             expectedRows);
+                }
+                verifyRs.close();
+                verifyStmt.close();
+            } catch (SQLException e) {
+                LOG.warn("{}: Pre-verification query failed: {}", Thread.currentThread().getName(), e.getMessage());
+            }
+        }
+
+        // NEW: Log which execution path will be taken
+        boolean isLastJob = (this.options.getJobs() == nThread + 1);
+        LOG.info("{}: Execution path - isLastJob: {}, will add LIMIT: {}",
+                 Thread.currentThread().getName(),
+                 isLastJob,
+                 !isLastJob);
+
         if (this.options.getJobs() == nThread + 1) {
+            // NEW: Log exact SQL being executed
+            LOG.info("{}: Executing query WITHOUT LIMIT (jobs==nThread+1). SQL: {}",
+                     Thread.currentThread().getName(),
+                     sqlCmd);
+            LOG.info("{}: Calling execute with offset parameter only: {}", 
+                     Thread.currentThread().getName(),
+                     offset);
+            
             // Explicitly call execute(String, Object...) with offset as vararg parameter
             return super.execute(sqlCmd, new Object[]{offset});
         } else {
             sqlCmd = sqlCmd + limit;
+            
+            // NEW: Log exact SQL being executed
+            LOG.info("{}: Executing query WITH LIMIT (parallel jobs). SQL: {}",
+                     Thread.currentThread().getName(),
+                     sqlCmd);
+            LOG.info("{}: Calling execute with offset: {} and chunkSize: {}",
+                     Thread.currentThread().getName(),
+                     offset,
+                     chunkSize);
+            
             return super.execute(sqlCmd, offset, chunkSize);
         }
 
