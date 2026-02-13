@@ -38,6 +38,57 @@ public class SqliteManager extends SqlManager {
 		}
 	}
 
+	/**
+	 * Override to configure SQLite-specific connection settings for improved concurrency.
+	 * Sets busy_timeout to prevent immediate lock failures, and optionally enables
+	 * WAL mode if specified in connection URL.
+	 *
+	 * @return Connection with SQLite pragmas configured
+	 * @throws SQLException if connection or pragma execution fails
+	 */
+	@Override
+	public Connection getConnection() throws SQLException {
+		Connection conn = super.getConnection();
+		if (conn != null && !conn.isClosed()) {
+			try (Statement stmt = conn.createStatement()) {
+				// Set busy timeout to 30 seconds to handle lock contention
+				// SQLite will retry for this duration instead of failing immediately
+				stmt.execute("PRAGMA busy_timeout = 30000");
+				LOG.debug("Set SQLite busy_timeout to 30000ms for lock handling");
+				
+				// Enable WAL mode if user explicitly requests it in connection URL
+				// WAL (Write-Ahead Logging) improves concurrency for read-heavy workloads
+				if (shouldEnableWalMode()) {
+					stmt.execute("PRAGMA journal_mode = WAL");
+					LOG.info("Enabled WAL mode for SQLite connection (user-requested)");
+				}
+			} catch (SQLException e) {
+				LOG.warn("Failed to set SQLite PRAGMA settings: " + e.getMessage());
+				// Don't fail connection creation if PRAGMA fails
+				// The connection is still usable, just without optimizations
+			}
+		}
+		return conn;
+	}
+
+	/**
+	 * Check if WAL mode should be enabled based on connection URL parameters.
+	 * Users can enable WAL by adding "journal_mode=wal" to the connection string.
+	 *
+	 * @return true if WAL mode is requested, false otherwise
+	 */
+	private boolean shouldEnableWalMode() {
+		try {
+			String connectStr = (dsType == DataSourceType.SOURCE) ? 
+				options.getSourceConnect() : options.getSinkConnect();
+			return connectStr != null && 
+				   connectStr.toLowerCase().contains("journal_mode=wal");
+		} catch (Exception e) {
+			LOG.debug("Could not check WAL mode setting: " + e.getMessage());
+			return false;
+		}
+	}
+
 	@Override
 	public String getDriverClass() {
 		return JdbcDrivers.SQLITE.getDriverClass();

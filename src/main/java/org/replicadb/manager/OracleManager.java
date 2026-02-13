@@ -298,12 +298,12 @@ public class OracleManager extends SqlManager {
                             break;
                         case Types.BOOLEAN:
                         case Types.BIT:
-                            // Oracle doesn't have native BOOLEAN, convert to string "true"/"false"
+                            // Oracle doesn't have native BOOLEAN, use NUMBER(1) with 0/1 values
                             Boolean boolValue = resultSet.getBoolean(i);
                             if (resultSet.wasNull()) {
-                                ps.setNull(i, Types.VARCHAR);
+                                ps.setNull(i, Types.NUMERIC);
                             } else {
-                                ps.setString(i, boolValue.toString());
+                                ps.setInt(i, boolValue ? 1 : 0);
                             }
                             break;
                         case Types.NVARCHAR:
