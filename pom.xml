@@ -217,7 +217,7 @@
         <dependency>
             <groupId>com.oracle.database.xml</groupId>
             <artifactId>xmlparserv2</artifactId>
-            <version>23.3.0.23.09</version>
+            <version>23.26.1.0.0</version>
         </dependency>
         <!-- Oracle XML DB support for XMLType processing -->
         <dependency>
