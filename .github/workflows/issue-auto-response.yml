@@ -57,9 +57,44 @@ jobs:
               return keywords.some(keyword => text.includes(keyword));
             }
             
+            // Detect issue type for labeling
+            let issueType = null;
+            let issueTypeLabels = [];
+            
+            // Bug detection
+            if (containsAny(issueText, ['error', 'exception', 'fail', 'failed', 'crash', 'broken', 'bug', 'defect', 'incorrect', 'wrong'])) {
+              issueType = 'bug';
+              issueTypeLabels.push('bug');
+            }
+            
+            // Enhancement/Feature detection
+            if (containsAny(issueText, ['feature', 'enhancement', 'improvement', 'add support', 'new feature', 'would be nice', 'could you add', 'feature request'])) {
+              if (issueType === null) issueType = 'enhancement';
+              issueTypeLabels.push('enhancement');
+            }
+            
+            // Question detection
+            if (containsAny(issueText, ['how to', 'how do', 'how can', 'what is', 'why does', 'when should', 'where', 'question', '?']) || 
+                issueTitle.includes('?')) {
+              if (issueType === null) issueType = 'question';
+              if (!issueTypeLabels.includes('question')) issueTypeLabels.push('question');
+            }
+            
+            // Documentation detection
+            if (containsAny(issueText, ['documentation', 'docs', 'readme', 'guide', 'tutorial', 'example', 'document'])) {
+              if (issueType === null) issueType = 'documentation';
+              if (!issueTypeLabels.includes('documentation')) issueTypeLabels.push('documentation');
+            }
+            
+            // If no type detected, default to question
+            if (issueType === null) {
+              issueType = 'question';
+              issueTypeLabels.push('question');
+            }
+            
             // Analyze issue content to provide relevant response
-            let response = `👋 ¡Hola @${issue.user.login}! Gracias por abrir este issue.\n\n`;
-            response += `🤖 **Respuesta automática inicial del agente**\n\n`;
+            let response = `👋 Hello @${issue.user.login}! Thank you for opening this issue.\n\n`;
+            response += `🤖 **Automated Initial Response**\n\n`;
             
             // Check for common topics and provide relevant information
             let topicsFound = [];
@@ -67,9 +102,9 @@ jobs:
             // Installation and setup
             if (containsAny(issueText, ['install', 'instalación', 'setup', 'download', 'descargar'])) {
               topicsFound.push('installation');
-              response += `### 📦 Instalación\n\n`;
-              response += `ReplicaDB requiere Java 11 o superior. Puedes instalarlo de las siguientes formas:\n\n`;
-              response += `**Descarga directa:**\n`;
+              response += `### 📦 Installation\n\n`;
+              response += `ReplicaDB requires Java 11 or higher. You can install it in the following ways:\n\n`;
+              response += `**Direct download:**\n`;
               response += `\`\`\`bash\n`;
               response += `curl -o ReplicaDB-0.18.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.18.0/ReplicaDB-0.18.0.tar.gz"\n`;
               response += `tar -xvzf ReplicaDB-0.18.0.tar.gz\n`;
@@ -85,49 +120,49 @@ jobs:
             // Database support
             if (containsAny(issueText, ['database', 'base de datos', 'oracle', 'postgres', 'mysql', 'mongodb', 'sql server', 'db2', 'sqlite'])) {
               topicsFound.push('database');
-              response += `### 🗄️ Bases de Datos Soportadas\n\n`;
-              response += `ReplicaDB soporta una amplia gama de bases de datos:\n`;
-              response += `- **Relacionales:** Oracle, PostgreSQL, MySQL/MariaDB, SQL Server, SQLite, IBM DB2 (LUW y AS/400)\n`;
+              response += `### 🗄️ Supported Databases\n\n`;
+              response += `ReplicaDB supports a wide range of databases:\n`;
+              response += `- **Relational:** Oracle, PostgreSQL, MySQL/MariaDB, SQL Server, SQLite, IBM DB2 (LUW and AS/400)\n`;
               response += `- **NoSQL:** MongoDB\n`;
-              response += `- **Otros:** Denodo (virtualización), CSV, Amazon S3, Kafka\n`;
-              response += `- **Cualquier base JDBC-compliant** (con algunas limitaciones)\n\n`;
-              response += `Para bases de datos específicas, consulta la [documentación completa](https://osalvador.github.io/ReplicaDB/docs/docs.html).\n\n`;
+              response += `- **Others:** Denodo (data virtualization), CSV, Amazon S3, Kafka\n`;
+              response += `- **Any JDBC-compliant database** (with some limitations)\n\n`;
+              response += `For database-specific information, check the [complete documentation](https://osalvador.github.io/ReplicaDB/docs/docs.html).\n\n`;
             }
             
             // Performance and parallel execution
             if (containsAny(issueText, ['performance', 'rendimiento', 'slow', 'lento', 'parallel', 'paralelo', 'jobs', 'speed', 'velocidad'])) {
               topicsFound.push('performance');
-              response += `### ⚡ Optimización del Rendimiento\n\n`;
-              response += `ReplicaDB utiliza paralelización nativa para transferencias de datos de alto rendimiento:\n\n`;
-              response += `- Usa el parámetro \`--jobs\` para controlar el número de hilos paralelos (ej: \`--jobs=4\`)\n`;
-              response += `- El particionamiento se hace mediante funciones nativas de la base de datos (\`ORA_HASH\`, \`HASH\`, etc.)\n`;
-              response += `- Ajusta \`--fetch-size\` para el tamaño del lote del cursor JDBC (default 5000)\n`;
-              response += `- Usa \`--bandwidth-throttling\` para limitar ancho de banda si es necesario\n\n`;
-              response += `**Métricas objetivo:**\n`;
-              response += `- Tablas pequeñas (<100K filas): Un solo hilo\n`;
-              response += `- Tablas medianas (100K-10M filas): 2-4 hilos, transferencias en menos de 10 minutos\n`;
-              response += `- Tablas grandes (>10M filas): 4-8 hilos\n\n`;
+              response += `### ⚡ Performance Optimization\n\n`;
+              response += `ReplicaDB uses native parallelization for high-performance data transfers:\n\n`;
+              response += `- Use the \`--jobs\` parameter to control the number of parallel threads (e.g., \`--jobs=4\`)\n`;
+              response += `- Partitioning is done using database-native functions (\`ORA_HASH\`, \`HASH\`, etc.)\n`;
+              response += `- Adjust \`--fetch-size\` for the JDBC cursor batch size (default 5000)\n`;
+              response += `- Use \`--bandwidth-throttling\` to limit bandwidth if needed\n\n`;
+              response += `**Target metrics:**\n`;
+              response += `- Small tables (<100K rows): Single thread\n`;
+              response += `- Medium tables (100K-10M rows): 2-4 threads, transfers in under 10 minutes\n`;
+              response += `- Large tables (>10M rows): 4-8 threads\n\n`;
             }
             
             // Modes of operation
             if (containsAny(issueText, ['mode', 'modo', 'incremental', 'complete', 'atomic'])) {
               topicsFound.push('modes');
-              response += `### 🔄 Modos de Replicación\n\n`;
-              response += `ReplicaDB soporta diferentes modos de replicación:\n\n`;
-              response += `1. **Complete Mode** (\`--mode=complete\`): Trunca y recarga la tabla completa\n`;
-              response += `2. **Incremental Mode** (\`--mode=incremental\`): Solo replica registros nuevos/modificados usando timestamp o secuencia\n`;
-              response += `3. **Complete-Atomic Mode** (\`--mode=complete-atomic\`): Usa tabla staging para commits atómicos\n\n`;
-              response += `Para modo incremental, usa \`--source-where\` para especificar la condición de filtrado.\n\n`;
+              response += `### 🔄 Replication Modes\n\n`;
+              response += `ReplicaDB supports different replication modes:\n\n`;
+              response += `1. **Complete Mode** (\`--mode=complete\`): Truncates and reloads the entire table\n`;
+              response += `2. **Incremental Mode** (\`--mode=incremental\`): Only replicates new/modified records using timestamp or sequence\n`;
+              response += `3. **Complete-Atomic Mode** (\`--mode=complete-atomic\`): Uses staging table for atomic commits\n\n`;
+              response += `For incremental mode, use \`--source-where\` to specify the filter condition.\n\n`;
             }
             
             // Configuration
             if (containsAny(issueText, ['config', 'configuración', 'options', 'opciones', 'parameters', 'parámetros'])) {
               topicsFound.push('configuration');
-              response += `### ⚙️ Configuración\n\n`;
-              response += `ReplicaDB puede configurarse mediante:\n`;
-              response += `- **Argumentos CLI:** \`replicadb --source-connect jdbc:... --sink-connect jdbc:...\`\n`;
-              response += `- **Archivo de configuración:** \`replicadb --options-file replicadb.conf\`\n\n`;
-              response += `El archivo de configuración soporta sustitución de variables de entorno:\n`;
+              response += `### ⚙️ Configuration\n\n`;
+              response += `ReplicaDB can be configured via:\n`;
+              response += `- **CLI arguments:** \`replicadb --source-connect jdbc:... --sink-connect jdbc:...\`\n`;
+              response += `- **Configuration file:** \`replicadb --options-file replicadb.conf\`\n\n`;
+              response += `The configuration file supports environment variable substitution:\n`;
               response += `\`\`\`properties\n`;
               response += `source.connect=jdbc:oracle:thin:@\${ORACLE_HOST}:1521:ORCL\n`;
               response += `source.user=\${ORACLE_USER}\n`;
@@ -138,59 +173,59 @@ jobs:
             }
             
             // Error handling
-            if (containsAny(issueText, ['error', 'exception', 'fail', 'fallo', 'problema', 'issue'])) {
+            if (containsAny(issueText, ['error', 'exception', 'fail', 'fallo', 'problema'])) {
               topicsFound.push('troubleshooting');
-              response += `### 🔍 Solución de Problemas\n\n`;
-              response += `Si encuentras errores:\n\n`;
-              response += `1. **Verifica conectividad:** Asegúrate de que ambas bases de datos sean accesibles\n`;
-              response += `2. **Revisa permisos:** \n`;
-              response += `   - Base origen: requiere permisos SELECT\n`;
-              response += `   - Base destino: requiere permisos INSERT/UPDATE/DELETE/CREATE TABLE\n`;
-              response += `3. **Drivers JDBC:** Asegúrate de tener los drivers correctos en \`$REPLICADB_HOME/lib/\`\n`;
-              response += `4. **Logs:** Revisa los logs para detalles específicos del error\n`;
-              response += `5. **Tipos de datos:** Algunas conversiones entre bases de datos pueden tener limitaciones\n\n`;
+              response += `### 🔍 Troubleshooting\n\n`;
+              response += `If you encounter errors:\n\n`;
+              response += `1. **Verify connectivity:** Ensure both databases are accessible\n`;
+              response += `2. **Check permissions:** \n`;
+              response += `   - Source database: requires SELECT permissions\n`;
+              response += `   - Sink database: requires INSERT/UPDATE/DELETE/CREATE TABLE permissions\n`;
+              response += `3. **JDBC drivers:** Ensure you have the correct drivers in \`$REPLICADB_HOME/lib/\`\n`;
+              response += `4. **Logs:** Check the logs for specific error details\n`;
+              response += `5. **Data types:** Some conversions between databases may have limitations\n\n`;
             }
             
             // Docker usage
             if (containsAny(issueText, ['docker', 'container', 'contenedor', 'containerfile', 'dockerfile'])) {
               topicsFound.push('docker');
-              response += `### 🐳 Uso con Docker\n\n`;
-              response += `ReplicaDB está disponible como imagen Docker:\n\n`;
+              response += `### 🐳 Docker Usage\n\n`;
+              response += `ReplicaDB is available as a Docker image:\n\n`;
               response += `\`\`\`bash\n`;
-              response += `# Ejecutar con opciones CLI\n`;
+              response += `# Run with CLI options\n`;
               response += `docker run -it osalvador/replicadb:latest \\\n`;
               response += `  --source-connect jdbc:postgresql://host.docker.internal:5432/sourcedb \\\n`;
               response += `  --source-user user --source-password pass \\\n`;
               response += `  --sink-connect jdbc:postgresql://host.docker.internal:5432/sinkdb \\\n`;
               response += `  --sink-user user --sink-password pass \\\n`;
               response += `  --mode complete --jobs 4\n\n`;
-              response += `# Usando archivo de configuración\n`;
+              response += `# Using configuration file\n`;
               response += `docker run -v /path/to/config:/config osalvador/replicadb:latest \\\n`;
               response += `  --options-file /config/replicadb.conf\n`;
               response += `\`\`\`\n\n`;
             }
             
             // Add general resources section
-            response += `### 📚 Recursos Adicionales\n\n`;
-            response += `- 📖 [Documentación completa](https://osalvador.github.io/ReplicaDB/docs/docs.html)\n`;
-            response += `- 🚀 [Guía de inicio rápido](https://github.com/osalvador/ReplicaDB#installation)\n`;
-            response += `- 🏗️ [Decisiones de arquitectura](https://github.com/osalvador/ReplicaDB/blob/master/ARCHITECTURE_DECISIONS.md)\n`;
-            response += `- 🤝 [Guía de contribución](https://github.com/osalvador/ReplicaDB/blob/master/CONTRIBUTING.md)\n`;
-            response += `- 💬 [Discusiones en GitHub](https://github.com/osalvador/ReplicaDB/discussions)\n\n`;
+            response += `### 📚 Additional Resources\n\n`;
+            response += `- 📖 [Complete documentation](https://osalvador.github.io/ReplicaDB/docs/docs.html)\n`;
+            response += `- 🚀 [Quick start guide](https://github.com/osalvador/ReplicaDB#installation)\n`;
+            response += `- 🏗️ [Architecture decisions](https://github.com/osalvador/ReplicaDB/blob/master/ARCHITECTURE_DECISIONS.md)\n`;
+            response += `- 🤝 [Contributing guide](https://github.com/osalvador/ReplicaDB/blob/master/CONTRIBUTING.md)\n`;
+            response += `- 💬 [GitHub Discussions](https://github.com/osalvador/ReplicaDB/discussions)\n\n`;
             
             // Footer
             response += `---\n\n`;
             if (topicsFound.length > 0) {
-              response += `*Esta respuesta fue generada automáticamente basándose en los temas detectados: ${topicsFound.join(', ')}.*\n\n`;
+              response += `*This response was automatically generated based on detected topics: ${topicsFound.join(', ')}.*\n\n`;
             } else {
-              response += `*Esta es una respuesta automática inicial. Un mantenedor revisará tu issue y proporcionará asistencia adicional pronto.*\n\n`;
+              response += `*This is an automated initial response. A maintainer will review your issue and provide additional assistance soon.*\n\n`;
             }
-            response += `Si necesitas ayuda más específica, por favor proporciona:\n`;
-            response += `- Versión de ReplicaDB que estás usando\n`;
-            response += `- Bases de datos origen y destino (tipo y versión)\n`;
-            response += `- Comando o archivo de configuración que estás ejecutando\n`;
-            response += `- Mensajes de error completos si los hay\n\n`;
-            response += `¡Un mantenedor humano revisará tu issue pronto! 🙂`;
+            response += `If you need more specific help, please provide:\n`;
+            response += `- ReplicaDB version you are using\n`;
+            response += `- Source and sink databases (type and version)\n`;
+            response += `- Command or configuration file you are running\n`;
+            response += `- Complete error messages if any\n\n`;
+            response += `A human maintainer will review your issue soon! 🙂`;
             
             // Post the response
             await github.rest.issues.createComment({
@@ -201,14 +236,15 @@ jobs:
             });
             
             console.log('Automated response posted successfully!');
-      
-      - name: Add label
-        uses: actions/github-script@v7
-        with:
-          script: |
+            
+            // Apply type-based labels
+            const labelsToAdd = ['auto-responded', ...issueTypeLabels];
+            
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.issue.number,
-              labels: ['auto-responded']
+              issue_number: issue.number,
+              labels: labelsToAdd
             });
+            
+            console.log(`Applied labels: ${labelsToAdd.join(', ')}`);
