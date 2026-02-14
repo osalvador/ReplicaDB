@@ -49,19 +49,34 @@ All 11 open Dependabot PRs are affected:
 
 ## Solution: Rebase Dependabot PRs
 
-### Quick Fix (Recommended)
-Comment on each open Dependabot PR:
+### Automated Solution (Recommended) ⭐
+Use the provided GitHub Actions workflow to automatically comment on all Dependabot PRs:
+
+**Steps**:
+1. Go to the **Actions** tab in GitHub
+2. Select "**Rebase Dependabot PRs**" workflow
+3. Click "**Run workflow**" button
+4. Wait for completion (takes ~15 seconds)
+
+The workflow will:
+- Comment `@dependabot rebase` on all 12 open Dependabot PRs
+- Verify PRs are still open and from Dependabot
+- Provide detailed logs and summary
+
+See `scripts/README.md` for complete documentation.
+
+### Manual Alternative
+If you prefer to do it manually, comment on each open Dependabot PR:
 ```
 @dependabot rebase
 ```
 
-This will:
-1. Rebase the PR on current master (which has TestContainers 1.21.4)
-2. Trigger CI tests (which should now pass)
-3. Auto-merge workflow will automatically merge the PR
+Or use the bash script: `./scripts/rebase-dependabot-prs.sh`
 
-### Alternative: Prioritize PR #224
-PR #224 upgrades testcontainers to 1.21.4. Merging this first might help, but rebasing is still the most reliable approach since each PR needs to be rebased anyway.
+### What Happens After Rebase
+1. Dependabot rebases each PR on current master (which has TestContainers 1.21.4)
+2. CI tests are triggered (which should now pass)
+3. Auto-merge workflow automatically merges the PR once tests pass
 
 ## Technical Details
 
@@ -111,17 +126,30 @@ Added two new troubleshooting documents:
 
 ## Next Steps
 
-1. **Immediate Action**: Rebase all open Dependabot PRs
-   ```bash
-   # For each PR #222 through #233
-   gh pr comment <pr-number> --body "@dependabot rebase"
-   ```
+### Immediate Action (Choose One)
 
-2. **Monitor**: Watch for CI completion on rebased PRs
+**Option A - Use Automated Workflow (Recommended)** ⭐
+1. Merge this investigation PR  
+2. Go to **Actions** tab → "**Rebase Dependabot PRs**" workflow
+3. Click "**Run workflow**"
+4. Wait for all PRs to be rebased (~15 seconds)
 
-3. **Verify**: Auto-merge should kick in once tests pass
+**Option B - Use Bash Script**
+1. Merge this investigation PR
+2. Run: `./scripts/rebase-dependabot-prs.sh`
 
-4. **Future Prevention**: 
+**Option C - Manual Comments**
+Comment `@dependabot rebase` on each PR individually
+
+See `scripts/README.md` for detailed instructions on all methods.
+
+### After Rebasing
+
+1. **Monitor**: Watch for CI completion on rebased PRs
+
+2. **Verify**: Auto-merge should kick in once tests pass
+
+3. **Future Prevention**: 
    - Regularly rebase old Dependabot PRs
    - Keep TestContainers dependency current
    - Monitor TestContainers release notes
