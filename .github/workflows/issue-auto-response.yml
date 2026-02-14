@@ -1,0 +1,214 @@
+name: Issue Auto-Response Agent
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  auto-response:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Read documentation files
+        id: read-docs
+        run: |
+          echo "Reading documentation files..."
+          
+          # Create a summary of key documentation
+          {
+            echo "DOCS_CONTENT<<DOCS_EOF"
+            echo "=== README.md Key Information ==="
+            head -200 README.md
+            echo ""
+            echo "=== Architecture Decisions ==="
+            if [ -f ARCHITECTURE_DECISIONS.md ]; then
+              head -100 ARCHITECTURE_DECISIONS.md
+            fi
+            echo ""
+            echo "=== Contributing Guidelines ==="
+            if [ -f CONTRIBUTING.md ]; then
+              head -100 CONTRIBUTING.md
+            fi
+            echo "DOCS_EOF"
+          } >> $GITHUB_OUTPUT
+      
+      - name: Analyze issue and post automated response
+        uses: actions/github-script@v7
+        env:
+          DOCS_CONTENT: ${{ steps.read-docs.outputs.DOCS_CONTENT }}
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const issueTitle = issue.title.toLowerCase();
+            const issueBody = (issue.body || '').toLowerCase();
+            const issueText = issueTitle + ' ' + issueBody;
+            
+            // Helper function to check if text contains keywords
+            function containsAny(text, keywords) {
+              return keywords.some(keyword => text.includes(keyword));
+            }
+            
+            // Analyze issue content to provide relevant response
+            let response = `👋 ¡Hola @${issue.user.login}! Gracias por abrir este issue.\n\n`;
+            response += `🤖 **Respuesta automática inicial del agente**\n\n`;
+            
+            // Check for common topics and provide relevant information
+            let topicsFound = [];
+            
+            // Installation and setup
+            if (containsAny(issueText, ['install', 'instalación', 'setup', 'download', 'descargar'])) {
+              topicsFound.push('installation');
+              response += `### 📦 Instalación\n\n`;
+              response += `ReplicaDB requiere Java 11 o superior. Puedes instalarlo de las siguientes formas:\n\n`;
+              response += `**Descarga directa:**\n`;
+              response += `\`\`\`bash\n`;
+              response += `curl -o ReplicaDB-0.18.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.18.0/ReplicaDB-0.18.0.tar.gz"\n`;
+              response += `tar -xvzf ReplicaDB-0.18.0.tar.gz\n`;
+              response += `./bin/replicadb --help\n`;
+              response += `\`\`\`\n\n`;
+              response += `**Docker:**\n`;
+              response += `\`\`\`bash\n`;
+              response += `docker pull osalvador/replicadb:latest\n`;
+              response += `docker run -it osalvador/replicadb:latest --help\n`;
+              response += `\`\`\`\n\n`;
+            }
+            
+            // Database support
+            if (containsAny(issueText, ['database', 'base de datos', 'oracle', 'postgres', 'mysql', 'mongodb', 'sql server', 'db2', 'sqlite'])) {
+              topicsFound.push('database');
+              response += `### 🗄️ Bases de Datos Soportadas\n\n`;
+              response += `ReplicaDB soporta una amplia gama de bases de datos:\n`;
+              response += `- **Relacionales:** Oracle, PostgreSQL, MySQL/MariaDB, SQL Server, SQLite, IBM DB2 (LUW y AS/400)\n`;
+              response += `- **NoSQL:** MongoDB\n`;
+              response += `- **Otros:** Denodo (virtualización), CSV, Amazon S3, Kafka\n`;
+              response += `- **Cualquier base JDBC-compliant** (con algunas limitaciones)\n\n`;
+              response += `Para bases de datos específicas, consulta la [documentación completa](https://osalvador.github.io/ReplicaDB/docs/docs.html).\n\n`;
+            }
+            
+            // Performance and parallel execution
+            if (containsAny(issueText, ['performance', 'rendimiento', 'slow', 'lento', 'parallel', 'paralelo', 'jobs', 'speed', 'velocidad'])) {
+              topicsFound.push('performance');
+              response += `### ⚡ Optimización del Rendimiento\n\n`;
+              response += `ReplicaDB utiliza paralelización nativa para transferencias de datos de alto rendimiento:\n\n`;
+              response += `- Usa el parámetro \`--jobs\` para controlar el número de hilos paralelos (ej: \`--jobs=4\`)\n`;
+              response += `- El particionamiento se hace mediante funciones nativas de la base de datos (\`ORA_HASH\`, \`HASH\`, etc.)\n`;
+              response += `- Ajusta \`--fetch-size\` para el tamaño del lote del cursor JDBC (default 5000)\n`;
+              response += `- Usa \`--bandwidth-throttling\` para limitar ancho de banda si es necesario\n\n`;
+              response += `**Métricas objetivo:**\n`;
+              response += `- Tablas pequeñas (<100K filas): Un solo hilo\n`;
+              response += `- Tablas medianas (100K-10M filas): 2-4 hilos, transferencias en menos de 10 minutos\n`;
+              response += `- Tablas grandes (>10M filas): 4-8 hilos\n\n`;
+            }
+            
+            // Modes of operation
+            if (containsAny(issueText, ['mode', 'modo', 'incremental', 'complete', 'atomic'])) {
+              topicsFound.push('modes');
+              response += `### 🔄 Modos de Replicación\n\n`;
+              response += `ReplicaDB soporta diferentes modos de replicación:\n\n`;
+              response += `1. **Complete Mode** (\`--mode=complete\`): Trunca y recarga la tabla completa\n`;
+              response += `2. **Incremental Mode** (\`--mode=incremental\`): Solo replica registros nuevos/modificados usando timestamp o secuencia\n`;
+              response += `3. **Complete-Atomic Mode** (\`--mode=complete-atomic\`): Usa tabla staging para commits atómicos\n\n`;
+              response += `Para modo incremental, usa \`--source-where\` para especificar la condición de filtrado.\n\n`;
+            }
+            
+            // Configuration
+            if (containsAny(issueText, ['config', 'configuración', 'options', 'opciones', 'parameters', 'parámetros'])) {
+              topicsFound.push('configuration');
+              response += `### ⚙️ Configuración\n\n`;
+              response += `ReplicaDB puede configurarse mediante:\n`;
+              response += `- **Argumentos CLI:** \`replicadb --source-connect jdbc:... --sink-connect jdbc:...\`\n`;
+              response += `- **Archivo de configuración:** \`replicadb --options-file replicadb.conf\`\n\n`;
+              response += `El archivo de configuración soporta sustitución de variables de entorno:\n`;
+              response += `\`\`\`properties\n`;
+              response += `source.connect=jdbc:oracle:thin:@\${ORACLE_HOST}:1521:ORCL\n`;
+              response += `source.user=\${ORACLE_USER}\n`;
+              response += `source.password=\${ORACLE_PASSWORD}\n`;
+              response += `mode=incremental\n`;
+              response += `jobs=4\n`;
+              response += `\`\`\`\n\n`;
+            }
+            
+            // Error handling
+            if (containsAny(issueText, ['error', 'exception', 'fail', 'fallo', 'problema', 'issue'])) {
+              topicsFound.push('troubleshooting');
+              response += `### 🔍 Solución de Problemas\n\n`;
+              response += `Si encuentras errores:\n\n`;
+              response += `1. **Verifica conectividad:** Asegúrate de que ambas bases de datos sean accesibles\n`;
+              response += `2. **Revisa permisos:** \n`;
+              response += `   - Base origen: requiere permisos SELECT\n`;
+              response += `   - Base destino: requiere permisos INSERT/UPDATE/DELETE/CREATE TABLE\n`;
+              response += `3. **Drivers JDBC:** Asegúrate de tener los drivers correctos en \`$REPLICADB_HOME/lib/\`\n`;
+              response += `4. **Logs:** Revisa los logs para detalles específicos del error\n`;
+              response += `5. **Tipos de datos:** Algunas conversiones entre bases de datos pueden tener limitaciones\n\n`;
+            }
+            
+            // Docker usage
+            if (containsAny(issueText, ['docker', 'container', 'contenedor', 'containerfile', 'dockerfile'])) {
+              topicsFound.push('docker');
+              response += `### 🐳 Uso con Docker\n\n`;
+              response += `ReplicaDB está disponible como imagen Docker:\n\n`;
+              response += `\`\`\`bash\n`;
+              response += `# Ejecutar con opciones CLI\n`;
+              response += `docker run -it osalvador/replicadb:latest \\\n`;
+              response += `  --source-connect jdbc:postgresql://host.docker.internal:5432/sourcedb \\\n`;
+              response += `  --source-user user --source-password pass \\\n`;
+              response += `  --sink-connect jdbc:postgresql://host.docker.internal:5432/sinkdb \\\n`;
+              response += `  --sink-user user --sink-password pass \\\n`;
+              response += `  --mode complete --jobs 4\n\n`;
+              response += `# Usando archivo de configuración\n`;
+              response += `docker run -v /path/to/config:/config osalvador/replicadb:latest \\\n`;
+              response += `  --options-file /config/replicadb.conf\n`;
+              response += `\`\`\`\n\n`;
+            }
+            
+            // Add general resources section
+            response += `### 📚 Recursos Adicionales\n\n`;
+            response += `- 📖 [Documentación completa](https://osalvador.github.io/ReplicaDB/docs/docs.html)\n`;
+            response += `- 🚀 [Guía de inicio rápido](https://github.com/osalvador/ReplicaDB#installation)\n`;
+            response += `- 🏗️ [Decisiones de arquitectura](https://github.com/osalvador/ReplicaDB/blob/master/ARCHITECTURE_DECISIONS.md)\n`;
+            response += `- 🤝 [Guía de contribución](https://github.com/osalvador/ReplicaDB/blob/master/CONTRIBUTING.md)\n`;
+            response += `- 💬 [Discusiones en GitHub](https://github.com/osalvador/ReplicaDB/discussions)\n\n`;
+            
+            // Footer
+            response += `---\n\n`;
+            if (topicsFound.length > 0) {
+              response += `*Esta respuesta fue generada automáticamente basándose en los temas detectados: ${topicsFound.join(', ')}.*\n\n`;
+            } else {
+              response += `*Esta es una respuesta automática inicial. Un mantenedor revisará tu issue y proporcionará asistencia adicional pronto.*\n\n`;
+            }
+            response += `Si necesitas ayuda más específica, por favor proporciona:\n`;
+            response += `- Versión de ReplicaDB que estás usando\n`;
+            response += `- Bases de datos origen y destino (tipo y versión)\n`;
+            response += `- Comando o archivo de configuración que estás ejecutando\n`;
+            response += `- Mensajes de error completos si los hay\n\n`;
+            response += `¡Un mantenedor humano revisará tu issue pronto! 🙂`;
+            
+            // Post the response
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: response
+            });
+            
+            console.log('Automated response posted successfully!');
+      
+      - name: Add label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              labels: ['auto-responded']
+            });
