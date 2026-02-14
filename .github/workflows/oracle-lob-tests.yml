@@ -31,7 +31,7 @@ jobs:
 
     - name: Upload Test Results
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: oracle-lob-test-results
         path: target/surefire-reports/
