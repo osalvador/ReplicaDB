@@ -122,13 +122,23 @@ public class SQLServerManager extends SqlManager {
       String catalog = conn.getCatalog();
       
       try (ResultSet rs = metaData.getColumns(catalog, schemaPattern, tablePattern, null)) {
-         java.util.Map<String, Integer> columnTypesByName = new HashMap<>();
-         while (rs.next()) {
-            String columnName = rs.getString("COLUMN_NAME").toLowerCase();
-            int columnType = rs.getInt("DATA_TYPE");
-            columnTypesByName.put(columnName, columnType);
-            LOG.trace("Sink column '{}' has JDBC type {}", columnName, columnType);
-         }
+          java.util.Map<String, Integer> columnTypesByName = new HashMap<>();
+          while (rs.next()) {
+             String columnName = rs.getString("COLUMN_NAME").toLowerCase();
+             int columnType = rs.getInt("DATA_TYPE");
+             String columnTypeName = rs.getString("TYPE_NAME");
+             
+             // SQL Server reports XML columns with vendor-specific type code (-16)
+             // but we need to map it to Types.SQLXML (2009) for proper handling
+             if ("xml".equalsIgnoreCase(columnTypeName)) {
+                LOG.info("Sink column '{}' has TYPE_NAME='xml', mapping vendor type {} to java.sql.Types.SQLXML (2009)", 
+                    columnName, columnType);
+                columnType = java.sql.Types.SQLXML;
+             }
+             
+             columnTypesByName.put(columnName, columnType);
+             LOG.info("Sink column '{}' has JDBC type {} (TYPE_NAME='{}')", columnName, columnType, columnTypeName);
+          }
          
          // Fail fast if no columns found - prevents cryptic BulkCopy errors
          if (columnTypesByName.isEmpty()) {

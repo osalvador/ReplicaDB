@@ -190,11 +190,20 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                 if (type == Types.ROWID
                     || type == Types.ARRAY
                     || type == Types.STRUCT
-                    || type == Types.SQLXML
                     || type == Types.OTHER) {
                     LOG.trace("Mapping unsupported type {} to VARCHAR", type);
                     return Types.VARCHAR;
                 }
+            
+            // Special handling for SQLXML
+            // Note: SQL Server Bulk Copy API does not support Types.SQLXML directly.
+            // Even for XML→XML replication, we must convert SQLXML to string and use LONGVARCHAR type.
+            // The sink column metadata will handle the string→XML conversion on the server side.
+            if (type == Types.SQLXML) {
+                LOG.info("Column {} source type is SQLXML ({}), sink type is {} - mapping to LONGVARCHAR for bulk copy", 
+                    column, type, sinkType != null ? sinkType : "null");
+                return Types.LONGVARCHAR;
+            }
             
             if (type == Types.BOOLEAN) {
                 return Types.BIT;
@@ -598,10 +607,11 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     value = resultSet.wasNull() ? null : (structObj != null ? structObj.toString() : null);
                     LOG.trace("Converted STRUCT to string");
                 } else if (sourceType == Types.SQLXML) {
-                    // Convert SQLXML/XMLTYPE to VARCHAR-compatible string
+                    // SQL Server Bulk Copy API does not support SQLXML type directly.
+                    // Always convert SQLXML to string, even for XML→XML replication.
                     final java.sql.SQLXML xml = resultSet.getSQLXML(i);
                     value = resultSet.wasNull() ? null : (xml != null ? xml.getString() : null);
-                    LOG.trace("Converted SQLXML to string");
+                    LOG.info("Converted SQLXML to string for bulk copy (sink type: {})", sinkType != null ? sinkType : "null");
                 } else if (sourceType == Types.OTHER) {
                     // Handle OTHER type (PostgreSQL specific types, etc.)
                     Object otherObj = resultSet.getObject(i);
