@@ -18,6 +18,8 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency "jekyll", ">= 3.3", "< 5.0"
 
-  spec.add_development_dependency "bundler", "~> 1.12"
+  # Updated to fix CVE-2016-7954 (Critical): Arbitrary code injection via secondary Gem source (fixed in Bundler 2.0+)
+  # Updated to fix CVE-2021-43809 (Moderate): Local Code Execution via dash-leading git URL (fixed in Bundler 2.2.33+)
+  spec.add_development_dependency "bundler", ">= 2.3.0"
   spec.add_development_dependency "rake", "~> 13.3"
 end
