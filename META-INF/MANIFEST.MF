@@ -1,0 +1,40 @@
+Manifest-Version: 1.0
+Created-By: Apache Maven Bundle Plugin
+Built-By: BLD-003-W81-64$
+Build-Jdk: 11.0.2
+Bnd-LastModified: 1555361056682
+Bundle-Activator: com.microsoft.sqlserver.jdbc.osgi.Activator
+Bundle-Description: Microsoft JDBC Driver for SQL Server.
+Bundle-License: http://www.opensource.org/licenses/mit-license.php
+Bundle-ManifestVersion: 2
+Bundle-Name: Microsoft JDBC Driver for SQL Server
+Bundle-SymbolicName: com.microsoft.sqlserver.mssql-jdbc
+Bundle-Vendor: Microsoft Corporation
+Bundle-Version: 7.2.2
+Export-Package: com.microsoft.sqlserver.jdbc;uses:="com.microsoft.sqlser
+ ver.jdbc.dataclassification,javax.naming,javax.naming.spi,javax.securit
+ y.auth.callback,javax.security.auth.login,javax.sql,javax.transaction.x
+ a,microsoft.sql,org.ietf.jgss";version="7.2.2",com.microsoft.sqlserver.
+ jdbc.osgi;uses:="javax.sql,org.osgi.framework,org.osgi.service.jdbc";ve
+ rsion="7.2.2",com.microsoft.sqlserver.jdbc.dataclassification;version="
+ 7.2.2",microsoft.sql;version="7.2.2"
+Import-Package: com.microsoft.aad.adal4j;resolution:=optional,com.micros
+ oft.azure;resolution:=optional,com.microsoft.azure.keyvault;resolution:
+ =optional,com.microsoft.azure.keyvault.authentication;resolution:=optio
+ nal,com.microsoft.azure.keyvault.models;resolution:=optional,com.micros
+ oft.azure.keyvault.webkey;resolution:=optional,com.microsoft.azure.seri
+ alizer;resolution:=optional,com.microsoft.rest;resolution:=optional,com
+ .microsoft.rest.credentials;resolution:=optional,com.microsoft.rest.pro
+ tocol;resolution:=optional,com.microsoft.sqlserver.jdbc.dataclassificat
+ ion,javax.crypto,javax.crypto.spec,javax.naming,javax.naming.directory,
+ javax.naming.spi,javax.net.ssl,javax.security.auth,javax.security.auth.
+ callback,javax.security.auth.kerberos,javax.security.auth.login,javax.s
+ ecurity.auth.x500,javax.sql,javax.transaction.xa,javax.xml.parsers,java
+ x.xml.stream,javax.xml.transform,javax.xml.transform.dom,javax.xml.tran
+ sform.sax,javax.xml.transform.stax,javax.xml.transform.stream,okhttp3;r
+ esolution:=optional,org.ietf.jgss,org.osgi.framework;version="[1.6,2)",
+ org.osgi.service.jdbc;version="[1.0,2)",org.w3c.dom,org.xml.sax,retrofi
+ t2;resolution:=optional
+Require-Capability: osgi.ee;filter:="(&(osgi.ee=JavaSE)(version=1.8))"
+Tool: Bnd-4.2.0.201903051501
+

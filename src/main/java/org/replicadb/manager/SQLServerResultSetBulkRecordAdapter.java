@@ -198,13 +198,15 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
             // Special handling for SQLXML
             if (type == Types.SQLXML) {
                 // Check if sink column is also XML
+                LOG.info("Column {} source type is SQLXML ({}), sink type is {} ({})", 
+                    column, type, sinkType, sinkType != null ? sinkType : "null");
                 if (sinkType != null && sinkType == Types.SQLXML) {
                     // Keep as SQLXML for XML→XML bulk copy (no conversion needed)
-                    LOG.trace("Keeping SQLXML type for XML→XML bulk copy");
+                    LOG.info("Keeping SQLXML type for XML→XML bulk copy");
                     return Types.SQLXML;
                 } else {
                     // Sink is not XML, convert to string
-                    LOG.trace("Mapping SQLXML to LONGVARCHAR for XML→VARCHAR bulk copy");
+                    LOG.info("Mapping SQLXML to LONGVARCHAR for XML→VARCHAR bulk copy (sink type: {})", sinkType);
                     return Types.LONGVARCHAR;
                 }
             }
@@ -612,18 +614,20 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     LOG.trace("Converted STRUCT to string");
                 } else if (sourceType == Types.SQLXML) {
                     // Check if sink is also XML - if so, keep as SQLXML object
+                    LOG.info("Processing SQLXML column {}, sink type is {} ({})", 
+                        i, sinkType, sinkType != null ? sinkType : "null");
                     if (sinkType != null && sinkType == Types.SQLXML) {
                         // XML→XML: pass SQLXML object directly (no conversion)
                         value = resultSet.getSQLXML(i);
                         if (resultSet.wasNull()) {
                             value = null;
                         }
-                        LOG.trace("Passing SQLXML object directly for XML→XML bulk copy");
+                        LOG.info("Passing SQLXML object directly for XML→XML bulk copy");
                     } else {
                         // XML→VARCHAR: convert to string
                         final java.sql.SQLXML xml = resultSet.getSQLXML(i);
                         value = resultSet.wasNull() ? null : (xml != null ? xml.getString() : null);
-                        LOG.trace("Converted SQLXML to string for XML→VARCHAR bulk copy");
+                        LOG.info("Converted SQLXML to string for XML→VARCHAR bulk copy");
                     }
                 } else if (sourceType == Types.OTHER) {
                     // Handle OTHER type (PostgreSQL specific types, etc.)
