@@ -23,3 +23,7 @@ create_db_error.log
 .vscode
 implementation_plan.md
 *.log
+
+# Ruby/Bundler
+docs/vendor/
+docs/.bundle/
