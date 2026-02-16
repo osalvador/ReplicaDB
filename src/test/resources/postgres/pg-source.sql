@@ -113,7 +113,7 @@ select
     current_timestamp at time zone 'cet' as C_TIMESTAMP_WITH_TIMEZONE,
     ARRAY [(generate_series * random())::text,(generate_series * random())::text],
     ARRAY [[(generate_series * random())::int,(generate_series * random())::int],[(generate_series * random())::int,(generate_series * random())::int]],
-    ('<person><age>'||(generate_series * random())::integer||'</age><firstName>'||(generate_series * random())::text||'</firstName><lastName>'||(generate_series * random())::text||'</lastName></person>')::xml,
+    ('<person><age>'||(generate_series * random())::integer||'</age><firstName>'||(generate_series * random())::integer||'</firstName><lastName>'||(generate_series * random())::integer||'</lastName></person>')::xml,
     ('{"firstName": "'||(generate_series * random())::integer||'",  "lastName": "'||(generate_series * random())::integer||'",  "age": '||(generate_series * random())::integer||'}')::jsonb
 from generate_series_4k;
 
