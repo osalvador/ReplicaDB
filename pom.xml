@@ -249,16 +249,14 @@
             <artifactId>log4j-slf4j-impl</artifactId>
             <version>2.24.3</version>
         </dependency>
-
-        <!-- Updated to fix CVE-2022-42003: Uncontrolled Resource Consumption (DoS) vulnerability affecting versions < 2.13.4.2 -->
+        
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>2.17.2</version>
         </dependency>
 
-        <!-- SQL Server - Updated to fix CVE-2025-59250: Improper Input Validation/Spoofing vulnerability affecting versions < 13.2.1 -->
-        <!-- Using jre11 variant to match project's Java 11 target (maven.compiler.target=11) -->
+        <!-- SQL Server -->        
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
