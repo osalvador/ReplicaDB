@@ -101,7 +101,7 @@ public class SQLServerBulkRecordAdapter implements ISQLServerBulkRecord {
                     case Types.VARCHAR:
                     case Types.CHAR:
                     case Types.LONGVARCHAR:
-                        return 8000; // SQL Server VARCHAR max without MAX
+                        return 4000; // Use conservative limit that works for both VARCHAR and NVARCHAR
                     case Types.NVARCHAR:
                     case Types.NCHAR:
                     case Types.LONGNVARCHAR:
