@@ -611,7 +611,15 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     // Always convert SQLXML to string, even for XML→XML replication.
                     final java.sql.SQLXML xml = resultSet.getSQLXML(i);
                     value = resultSet.wasNull() ? null : (xml != null ? xml.getString() : null);
-                    LOG.info("Converted SQLXML to string for bulk copy (sink type: {})", sinkType != null ? sinkType : "null");
+                    if (value != null) {
+                        String xmlStr = value.toString();
+                        String preview = xmlStr.length() > 200 ? xmlStr.substring(0, 200) + "..." : xmlStr;
+                        LOG.info("Converted SQLXML to string for bulk copy (sink type: {}, preview: {})", 
+                                 sinkType != null ? sinkType : "null", preview);
+                    } else {
+                        LOG.info("Converted SQLXML to string for bulk copy (sink type: {}, value: null)", 
+                                 sinkType != null ? sinkType : "null");
+                    }
                 } else if (sourceType == Types.OTHER) {
                     // Handle OTHER type (PostgreSQL specific types, etc.)
                     Object otherObj = resultSet.getObject(i);
