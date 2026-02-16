@@ -1,54 +1,46 @@
 # Security Scan Notes
 
-This document explains known false positives and security considerations for ReplicaDB dependencies.
+This document explains security considerations and dependency choices for ReplicaDB.
 
 ## Microsoft JDBC Driver for SQL Server (mssql-jdbc)
 
-### Current Version: 13.2.1.jre8
+### Current Version: 13.2.1.jre11
 
-**Status**: ✅ **SECURE** - This is the latest patched version for Java 8 environments.
+**Status**: ✅ **SECURE** - This is the latest patched version for Java 11 environments.
 
-### Known False Positive
+### Why jre11 variant?
 
-Some security scanning tools (e.g., Trivy, Snyk, internal scanners) may incorrectly flag `mssql-jdbc:13.2.1.jre8` as vulnerable to CVE-2025-59250, showing affected versions like:
-- `>= 11.2.0.jre11, < 11.2.4.jre11`
-- `>= 12.2.0.jre11, < 12.2.1.jre11`
-- `>= 13.2.0.jre11, < 13.2.1.jre11`
+ReplicaDB is built with **Java 11** (see `maven.compiler.source=11` and `maven.compiler.target=11` in pom.xml), so we use the **jre11 variant** of the JDBC driver to match the project's Java version.
 
-**Why this is a false positive:**
-- All listed affected versions are `.jre11` variants, NOT `.jre8` variants
-- Security scanners sometimes fail to properly distinguish between jre8 and jre11 suffixes
-- The vulnerability CVE-2025-59250 **IS FIXED** in 13.2.1.jre8
-
-### Official Verification
+### Security Fix
 
 **CVE-2025-59250** (Improper Input Validation/Spoofing):
-- **Patched for JRE 8**: 13.2.1.jre8 ✅
-- **Patched for JRE 11**: 13.2.1.jre11 ✅
-- **Sources**: 
-  - Microsoft Security Advisory
-  - NVD: https://nvd.nist.gov/vuln/detail/CVE-2025-59250
-  - Snyk: SNYK-JAVA-COMMICROSOFTSQLSERVER-13821835
-  - CVE Record: https://www.cve.org/CVERecord?id=CVE-2025-59250
-  - GitHub: https://github.com/microsoft/mssql-jdbc/issues/2831
+- **Severity**: High (CVSS 8.1)
+- **Issue**: Hostname spoofing through improper SSL certificate validation
+- **Patched Version**: 13.2.1.jre11 ✅
+- **Previous Version**: 7.2.2.jre8 (vulnerable)
 
-### Why Not Upgrade to a Newer Version?
+**Official Sources**:
+- Microsoft Security Advisory
+- NVD: https://nvd.nist.gov/vuln/detail/CVE-2025-59250
+- Snyk: SNYK-JAVA-COMMICROSOFTSQLSERVER-13821835
+- CVE Record: https://www.cve.org/CVERecord?id=CVE-2025-59250
 
-As of February 2026:
-- **13.2.1.jre8** is the **latest stable version** for Java 8
-- Versions 13.3.x and above only support Java 11+
-- Microsoft no longer releases jre8 variants for versions after 13.2.1
-- ReplicaDB uses Java 11+ (see pom.xml), but the driver is marked as `provided` scope for users who may still run on Java 8
+### Version Selection Rationale
 
-### Recommendation
+- **Why 13.2.1?** Latest stable version with CVE-2025-59250 fix
+- **Why jre11?** Matches project's Java 11 compiler target
+- **Scope**: `provided` - allows users to provide their own driver version if needed
 
-If your security scanner flags this version:
-1. Verify the scanner is checking the correct variant (jre8 vs jre11)
-2. Add an exception/ignore rule for this false positive
-3. Reference this document and the official CVE sources listed above
-4. If using Java 11+, you may optionally use the jre11 variant, but it's not required
+### Verification
+
+Run `mvn dependency:tree | grep mssql-jdbc` to verify:
+```
+com.microsoft.sqlserver:mssql-jdbc:jar:13.2.1.jre11:compile
+```
 
 ---
 
 ## Last Updated
-February 16, 2026 - Security vulnerability fixes in PR #[number]
+February 16, 2026 - Changed from jre8 to jre11 variant to match Java 11 target
+
