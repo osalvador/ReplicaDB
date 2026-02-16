@@ -258,10 +258,11 @@
         </dependency>
 
         <!-- SQL Server - Updated to fix CVE-2025-59250: Improper Input Validation/Spoofing vulnerability affecting versions < 13.2.1 -->
+        <!-- Using jre11 variant to match project's Java 11 target (maven.compiler.target=11) -->
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
-            <version>13.2.1.jre8</version>
+            <version>13.2.1.jre11</version>
         </dependency>
 
         <!-- Amazon S3 -->
