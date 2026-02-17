@@ -1583,6 +1583,49 @@ sink.staging.schema=dbo
 sink.columns=c_numeric, c_decimal, c_binary_blob, c_xml
 ```
 
+### XML Column Performance
+
+**Important:** When replicating XML data to SQL Server, it is recommended to use a smaller batch size to ensure optimal performance and reliability.
+
+**Recommended Configuration:**
+```properties
+fetch.size=10
+```
+
+**Why this matters:**
+
+SQL Server's bulk copy API requires XML data to be properly formatted with an XML declaration. ReplicaDB automatically adds the declaration (`<?xml version="1.0" encoding="UTF-8"?>`) when missing. However, SQL Server 2019's bulk copy parser has performance limitations when processing multiple XML rows in a single batch.
+
+**Performance Characteristics:**
+- **Batch size ≤ 10**: Optimal performance and reliability
+- **Batch size > 10**: May experience slower processing or intermittent issues
+- **Default (fetch.size=100)**: Not recommended for tables with XML columns
+
+**Example Configuration for XML Replication:**
+
+```properties
+######################## ReplicadB General Options ########################
+mode=complete
+jobs=1
+fetch.size=10
+############################# Source Options ##############################
+source.connect=jdbc:postgresql://localhost:5432/postgres
+source.user=root
+source.password=ReplicaDB_1234
+source.table=public.t_source
+source.columns=c_integer, c_varchar, c_xml
+
+############################# Sink Options ################################
+sink.connect=jdbc:sqlserver://localhost:1433;database=master
+sink.user=sa
+sink.password=ReplicaDB_1234
+sink.table=dbo.t_sink
+sink.staging.schema=dbo
+sink.columns=c_integer, c_varchar, c_xml
+```
+
+**Note:** This limitation only applies when XML columns are present in the replicated data. For tables without XML columns, you can use the default batch size (100) for optimal performance.
+
 <br>
 ## 4.8 SQLite Connector
 
