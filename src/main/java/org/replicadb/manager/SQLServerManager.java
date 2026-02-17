@@ -321,7 +321,7 @@ public class SQLServerManager extends SqlManager {
       
       int batchSize = options.getFetchSize();
       if (hasXmlColumns) {
-         batchSize = 5; // Reduce batch size for XML columns to avoid bulk copy parser issues
+         batchSize = 10; // Reduce batch size for XML columns to avoid bulk copy parser issues
          LOG.warn("Adaptive batch sizing: Reduced batch size from {} to {} due to XML columns (SQL Server bulk copy limitation)", 
                   options.getFetchSize(), batchSize);
       }
