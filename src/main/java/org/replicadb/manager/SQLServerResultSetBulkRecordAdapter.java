@@ -616,19 +616,19 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     Object otherObj = resultSet.getObject(i);
                     if (resultSet.wasNull()) {
                         value = null;
-                } else if (otherObj != null) {
-                    if (otherObj instanceof byte[]) {
-                        value = otherObj;  // Keep as bytes for VARBINARY columns
-                    } else if (otherObj instanceof String) {
-                        // For text-based OTHER types, pass as-is
-                        value = otherObj;
+                    } else if (otherObj != null) {
+                        if (otherObj instanceof byte[]) {
+                            value = otherObj;  // Keep as bytes for VARBINARY columns
+                        } else if (otherObj instanceof String) {
+                            // For text-based OTHER types, pass as-is
+                            value = otherObj;
+                        } else {
+                            // For complex types, convert to string representation
+                            value = otherObj.toString();
+                        }
                     } else {
-                        // For complex types, convert to string representation
-                        value = otherObj.toString();
+                        value = null;
                     }
-                } else {
-                    value = null;
-                }
                 } else if (binaryColumns[i - 1] && sourceType != Types.BLOB) {
                     value = resultSet.getBytes(i);                    
                 } else if (columnType == Types.NVARCHAR
