@@ -612,30 +612,19 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     final java.sql.SQLXML xml = resultSet.getSQLXML(i);
                     value = resultSet.wasNull() ? null : (xml != null ? xml.getString() : null);
                     if (value != null) {
-                        String xmlStr = value.toString();
-                        String preview = xmlStr.length() > 200 ? xmlStr.substring(0, 200) + "..." : xmlStr;
-                        // Check for trailing whitespace or special characters
-                        String debugInfo = "";
-                        if (xmlStr.length() != xmlStr.trim().length()) {
-                            debugInfo = String.format(", TRIMMED_DIFF=%d", xmlStr.length() - xmlStr.trim().length());
+                        String xmlStr = value.toString().trim();
+                        
+                        // Add XML declaration if missing (SQL Server expects well-formed XML)
+                        // This improves compatibility with SQL Server's XML parser
+                        if (!xmlStr.startsWith("<?xml")) {
+                            xmlStr = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + xmlStr;
+                            LOG.debug("Added XML declaration to XML content (original length: {})", value.toString().length());
                         }
-                        if (xmlStr.contains("\n") || xmlStr.contains("\r")) {
-                            debugInfo += ", CONTAINS_NEWLINE";
-                        }
-                        // Show last 5 characters as hex for debugging
-                        if (xmlStr.length() >= 5) {
-                            String lastChars = xmlStr.substring(xmlStr.length() - 5);
-                            StringBuilder hexStr = new StringBuilder();
-                            for (char c : lastChars.toCharArray()) {
-                                hexStr.append(String.format("%04x ", (int) c));
-                            }
-                            debugInfo += String.format(", last5hex=[%s]", hexStr.toString().trim());
-                        }
-                        LOG.info("Converted SQLXML to string for bulk copy (sink type: {}, len: {}{}, preview: {})", 
-                                 sinkType != null ? sinkType : "null", xmlStr.length(), debugInfo, preview);
+                        
+                        value = xmlStr;
+                        LOG.trace("Converted SQLXML to string for bulk copy (length: {})", xmlStr.length());
                     } else {
-                        LOG.info("Converted SQLXML to string for bulk copy (sink type: {}, value: null)", 
-                                 sinkType != null ? sinkType : "null");
+                        LOG.trace("Converted SQLXML to string for bulk copy (value: null)");
                     }
                 } else if (sourceType == Types.OTHER) {
                     // Handle OTHER type (PostgreSQL specific types, etc.)
