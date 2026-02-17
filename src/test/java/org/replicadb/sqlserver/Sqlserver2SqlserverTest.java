@@ -102,7 +102,7 @@ class Sqlserver2SqlserverTest {
                 "--sink-password", sqlserver.getPassword(),
                 "--source-columns", COLUMNS,
                 "--sink-columns", COLUMNS,
-                "--fetch-size", "2"
+                "--fetch-size", "1"
         };
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
@@ -234,7 +234,7 @@ class Sqlserver2SqlserverTest {
             "--sink-table", sinkTable,
             "--sink-auto-create", "true",
             "--mode", ReplicationMode.COMPLETE.getModeText(),
-            "--fetch-size", "2"
+            "--fetch-size", "1"
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
