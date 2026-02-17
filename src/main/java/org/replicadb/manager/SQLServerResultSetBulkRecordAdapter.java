@@ -614,8 +614,16 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     if (value != null) {
                         String xmlStr = value.toString();
                         String preview = xmlStr.length() > 200 ? xmlStr.substring(0, 200) + "..." : xmlStr;
-                        LOG.info("Converted SQLXML to string for bulk copy (sink type: {}, preview: {})", 
-                                 sinkType != null ? sinkType : "null", preview);
+                        // Check for trailing whitespace or special characters
+                        String debugInfo = "";
+                        if (xmlStr.length() != xmlStr.trim().length()) {
+                            debugInfo = String.format(", TRIMMED_DIFF=%d", xmlStr.length() - xmlStr.trim().length());
+                        }
+                        if (xmlStr.contains("\n") || xmlStr.contains("\r")) {
+                            debugInfo += ", CONTAINS_NEWLINE";
+                        }
+                        LOG.info("Converted SQLXML to string for bulk copy (sink type: {}, len: {}{}, preview: {})", 
+                                 sinkType != null ? sinkType : "null", xmlStr.length(), debugInfo, preview);
                     } else {
                         LOG.info("Converted SQLXML to string for bulk copy (sink type: {}, value: null)", 
                                  sinkType != null ? sinkType : "null");
