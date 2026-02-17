@@ -311,7 +311,7 @@ public class SQLServerManager extends SqlManager {
       boolean hasXmlColumns = false;
       for (int i = 1; i <= columnCount; i++) {
          int sourceType = rsmd.getColumnType(i);
-         if (sourceType == Types.SQLXML) {
+         if (sourceType == java.sql.Types.SQLXML) {
             hasXmlColumns = true;
             LOG.info("Detected XML column '{}' (type: SQLXML) at position {}", rsmd.getColumnName(i), i);
             break;
