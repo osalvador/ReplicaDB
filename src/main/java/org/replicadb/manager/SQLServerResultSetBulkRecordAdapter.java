@@ -520,7 +520,6 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                         Timestamp ts = resultSet.getTimestamp(i);
                         if (ts != null && !resultSet.wasNull()) {
                             value = new java.sql.Date(ts.getTime());
-                            LOG.trace("Converted TIMESTAMP to DATE for column {}: {}", i, value);
                         } else {
                             value = null;
                         }
@@ -532,7 +531,6 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                         Timestamp ts = resultSet.getTimestamp(i);
                         if (ts != null && !resultSet.wasNull()) {
                             value = new java.sql.Time(ts.getTime());
-                            LOG.trace("Converted TIMESTAMP to TIME for column {}: {}", i, value);
                         } else {
                             value = null;
                         }
@@ -553,57 +551,50 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                                 value = null;
                             }
                             if (value instanceof Timestamp) {
-                                Timestamp ts = (Timestamp) value;
-                                int nanos = ts.getNanos();
-                                int millis = nanos / 1000000;
-                                Timestamp truncated = new Timestamp(ts.getTime());
-                                truncated.setNanos(millis * 1000000);
-                                value = truncated;
-                            }
-                            LOG.trace("Retrieved TIMESTAMP as java.sql.Timestamp for column {}", i);
-                            rowData[i - 1] = value;
-                            continue;
+                            Timestamp ts = (Timestamp) value;
+                            int nanos = ts.getNanos();
+                            int millis = nanos / 1000000;
+                            Timestamp truncated = new Timestamp(ts.getTime());
+                            truncated.setNanos(millis * 1000000);
+                            value = truncated;
+                        }
+                        rowData[i - 1] = value;
+                        continue;
                             
-                        case Types.DATE:
-                            value = resultSet.getDate(i);
-                            if (resultSet.wasNull()) {
-                                value = null;
-                            }
-                            LOG.trace("Retrieved DATE as java.sql.Date for column {}", i);
-                            rowData[i - 1] = value;
-                            continue;
+                    case Types.DATE:
+                        value = resultSet.getDate(i);
+                        if (resultSet.wasNull()) {
+                            value = null;
+                        }
+                        rowData[i - 1] = value;
+                        continue;
                             
-                        case Types.TIME:
-                            value = resultSet.getTime(i);
-                            if (resultSet.wasNull()) {
-                                value = null;
-                            }
-                            LOG.trace("Retrieved TIME as java.sql.Time for column {}", i);
-                            rowData[i - 1] = value;
-                            continue;
+                    case Types.TIME:
+                        value = resultSet.getTime(i);
+                        if (resultSet.wasNull()) {
+                            value = null;
+                        }
+                        rowData[i - 1] = value;
+                        continue;
                     }
                 }
 
-                // Handle Oracle INTERVAL types by setting to NULL
-                // (no direct SQL Server equivalent, string conversion causes bulk copy errors)
-                if (sourceType == -104 || sourceType == -103) {  // INTERVALDS or INTERVALYM
-                    LOG.trace("Skipping Oracle INTERVAL type {} for column {} (no SQL Server equivalent)", sourceType, i);
-                    value = null;
-                } else if (sourceType == Types.ROWID) {
-                    // Convert ROWID to string
-                    java.sql.RowId rowId = resultSet.getRowId(i);
-                    value = resultSet.wasNull() ? null : (rowId != null ? new String(rowId.getBytes()) : null);
-                    LOG.trace("Converted ROWID to string for column {}", i);
-                } else if (sourceType == Types.ARRAY) {
-                    // Convert ARRAY to string
-                    java.sql.Array arrayData = resultSet.getArray(i);
-                    value = resultSet.wasNull() ? null : (arrayData != null ? arrayData.toString() : null);
-                    LOG.trace("Converted ARRAY to string");
-                } else if (sourceType == Types.STRUCT) {
-                    // Convert STRUCT to string
-                    Object structObj = resultSet.getObject(i);
-                    value = resultSet.wasNull() ? null : (structObj != null ? structObj.toString() : null);
-                    LOG.trace("Converted STRUCT to string");
+            // Handle Oracle INTERVAL types by setting to NULL
+            // (no direct SQL Server equivalent, string conversion causes bulk copy errors)
+            if (sourceType == -104 || sourceType == -103) {  // INTERVALDS or INTERVALYM
+                value = null;
+            } else if (sourceType == Types.ROWID) {
+                // Convert ROWID to string
+                java.sql.RowId rowId = resultSet.getRowId(i);
+                value = resultSet.wasNull() ? null : (rowId != null ? new String(rowId.getBytes()) : null);
+            } else if (sourceType == Types.ARRAY) {
+                // Convert ARRAY to string
+                java.sql.Array arrayData = resultSet.getArray(i);
+                value = resultSet.wasNull() ? null : (arrayData != null ? arrayData.toString() : null);
+            } else if (sourceType == Types.STRUCT) {
+                // Convert STRUCT to string
+                Object structObj = resultSet.getObject(i);
+                value = resultSet.wasNull() ? null : (structObj != null ? structObj.toString() : null);
                 } else if (sourceType == Types.SQLXML) {
                     // SQL Server Bulk Copy API does not support SQLXML type directly.
                     // Always convert SQLXML to string, even for XML→XML replication.
@@ -625,22 +616,19 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                     Object otherObj = resultSet.getObject(i);
                     if (resultSet.wasNull()) {
                         value = null;
-                    } else if (otherObj != null) {
-                        if (otherObj instanceof byte[]) {
-                            value = otherObj;  // Keep as bytes for VARBINARY columns
-                            LOG.trace("OTHER type is binary data");
-                        } else if (otherObj instanceof String) {
-                            // For text-based OTHER types, pass as-is
-                            value = otherObj;
-                            LOG.trace("OTHER type is string");
-                        } else {
-                            // For complex types, convert to string representation
-                            value = otherObj.toString();
-                            LOG.trace("Converted OTHER type to string");
-                        }
+                } else if (otherObj != null) {
+                    if (otherObj instanceof byte[]) {
+                        value = otherObj;  // Keep as bytes for VARBINARY columns
+                    } else if (otherObj instanceof String) {
+                        // For text-based OTHER types, pass as-is
+                        value = otherObj;
                     } else {
-                        value = null;
+                        // For complex types, convert to string representation
+                        value = otherObj.toString();
                     }
+                } else {
+                    value = null;
+                }
                 } else if (binaryColumns[i - 1] && sourceType != Types.BLOB) {
                     value = resultSet.getBytes(i);                    
                 } else if (columnType == Types.NVARCHAR
@@ -674,13 +662,9 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                         if ((strValue.length() % 2 == 0) && strValue.matches("(?i)^[0-9a-f]+$")) {
                             // Convert hex string to byte array
                             value = hexStringToBytes(strValue);
-                            LOG.trace("Converted hex string to byte[]: {} bytes",
-                                ((byte[])value).length);
                         } else {
                             // Not hex, convert string characters to bytes
                             value = strValue.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-                            LOG.trace("Converted string to UTF-8 bytes: {} bytes",
-                                strValue.length());
                         }
                     } else {
                         value = null;
