@@ -622,6 +622,15 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                         if (xmlStr.contains("\n") || xmlStr.contains("\r")) {
                             debugInfo += ", CONTAINS_NEWLINE";
                         }
+                        // Show last 5 characters as hex for debugging
+                        if (xmlStr.length() >= 5) {
+                            String lastChars = xmlStr.substring(xmlStr.length() - 5);
+                            StringBuilder hexStr = new StringBuilder();
+                            for (char c : lastChars.toCharArray()) {
+                                hexStr.append(String.format("%04x ", (int) c));
+                            }
+                            debugInfo += String.format(", last5hex=[%s]", hexStr.toString().trim());
+                        }
                         LOG.info("Converted SQLXML to string for bulk copy (sink type: {}, len: {}{}, preview: {})", 
                                  sinkType != null ? sinkType : "null", xmlStr.length(), debugInfo, preview);
                     } else {
