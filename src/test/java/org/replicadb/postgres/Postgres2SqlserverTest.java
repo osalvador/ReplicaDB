@@ -106,7 +106,7 @@ class Postgres2SqlserverTest {
            "--sink-password", sqlserver.getPassword(),
            "--source-columns", SOURCE_COLUMNS,
            "--sink-columns", SINK_COLUMNS,
-           "--fetch-size", "5"
+           "--fetch-size", "1"
        };
        ToolOptions options = new ToolOptions(args);
        Assertions.assertEquals(0, ReplicaDB.processReplica(options));
@@ -127,7 +127,7 @@ class Postgres2SqlserverTest {
            "--source-columns", SOURCE_COLUMNS,
            "--sink-columns", SINK_COLUMNS,
            "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
-           "--fetch-size", "5"
+           "--fetch-size", "1"
        };
        ToolOptions options = new ToolOptions(args);
        assertEquals(0, ReplicaDB.processReplica(options));
@@ -149,7 +149,7 @@ class Postgres2SqlserverTest {
            "--source-columns", SOURCE_COLUMNS,
            "--sink-columns", SINK_COLUMNS,
            "--mode", ReplicationMode.INCREMENTAL.getModeText(),
-           "--fetch-size", "5"
+           "--fetch-size", "1"
        };
        ToolOptions options = new ToolOptions(args);
        assertEquals(0, ReplicaDB.processReplica(options));
@@ -170,7 +170,7 @@ class Postgres2SqlserverTest {
            "--source-columns", SOURCE_COLUMNS,
            "--sink-columns", SINK_COLUMNS,
            "--jobs", "4",
-           "--fetch-size", "5"
+           "--fetch-size", "1"
        };
        ToolOptions options = new ToolOptions(args);
        assertEquals(0, ReplicaDB.processReplica(options));
@@ -192,7 +192,7 @@ class Postgres2SqlserverTest {
            "--sink-columns", SINK_COLUMNS,
            "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
            "--jobs", "4",
-           "--fetch-size", "5"
+           "--fetch-size", "1"
        };
        ToolOptions options = new ToolOptions(args);
        assertEquals(0, ReplicaDB.processReplica(options));
@@ -214,7 +214,7 @@ class Postgres2SqlserverTest {
            "--sink-columns", SINK_COLUMNS,
            "--mode", ReplicationMode.INCREMENTAL.getModeText(),
            "--jobs", "4",
-           "--fetch-size", "5"
+           "--fetch-size", "1"
        };
        ToolOptions options = new ToolOptions(args);
        assertEquals(0, ReplicaDB.processReplica(options));
@@ -237,7 +237,7 @@ class Postgres2SqlserverTest {
            "--sink-table", sinkTable,
            "--sink-auto-create", "true",
            "--mode", ReplicationMode.COMPLETE.getModeText(),
-           "--fetch-size", "5"
+           "--fetch-size", "1"
        };
        ToolOptions options = new ToolOptions(args);
        assertEquals(0, ReplicaDB.processReplica(options));
@@ -297,7 +297,7 @@ class Postgres2SqlserverTest {
            "--source-columns", SOURCE_COLUMNS,
            "--sink-columns", SINK_COLUMNS,
            "--mode", ReplicationMode.COMPLETE.getModeText(),
-           "--fetch-size", "5"
+           "--fetch-size", "1"
        };
       ToolOptions options = new ToolOptions(args);
       assertEquals(0, ReplicaDB.processReplica(options));
