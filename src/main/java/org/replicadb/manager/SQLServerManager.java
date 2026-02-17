@@ -306,31 +306,11 @@ public class SQLServerManager extends SqlManager {
          sinkColumnOrdinals = getSinkColumnOrdinals(tableName);
       }
 
-      // Detect XML columns from source and apply adaptive batch sizing
-      // SQL Server 2019 bulk copy has parser issues with variable-length XML in large batches
-      // The issue occurs even with proper XML declarations - batch size must be reduced
-      boolean hasXmlColumns = false;
-      for (int i = 1; i <= columnCount; i++) {
-         int sourceType = rsmd.getColumnType(i);
-         if (sourceType == java.sql.Types.SQLXML) {
-            hasXmlColumns = true;
-            LOG.info("Detected XML column '{}' (type: SQLXML) at position {}", rsmd.getColumnName(i), i);
-            break;
-         }
-      }
-      
-      int batchSize = options.getFetchSize();
-      if (hasXmlColumns) {
-         batchSize = 10; // Reduce batch size for XML columns to avoid bulk copy parser issues
-         LOG.warn("Adaptive batch sizing: Reduced batch size from {} to {} due to XML columns (SQL Server bulk copy limitation)", 
-                  options.getFetchSize(), batchSize);
-      }
-
       SQLServerBulkCopy bulkCopy = new SQLServerBulkCopy(this.getConnection());
       // BulkCopy Options
       SQLServerBulkCopyOptions copyOptions = new SQLServerBulkCopyOptions();
       copyOptions.setBulkCopyTimeout(0);
-      copyOptions.setBatchSize(batchSize);
+      copyOptions.setBatchSize(options.getFetchSize());
       
       // Use TABLOCK to acquire table-level lock and prevent deadlocks during parallel operations
       // This is the recommended approach for parallel bulk inserts to avoid row-level lock contention
