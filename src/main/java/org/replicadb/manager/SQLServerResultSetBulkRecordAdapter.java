@@ -617,8 +617,8 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                         // Add XML declaration if missing (SQL Server expects well-formed XML)
                         // This improves compatibility with SQL Server's XML parser
                         if (!xmlStr.startsWith("<?xml")) {
-                            xmlStr = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + xmlStr;
-                            LOG.debug("Added XML declaration to XML content (original length: {})", value.toString().length());
+                            xmlStr = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + xmlStr;
+                            LOG.debug("Added XML declaration with newline to XML content (original length: {})", value.toString().length());
                         }
                         
                         value = xmlStr;
