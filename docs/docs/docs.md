@@ -1589,7 +1589,7 @@ sink.columns=c_numeric, c_decimal, c_binary_blob, c_xml
 
 **Recommended Configuration:**
 ```properties
-fetch.size=2
+fetch.size=1
 ```
 
 **Why this matters:**
@@ -1597,7 +1597,8 @@ fetch.size=2
 SQL Server's bulk copy API requires XML data to be properly formatted with an XML declaration. ReplicaDB automatically adds the declaration (`<?xml version="1.0" encoding="UTF-8"?>`) when missing. However, SQL Server 2019's bulk copy parser has limitations when processing multiple XML rows in a single batch.
 
 **Performance Characteristics:**
-- **Batch size 1-2**: Optimal performance and reliability (recommended)
+- **Batch size 1**: Maximum reliability (recommended for SQLServer→SQLServer)
+- **Batch size 2**: Good reliability (recommended for PostgreSQL/Oracle→SQLServer)
 - **Batch size > 2**: May experience intermittent parsing failures
 - **Default (fetch.size=100)**: Not recommended for tables with XML columns
 
@@ -1607,7 +1608,7 @@ SQL Server's bulk copy API requires XML data to be properly formatted with an XM
 ######################## ReplicadB General Options ########################
 mode=complete
 jobs=1
-fetch.size=2
+fetch.size=1
 ############################# Source Options ##############################
 source.connect=jdbc:postgresql://localhost:5432/postgres
 source.user=root
