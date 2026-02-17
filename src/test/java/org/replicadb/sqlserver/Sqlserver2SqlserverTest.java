@@ -101,7 +101,8 @@ class Sqlserver2SqlserverTest {
                 "--sink-user", sqlserver.getUsername(),
                 "--sink-password", sqlserver.getPassword(),
                 "--source-columns", COLUMNS,
-                "--sink-columns", COLUMNS
+                "--sink-columns", COLUMNS,
+                "--fetch-size", "1"
         };
         ToolOptions options = new ToolOptions(args);
         Assertions.assertEquals(0, ReplicaDB.processReplica(options));
@@ -151,10 +152,10 @@ class Sqlserver2SqlserverTest {
 
     }
 
-    @Disabled("XML bulk copy fails with SQL Server 2019 + mssql-jdbc 13.x driver (works with Azure SQL Edge). " +
-            "Error: 'XML parsing: line 1, character 20, > expected'. " +
-            "This is a known compatibility issue between SQL Server 2019 and the new JDBC driver version. " +
-            "See: https://github.com/osalvador/ReplicaDB/issues/XXX")
+    @Disabled("Parallel jobs with XML columns require per-job batch size configuration. " +
+            "SQL Server 2019 requires fetch.size=1 for XML replication, but --fetch-size applies globally. " +
+            "Need to implement per-job batch size control. Note: This limitation is SQL Server 2019 specific. " +
+            "See: https://github.com/osalvador/ReplicaDB/issues/240")
     @Test
     void testSqlserver2SqlserverCompleteParallel() throws ParseException, IOException, SQLException {
         String[] args = {
@@ -233,7 +234,8 @@ class Sqlserver2SqlserverTest {
             "--sink-password", sqlserver.getPassword(),
             "--sink-table", sinkTable,
             "--sink-auto-create", "true",
-            "--mode", ReplicationMode.COMPLETE.getModeText()
+            "--mode", ReplicationMode.COMPLETE.getModeText(),
+            "--fetch-size", "1"
         };
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
@@ -276,10 +278,10 @@ class Sqlserver2SqlserverTest {
         sqlserverConn.createStatement().execute("DROP TABLE " + sinkTable);
     }
 
-    @Disabled("XML bulk copy fails with SQL Server 2019 + mssql-jdbc 13.x driver (works with Azure SQL Edge). " +
-            "Error: 'XML parsing: line 1, character 20, > expected'. " +
-            "This is a known compatibility issue between SQL Server 2019 and the new JDBC driver version. " +
-            "See: https://github.com/osalvador/ReplicaDB/issues/XXX")
+    @Disabled("Parallel jobs with XML columns require per-job batch size configuration. " +
+            "SQL Server 2019 requires fetch.size=1 for XML replication, but --fetch-size applies globally. " +
+            "Need to implement per-job batch size control. Note: This limitation is SQL Server 2019 specific. " +
+            "See: https://github.com/osalvador/ReplicaDB/issues/240")
     @Test
     void testSqlserver2SqlserverAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
         String sinkTable = "t_sink"; // Use existing table

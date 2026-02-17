@@ -1583,6 +1583,56 @@ sink.staging.schema=dbo
 sink.columns=c_numeric, c_decimal, c_binary_blob, c_xml
 ```
 
+### XML Column Performance
+
+**Important:** When replicating XML data to SQL Server, it is recommended to use a smaller batch size to ensure optimal performance and reliability.
+
+**Recommended Configuration:**
+```properties
+fetch.size=1
+```
+
+**Why this matters:**
+
+SQL Server's bulk copy API requires XML data to be properly formatted with an XML declaration. ReplicaDB automatically adds the declaration (`<?xml version="1.0" encoding="UTF-8"?>`) when missing. However, **SQL Server 2019's bulk copy parser has limitations** when processing multiple XML rows in a single batch.
+
+**Important:** This limitation is **specific to SQL Server 2019** (tested with CU29). It has **not been observed in Azure SQL Database/Azure SQL Edge**, which handle XML bulk copy operations with larger batch sizes without issues.
+
+**Performance Characteristics:**
+- **Batch size 1**: Maximum reliability (recommended for SQLServer 2019→SQLServer 2019)
+- **Batch size 2**: Good reliability (recommended for PostgreSQL/Oracle→SQLServer 2019)
+- **Batch size > 2**: May experience intermittent parsing failures on SQL Server 2019
+- **Default (fetch.size=100)**: Not recommended for XML columns with SQL Server 2019 sink
+
+**Example Configuration for XML Replication:**
+
+```properties
+######################## ReplicadB General Options ########################
+mode=complete
+jobs=1
+fetch.size=1
+############################# Source Options ##############################
+source.connect=jdbc:postgresql://localhost:5432/postgres
+source.user=root
+source.password=ReplicaDB_1234
+source.table=public.t_source
+source.columns=c_integer, c_varchar, c_xml
+
+############################# Sink Options ################################
+sink.connect=jdbc:sqlserver://localhost:1433;database=master
+sink.user=sa
+sink.password=ReplicaDB_1234
+sink.table=dbo.t_sink
+sink.staging.schema=dbo
+sink.columns=c_integer, c_varchar, c_xml
+```
+
+**Azure SQL Database / Azure SQL Edge:**
+
+If you are using Azure SQL Database or Azure SQL Edge as the sink, you can use larger batch sizes (the default `fetch.size=100` works well) as these platforms do not exhibit the same XML bulk copy limitations as SQL Server 2019.
+
+**Note:** This limitation only applies when XML columns are present in the replicated data. For tables without XML columns, you can use the default batch size (100) for optimal performance on all SQL Server variants.
+
 <br>
 ## 4.8 SQLite Connector
 

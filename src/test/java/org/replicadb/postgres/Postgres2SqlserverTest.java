@@ -94,152 +94,159 @@ class Postgres2SqlserverTest {
       assertTrue(version.contains("2019"));
    }
 
-   @Test
-   void testPostgres2SqlserverComplete () throws ParseException, IOException, SQLException {
-      String[] args = {
-          "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-          "--source-connect", postgres.getJdbcUrl(),
-          "--source-user", postgres.getUsername(),
-          "--source-password", postgres.getPassword(),
-          "--sink-connect", sqlserver.getJdbcUrl(),
-          "--sink-user", sqlserver.getUsername(),
-          "--sink-password", sqlserver.getPassword(),
-          "--source-columns", SOURCE_COLUMNS,
-          "--sink-columns", SINK_COLUMNS
-      };
-      ToolOptions options = new ToolOptions(args);
-      Assertions.assertEquals(0, ReplicaDB.processReplica(options));
-      assertEquals(TOTAL_SINK_ROWS, countSinkRows());
-   }
+    @Test
+    void testPostgres2SqlserverComplete () throws ParseException, IOException, SQLException {
+       String[] args = {
+           "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+           "--source-connect", postgres.getJdbcUrl(),
+           "--source-user", postgres.getUsername(),
+           "--source-password", postgres.getPassword(),
+           "--sink-connect", sqlserver.getJdbcUrl(),
+           "--sink-user", sqlserver.getUsername(),
+           "--sink-password", sqlserver.getPassword(),
+           "--source-columns", SOURCE_COLUMNS,
+           "--sink-columns", SINK_COLUMNS,
+           "--fetch-size", "1"
+       };
+       ToolOptions options = new ToolOptions(args);
+       Assertions.assertEquals(0, ReplicaDB.processReplica(options));
+       assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+    }
 
-   @Test
-   void testPostgres2SqlserverCompleteAtomic () throws ParseException, IOException, SQLException {
-      String[] args = {
-          "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-          "--source-connect", postgres.getJdbcUrl(),
-          "--source-user", postgres.getUsername(),
-          "--source-password", postgres.getPassword(),
-          "--sink-connect", sqlserver.getJdbcUrl(),
-          "--sink-user", sqlserver.getUsername(),
-          "--sink-password", sqlserver.getPassword(),
-          "--sink-staging-schema", "dbo",
-          "--source-columns", SOURCE_COLUMNS,
-          "--sink-columns", SINK_COLUMNS,
-          "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText()
-      };
-      ToolOptions options = new ToolOptions(args);
-      assertEquals(0, ReplicaDB.processReplica(options));
-      assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+    @Test
+    void testPostgres2SqlserverCompleteAtomic () throws ParseException, IOException, SQLException {
+       String[] args = {
+           "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+           "--source-connect", postgres.getJdbcUrl(),
+           "--source-user", postgres.getUsername(),
+           "--source-password", postgres.getPassword(),
+           "--sink-connect", sqlserver.getJdbcUrl(),
+           "--sink-user", sqlserver.getUsername(),
+           "--sink-password", sqlserver.getPassword(),
+           "--sink-staging-schema", "dbo",
+           "--source-columns", SOURCE_COLUMNS,
+           "--sink-columns", SINK_COLUMNS,
+           "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
+           "--fetch-size", "1"
+       };
+       ToolOptions options = new ToolOptions(args);
+       assertEquals(0, ReplicaDB.processReplica(options));
+       assertEquals(TOTAL_SINK_ROWS, countSinkRows());
 
-   }
+    }
 
-   @Test
-   void testPostgres2SqlserverIncremental () throws ParseException, IOException, SQLException {
-      String[] args = {
-          "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-          "--source-connect", postgres.getJdbcUrl(),
-          "--source-user", postgres.getUsername(),
-          "--source-password", postgres.getPassword(),
-          "--sink-connect", sqlserver.getJdbcUrl(),
-          "--sink-user", sqlserver.getUsername(),
-          "--sink-password", sqlserver.getPassword(),
-          "--sink-staging-schema", "dbo",
-          "--source-columns", SOURCE_COLUMNS,
-          "--sink-columns", SINK_COLUMNS,
-          "--mode", ReplicationMode.INCREMENTAL.getModeText()
-      };
-      ToolOptions options = new ToolOptions(args);
-      assertEquals(0, ReplicaDB.processReplica(options));
-      assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+    @Test
+    void testPostgres2SqlserverIncremental () throws ParseException, IOException, SQLException {
+       String[] args = {
+           "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+           "--source-connect", postgres.getJdbcUrl(),
+           "--source-user", postgres.getUsername(),
+           "--source-password", postgres.getPassword(),
+           "--sink-connect", sqlserver.getJdbcUrl(),
+           "--sink-user", sqlserver.getUsername(),
+           "--sink-password", sqlserver.getPassword(),
+           "--sink-staging-schema", "dbo",
+           "--source-columns", SOURCE_COLUMNS,
+           "--sink-columns", SINK_COLUMNS,
+           "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+           "--fetch-size", "1"
+       };
+       ToolOptions options = new ToolOptions(args);
+       assertEquals(0, ReplicaDB.processReplica(options));
+       assertEquals(TOTAL_SINK_ROWS, countSinkRows());
 
-   }
+    }
 
-   @Test
-   void testPostgres2SqlserverCompleteParallel () throws ParseException, IOException, SQLException {
-      String[] args = {
-          "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-          "--source-connect", postgres.getJdbcUrl(),
-          "--source-user", postgres.getUsername(),
-          "--source-password", postgres.getPassword(),
-          "--sink-connect", sqlserver.getJdbcUrl(),
-          "--sink-user", sqlserver.getUsername(),
-          "--sink-password", sqlserver.getPassword(),
-          "--source-columns", SOURCE_COLUMNS,
-          "--sink-columns", SINK_COLUMNS,
-          "--jobs", "4"
-      };
-      ToolOptions options = new ToolOptions(args);
-      assertEquals(0, ReplicaDB.processReplica(options));
-      assertEquals(TOTAL_SINK_ROWS, countSinkRows());
-   }
+    @Test
+    void testPostgres2SqlserverCompleteParallel () throws ParseException, IOException, SQLException {
+       String[] args = {
+           "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+           "--source-connect", postgres.getJdbcUrl(),
+           "--source-user", postgres.getUsername(),
+           "--source-password", postgres.getPassword(),
+           "--sink-connect", sqlserver.getJdbcUrl(),
+           "--sink-user", sqlserver.getUsername(),
+           "--sink-password", sqlserver.getPassword(),
+           "--source-columns", SOURCE_COLUMNS,
+           "--sink-columns", SINK_COLUMNS,
+           "--jobs", "4",
+           "--fetch-size", "1"
+       };
+       ToolOptions options = new ToolOptions(args);
+       assertEquals(0, ReplicaDB.processReplica(options));
+       assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+    }
 
-   @Test
-   void testPostgres2SqlserverCompleteAtomicParallel () throws ParseException, IOException, SQLException {
-      String[] args = {
-          "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-          "--source-connect", postgres.getJdbcUrl(),
-          "--source-user", postgres.getUsername(),
-          "--source-password", postgres.getPassword(),
-          "--sink-connect", sqlserver.getJdbcUrl(),
-          "--sink-user", sqlserver.getUsername(),
-          "--sink-password", sqlserver.getPassword(),
-          "--sink-staging-schema", "dbo",
-          "--source-columns", SOURCE_COLUMNS,
-          "--sink-columns", SINK_COLUMNS,
-          "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
-          "--jobs", "4"
-      };
-      ToolOptions options = new ToolOptions(args);
-      assertEquals(0, ReplicaDB.processReplica(options));
-      assertEquals(TOTAL_SINK_ROWS, countSinkRows());
-   }
+    @Test
+    void testPostgres2SqlserverCompleteAtomicParallel () throws ParseException, IOException, SQLException {
+       String[] args = {
+           "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+           "--source-connect", postgres.getJdbcUrl(),
+           "--source-user", postgres.getUsername(),
+           "--source-password", postgres.getPassword(),
+           "--sink-connect", sqlserver.getJdbcUrl(),
+           "--sink-user", sqlserver.getUsername(),
+           "--sink-password", sqlserver.getPassword(),
+           "--sink-staging-schema", "dbo",
+           "--source-columns", SOURCE_COLUMNS,
+           "--sink-columns", SINK_COLUMNS,
+           "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
+           "--jobs", "4",
+           "--fetch-size", "1"
+       };
+       ToolOptions options = new ToolOptions(args);
+       assertEquals(0, ReplicaDB.processReplica(options));
+       assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+    }
 
-   @Test
-   void testSqlserver2PostgresIncrementalParallel () throws ParseException, IOException, SQLException {
-      String[] args = {
-          "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-          "--source-connect", postgres.getJdbcUrl(),
-          "--source-user", postgres.getUsername(),
-          "--source-password", postgres.getPassword(),
-          "--sink-connect", sqlserver.getJdbcUrl(),
-          "--sink-user", sqlserver.getUsername(),
-          "--sink-password", sqlserver.getPassword(),
-          "--sink-staging-schema", "dbo",
-          "--source-columns", SOURCE_COLUMNS,
-          "--sink-columns", SINK_COLUMNS,
-          "--mode", ReplicationMode.INCREMENTAL.getModeText(),
-          "--jobs", "4"
-      };
-      ToolOptions options = new ToolOptions(args);
-      assertEquals(0, ReplicaDB.processReplica(options));
-      assertEquals(TOTAL_SINK_ROWS, countSinkRows());
-   }
+    @Test
+    void testSqlserver2PostgresIncrementalParallel () throws ParseException, IOException, SQLException {
+       String[] args = {
+           "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+           "--source-connect", postgres.getJdbcUrl(),
+           "--source-user", postgres.getUsername(),
+           "--source-password", postgres.getPassword(),
+           "--sink-connect", sqlserver.getJdbcUrl(),
+           "--sink-user", sqlserver.getUsername(),
+           "--sink-password", sqlserver.getPassword(),
+           "--sink-staging-schema", "dbo",
+           "--source-columns", SOURCE_COLUMNS,
+           "--sink-columns", SINK_COLUMNS,
+           "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+           "--jobs", "4",
+           "--fetch-size", "1"
+       };
+       ToolOptions options = new ToolOptions(args);
+       assertEquals(0, ReplicaDB.processReplica(options));
+       assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+    }
 
-   @Test
-   void testPostgres2SqlserverAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
-      String sinkTable = "t_sink_autocreate_postgres2sqlserver";
-      Assertions.assertFalse(tableExists(sqlserverConn, sinkTable), "Sink table should not exist before test");
+    @Test
+    void testPostgres2SqlserverAutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+       String sinkTable = "t_sink_autocreate_postgres2sqlserver";
+       Assertions.assertFalse(tableExists(sqlserverConn, sinkTable), "Sink table should not exist before test");
 
-      String[] args = {
-          "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-          "--source-connect", postgres.getJdbcUrl(),
-          "--source-user", postgres.getUsername(),
-          "--source-password", postgres.getPassword(),
-          "--sink-connect", sqlserver.getJdbcUrl(),
-          "--sink-user", sqlserver.getUsername(),
-          "--sink-password", sqlserver.getPassword(),
-          "--sink-table", sinkTable,
-          "--sink-auto-create", "true",
-          "--mode", ReplicationMode.COMPLETE.getModeText()
-      };
-      ToolOptions options = new ToolOptions(args);
-      assertEquals(0, ReplicaDB.processReplica(options));
-      assertTrue(tableExists(sqlserverConn, sinkTable), "Sink table should exist after auto-create");
-      assertEquals(TOTAL_SINK_ROWS, countRows(sqlserverConn, sinkTable));
+       String[] args = {
+           "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+           "--source-connect", postgres.getJdbcUrl(),
+           "--source-user", postgres.getUsername(),
+           "--source-password", postgres.getPassword(),
+           "--sink-connect", sqlserver.getJdbcUrl(),
+           "--sink-user", sqlserver.getUsername(),
+           "--sink-password", sqlserver.getPassword(),
+           "--sink-table", sinkTable,
+           "--sink-auto-create", "true",
+           "--mode", ReplicationMode.COMPLETE.getModeText(),
+           "--fetch-size", "1"
+       };
+       ToolOptions options = new ToolOptions(args);
+       assertEquals(0, ReplicaDB.processReplica(options));
+       assertTrue(tableExists(sqlserverConn, sinkTable), "Sink table should exist after auto-create");
+       assertEquals(TOTAL_SINK_ROWS, countRows(sqlserverConn, sinkTable));
 
-      // Cleanup
-      sqlserverConn.createStatement().execute("DROP TABLE " + sinkTable);
-   }
+       // Cleanup
+       sqlserverConn.createStatement().execute("DROP TABLE " + sinkTable);
+    }
 
    @Disabled("SQL Server sink does not support incremental mode with staging schema - requires schema creation")
    @Test
@@ -273,24 +280,25 @@ class Postgres2SqlserverTest {
       sqlserverConn.createStatement().execute("DROP TABLE " + sinkTable);
    }
 
-   @Test
-   void testPostgres2SqlserverAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
-      String sinkTable = "t_sink"; // Use existing table
+    @Test
+    void testPostgres2SqlserverAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+       String sinkTable = "t_sink"; // Use existing table
 
-      String[] args = {
-          "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
-          "--source-connect", postgres.getJdbcUrl(),
-          "--source-user", postgres.getUsername(),
-          "--source-password", postgres.getPassword(),
-          "--sink-connect", sqlserver.getJdbcUrl(),
-          "--sink-user", sqlserver.getUsername(),
-          "--sink-password", sqlserver.getPassword(),
-          "--sink-table", sinkTable,
-          "--sink-auto-create", "true",
-          "--source-columns", SOURCE_COLUMNS,
-          "--sink-columns", SINK_COLUMNS,
-          "--mode", ReplicationMode.COMPLETE.getModeText()
-      };
+       String[] args = {
+           "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+           "--source-connect", postgres.getJdbcUrl(),
+           "--source-user", postgres.getUsername(),
+           "--source-password", postgres.getPassword(),
+           "--sink-connect", sqlserver.getJdbcUrl(),
+           "--sink-user", sqlserver.getUsername(),
+           "--sink-password", sqlserver.getPassword(),
+           "--sink-table", sinkTable,
+           "--sink-auto-create", "true",
+           "--source-columns", SOURCE_COLUMNS,
+           "--sink-columns", SINK_COLUMNS,
+           "--mode", ReplicationMode.COMPLETE.getModeText(),
+           "--fetch-size", "1"
+       };
       ToolOptions options = new ToolOptions(args);
       assertEquals(0, ReplicaDB.processReplica(options));
       assertEquals(TOTAL_SINK_ROWS, countSinkRows());
