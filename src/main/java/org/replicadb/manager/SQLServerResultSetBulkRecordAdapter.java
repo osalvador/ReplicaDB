@@ -200,8 +200,6 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
             // Even for XML→XML replication, we must convert SQLXML to string and use LONGVARCHAR type.
             // The sink column metadata will handle the string→XML conversion on the server side.
             if (type == Types.SQLXML) {
-                LOG.info("Column {} source type is SQLXML ({}), sink type is {} - mapping to LONGVARCHAR for bulk copy", 
-                    column, type, sinkType != null ? sinkType : "null");
                 return Types.LONGVARCHAR;
             }
             
@@ -618,13 +616,9 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                         // This improves compatibility with SQL Server's XML parser
                         if (!xmlStr.startsWith("<?xml")) {
                             xmlStr = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + xmlStr;
-                            LOG.debug("Added XML declaration with newline to XML content (original length: {})", value.toString().length());
                         }
                         
                         value = xmlStr;
-                        LOG.trace("Converted SQLXML to string for bulk copy (length: {})", xmlStr.length());
-                    } else {
-                        LOG.trace("Converted SQLXML to string for bulk copy (value: null)");
                     }
                 } else if (sourceType == Types.OTHER) {
                     // Handle OTHER type (PostgreSQL specific types, etc.)
