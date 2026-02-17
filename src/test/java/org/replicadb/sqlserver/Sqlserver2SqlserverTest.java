@@ -153,7 +153,8 @@ class Sqlserver2SqlserverTest {
     }
 
     @Disabled("Parallel jobs with XML columns require per-job batch size configuration. " +
-            "Currently --fetch-size applies globally. Need to implement per-job batch size control. " +
+            "SQL Server 2019 requires fetch.size=1 for XML replication, but --fetch-size applies globally. " +
+            "Need to implement per-job batch size control. Note: This limitation is SQL Server 2019 specific. " +
             "See: https://github.com/osalvador/ReplicaDB/issues/240")
     @Test
     void testSqlserver2SqlserverCompleteParallel() throws ParseException, IOException, SQLException {
@@ -278,7 +279,8 @@ class Sqlserver2SqlserverTest {
     }
 
     @Disabled("Parallel jobs with XML columns require per-job batch size configuration. " +
-            "Currently --fetch-size applies globally. Need to implement per-job batch size control. " +
+            "SQL Server 2019 requires fetch.size=1 for XML replication, but --fetch-size applies globally. " +
+            "Need to implement per-job batch size control. Note: This limitation is SQL Server 2019 specific. " +
             "See: https://github.com/osalvador/ReplicaDB/issues/240")
     @Test
     void testSqlserver2SqlserverAutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
