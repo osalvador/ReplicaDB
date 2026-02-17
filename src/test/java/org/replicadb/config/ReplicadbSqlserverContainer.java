@@ -54,7 +54,7 @@ public class ReplicadbSqlserverContainer extends MSSQLServerContainer<ReplicadbS
 			}
 		}
 		
-		return DockerImageName.parse("mcr.microsoft.com/mssql/server:2019-latest");
+		return DockerImageName.parse("mcr.microsoft.com/mssql/server:2019-CU29-ubuntu-20.04");
 	}
 	private static final String SINK_FILE = "/sinks/sqlserver-sink.sql";
 	private static final String SOURCE_FILE = "/sqlserver/sqlserver-source.sql";
