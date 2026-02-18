@@ -13,7 +13,7 @@ jobs:
     
     steps:
       - name: Comment on Dependabot PRs to trigger rebase
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const dependabotPRs = [
