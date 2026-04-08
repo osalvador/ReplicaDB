@@ -205,7 +205,7 @@
         <dependency>
             <groupId>com.oracle.database.nls</groupId>
             <artifactId>orai18n</artifactId>
-            <version>23.3.0.23.09</version>
+            <version>23.26.1.0.0</version>
         </dependency>
         <!-- Oracle XML support -->
         <dependency>
