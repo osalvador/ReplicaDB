@@ -33,7 +33,7 @@
       --radius-lg: 20px;
       --radius-md: 14px;
       --sidebar-w: 76px;
-      --panel-h: clamp(640px, calc(100vh - 238px), 1120px);
+      --panel-h: clamp(680px, calc(100vh - 212px), 1120px);
       --shadow: 0 24px 90px rgba(0, 0, 0, .35), 0 8px 26px rgba(0, 0, 0, .22);
     }
 
@@ -112,6 +112,24 @@
     .side-button:hover { transform: translateY(-1px); background: rgba(255,255,255,.05); color: var(--text); border-color: var(--line); }
     .side-button.active { background: var(--accent-soft); color: var(--accent-2); border-color: rgba(232,184,109,.34); }
     .side-button .ico { font-size: 22px; }
+    .side-button .ico.app-ico {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      display: inline-grid;
+      place-items: center;
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: -.04em;
+      border: 1px solid var(--line-strong);
+      background: rgba(255,255,255,.04);
+      color: var(--muted);
+    }
+    .side-button.active .ico.app-ico { color: #121212; border-color: transparent; }
+    .side-button.active .teams-ico { background: linear-gradient(135deg, #6264a7, #8b80ff); color: #fff; }
+    .side-button.active .jira-ico { background: linear-gradient(135deg, #2684ff, #0052cc); color: #fff; }
+    .side-button.active .email-ico { background: linear-gradient(135deg, var(--accent), #d19949); color: #121212; }
+    .side-button.active .rich-ico { background: linear-gradient(135deg, #14b8a6, #67e8f9); color: #071014; }
     .side-button .tip {
       position: absolute;
       left: 64px;
@@ -134,11 +152,9 @@
 
     .main-shell {
       min-width: 0;
-      padding: 18px 24px 28px;
+      padding: 22px 26px 34px;
       display: grid;
-      grid-template-rows: auto auto minmax(0, 1fr);
-      gap: 14px;
-      align-content: start;
+      gap: 18px;
     }
 
     .topbar {
@@ -146,10 +162,9 @@
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 18px;
       align-items: center;
-      padding: 16px 18px;
+      padding: 20px 22px;
       border: 1px solid var(--line);
-      border-radius: 24px;
-      align-self: start;
+      border-radius: 30px;
       background: linear-gradient(135deg, rgba(23,26,33,.94), rgba(32,36,45,.82));
       box-shadow: var(--shadow);
       overflow: hidden;
@@ -177,16 +192,16 @@
     }
     h1 {
       margin: 0;
-      font-size: clamp(28px, 2.6vw, 40px);
+      font-size: clamp(28px, 4vw, 48px);
       line-height: .95;
       letter-spacing: -.06em;
     }
     .top-copy {
-      margin: 8px 0 0;
+      margin: 10px 0 0;
       color: var(--muted);
       max-width: 78ch;
-      line-height: 1.45;
-      font-size: 13px;
+      line-height: 1.55;
+      font-size: 14px;
     }
     .top-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; position: relative; z-index: 1; }
 
@@ -221,10 +236,9 @@
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 12px;
       align-items: center;
-      padding: 10px 12px;
+      padding: 12px 14px;
       border: 1px solid var(--line);
-      border-radius: 20px;
-      align-self: start;
+      border-radius: 22px;
       background: rgba(23,26,33,.68);
       backdrop-filter: blur(16px);
     }
@@ -376,6 +390,7 @@
     .email-preview-body { padding: 26px; color: #20242d; font-size: 15px; line-height: 1.55; }
 
     .raw-output {
+      display: none !important;
       flex: 0 0 118px;
       min-height: 0;
       border-top: 1px solid var(--line);
@@ -534,10 +549,10 @@
     <aside class="sidebar" aria-label="Main navigation">
       <div class="brand-mark" title="Markdown Copy Lab"><img src="./markdown-copy-lab-icon.svg" alt="Markdown Copy Lab" /></div>
       <div class="side-group" aria-label="Utilities">
-        <button class="side-button utility-nav active" data-utility="teams"><span class="ico">💬</span><span class="tip">Markdown to Teams</span></button>
-        <button class="side-button utility-nav" data-utility="jira"><span class="ico">◆</span><span class="tip">Markdown to Jira</span></button>
-        <button class="side-button utility-nav" data-utility="email"><span class="ico">✉</span><span class="tip">Markdown to HTML Email</span></button>
-        <button class="side-button utility-nav" data-utility="clipboard"><span class="ico">⌘</span><span class="tip">Rich Clipboard to Markdown</span></button>
+        <button class="side-button utility-nav active" data-utility="teams"><span class="ico app-ico teams-ico">T</span><span class="tip">Markdown to Teams</span></button>
+        <button class="side-button utility-nav" data-utility="jira"><span class="ico app-ico jira-ico">J</span><span class="tip">Markdown to Jira</span></button>
+        <button class="side-button utility-nav" data-utility="email"><span class="ico app-ico email-ico">✉</span><span class="tip">Markdown to Email</span></button>
+        <button class="side-button utility-nav" data-utility="clipboard"><span class="ico app-ico rich-ico">↧</span><span class="tip">Teams to Markdown</span></button>
       </div>
       <div class="side-divider"></div>
       <div class="side-group" aria-label="Workspace tools">
@@ -557,7 +572,7 @@
         <div class="title-stack">
           <p class="eyebrow">Graphite Studio · Browser-only conversion workspace</p>
           <h1>Markdown Copy Lab</h1>
-          <p class="top-copy" id="activeUtilityCopy">Convert Markdown into paste-ready Teams chat, Jira wiki markup, email-safe HTML, or clean Markdown from rich clipboard content.</p>
+          <p class="top-copy" id="activeUtilityCopy">Convert Markdown into paste-ready Teams chat, Jira wiki markup, styled email HTML, or clean Markdown from Teams and other rich clipboard content.</p>
         </div>
         <div class="top-actions">
           <button class="button ghost" id="commandButton">⌘K <span class="subcap">Command</span></button>
@@ -643,10 +658,7 @@
               <iframe id="previewFrame" title="Conversion preview" srcdoc=""></iframe>
               <div class="format-preview" id="formatPreview" hidden><pre id="formatPreviewText"></pre></div>
             </div>
-            <details class="raw-output">
-              <summary id="inspectorTitle">Clipboard HTML payload</summary>
-              <textarea id="output" readonly spellcheck="false"></textarea>
-            </details>
+            <textarea id="output" hidden readonly spellcheck="false" aria-hidden="true"></textarea>
           </div>
         </section>
 
@@ -789,20 +801,20 @@
 
     const utilityConfig = {
       teams: {
-        icon: '💬',
+        icon: 'T',
         editorTitle: 'Markdown Editor', editorSubtitle: 'Write, paste, format, or upload Markdown.',
         previewTitle: 'Teams Preview', previewSubtitle: 'Composer-style rendering, including code cards.',
-        copyLabel: 'Copy for Teams', copyCaption: 'Rich HTML', outputLabel: 'Clipboard HTML payload',
+        copyLabel: 'Copy for Teams', copyCaption: 'Rich HTML', outputLabel: 'Hidden debug output',
         inputPlaceholder: '# Paste your Markdown here...',
         copy: 'Convert Markdown into paste-ready rich HTML for Microsoft Teams chat.',
         warnings: ['Teams-safe HTML', 'Code cards', 'Tables experimental'],
         compatibility: 'Best for Teams chat compose boxes. Nested lists and complex tables may still be flattened by Teams.'
       },
       jira: {
-        icon: '◆',
+        icon: 'J',
         editorTitle: 'Markdown Editor', editorSubtitle: 'Write Markdown and convert it into Jira wiki markup.',
         previewTitle: 'Jira Markup Preview', previewSubtitle: 'Jira-specific wiki markup for issue descriptions and comments.',
-        copyLabel: 'Copy for Jira', copyCaption: 'Wiki markup', outputLabel: 'Jira wiki markup payload',
+        copyLabel: 'Copy for Jira', copyCaption: 'Wiki markup', outputLabel: 'Hidden debug output',
         inputPlaceholder: '# Paste your Markdown here...',
         copy: 'Convert Markdown into Jira wiki markup for descriptions, comments and tickets.',
         warnings: ['Wiki markup', 'Tables supported', 'No rich HTML'],
@@ -811,20 +823,20 @@
       email: {
         icon: '✉',
         editorTitle: 'Markdown Editor', editorSubtitle: 'Write Markdown and generate email-safe HTML.',
-        previewTitle: 'HTML Email Preview', previewSubtitle: 'A conservative email layout for Gmail, Outlook, and newsletters.',
-        copyLabel: 'Copy Email HTML', copyCaption: 'Rich email', outputLabel: 'Email HTML payload',
+        previewTitle: 'Markdown to Email', previewSubtitle: 'Choose a styled email template and copy it as rich HTML for Gmail or Outlook.',
+        copyLabel: 'Copy Email', copyCaption: 'Rich HTML', outputLabel: 'Hidden debug output',
         inputPlaceholder: '# Paste your Markdown here...',
-        copy: 'Generate email-safe HTML and copy it as rich HTML for Gmail or Outlook.',
+        copy: 'Convert Markdown into styled, email-safe rich HTML for Gmail or Outlook.',
         warnings: ['Inline styles', 'Rich clipboard', 'Client-safe'],
         compatibility: 'Email clients vary. This output uses conservative inline styles and a text/plain fallback.'
       },
       clipboard: {
-        icon: '⌘',
-        editorTitle: 'Rich Text Input', editorSubtitle: 'Paste rich clipboard content from Teams, email, or web pages and clean it into Markdown.',
-        previewTitle: 'Markdown Preview', previewSubtitle: 'Clean Markdown generated from rich clipboard content.',
-        copyLabel: 'Copy Markdown', copyCaption: 'Plain text', outputLabel: 'Markdown payload',
-        inputPlaceholder: 'Click Paste Rich Text to import formatted clipboard content...',
-        copy: 'Turn rich clipboard HTML from Teams, Confluence, Word, Gmail or Jira into clean Markdown.',
+        icon: '↧',
+        editorTitle: 'Teams / Rich Text Input', editorSubtitle: 'Paste rich clipboard content from Teams, email, Confluence, Word, Jira, or any web page and clean it into Markdown.',
+        previewTitle: 'Teams to Markdown', previewSubtitle: 'Clean Markdown generated from Teams or any rich text copied to the clipboard.',
+        copyLabel: 'Copy Markdown', copyCaption: 'Plain text', outputLabel: 'Hidden debug output',
+        inputPlaceholder: 'Click Paste Rich Text to import Teams or any rich formatted clipboard content...',
+        copy: 'Turn Teams messages or any rich clipboard HTML from Confluence, Word, Gmail, Jira, or web pages into clean Markdown.',
         warnings: ['Clipboard API', 'HTML cleanup', 'Local only'],
         compatibility: 'The browser may ask for clipboard permission. Some apps expose richer HTML than others.'
       }
@@ -844,7 +856,11 @@
       email: [
         { id: 'executive', name: 'Executive Email', description: 'Premium email card with Graphite header and generous spacing.' },
         { id: 'minimal', name: 'Minimal Email', description: 'White layout, fewer visual accents, very conservative HTML.' },
-        { id: 'technical', name: 'Technical Email', description: 'Better spacing for code, lists and technical updates.' }
+        { id: 'technical', name: 'Technical Email', description: 'Better spacing for code, lists and technical updates.' },
+        { id: 'newsletter', name: 'Newsletter Email', description: 'Wider editorial layout with a stronger header and callout feel.' },
+        { id: 'status', name: 'Status Update Email', description: 'Compact professional update for weekly reports and operational status.' },
+        { id: 'memo', name: 'Plain Memo Email', description: 'Lightweight memo style with almost no decoration.' },
+        { id: 'alert', name: 'Alert Email', description: 'High-contrast notification layout for incidents, blockers or urgent changes.' }
       ],
       clipboard: [
         { id: 'clean', name: 'Clean Markdown', description: 'Balanced cleanup that preserves headings, links, lists and code.' },
@@ -858,7 +874,10 @@
       { id: 'incident', title: 'Incident report', tags: ['ops','jira'], body: '# Incident report\n\n**Impact**\n\nDescribe customer or system impact.\n\n## Timeline\n\n- 10:00 Detection\n- 10:10 Mitigation started\n- 10:30 Service restored\n\n## Root cause\n\nTBD\n\n## Follow-ups\n\n- [ ] Action item' },
       { id: 'adr', title: 'Architecture decision record', tags: ['architecture','docs'], body: '# ADR: Decision title\n\n## Context\n\nWhat problem are we solving?\n\n## Decision\n\nWhat did we choose?\n\n## Consequences\n\n- Positive consequence\n- Trade-off\n\n## Alternatives considered\n\n1. Option A\n2. Option B' },
       { id: 'release', title: 'Release notes', tags: ['release','email'], body: '# Release notes\n\n## Highlights\n\n- New capability\n- Improved behavior\n\n## Fixes\n\n- Fixed issue one\n\n## Upgrade notes\n\n```bash\ncommand --example\n```' },
-      { id: 'customer-email', title: 'Customer update email', tags: ['email'], body: '# Project update\n\nHi team,\n\nHere is the latest status update.\n\n**Progress**\n\n- Milestone one completed\n- Milestone two in progress\n\n**Next steps**\n\n1. Confirm scope\n2. Schedule rollout\n\nThanks,' }
+      { id: 'customer-email', title: 'Customer update email', tags: ['email'], body: '# Project update\n\nHi team,\n\nHere is the latest status update.\n\n**Progress**\n\n- Milestone one completed\n- Milestone two in progress\n\n**Next steps**\n\n1. Confirm scope\n2. Schedule rollout\n\nThanks,' },
+      { id: 'email-newsletter', title: 'Newsletter email', tags: ['email','newsletter'], body: '# Product newsletter\n\n**This week at a glance**\n\n- Highlight one\n- Highlight two\n- Customer impact\n\n## Featured update\n\nDescribe the most important change in one short paragraph.\n\n## What is next\n\n1. Next milestone\n2. Upcoming release' },
+      { id: 'email-alert', title: 'Incident alert email', tags: ['email','ops'], body: '# Important notice\n\n**Impact**\n\nDescribe who is affected and what is happening.\n\n**Current status**\n\n- Detection time: TBD\n- Mitigation: In progress\n- Next update: TBD\n\n## Action required\n\nPlease review the mitigation steps.' },
+      { id: 'email-memo', title: 'Executive memo email', tags: ['email','memo'], body: '# Executive memo\n\n**Decision needed**\n\nSummarize the decision in one sentence.\n\n## Context\n\nWhy this matters now.\n\n## Recommendation\n\n- Option recommended\n- Main trade-off\n- Expected outcome' }
     ];
 
     const builtInSnippets = [
@@ -1109,19 +1128,42 @@
       return out.join('\n').replace(/\n{4,}/g, '\n\n\n').trim();
     }
 
-    function convertMarkdownToEmailHtml(md) {
-      const bodyHtml = convertMarkdownToHtml(md)
+    function inlineEmailBodyHtml(md, profile = 'executive') {
+      const accent = profile === 'alert' ? '#fb7185' : profile === 'newsletter' ? '#14b8a6' : profile === 'status' ? '#38bdf8' : '#e8b86d';
+      const soft = profile === 'minimal' || profile === 'memo' ? '#f8fafc' : '#f7f3ea';
+      return convertMarkdownToHtml(md)
         .replace(/<p>/g, '<p style="margin:0 0 14px;line-height:1.58;">')
         .replace(/<ul>/g, '<ul style="margin:0 0 14px 22px;padding:0;line-height:1.58;">')
         .replace(/<ol>/g, '<ol style="margin:0 0 14px 22px;padding:0;line-height:1.58;">')
         .replace(/<li>/g, '<li style="margin:0 0 6px;">')
-        .replace(/<blockquote[^>]*>/g, '<blockquote style="margin:0 0 16px;padding:10px 14px;border-left:4px solid #6750a4;background:#f7f2fa;color:#49454f;border-radius:8px;">')
-        .replace(/<pre([^>]*)>/g, '<pre$1 style="margin:0 0 16px;padding:14px;border:1px solid #ded8e1;border-radius:10px;background:#f8f7fb;overflow:auto;white-space:pre-wrap;font-family:Consolas,Menlo,monospace;font-size:13px;line-height:1.5;">')
-        .replace(/<code>/g, '<code style="font-family:Consolas,Menlo,monospace;background:#f1eef5;border-radius:4px;padding:1px 4px;">')
+        .replace(/<blockquote[^>]*>/g, `<blockquote style="margin:0 0 16px;padding:10px 14px;border-left:4px solid ${accent};background:${soft};color:#49454f;border-radius:8px;">`)
+        .replace(/<pre([^>]*)>/g, '<pre$1 style="margin:0 0 16px;padding:14px;border:1px solid #d7dde8;border-radius:10px;background:#0f172a;color:#e5e7eb;overflow:auto;white-space:pre-wrap;font-family:Consolas,Menlo,monospace;font-size:13px;line-height:1.5;">')
+        .replace(/<code>/g, '<code style="font-family:Consolas,Menlo,monospace;background:#eef2f7;border-radius:4px;padding:1px 4px;">')
         .replace(/<table>/g, '<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 16px;">')
-        .replace(/<td>/g, '<td style="border:1px solid #ded8e1;padding:8px 10px;vertical-align:top;">')
-        .replace(/<a /g, '<a style="color:#6750a4;text-decoration:underline;" ');
-      return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Markdown email</title></head><body style="margin:0;background:#f7f2fa;font-family:Arial,Helvetica,sans-serif;color:#1d1b20;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f7f2fa;padding:24px 0;"><tr><td align="center"><table role="presentation" width="640" cellspacing="0" cellpadding="0" style="width:640px;max-width:calc(100% - 32px);background:#ffffff;border-radius:18px;border:1px solid #e7e2ea;overflow:hidden;"><tr><td style="padding:24px 28px;background:#6750a4;color:#ffffff;font-size:18px;font-weight:700;">Markdown Email</td></tr><tr><td style="padding:28px;font-size:15px;line-height:1.58;">${bodyHtml}</td></tr></table></td></tr></table></body></html>`;
+        .replace(/<td>/g, '<td style="border:1px solid #d7dde8;padding:8px 10px;vertical-align:top;">')
+        .replace(/<a /g, `<a style="color:${accent};text-decoration:underline;" `);
+    }
+
+    function buildEmailTemplate(bodyHtml, profile = 'executive') {
+      const templates = {
+        executive: { title: 'Executive update', bg: '#f4f1ea', card: '#ffffff', headerBg: '#171a21', headerColor: '#e8b86d', width: 680, border: '#e7dfd2', radius: 20, preheader: 'A concise Markdown-generated update.' },
+        minimal: { title: 'Markdown email', bg: '#ffffff', card: '#ffffff', headerBg: '#ffffff', headerColor: '#111827', width: 640, border: '#e5e7eb', radius: 0, preheader: 'Plain, conservative email layout.' },
+        technical: { title: 'Technical update', bg: '#eef2f7', card: '#ffffff', headerBg: '#0f172a', headerColor: '#67e8f9', width: 720, border: '#cbd5e1', radius: 16, preheader: 'Technical notes, code blocks and implementation details.' },
+        newsletter: { title: 'Team newsletter', bg: '#ecfeff', card: '#ffffff', headerBg: '#0f766e', headerColor: '#ffffff', width: 720, border: '#99f6e4', radius: 22, preheader: 'Editorial update generated from Markdown.' },
+        status: { title: 'Status update', bg: '#f8fafc', card: '#ffffff', headerBg: '#1e3a8a', headerColor: '#dbeafe', width: 660, border: '#bfdbfe', radius: 16, preheader: 'Compact status email.' },
+        memo: { title: 'Memo', bg: '#ffffff', card: '#ffffff', headerBg: '#ffffff', headerColor: '#111827', width: 620, border: '#ffffff', radius: 0, preheader: 'Simple memo generated from Markdown.' },
+        alert: { title: 'Important notice', bg: '#fff1f2', card: '#ffffff', headerBg: '#991b1b', headerColor: '#ffffff', width: 660, border: '#fecdd3', radius: 16, preheader: 'Important Markdown-generated notification.' }
+      };
+      const t = templates[profile] || templates.executive;
+      const headerBorder = profile === 'minimal' || profile === 'memo' ? `border-bottom:1px solid ${t.border};` : '';
+      const header = profile === 'memo' ? '' : `<tr><td style="padding:22px 28px;background:${t.headerBg};color:${t.headerColor};font-size:18px;font-weight:700;letter-spacing:.01em;${headerBorder}">${t.title}</td></tr>`;
+      const outerPadding = profile === 'memo' ? '16px 0' : '24px 0';
+      return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${t.title}</title></head><body style="margin:0;background:${t.bg};font-family:Arial,Helvetica,sans-serif;color:#1d1b20;"><div style="display:none;max-height:0;overflow:hidden;color:transparent;opacity:0;">${t.preheader}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${t.bg};padding:${outerPadding};"><tr><td align="center"><table role="presentation" width="${t.width}" cellspacing="0" cellpadding="0" style="width:${t.width}px;max-width:calc(100% - 32px);background:${t.card};border-radius:${t.radius}px;border:1px solid ${t.border};overflow:hidden;">${header}<tr><td style="padding:${profile === 'memo' ? '8px 16px' : '28px'};font-size:${profile === 'technical' ? '14px' : '15px'};line-height:${profile === 'technical' ? '1.62' : '1.58'};">${bodyHtml}</td></tr></table></td></tr></table></body></html>`;
+    }
+
+    function convertMarkdownToEmailHtml(md, profile = getActiveProfile()) {
+      const bodyHtml = inlineEmailBodyHtml(md, profile);
+      return buildEmailTemplate(bodyHtml, profile);
     }
 
     function htmlNodeToMarkdown(node) {
@@ -1220,27 +1262,47 @@
       if (totalLines <= 1) return 0;
       return Math.max(0, Math.min(1, (getEditorCursorLine() - 1) / (totalLines - 1)));
     }
-    function syncScrollElementToEditor(scrollEl) {
+    function getEditorScrollRatio() {
+      const maxScroll = Math.max(0, inputEl.scrollHeight - inputEl.clientHeight);
+      if (!maxScroll) return getEditorCursorRatio();
+      return Math.max(0, Math.min(1, inputEl.scrollTop / maxScroll));
+    }
+    function isEditorNearBottom() {
+      const maxScroll = Math.max(0, inputEl.scrollHeight - inputEl.clientHeight);
+      if (!maxScroll) return true;
+      const cursorLine = getEditorCursorLine();
+      const totalLines = Math.max(1, (inputEl.value || '').split('\n').length);
+      return (maxScroll - inputEl.scrollTop) < 36 || cursorLine >= totalLines - 1;
+    }
+    function syncScrollElementToEditor(scrollEl, options = {}) {
       if (!scrollEl) return;
       const maxScroll = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight);
       if (!maxScroll) { scrollEl.scrollTop = 0; return; }
-      const ratio = getEditorCursorRatio();
-      const contextOffset = Math.min(160, scrollEl.clientHeight * 0.28);
-      const target = Math.round(maxScroll * ratio - contextOffset);
-      scrollEl.scrollTop = Math.max(0, Math.min(maxScroll, target));
+      if (options.forceBottom || isEditorNearBottom()) {
+        scrollEl.scrollTop = maxScroll;
+        return;
+      }
+      const scrollRatio = getEditorScrollRatio();
+      const cursorRatio = getEditorCursorRatio();
+      const ratio = Math.max(scrollRatio, Math.min(1, cursorRatio + 0.03));
+      scrollEl.scrollTop = Math.max(0, Math.min(maxScroll, Math.round(maxScroll * ratio)));
     }
-    function syncTeamsPreviewScrollToEditor() {
+    function syncTeamsPreviewScrollToEditor(options = {}) {
       const doc = previewFrame.contentDocument;
       const scrollEl = doc && doc.querySelector('.teams-message');
-      syncScrollElementToEditor(scrollEl);
+      syncScrollElementToEditor(scrollEl, options);
     }
-    function syncFormatPreviewScrollToEditor() {
-      if (formatPreviewEl && !formatPreviewEl.hidden) syncScrollElementToEditor(formatPreviewEl);
+    function syncFormatPreviewScrollToEditor(options = {}) {
+      if (formatPreviewEl && !formatPreviewEl.hidden) syncScrollElementToEditor(formatPreviewEl, options);
     }
-    function syncActivePreviewScrollToEditor() {
+    function syncActivePreviewScrollToEditor(options = {}) {
       requestAnimationFrame(() => {
-        if (activeUtility === 'teams') syncTeamsPreviewScrollToEditor();
-        else syncFormatPreviewScrollToEditor();
+        if (activeUtility === 'teams') syncTeamsPreviewScrollToEditor(options);
+        else syncFormatPreviewScrollToEditor(options);
+        window.setTimeout(() => {
+          if (activeUtility === 'teams') syncTeamsPreviewScrollToEditor(options);
+          else syncFormatPreviewScrollToEditor(options);
+        }, 0);
       });
     }
     function updatePreviewDocument(html, shouldFollowCursor = false) {
@@ -1250,7 +1312,7 @@
       const scrollEl = doc && doc.querySelector('.teams-message');
       if (!msg || !scrollEl) {
         previewFrame.onload = () => {
-          if (shouldFollowCursor) syncTeamsPreviewScrollToEditor();
+          if (shouldFollowCursor) syncTeamsPreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
         };
         previewFrame.srcdoc = buildTeamsPreviewHtml(html);
         return;
@@ -1259,7 +1321,7 @@
       msg.innerHTML = body;
       requestAnimationFrame(() => {
         if (shouldFollowCursor) {
-          syncTeamsPreviewScrollToEditor();
+          syncTeamsPreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
           if (document.activeElement !== inputEl) return;
           try { inputEl.focus({ preventScroll: true }); } catch { inputEl.focus(); }
         } else {
@@ -1437,50 +1499,6 @@
       showToast('Snippet saved locally');
     }
 
-    function updateLineNumbers() {
-      if (!lineNumbersEl) return;
-      const count = Math.max(1, (inputEl.value.match(/\n/g) || []).length + 1);
-      const next = Array.from({ length: count }, (_, index) => String(index + 1)).join('\n');
-      if (lineNumbersEl.textContent !== next) lineNumbersEl.textContent = next;
-      lineNumbersEl.scrollTop = inputEl.scrollTop;
-    }
-    function syncLineNumbersScroll() { if (lineNumbersEl) lineNumbersEl.scrollTop = inputEl.scrollTop; }
-    function getEditorCursorRatio() {
-      const value = inputEl.value || '';
-      const cursor = inputEl.selectionStart ?? value.length;
-      const currentLine = value.slice(0, cursor).split('\n').length;
-      const totalLines = Math.max(1, value.split('\n').length);
-      return totalLines <= 1 ? 0 : (currentLine - 1) / (totalLines - 1);
-    }
-    function syncPreviewScrollToEditor(scrollEl) {
-      if (!scrollEl) return;
-      const maxScroll = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight);
-      const ratio = getEditorCursorRatio();
-      const contextOffset = Math.min(90, scrollEl.clientHeight * 0.18);
-      scrollEl.scrollTop = Math.max(0, Math.min(maxScroll, Math.round(maxScroll * ratio - contextOffset)));
-    }
-    function updatePreviewDocument(html, shouldFollowCursor = false) {
-      const body = buildTeamsPreviewBody(html);
-      const doc = previewFrame.contentDocument;
-      const msg = doc && doc.querySelector('.msg');
-      const scrollEl = doc && doc.querySelector('.teams-message');
-      if (!msg || !scrollEl) {
-        previewFrame.srcdoc = buildTeamsPreviewHtml(html);
-        return;
-      }
-      const previousTop = scrollEl.scrollTop;
-      msg.innerHTML = body;
-      requestAnimationFrame(() => {
-        if (shouldFollowCursor) {
-          syncPreviewScrollToEditor(scrollEl);
-          if (document.activeElement !== inputEl) return;
-          try { inputEl.focus({ preventScroll: true }); } catch { inputEl.focus(); }
-        } else {
-          scrollEl.scrollTop = previousTop;
-        }
-      });
-    }
-
     function applyProfileToTeams(html) {
       const profile = getActiveProfile();
       if (profile === 'compact') return html.replace(/<p>&nbsp;<\/p>/g, '');
@@ -1499,26 +1517,13 @@
       return text;
     }
     function convertMarkdownToEmailHtmlProfiled(md) {
-      let html = convertMarkdownToEmailHtml(md);
-      const profile = getActiveProfile();
-      if (profile === 'minimal') {
-        html = html.replace(/background:#f7f2fa/g, 'background:#ffffff')
-                   .replace(/background:#6750a4;color:#ffffff/g, 'background:#ffffff;color:#171a21;border-bottom:1px solid #e5e7eb')
-                   .replace(/border-radius:18px;/g, 'border-radius:0;');
-      }
-      if (profile === 'executive') {
-        html = html.replace('Markdown Email', 'Markdown Copy Lab');
-      }
-      if (profile === 'technical') {
-        html = html.replace(/font-size:15px;line-height:1.58/g, 'font-size:14px;line-height:1.62');
-      }
-      return html;
+      return convertMarkdownToEmailHtml(md, getActiveProfile());
     }
 
     function renderEmailPreview(emailHtml) {
       const doc = new DOMParser().parseFromString(emailHtml || '', 'text/html');
       const body = doc.body ? doc.body.innerHTML : emailHtml;
-      formatPreviewEl.innerHTML = `<div class="email-preview-doc"><div class="email-preview-head">Email Preview</div><div class="email-preview-body">${body}</div></div>`;
+      formatPreviewEl.innerHTML = `<div class="email-preview-doc">${body}</div>`;
     }
 
     function updateStats(src, out) {
@@ -1561,7 +1566,7 @@
       activeUtilityCopyEl.textContent = cfg.copy;
       copyBtnLabel.textContent = cfg.copyLabel;
       copyBtnCaption.textContent = cfg.copyCaption;
-      inspectorTitleEl.textContent = cfg.outputLabel;
+      if (inspectorTitleEl) inspectorTitleEl.textContent = cfg.outputLabel;
       inputEl.placeholder = cfg.inputPlaceholder;
       loadFileBtn.hidden = activeUtility === 'clipboard';
       pasteRichBtn.hidden = activeUtility !== 'clipboard';
@@ -1589,30 +1594,11 @@
       localStorage.setItem('mcl.inspector', visible ? 'open' : 'collapsed');
     }
 
-    let editorIsTyping = false;
-    let editorTypingTimer = 0;
-    const previewSyncKeys = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End']);
-    function markEditorTyping() {
-      editorIsTyping = true;
-      window.clearTimeout(editorTypingTimer);
-      editorTypingTimer = window.setTimeout(() => { editorIsTyping = false; }, 240);
-    }
-    function restorePreviewScrollTop(scrollEl, top) {
-      if (!scrollEl) return;
-      requestAnimationFrame(() => { scrollEl.scrollTop = top; });
-    }
-    function syncPreviewForNavigation(event) {
-      if (!event || previewSyncKeys.has(event.key) || event.metaKey || event.ctrlKey || event.altKey) {
-        syncActivePreviewScrollToEditor();
-      }
-    }
-
-    function convert(shouldFollowCursor = false) {
+    function convert(shouldFollowCursor = document.activeElement === inputEl) {
       const src = inputEl.value || '';
       updateLineNumbers();
       formatPreviewEl.hidden = activeUtility === 'teams';
       previewFrame.hidden = activeUtility !== 'teams';
-      const previousFormatTop = formatPreviewEl.scrollTop;
 
       if (activeUtility === 'teams') {
         const html = applyProfileToTeams(convertMarkdownToHtml(src)).replace(/\n+/g, '');
@@ -1625,23 +1611,20 @@
         outputEl.value = jira;
         formatPreviewEl.innerHTML = '<pre id="formatPreviewText"></pre>';
         formatPreviewEl.querySelector('pre').textContent = jira || 'Jira markup will appear here.';
-        if (shouldFollowCursor) syncActivePreviewScrollToEditor();
-        else restorePreviewScrollTop(formatPreviewEl, previousFormatTop);
+        if (shouldFollowCursor) syncActivePreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
       } else if (activeUtility === 'email') {
         lastEmailHtml = convertMarkdownToEmailHtmlProfiled(src);
         currentOutput = lastEmailHtml;
         outputEl.value = lastEmailHtml;
         renderEmailPreview(lastEmailHtml);
-        if (shouldFollowCursor) syncActivePreviewScrollToEditor();
-        else restorePreviewScrollTop(formatPreviewEl, previousFormatTop);
+        if (shouldFollowCursor) syncActivePreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
       } else if (activeUtility === 'clipboard') {
         const md = applyProfileToMarkdown(src);
         currentOutput = md;
         outputEl.value = md;
         formatPreviewEl.innerHTML = '<pre id="formatPreviewText"></pre>';
         formatPreviewEl.querySelector('pre').textContent = md || 'Markdown output will appear here.';
-        if (shouldFollowCursor) syncActivePreviewScrollToEditor();
-        else restorePreviewScrollTop(formatPreviewEl, previousFormatTop);
+        if (shouldFollowCursor) syncActivePreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
       }
       updateStats(src, currentOutput);
     }
@@ -1693,7 +1676,7 @@
         { icon: '✎', title: 'Split: Editor only', subtitle: 'Focus on writing', run: () => setSplitMode('editor') },
         { icon: '◉', title: 'Split: Preview only', subtitle: 'Focus on output', run: () => setSplitMode('preview') },
         { icon: '⌁', title: 'Toggle inspector', subtitle: 'Show or hide side inspector', run: () => setInspectorVisible(!inspectorVisible) },
-        { icon: '⌘', title: 'Paste rich text from clipboard', subtitle: 'Convert rich clipboard content to Markdown', run: () => pasteRichText('Clipboard') },
+        { icon: '↧', title: 'Paste rich text from clipboard', subtitle: 'Convert Teams or rich clipboard content to Markdown', run: () => pasteRichText('Clipboard') },
         ...templates.map(t => ({ icon: '▤', title: `Load template: ${t.title}`, subtitle: t.tags.join(' · '), run: () => loadText(t.body) })),
         ...allSnippets.map(s => ({ icon: '✂', title: `Insert snippet: ${s.title}`, subtitle: (s.body || '').slice(0, 70), run: () => insertAtCursor(s.body) }))
       ];
@@ -1745,6 +1728,7 @@
         if (activeUtility === 'teams') await copyRichHtml(currentOutput);
         else if (activeUtility === 'email') await copyEmailHtml(lastEmailHtml || currentOutput);
         else await copyPlainText(currentOutput);
+        console.debug('[Markdown Copy Lab] copied output', { utility: activeUtility, profile: getActiveProfile(), output: currentOutput });
         await saveHistorySnapshot('copy', { silent: true });
         showToast(`${utilityConfig[activeUtility].copyLabel} · copied + saved locally`);
       } catch (error) {
@@ -1800,12 +1784,12 @@
     btnCheck.addEventListener('click', () => prefixLines('- [ ]'));
     btnHr.addEventListener('click', () => insertAtCursor('\n---\n'));
     undoBtn.addEventListener('click', () => restoreUndoSnapshot(undoStack.pop()));
-    inputEl.addEventListener('input', () => { markEditorTyping(); convert(false); });
-    inputEl.addEventListener('scroll', () => { syncLineNumbersScroll(); if (!editorIsTyping) syncActivePreviewScrollToEditor(); });
-    inputEl.addEventListener('keyup', syncPreviewForNavigation);
+    inputEl.addEventListener('input', () => convert(true));
+    inputEl.addEventListener('scroll', () => { syncLineNumbersScroll(); syncActivePreviewScrollToEditor({ forceBottom: isEditorNearBottom() }); });
+    inputEl.addEventListener('keyup', syncActivePreviewScrollToEditor);
     inputEl.addEventListener('click', syncActivePreviewScrollToEditor);
     inputEl.addEventListener('select', syncActivePreviewScrollToEditor);
-    fileInput.addEventListener('change', async () => { const file = fileInput.files && fileInput.files[0]; if (!file) return; inputEl.value = await file.text(); convert(false); showToast(`Loaded ${file.name}`); });
+    fileInput.addEventListener('change', async () => { const file = fileInput.files && fileInput.files[0]; if (!file) return; inputEl.value = await file.text(); convert(true); showToast(`Loaded ${file.name}`); });
 
     drawerBodyEl.addEventListener('click', async (event) => {
       const btn = event.target.closest('button');
