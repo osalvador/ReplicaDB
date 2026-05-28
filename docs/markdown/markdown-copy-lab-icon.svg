@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Markdown Copy Lab icon">
+  <rect width="512" height="512" rx="112" fill="#0F1115"/>
+  <circle cx="376" cy="130" r="150" fill="#E8B86D" opacity="0.18"/>
+  <rect x="84" y="128" width="344" height="256" rx="54" fill="#171A21" stroke="#E8B86D" stroke-opacity="0.42" stroke-width="8"/>
+  <path d="M142 318V194h42l72 78 72-78h42v124h-46v-58l-52 58h-32l-52-58v58h-46Z" fill="#F4F6FA"/>
+  <path d="M332 302l42-48h-28v-38h92v92h-38v-28l-48 42-20-20Z" fill="#E8B86D"/>
+</svg>
