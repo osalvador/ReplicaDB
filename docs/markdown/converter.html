@@ -339,6 +339,37 @@
     .panel-title h2 { margin: 0; font-size: 16px; letter-spacing: -.02em; }
     .panel-title p { margin: 3px 0 0; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .panel-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .preview-profile {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.035);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .preview-profile span {
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      color: var(--muted-2);
+    }
+    .preview-profile select {
+      min-width: 150px;
+      max-width: 230px;
+      border: 0;
+      outline: 0;
+      color: var(--text);
+      background: transparent;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .preview-profile select option { color: #111; background: #f7f2ea; }
     .panel-body { min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; padding: 14px; }
 
     .editor-toolbar { display: flex; gap: 8px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; flex: 0 0 auto; }
@@ -697,6 +728,7 @@
               </div>
             </div>
             <div class="panel-actions">
+              <label class="preview-profile" title="Conversion profile used by this output"><span>Profile</span><select id="previewProfileSelect" aria-label="Conversion profile"></select></label>
               <button class="button primary" id="copyBtn"><span id="copyBtnLabel">Copy for Teams</span><span class="subcap" id="copyBtnCaption">Rich HTML</span></button>
             </div>
           </div>
@@ -813,6 +845,7 @@
     const formatPreviewTextEl = document.getElementById('formatPreviewText');
     const inspectorTitleEl = document.getElementById('inspectorTitle');
     const profileSelect = document.getElementById('profileSelect');
+    const previewProfileSelect = document.getElementById('previewProfileSelect');
     const profileDescriptionEl = document.getElementById('profileDescription');
     const warningPillsEl = document.getElementById('warningPills');
     const compatibilityTextEl = document.getElementById('compatibilityText');
@@ -1289,10 +1322,28 @@
     function buildTeamsPreviewHtml(html) {
       const body = buildTeamsPreviewBody(html);
       return `<!doctype html><html><head><meta charset="utf-8"><style>
-        :root{color-scheme:dark;--teams-bg:#1f1f1f;--composer:#2b2b2b;--composer-2:#242424;--line:#666;--line-soft:#505050;--text:#f3f3f3;--muted:#c8c8c8;--dim:#9b9b9b;--accent:#8b80ff;--code-bg:#282828;--code-border:#686868;--green:#13c213;--pink:#ff8ca0;--blue:#8ab4ff;--orange:#ffb86c;}
-        *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--teams-bg);font-family:'Segoe UI',system-ui,-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text);font-size:16px;line-height:1.45;overflow:hidden}.teams-preview-wrap{height:100%;padding:18px 22px 18px;background:var(--teams-bg);display:flex;flex-direction:column;gap:6px}.teams-composer{position:relative;flex:1 1 auto;min-height:0;background:var(--composer);border:1px solid var(--line);border-bottom:3px solid var(--accent);border-radius:8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03);display:flex;flex-direction:column;overflow:hidden}.teams-composer::after{content:'';position:absolute;right:6px;top:8px;width:8px;height:50px;border-radius:999px;background:#8d8d8d}.teams-message{flex:1 1 auto;min-height:0;overflow:auto;padding:18px 21px 0 21px;scrollbar-color:#8d8d8d transparent;scrollbar-width:thin}.teams-message::-webkit-scrollbar{width:10px}.teams-message::-webkit-scrollbar-track{background:transparent}.teams-message::-webkit-scrollbar-thumb{background:#8d8d8d;border:2px solid var(--composer);border-radius:999px}.msg{max-width:100%;padding-right:19px}p{margin:0;min-height:1.45em;line-height:1.45;color:var(--text)}p:last-child{margin-bottom:0}strong{font-weight:700;color:#fff}i,em{font-style:italic;color:#f5f5f5}s{text-decoration-thickness:2px;text-decoration-color:#d7d7d7}a{color:#b9cdfd;text-decoration:underline}blockquote{margin:0 0 1.45em;padding:3px 0 3px 13px;border-left:2px solid #777;color:#dedede;background:transparent}ul,ol{margin:0 0 1.45em 24px;padding:0}li{margin:4px 0}p code,li code{font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:.92em;color:#f3f3f3;background:#363636;border:1px solid #505050;border-radius:4px;padding:1px 4px}.teams-code-card{margin:1.45em 0 0;border:1px solid var(--code-border);border-radius:9px;background:var(--code-bg);overflow:hidden;color:#e6e6e6;font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:14px;line-height:1.55}.teams-code-title{height:40px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:10px;padding:0 14px;color:#d7d7d7;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px}.code-icon{width:18px;height:18px;border:1.5px solid #d6d6d6;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;line-height:1}.code-chevron{font-size:14px;color:#d6d6d6;margin-left:2px}.code-more{margin-left:auto;letter-spacing:2px;color:#d7d7d7}.teams-code-body{overflow:auto;max-height:288px;padding:13px 0 14px}.teams-code-body ol{margin:0;padding:0;list-style:none;counter-reset:code-line}.teams-code-body li{counter-increment:code-line;display:grid;grid-template-columns:43px minmax(0,1fr);gap:14px;margin:0;padding:0 18px 0 0;white-space:pre}.teams-code-body li::before{content:counter(code-line);color:#9d9d9d;text-align:right;user-select:none}.code-line-content{min-width:0;overflow-wrap:normal}.hljs-function{color:var(--pink)}.hljs-string{color:var(--green)}.hljs-number{color:var(--green)}.hljs-literal{color:var(--blue)}.hljs-keyword{color:#c792ea}.hljs-comment{color:#8f9f8f}.hljs-attr{color:#e6e6e6;font-weight:600}.hljs-bullet{color:#d7d7d7}figure.table{margin:1.45em 0;border:1px solid var(--line-soft);border-radius:8px;overflow:auto;background:#252525}table{border-collapse:collapse;width:100%;font-size:14px}td{border:1px solid var(--line-soft);padding:6px 8px;vertical-align:top}td p{margin:0}.teams-compose-toolbar{min-height:54px;border-top:0 solid transparent;display:flex;align-items:center;justify-content:flex-end;gap:18px;padding:0 16px 11px;color:#e5e5e5;font-size:22px}.toolbar-icon{display:inline-flex;align-items:center;justify-content:center;min-width:18px;opacity:.95}.toolbar-icon.text{font-size:20px;font-weight:600}.toolbar-divider{width:1px;height:27px;background:#777}.send-icon{font-size:30px;line-height:1;transform:translateY(-1px)}.teams-hint{align-self:flex-end;color:#f2f2f2;font-size:16px;line-height:1}.teams-hint span{color:var(--accent)}@media (max-width:700px){body{font-size:14px}.teams-preview-wrap{padding:10px}.teams-message{padding:12px 12px 0}.teams-code-card{font-size:12px}.teams-code-title{font-size:12px;height:34px}.teams-compose-toolbar{font-size:18px;gap:12px}.teams-hint{font-size:12px}}
-      </style></head><body><div class="teams-preview-wrap"><div class="teams-composer"><div class="teams-message"><div class="msg">${body}</div></div><div class="teams-compose-toolbar" aria-hidden="true"><span class="toolbar-icon text">A✎</span><span class="toolbar-icon">☺</span><span class="toolbar-icon">◔</span><span class="toolbar-icon">＋</span><span class="toolbar-divider"></span><span class="toolbar-icon send-icon">▷</span></div></div><div class="teams-hint"><span>Shift+Enter</span> starts a new line.</div></div></body></html>`;
+        :root{--teams-bg:#1f1f1f;--composer:#242424;--line:#5b5b5b;--line-soft:#494949;--text:#f1f1f1;--accent:#7b6ff6;--code-bg:#242424;--code-border:#626262;--pink:#ff8797;--green:#16c60c;--blue:#86b6ff;}
+        *{box-sizing:border-box}html,body{height:100%}
+        body{margin:0;background:var(--teams-bg);font-family:'Segoe UI',system-ui,-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text);font-size:16px;line-height:1.45;overflow:hidden}
+        .teams-preview-wrap{height:100%;padding:18px 22px;background:var(--teams-bg);display:flex;flex-direction:column;gap:8px}
+        .teams-composer{position:relative;flex:1 1 auto;min-height:0;background:var(--composer);border:1px solid var(--line);border-bottom:3px solid var(--accent);border-radius:8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03);display:flex;flex-direction:column;overflow:hidden}
+        .teams-format-toolbar{min-height:62px;display:flex;align-items:center;gap:24px;padding:0 22px;color:#e6e6e6;background:var(--composer);flex:0 0 auto}
+        .teams-format-toolbar .group{display:inline-flex;align-items:center;gap:22px}.teams-format-toolbar .sep{width:1px;height:30px;background:#777;opacity:.55}
+        .fmt{display:inline-flex;align-items:center;justify-content:center;min-width:18px;min-height:24px;color:#e9e9e9;font-size:22px;line-height:1;font-weight:500;opacity:.96}
+        .fmt.bold{font-weight:800}.fmt.italic{font-style:italic}.fmt.under{text-decoration:underline}.fmt.strike{text-decoration:line-through}.fmt.active{color:#8c83ff}.fmt.code{font-size:20px}.fmt.more{letter-spacing:4px;transform:translateY(-2px)}.fmt.trash{margin-left:auto;font-size:26px;color:#f0f0f0}
+        .teams-message{flex:1 1 auto;min-height:0;overflow:auto;padding:28px 30px 28px;scrollbar-color:#8d8d8d transparent;scrollbar-width:thin}.teams-message::-webkit-scrollbar{width:10px}.teams-message::-webkit-scrollbar-track{background:transparent}.teams-message::-webkit-scrollbar-thumb{background:#8d8d8d;border:2px solid var(--composer);border-radius:999px}
+        .msg{max-width:100%;padding-right:12px}p{margin:0;min-height:1.45em;line-height:1.45;color:var(--text)}p:last-child{margin-bottom:0}strong{font-weight:700;color:#fff}i,em{font-style:italic;color:#f5f5f5}s{text-decoration-thickness:2px;text-decoration-color:#d7d7d7}a{color:#b9cdfd;text-decoration:underline}
+        blockquote{margin:0 0 3.2em;padding:4px 0 4px 20px;border-left:3px solid #777;color:#f0f0f0;background:transparent;font-size:17px}
+        ul,ol{margin:0 0 1.45em 24px;padding:0}li{margin:4px 0}p code,li code{font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:.92em;color:#f3f3f3;background:#363636;border:1px solid #505050;border-radius:4px;padding:1px 4px}
+        .teams-code-card{margin:1.45em 0 0;border:1px solid var(--code-border);border-radius:9px;background:var(--code-bg);overflow:hidden;color:#e6e6e6;font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:15px;line-height:1.55}
+        .teams-code-title{height:48px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:12px;padding:0 16px;color:#d7d7d7;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:17px}.code-icon{width:20px;height:20px;border:1.5px solid #d6d6d6;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1}.code-chevron{font-size:14px;color:#d6d6d6;margin-left:3px}.code-more{margin-left:auto;letter-spacing:3px;color:#d7d7d7}
+        .teams-code-body{overflow:auto;max-height:320px;padding:16px 0 18px}.teams-code-body ol{margin:0;padding:0;list-style:none;counter-reset:code-line}.teams-code-body li{counter-increment:code-line;display:grid;grid-template-columns:48px minmax(0,1fr);gap:16px;margin:0;padding:0 20px 0 0;white-space:pre}.teams-code-body li::before{content:counter(code-line);color:#9d9d9d;text-align:right;user-select:none}.code-line-content{min-width:0;overflow-wrap:normal}
+        .hljs-function{color:var(--pink)}.hljs-string{color:var(--green)}.hljs-number{color:var(--green)}.hljs-literal{color:var(--blue)}.hljs-keyword{color:#c792ea}.hljs-comment{color:#8f9f8f}.hljs-attr{color:#e6e6e6;font-weight:600}.hljs-bullet{color:#d7d7d7}
+        figure.table{margin:1.45em 0;border:1px solid var(--line-soft);border-radius:8px;overflow:auto;background:#252525}table{border-collapse:collapse;width:100%;font-size:14px}td{border:1px solid var(--line-soft);padding:6px 8px;vertical-align:top}td p{margin:0}.teams-hint{align-self:flex-end;color:#f2f2f2;font-size:16px;line-height:1}.teams-hint span{color:var(--accent)}
+        @media (max-width:700px){body{font-size:14px}.teams-preview-wrap{padding:10px}.teams-format-toolbar{gap:14px;min-height:50px;padding:0 14px}.teams-format-toolbar .group{gap:13px}.fmt{font-size:18px}.teams-message{padding:18px 16px}.teams-code-card{font-size:12px}.teams-code-title{font-size:13px;height:38px}.teams-hint{font-size:12px}}
+      </style></head><body><div class="teams-preview-wrap"><div class="teams-composer"><div class="teams-format-toolbar" aria-hidden="true"><span class="group"><span class="fmt bold">B</span><span class="fmt italic">I</span><span class="fmt under">U</span><span class="fmt strike">S</span></span><span class="sep"></span><span class="group"><span class="fmt">≡</span><span class="fmt active">1 2</span></span><span class="sep"></span><span class="group"><span class="fmt">▱</span><span class="fmt">A̲</span><span class="fmt">Aᴀ</span></span><span class="sep"></span><span class="group"><span class="fmt">”</span><span class="fmt">🔗</span><span class="fmt code">⌘</span><span class="fmt more">…</span></span><span class="fmt trash">🗑</span></div><div class="teams-message"><div class="msg">${body}</div></div></div><div class="teams-hint"><span>Enter</span> starts a new line.</div></div></body></html>`;
     }
+
 
     function updateLineNumbers() {
       if (!lineNumbersEl) return;
@@ -1667,7 +1718,9 @@
     function renderProfiles() {
       const options = profiles[activeUtility] || [];
       const selected = getActiveProfile();
-      profileSelect.innerHTML = options.map(p => `<option value="${p.id}" ${p.id === selected ? 'selected' : ''}>${p.name}</option>`).join('');
+      const markup = options.map(p => `<option value="${p.id}" ${p.id === selected ? 'selected' : ''}>${p.name}</option>`).join('');
+      if (profileSelect) profileSelect.innerHTML = markup;
+      if (previewProfileSelect) previewProfileSelect.innerHTML = markup;
       profileDescriptionEl.textContent = (options.find(p => p.id === selected) || options[0] || {}).description || '';
     }
     function renderWarnings() {
@@ -1927,6 +1980,7 @@
       if (event.key === 'Escape' && drawerEl.classList.contains('open')) closeDrawer();
     });
     profileSelect.addEventListener('change', () => setActiveProfile(profileSelect.value));
+    previewProfileSelect.addEventListener('change', () => setActiveProfile(previewProfileSelect.value));
     loadFileBtn.addEventListener('click', () => fileInput.click());
     pasteRichBtn.addEventListener('click', () => pasteRichText('Clipboard'));
     copyBtn.addEventListener('click', copyCurrentOutput);
