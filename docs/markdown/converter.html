@@ -33,7 +33,7 @@
       --radius-lg: 20px;
       --radius-md: 14px;
       --sidebar-w: 76px;
-      --panel-h: clamp(640px, calc(100vh - 246px), 820px);
+      --panel-h: clamp(640px, calc(100vh - 238px), 1120px);
       --shadow: 0 24px 90px rgba(0, 0, 0, .35), 0 8px 26px rgba(0, 0, 0, .22);
     }
 
@@ -134,9 +134,11 @@
 
     .main-shell {
       min-width: 0;
-      padding: 22px 26px 34px;
+      padding: 18px 24px 28px;
       display: grid;
-      gap: 18px;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: 14px;
+      align-content: start;
     }
 
     .topbar {
@@ -144,9 +146,10 @@
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 18px;
       align-items: center;
-      padding: 20px 22px;
+      padding: 16px 18px;
       border: 1px solid var(--line);
-      border-radius: 30px;
+      border-radius: 24px;
+      align-self: start;
       background: linear-gradient(135deg, rgba(23,26,33,.94), rgba(32,36,45,.82));
       box-shadow: var(--shadow);
       overflow: hidden;
@@ -174,16 +177,16 @@
     }
     h1 {
       margin: 0;
-      font-size: clamp(28px, 4vw, 48px);
+      font-size: clamp(28px, 2.6vw, 40px);
       line-height: .95;
       letter-spacing: -.06em;
     }
     .top-copy {
-      margin: 10px 0 0;
+      margin: 8px 0 0;
       color: var(--muted);
       max-width: 78ch;
-      line-height: 1.55;
-      font-size: 14px;
+      line-height: 1.45;
+      font-size: 13px;
     }
     .top-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; position: relative; z-index: 1; }
 
@@ -218,9 +221,10 @@
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 12px;
       align-items: center;
-      padding: 12px 14px;
+      padding: 10px 12px;
       border: 1px solid var(--line);
-      border-radius: 22px;
+      border-radius: 20px;
+      align-self: start;
       background: rgba(23,26,33,.68);
       backdrop-filter: blur(16px);
     }
@@ -1585,11 +1589,30 @@
       localStorage.setItem('mcl.inspector', visible ? 'open' : 'collapsed');
     }
 
-    function convert(shouldFollowCursor = document.activeElement === inputEl) {
+    let editorIsTyping = false;
+    let editorTypingTimer = 0;
+    const previewSyncKeys = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End']);
+    function markEditorTyping() {
+      editorIsTyping = true;
+      window.clearTimeout(editorTypingTimer);
+      editorTypingTimer = window.setTimeout(() => { editorIsTyping = false; }, 240);
+    }
+    function restorePreviewScrollTop(scrollEl, top) {
+      if (!scrollEl) return;
+      requestAnimationFrame(() => { scrollEl.scrollTop = top; });
+    }
+    function syncPreviewForNavigation(event) {
+      if (!event || previewSyncKeys.has(event.key) || event.metaKey || event.ctrlKey || event.altKey) {
+        syncActivePreviewScrollToEditor();
+      }
+    }
+
+    function convert(shouldFollowCursor = false) {
       const src = inputEl.value || '';
       updateLineNumbers();
       formatPreviewEl.hidden = activeUtility === 'teams';
       previewFrame.hidden = activeUtility !== 'teams';
+      const previousFormatTop = formatPreviewEl.scrollTop;
 
       if (activeUtility === 'teams') {
         const html = applyProfileToTeams(convertMarkdownToHtml(src)).replace(/\n+/g, '');
@@ -1600,16 +1623,17 @@
         const jira = applyProfileToJira(convertMarkdownToJira(src));
         currentOutput = jira;
         outputEl.value = jira;
-        formatPreviewTextEl.textContent = jira || 'Jira markup will appear here.';
         formatPreviewEl.innerHTML = '<pre id="formatPreviewText"></pre>';
         formatPreviewEl.querySelector('pre').textContent = jira || 'Jira markup will appear here.';
         if (shouldFollowCursor) syncActivePreviewScrollToEditor();
+        else restorePreviewScrollTop(formatPreviewEl, previousFormatTop);
       } else if (activeUtility === 'email') {
         lastEmailHtml = convertMarkdownToEmailHtmlProfiled(src);
         currentOutput = lastEmailHtml;
         outputEl.value = lastEmailHtml;
         renderEmailPreview(lastEmailHtml);
         if (shouldFollowCursor) syncActivePreviewScrollToEditor();
+        else restorePreviewScrollTop(formatPreviewEl, previousFormatTop);
       } else if (activeUtility === 'clipboard') {
         const md = applyProfileToMarkdown(src);
         currentOutput = md;
@@ -1617,6 +1641,7 @@
         formatPreviewEl.innerHTML = '<pre id="formatPreviewText"></pre>';
         formatPreviewEl.querySelector('pre').textContent = md || 'Markdown output will appear here.';
         if (shouldFollowCursor) syncActivePreviewScrollToEditor();
+        else restorePreviewScrollTop(formatPreviewEl, previousFormatTop);
       }
       updateStats(src, currentOutput);
     }
@@ -1775,9 +1800,9 @@
     btnCheck.addEventListener('click', () => prefixLines('- [ ]'));
     btnHr.addEventListener('click', () => insertAtCursor('\n---\n'));
     undoBtn.addEventListener('click', () => restoreUndoSnapshot(undoStack.pop()));
-    inputEl.addEventListener('input', () => convert(true));
-    inputEl.addEventListener('scroll', () => { syncLineNumbersScroll(); syncActivePreviewScrollToEditor(); });
-    inputEl.addEventListener('keyup', syncActivePreviewScrollToEditor);
+    inputEl.addEventListener('input', () => { markEditorTyping(); convert(false); });
+    inputEl.addEventListener('scroll', () => { syncLineNumbersScroll(); if (!editorIsTyping) syncActivePreviewScrollToEditor(); });
+    inputEl.addEventListener('keyup', syncPreviewForNavigation);
     inputEl.addEventListener('click', syncActivePreviewScrollToEditor);
     inputEl.addEventListener('select', syncActivePreviewScrollToEditor);
     fileInput.addEventListener('change', async () => { const file = fileInput.files && fileInput.files[0]; if (!file) return; inputEl.value = await file.text(); convert(false); showToast(`Loaded ${file.name}`); });
