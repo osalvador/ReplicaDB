@@ -263,17 +263,19 @@
 
     .quick-strip {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 12px;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
       align-items: center;
-      padding: 12px 14px;
+      min-height: 92px;
+      padding: 16px 20px;
       border: 1px solid var(--line);
       border-radius: 22px;
-      background: rgba(23,26,33,.68);
+      background: linear-gradient(135deg, rgba(23,26,33,.78), rgba(15,17,21,.74));
       backdrop-filter: blur(16px);
     }
-    .quick-title { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-    .helper-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .quick-title { color: var(--accent-2); font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+    .quick-strip .small-text { max-width: 1040px; font-size: 13px; line-height: 1.55; color: var(--muted); }
+    .helper-row { display: none; }
     .helper-button { min-height: 34px; padding: 6px 10px; border-radius: 999px; font-size: 12px; color: var(--muted); }
     .helper-button .quick-icon {
       width: 20px;
@@ -529,8 +531,7 @@
     .drawer-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,.28);
-      backdrop-filter: blur(1px);
+      background: rgba(0,0,0,.42);
       opacity: 0;
       pointer-events: none;
       transition: opacity .18s ease;
@@ -547,7 +548,7 @@
       border: 1px solid var(--line-strong);
       border-radius: 30px;
       box-shadow: var(--shadow);
-      z-index: 50;
+      z-index: 90;
       transform: translateX(calc(100% + 34px));
       transition: transform .22s ease;
       display: flex;
@@ -1333,12 +1334,12 @@
         .fmt.bold{font-weight:800}.fmt.italic{font-style:italic}.fmt.under{text-decoration:underline}.fmt.strike{text-decoration:line-through}.fmt.active{color:#8c83ff}.fmt.code{font-size:20px}.fmt.more{letter-spacing:4px;transform:translateY(-2px)}.fmt.trash{margin-left:auto;font-size:26px;color:#f0f0f0}
         .teams-message{flex:1 1 auto;min-height:0;overflow:auto;padding:28px 30px 28px;scrollbar-color:#8d8d8d transparent;scrollbar-width:thin}.teams-message::-webkit-scrollbar{width:10px}.teams-message::-webkit-scrollbar-track{background:transparent}.teams-message::-webkit-scrollbar-thumb{background:#8d8d8d;border:2px solid var(--composer);border-radius:999px}
         .msg{max-width:100%;padding-right:12px}p{margin:0;min-height:1.45em;line-height:1.45;color:var(--text)}p:last-child{margin-bottom:0}strong{font-weight:700;color:#fff}i,em{font-style:italic;color:#f5f5f5}s{text-decoration-thickness:2px;text-decoration-color:#d7d7d7}a{color:#b9cdfd;text-decoration:underline}
-        blockquote{margin:0 0 3.2em;padding:4px 0 4px 20px;border-left:3px solid #777;color:#f0f0f0;background:transparent;font-size:17px}
+        blockquote{margin:0 0 64px;padding:2px 0 2px 20px;border-left:3px solid #8a8a8a;border-radius:0;color:#f2f2f2;background:transparent;font-size:17px;line-height:1.45}blockquote p{margin:0!important;min-height:0;color:#f2f2f2}
         ul,ol{margin:0 0 1.45em 24px;padding:0}li{margin:4px 0}p code,li code{font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:.92em;color:#f3f3f3;background:#363636;border:1px solid #505050;border-radius:4px;padding:1px 4px}
         .teams-code-card{margin:1.45em 0 0;border:1px solid var(--code-border);border-radius:9px;background:var(--code-bg);overflow:hidden;color:#e6e6e6;font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:15px;line-height:1.55}
         .teams-code-title{height:48px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:12px;padding:0 16px;color:#d7d7d7;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:17px}.code-icon{width:20px;height:20px;border:1.5px solid #d6d6d6;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1}.code-chevron{font-size:14px;color:#d6d6d6;margin-left:3px}.code-more{margin-left:auto;letter-spacing:3px;color:#d7d7d7}
         .teams-code-body{overflow:auto;max-height:320px;padding:16px 0 18px}.teams-code-body ol{margin:0;padding:0;list-style:none;counter-reset:code-line}.teams-code-body li{counter-increment:code-line;display:grid;grid-template-columns:48px minmax(0,1fr);gap:16px;margin:0;padding:0 20px 0 0;white-space:pre}.teams-code-body li::before{content:counter(code-line);color:#9d9d9d;text-align:right;user-select:none}.code-line-content{min-width:0;overflow-wrap:normal}
-        .hljs-function{color:var(--pink)}.hljs-string{color:var(--green)}.hljs-number{color:var(--green)}.hljs-literal{color:var(--blue)}.hljs-keyword{color:#c792ea}.hljs-comment{color:#8f9f8f}.hljs-attr{color:#e6e6e6;font-weight:600}.hljs-bullet{color:#d7d7d7}
+        .teams-code-card .hljs-function,.teams-code-card .hljs-attr{color:#ff8797!important;font-weight:600}.teams-code-card .hljs-string{color:#16c60c!important}.teams-code-card .hljs-number{color:#16c60c!important}.teams-code-card .hljs-literal{color:#86b6ff!important}.teams-code-card .hljs-keyword{color:#c792ea!important}.teams-code-card .hljs-comment{color:#8f9f8f!important;font-style:italic}.teams-code-card .hljs-bullet{color:#d7d7d7!important}.teams-code-card code span{font-family:inherit}
         figure.table{margin:1.45em 0;border:1px solid var(--line-soft);border-radius:8px;overflow:auto;background:#252525}table{border-collapse:collapse;width:100%;font-size:14px}td{border:1px solid var(--line-soft);padding:6px 8px;vertical-align:top}td p{margin:0}.teams-hint{align-self:flex-end;color:#f2f2f2;font-size:16px;line-height:1}.teams-hint span{color:var(--accent)}
         @media (max-width:700px){body{font-size:14px}.teams-preview-wrap{padding:10px}.teams-format-toolbar{gap:14px;min-height:50px;padding:0 14px}.teams-format-toolbar .group{gap:13px}.fmt{font-size:18px}.teams-message{padding:18px 16px}.teams-code-card{font-size:12px}.teams-code-title{font-size:13px;height:38px}.teams-hint{font-size:12px}}
       </style></head><body><div class="teams-preview-wrap"><div class="teams-composer"><div class="teams-format-toolbar" aria-hidden="true"><span class="group"><span class="fmt bold">B</span><span class="fmt italic">I</span><span class="fmt under">U</span><span class="fmt strike">S</span></span><span class="sep"></span><span class="group"><span class="fmt">≡</span><span class="fmt active">1 2</span></span><span class="sep"></span><span class="group"><span class="fmt">▱</span><span class="fmt">A̲</span><span class="fmt">Aᴀ</span></span><span class="sep"></span><span class="group"><span class="fmt">”</span><span class="fmt">🔗</span><span class="fmt code">⌘</span><span class="fmt more">…</span></span><span class="fmt trash">🗑</span></div><div class="teams-message"><div class="msg">${body}</div></div></div><div class="teams-hint"><span>Enter</span> starts a new line.</div></div></body></html>`;
@@ -1652,45 +1653,24 @@
 
     const quickContexts = {
       teams: {
-        title: 'Teams output helpers',
-        text: 'Tune Markdown for a Teams chat composer, then copy rich HTML locally.',
-        actions: [
-          { label: 'Teams sample', icon: 'teams', action: 'sample', sample: 'teams' },
-          { label: 'Templates', textIcon: '▤', action: 'drawer', drawer: 'templates' },
-          { label: 'Profiles', textIcon: '◈', action: 'drawer', drawer: 'profiles' },
-          { label: 'Copy for Teams', textIcon: '⧉', action: 'copy', primary: true }
-        ]
+        title: 'Markdown to Teams',
+        text: 'Convert Markdown into paste-ready rich HTML for Microsoft Teams. Write or upload Markdown on the left, choose the Teams profile in the preview header, then use Copy for Teams. Everything runs locally in your browser.',
+        actions: []
       },
       jira: {
-        title: 'Jira markup helpers',
-        text: 'Convert Markdown into Jira wiki markup for tickets, descriptions and comments.',
-        actions: [
-          { label: 'Jira sample', icon: 'jira', action: 'sample', sample: 'jira' },
-          { label: 'Profiles', textIcon: '◈', action: 'drawer', drawer: 'profiles' },
-          { label: 'Local history', textIcon: '◷', action: 'drawer', drawer: 'history' },
-          { label: 'Copy for Jira', textIcon: '⧉', action: 'copy', primary: true }
-        ]
+        title: 'Markdown to Jira',
+        text: 'Convert Markdown into Jira wiki markup for issue descriptions, comments and acceptance criteria. Use the preview profile selector to choose the Jira flavor before copying the generated text.',
+        actions: []
       },
       email: {
-        title: 'Email template helpers',
-        text: 'Choose a template style and copy rich email HTML for Gmail or Outlook.',
-        actions: [
-          { label: 'Executive email', icon: 'gmail', action: 'template', template: 'executive-email' },
-          { label: 'Newsletter', icon: 'gmail', action: 'template', template: 'newsletter-email' },
-          { label: 'Profiles', textIcon: '◈', action: 'drawer', drawer: 'profiles' },
-          { label: 'Copy Email', textIcon: '⧉', action: 'copy', primary: true }
-        ]
+        title: 'Markdown to Email',
+        text: 'Turn Markdown into rich email HTML for Gmail or Outlook. Choose an email template/profile in the preview header, review the rendered message, then copy the formatted email body.',
+        actions: []
       },
       clipboard: {
-        title: 'Paste from app helpers',
-        text: 'Import Teams or any rich text from your clipboard. The cleanup stays inside your browser.',
-        actions: [
-          { label: 'From Teams', icon: 'teams', action: 'paste', source: 'Teams' },
-          { label: 'From Confluence', icon: 'confluence', action: 'paste', source: 'Confluence' },
-          { label: 'From Gmail', icon: 'gmail', action: 'paste', source: 'Gmail' },
-          { label: 'From Word', icon: 'word', action: 'paste', source: 'Word' },
-          { label: 'From Jira', icon: 'jira', action: 'paste', source: 'Jira' }
-        ]
+        title: 'Teams to Markdown',
+        text: 'Paste rich text copied from Teams, Confluence, Gmail, Word, Jira or any web page and clean it into Markdown. The clipboard cleanup stays inside your browser and no content is sent to a server.',
+        actions: []
       }
     };
 
@@ -1704,10 +1684,7 @@
       const context = quickContexts[activeUtility] || quickContexts.teams;
       quickTitleEl.textContent = context.title;
       quickTextEl.textContent = context.text;
-      quickActionsEl.innerHTML = context.actions.map(action => {
-        const icon = action.icon ? iconImg(action.icon) : `<span class="quick-icon">${action.textIcon || '•'}</span>`;
-        return `<button class="button helper-button ${action.primary ? 'primary' : ''}" data-quick-action="${action.action}" data-source="${action.source || ''}" data-drawer="${action.drawer || ''}" data-template="${action.template || ''}" data-sample="${action.sample || ''}">${icon}<span>${htmlEscape(action.label)}</span></button>`;
-      }).join('');
+      quickActionsEl.innerHTML = '';
     }
 
     function loadContextSample(kind = activeUtility) {
