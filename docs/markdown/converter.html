@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0F1115" />
-  <meta name="description" content="A private, browser-only Markdown conversion dashboard for Teams, Jira, email HTML and rich clipboard cleanup." />
+  <meta name="description" content="A private, browser-only markup conversion dashboard for Teams, Jira, email HTML and rich clipboard cleanup." />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./markdown-copy-lab-icon.svg" type="image/svg+xml" />
   <link rel="icon" href="./favicon-32.png" sizes="32x32" type="image/png" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <title>Markdown Copy Lab · Graphite Studio</title>
+  <title>Markup Forge · Graphite Studio</title>
   <style>
     :root {
       color-scheme: dark;
@@ -276,7 +276,7 @@
       backdrop-filter: blur(16px);
     }
     .quick-title { color: var(--accent-2); font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
-    .quick-strip .small-text { max-width: 1040px; font-size: 13px; line-height: 1.55; color: var(--muted); }
+    .quick-strip .small-text { max-width: none; width: 100%; font-size: 13px; line-height: 1.55; color: var(--muted); }
     .helper-row { display: none; }
     .helper-button { min-height: 34px; padding: 6px 10px; border-radius: 999px; font-size: 12px; color: var(--muted); }
     .helper-button .quick-icon {
@@ -291,6 +291,14 @@
       color: var(--accent-2);
     }
     .helper-button .quick-icon img { width: 15px; height: 15px; display:block; object-fit: contain; }
+
+
+    .panel-title { min-width: 0; }
+    .panel-title > div { min-width: 0; }
+    .panel-title p { max-width: min(72ch, calc(100vw - 360px)); overflow-wrap: normal; }
+    .panel-actions { flex: 0 0 auto; }
+    #pasteRichBtn { white-space: nowrap; min-width: 166px; font-weight: 900; background: linear-gradient(135deg, var(--accent), #d19949); color: #121212; border-color: transparent; box-shadow: 0 14px 34px rgba(232,184,109,.18); }
+    #pasteRichBtn:hover { box-shadow: 0 18px 45px rgba(232,184,109,.24); }
 
     .workspace {
       display: grid;
@@ -465,6 +473,9 @@
     }
     .email-preview-head { padding: 22px 26px; background: #171a21; color: #e8b86d; font-weight: 700; letter-spacing: .02em; }
     .email-preview-body { padding: 26px; color: #20242d; font-size: 15px; line-height: 1.55; }
+    .email-preview-doc pre { background: #0f172a !important; color: #e5e7eb !important; border-color: #334155 !important; }
+    .email-preview-doc pre code { background: transparent !important; color: inherit !important; padding: 0 !important; border-radius: 0 !important; }
+    .email-preview-doc code { background: #1e293b !important; color: #e5e7eb !important; }
 
     .raw-output {
       display: none !important;
@@ -634,7 +645,7 @@
 <body>
   <div class="app">
     <aside class="sidebar" aria-label="Main navigation">
-      <div class="brand-mark" title="Markdown Copy Lab"><img src="./markdown-copy-lab-icon.svg" alt="Markdown Copy Lab" /></div>
+      <div class="brand-mark" title="Markup Forge"><img src="./markdown-copy-lab-icon.svg" alt="Markup Forge" /></div>
       <nav class="side-group" aria-label="Utilities">
         <button class="side-button utility-nav active" data-utility="teams" aria-label="Markdown to Teams" title="Markdown to Teams"><span class="ico app-ico teams-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4" width="11" height="13" rx="3" fill="#6264A7"/><rect x="3" y="7" width="10" height="11" rx="2" fill="#464775"/><circle cx="18" cy="8" r="2" fill="#8B8CC7"/><circle cx="17" cy="15" r="3" fill="#6264A7"/><path d="M6 10h6v2H10v5H8v-5H6z" fill="#fff"/></svg></span><span class="tip">Markdown to Teams</span></button>
         <button class="side-button utility-nav" data-utility="jira" aria-label="Markdown to Jira" title="Markdown to Jira"><span class="ico app-ico jira-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 12 12 21 3 12z" fill="#2684FF"/><path d="M12 7.2 16.8 12 12 16.8 7.2 12z" fill="#DEEBFF"/><path d="M12 3v4.2L7.2 12H3z" fill="#0052CC" opacity=".72"/></svg></span><span class="tip">Markdown to Jira</span></button>
@@ -644,7 +655,7 @@
       <div class="side-divider"></div>
       <div class="side-group" role="group" aria-label="Workspace tools">
         <button class="side-button drawer-nav" data-drawer="templates" aria-label="Templates" title="Templates"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5"/><path d="M4 7v14h3"/><path d="M10 13h6M10 17h6"/></svg></span><span class="tip">Templates</span></button>
-        <button class="side-button drawer-nav" data-drawer="snippets" aria-label="Saved snippets" title="Saved snippets"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8.2 8.8 20 20M8.2 15.2 20 4"/></svg></span><span class="tip">Saved snippets</span></button>
+        <button class="side-button drawer-nav" data-drawer="snippets" aria-label="Saved snippets" title="Saved snippets"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l2 2v16H5z"/><path d="M8 3v6h8V3"/><path d="M8 15h8v6H8z"/><path d="M10 6h4"/></svg></span><span class="tip">Saved snippets</span></button>
         <button class="side-button drawer-nav" data-drawer="history" aria-label="Local history" title="Local history"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.35-5.65"/><path d="M4 5v5h5"/><path d="M12 8v5l3 2"/></svg></span><span class="tip">Local history</span></button>
         <button class="side-button drawer-nav" data-drawer="profiles" aria-label="Conversion profiles" title="Conversion profiles"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></span><span class="tip">Conversion profiles</span></button>
       </div>
@@ -658,7 +669,7 @@
       <header class="topbar">
         <div class="title-stack">
           <p class="eyebrow">Graphite Studio · Browser-only conversion workspace</p>
-          <h1>Markdown Copy Lab</h1>
+          <h1>Markup Forge</h1>
           <p class="top-copy" id="activeUtilityCopy">Convert Markdown into paste-ready Teams chat, Jira wiki markup, styled email HTML, or clean Markdown from Teams and other rich clipboard content.</p>
         </div>
         <div class="top-actions">
@@ -693,7 +704,7 @@
             <div class="panel-actions">
               <input id="fileInput" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden />
               <button class="button" id="loadFileBtn">↑ Upload</button>
-              <button class="button" id="pasteRichBtn" hidden>Paste Rich Text</button>
+              <button class="button primary" id="pasteRichBtn" hidden>Paste Rich Text</button>
             </div>
           </div>
           <div class="panel-body">
@@ -871,7 +882,7 @@
     const undoStack = [];
     let activeUtility = localStorage.getItem('mcl.activeUtility') || 'teams';
     let splitMode = localStorage.getItem('mcl.splitMode') || 'both';
-    let inspectorVisible = localStorage.getItem('mcl.inspector') !== 'collapsed';
+    let inspectorVisible = false;
     let activeProfile = JSON.parse(localStorage.getItem('mcl.activeProfiles') || '{}');
     let currentOutput = '';
     let lastEmailHtml = '';
@@ -933,7 +944,7 @@
     const profiles = {
       teams: [
         { id: 'rich', name: 'Teams Rich', description: 'Preserve spacing, links, lists, quotes, code blocks and basic tables.' },
-        { id: 'compact', name: 'Teams Compact', description: 'Remove blank spacer paragraphs for denser chat messages.' },
+        { id: 'compact', name: 'Teams Compact', description: 'Merge wrapped paragraph lines while preserving blank paragraphs, lists and code fences.' },
         { id: 'plain-safe', name: 'Teams Plain-safe', description: 'Keep Teams-compatible HTML while avoiding decorative separators.' }
       ],
       jira: [
@@ -1226,7 +1237,8 @@
         .replace(/<li>/g, '<li style="margin:0 0 6px;">')
         .replace(/<blockquote[^>]*>/g, `<blockquote style="margin:0 0 16px;padding:10px 14px;border-left:4px solid ${accent};background:${soft};color:#49454f;border-radius:8px;">`)
         .replace(/<pre([^>]*)>/g, '<pre$1 style="margin:0 0 16px;padding:14px;border:1px solid #d7dde8;border-radius:10px;background:#0f172a;color:#e5e7eb;overflow:auto;white-space:pre-wrap;font-family:Consolas,Menlo,monospace;font-size:13px;line-height:1.5;">')
-        .replace(/<code>/g, '<code style="font-family:Consolas,Menlo,monospace;background:#eef2f7;border-radius:4px;padding:1px 4px;">')
+        .replace(/<code>/g, '<code style="font-family:Consolas,Menlo,monospace;background:#1e293b;color:#e5e7eb;border-radius:4px;padding:1px 4px;">')
+        .replace(/<pre([^>]*)><code style="[^"]*">/g, '<pre$1><code style="font-family:Consolas,Menlo,monospace;background:transparent;color:inherit;padding:0;border-radius:0;">')
         .replace(/<table>/g, '<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 16px;">')
         .replace(/<td>/g, '<td style="border:1px solid #d7dde8;padding:8px 10px;vertical-align:top;">')
         .replace(/<a /g, `<a style="color:${accent};text-decoration:underline;" `);
@@ -1605,9 +1617,45 @@
       showToast('Snippet saved locally');
     }
 
+    function compactMarkdownForTeams(md) {
+      const lines = String(md || '').replace(/\r\n?/g, '\n').split('\n');
+      const out = [];
+      let paragraph = [];
+      let inFence = false;
+      function flushParagraph() {
+        if (!paragraph.length) return;
+        out.push(paragraph.map(line => line.trim()).filter(Boolean).join(' '));
+        paragraph = [];
+      }
+      for (const raw of lines) {
+        const line = raw.replace(/\s+$/g, '');
+        const trimmed = line.trim();
+        if (/^```/.test(trimmed)) {
+          flushParagraph();
+          out.push(line);
+          inFence = !inFence;
+          continue;
+        }
+        if (inFence) { out.push(line); continue; }
+        if (!trimmed) {
+          flushParagraph();
+          if (out[out.length - 1] !== '') out.push('');
+          continue;
+        }
+        if (/^(#{1,6}\s+|>\s?|[-*+]\s+|\d+\.\s+|\|.*\||-{3,}$|\*{3,}$|_{3,}$)/.test(trimmed)) {
+          flushParagraph();
+          out.push(line);
+          continue;
+        }
+        paragraph.push(line);
+      }
+      flushParagraph();
+      return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+    }
+
     function applyProfileToTeams(html) {
       const profile = getActiveProfile();
-      if (profile === 'compact') return html.replace(/<p>&nbsp;<\/p>/g, '');
+      if (profile === 'compact') return html.replace(/(<p>&nbsp;<\/p>){2,}/g, '<p>&nbsp;</p>');
       if (profile === 'plain-safe') return html.replace(/<p>──────────<\/p>/g, '<p>---</p>');
       return html;
     }
@@ -1766,7 +1814,8 @@
       previewFrame.hidden = activeUtility !== 'teams';
 
       if (activeUtility === 'teams') {
-        const html = applyProfileToTeams(convertMarkdownToHtml(src)).replace(/\n+/g, '');
+        const sourceForTeams = getActiveProfile() === 'compact' ? compactMarkdownForTeams(src) : src;
+        const html = applyProfileToTeams(convertMarkdownToHtml(sourceForTeams)).replace(/\n+/g, '');
         currentOutput = html;
         outputEl.value = html;
         updatePreviewDocument(html, shouldFollowCursor);
@@ -1831,7 +1880,7 @@
         drawerBodyEl.innerHTML = '<div class="inspector-card"><h3>Privacy mode is always on</h3><p>No conversion content is sent to a backend. Markdown, rich clipboard HTML, templates, snippets and history stay in this browser. Optional storage uses IndexedDB under this site origin.</p><div class="pill-row"><span class="pill good">Local conversion</span><span class="pill good">IndexedDB history</span><span class="pill good">No API upload</span></div></div>';
       } else if (kind === 'pwa') {
         drawerTitleEl.textContent = 'PWA offline';
-        drawerBodyEl.innerHTML = '<div class="inspector-card"><h3>Installable offline app</h3><p>This HTML can run as a PWA when deployed together with <code>manifest.webmanifest</code>, <code>sw.js</code>, <code>markdown-copy-lab-icon.svg</code>, and the PNG icon files in the same folder.</p><button class="button primary" id="installPwaBtn">Install app</button></div>';
+        drawerBodyEl.innerHTML = '<div class="inspector-card"><h3>Installable offline app</h3><p>Markup Forge can run as a PWA when deployed together with <code>manifest.webmanifest</code>, <code>sw.js</code>, <code>markdown-copy-lab-icon.svg</code>, and the PNG icon files in the same folder.</p><button class="button primary" id="installPwaBtn">Install app</button></div>';
       }
     }
     function getTemplate(id) { return templates.find(t => t.id === id); }
@@ -1899,7 +1948,7 @@
         if (activeUtility === 'teams') await copyRichHtml(currentOutput);
         else if (activeUtility === 'email') await copyEmailHtml(lastEmailHtml || currentOutput);
         else await copyPlainText(currentOutput);
-        console.debug('[Markdown Copy Lab] copied output', { utility: activeUtility, profile: getActiveProfile(), output: currentOutput });
+        console.debug('[Markup Forge] copied output', { utility: activeUtility, profile: getActiveProfile(), output: currentOutput });
         await saveHistorySnapshot('copy', { silent: true });
         showToast(`${utilityConfig[activeUtility].copyLabel} · copied + saved locally`);
       } catch (error) {
