@@ -1,4 +1,4 @@
-const CACHE_NAME = 'markdown-copy-lab-graphite-v12';
+const CACHE_NAME = 'markup-forge-graphite-v28';
 const CORE_ASSETS = [
   './',
   './converter.html',
