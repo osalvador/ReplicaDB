@@ -1,4 +1,4 @@
-const CACHE_NAME = 'markdown-copy-lab-graphite-v7';
+const CACHE_NAME = 'markdown-copy-lab-graphite-v8';
 const CORE_ASSETS = [
   './',
   './converter.html',
