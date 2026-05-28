@@ -113,23 +113,53 @@
     .side-button.active { background: var(--accent-soft); color: var(--accent-2); border-color: rgba(232,184,109,.34); }
     .side-button .ico { font-size: 22px; }
     .side-button .ico.app-ico {
-      width: 30px;
-      height: 30px;
-      border-radius: 10px;
+      width: 32px;
+      height: 32px;
+      border-radius: 12px;
       display: inline-grid;
       place-items: center;
-      font-size: 14px;
-      font-weight: 900;
-      letter-spacing: -.04em;
+      position: relative;
       border: 1px solid var(--line-strong);
-      background: rgba(255,255,255,.04);
+      background: rgba(255,255,255,.045);
+      overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .side-button .app-ico img,
+    .helper-button img.app-mini-icon,
+    .app-mini-icon {
+      width: 19px;
+      height: 19px;
+      display: block;
+      object-fit: contain;
+      filter: saturate(.92) brightness(1.16) drop-shadow(0 2px 5px rgba(0,0,0,.22));
+    }
+    .side-button.active .ico.app-ico { border-color: rgba(232,184,109,.45); background: rgba(232,184,109,.10); }
+    .side-button .ico.tool-ico {
+      width: 28px;
+      height: 28px;
+      display: inline-grid;
+      place-items: center;
       color: var(--muted);
     }
-    .side-button.active .ico.app-ico { color: #121212; border-color: transparent; }
-    .side-button.active .teams-ico { background: linear-gradient(135deg, #6264a7, #8b80ff); color: #fff; }
-    .side-button.active .jira-ico { background: linear-gradient(135deg, #2684ff, #0052cc); color: #fff; }
-    .side-button.active .email-ico { background: linear-gradient(135deg, var(--accent), #d19949); color: #121212; }
-    .side-button.active .rich-ico { background: linear-gradient(135deg, #14b8a6, #67e8f9); color: #071014; }
+    .side-button .ico.tool-ico svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.9; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .side-button.active .ico.tool-ico, .side-button:hover .ico.tool-ico { color: var(--accent-2); }
+    .source-ico-stack { position: relative; }
+    .source-ico-stack::after {
+      content: '↓';
+      position: absolute;
+      right: -5px;
+      bottom: -5px;
+      width: 16px;
+      height: 16px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      color: #071014;
+      background: var(--accent);
+      border: 1px solid rgba(0,0,0,.32);
+      font-size: 11px;
+      font-weight: 900;
+    }
     .side-button .tip {
       position: absolute;
       left: 64px;
@@ -245,6 +275,18 @@
     .quick-title { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
     .helper-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
     .helper-button { min-height: 34px; padding: 6px 10px; border-radius: 999px; font-size: 12px; color: var(--muted); }
+    .helper-button .quick-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 8px;
+      display: inline-grid;
+      place-items: center;
+      background: rgba(255,255,255,.055);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--accent-2);
+    }
+    .helper-button .quick-icon img { width: 15px; height: 15px; display:block; object-fit: contain; }
 
     .workspace {
       display: grid;
@@ -453,6 +495,17 @@
     .list-item span { color: var(--muted); font-size: 11px; }
     .list-item button { justify-self: start; }
 
+    .drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.28);
+      backdrop-filter: blur(1px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease;
+      z-index: 79;
+    }
+    .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
     .drawer {
       position: fixed;
       right: 22px;
@@ -549,21 +602,21 @@
     <aside class="sidebar" aria-label="Main navigation">
       <div class="brand-mark" title="Markdown Copy Lab"><img src="./markdown-copy-lab-icon.svg" alt="Markdown Copy Lab" /></div>
       <div class="side-group" aria-label="Utilities">
-        <button class="side-button utility-nav active" data-utility="teams"><span class="ico app-ico teams-ico">T</span><span class="tip">Markdown to Teams</span></button>
-        <button class="side-button utility-nav" data-utility="jira"><span class="ico app-ico jira-ico">J</span><span class="tip">Markdown to Jira</span></button>
-        <button class="side-button utility-nav" data-utility="email"><span class="ico app-ico email-ico">✉</span><span class="tip">Markdown to Email</span></button>
-        <button class="side-button utility-nav" data-utility="clipboard"><span class="ico app-ico rich-ico">↧</span><span class="tip">Teams to Markdown</span></button>
+        <button class="side-button utility-nav active" data-utility="teams"><span class="ico app-ico teams-ico"><img src="https://cdn.simpleicons.org/microsoftteams/6264A7" alt="" loading="lazy" /></span><span class="tip">Markdown to Teams</span></button>
+        <button class="side-button utility-nav" data-utility="jira"><span class="ico app-ico jira-ico"><img src="https://cdn.simpleicons.org/jira/2684FF" alt="" loading="lazy" /></span><span class="tip">Markdown to Jira</span></button>
+        <button class="side-button utility-nav" data-utility="email"><span class="ico app-ico email-ico"><img src="https://cdn.simpleicons.org/gmail/EA4335" alt="" loading="lazy" /></span><span class="tip">Markdown to Email</span></button>
+        <button class="side-button utility-nav" data-utility="clipboard"><span class="ico app-ico rich-ico source-ico-stack"><img src="https://cdn.simpleicons.org/microsoftteams/6264A7" alt="" loading="lazy" /></span><span class="tip">Teams to Markdown</span></button>
       </div>
       <div class="side-divider"></div>
       <div class="side-group" aria-label="Workspace tools">
-        <button class="side-button drawer-nav" data-drawer="templates"><span class="ico">▤</span><span class="tip">Templates</span></button>
-        <button class="side-button drawer-nav" data-drawer="snippets"><span class="ico">✂</span><span class="tip">Saved snippets</span></button>
-        <button class="side-button drawer-nav" data-drawer="history"><span class="ico">◷</span><span class="tip">Local history</span></button>
-        <button class="side-button drawer-nav" data-drawer="profiles"><span class="ico">◈</span><span class="tip">Conversion profiles</span></button>
+        <button class="side-button drawer-nav" data-drawer="templates"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5"/><path d="M4 7v14h3"/><path d="M10 13h6M10 17h6"/></svg></span><span class="tip">Templates</span></button>
+        <button class="side-button drawer-nav" data-drawer="snippets"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8.2 8.8 20 20M8.2 15.2 20 4"/></svg></span><span class="tip">Saved snippets</span></button>
+        <button class="side-button drawer-nav" data-drawer="history"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.35-5.65"/><path d="M4 5v5h5"/><path d="M12 8v5l3 2"/></svg></span><span class="tip">Local history</span></button>
+        <button class="side-button drawer-nav" data-drawer="profiles"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></span><span class="tip">Conversion profiles</span></button>
       </div>
       <div class="side-bottom side-group">
-        <button class="side-button" id="privacyButton"><span class="ico">◌</span><span class="tip">Privacy mode</span></button>
-        <button class="side-button" id="pwaButton"><span class="ico">⬇</span><span class="tip">PWA offline</span></button>
+        <button class="side-button" id="privacyButton"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 19 6v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="m9.5 12 1.8 1.8L15 10"/></svg></span><span class="tip">Privacy mode</span></button>
+        <button class="side-button" id="pwaButton"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg></span><span class="tip">PWA offline</span></button>
       </div>
     </aside>
 
@@ -585,18 +638,12 @@
         </div>
       </header>
 
-      <section class="quick-strip">
+      <section class="quick-strip" id="quickStrip">
         <div>
-          <div class="quick-title">Paste from app helpers</div>
-          <p class="small-text">Use these when content comes from rich editors. The cleanup stays inside your browser.</p>
+          <div class="quick-title" id="quickTitle">Teams output helpers</div>
+          <p class="small-text" id="quickText">Tune Markdown for a Teams chat composer, then copy rich HTML locally.</p>
         </div>
-        <div class="helper-row">
-          <button class="button helper-button paste-helper" data-source="Teams">From Teams</button>
-          <button class="button helper-button paste-helper" data-source="Confluence">From Confluence</button>
-          <button class="button helper-button paste-helper" data-source="Gmail">From Gmail</button>
-          <button class="button helper-button paste-helper" data-source="Word">From Word</button>
-          <button class="button helper-button paste-helper" data-source="Jira">From Jira</button>
-        </div>
+        <div class="helper-row" id="quickActions" aria-label="Context actions"></div>
       </section>
 
       <main class="workspace" id="workspace">
@@ -712,6 +759,7 @@
     </div>
   </div>
 
+  <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
   <aside class="drawer" id="drawer" aria-label="Workspace drawer">
     <div class="drawer-header">
       <h2 id="drawerTitle">Templates</h2>
@@ -772,9 +820,13 @@
     const pwaStatusEl = document.getElementById('pwaStatus');
     const workspaceEl = document.getElementById('workspace');
     const drawerEl = document.getElementById('drawer');
+    const drawerBackdropEl = document.getElementById('drawerBackdrop');
     const drawerTitleEl = document.getElementById('drawerTitle');
     const drawerBodyEl = document.getElementById('drawerBody');
     const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+    const quickTitleEl = document.getElementById('quickTitle');
+    const quickTextEl = document.getElementById('quickText');
+    const quickActionsEl = document.getElementById('quickActions');
     const paletteBackdrop = document.getElementById('paletteBackdrop');
     const paletteInput = document.getElementById('paletteInput');
     const paletteResults = document.getElementById('paletteResults');
@@ -804,7 +856,7 @@
         icon: 'T',
         editorTitle: 'Markdown Editor', editorSubtitle: 'Write, paste, format, or upload Markdown.',
         previewTitle: 'Teams Preview', previewSubtitle: 'Composer-style rendering, including code cards.',
-        copyLabel: 'Copy for Teams', copyCaption: 'Rich HTML', outputLabel: 'Hidden debug output',
+        copyLabel: 'Copy for Teams', copyCaption: 'Rich HTML', outputLabel: 'Clipboard HTML payload',
         inputPlaceholder: '# Paste your Markdown here...',
         copy: 'Convert Markdown into paste-ready rich HTML for Microsoft Teams chat.',
         warnings: ['Teams-safe HTML', 'Code cards', 'Tables experimental'],
@@ -814,7 +866,7 @@
         icon: 'J',
         editorTitle: 'Markdown Editor', editorSubtitle: 'Write Markdown and convert it into Jira wiki markup.',
         previewTitle: 'Jira Markup Preview', previewSubtitle: 'Jira-specific wiki markup for issue descriptions and comments.',
-        copyLabel: 'Copy for Jira', copyCaption: 'Wiki markup', outputLabel: 'Hidden debug output',
+        copyLabel: 'Copy for Jira', copyCaption: 'Wiki markup', outputLabel: 'Jira wiki markup payload',
         inputPlaceholder: '# Paste your Markdown here...',
         copy: 'Convert Markdown into Jira wiki markup for descriptions, comments and tickets.',
         warnings: ['Wiki markup', 'Tables supported', 'No rich HTML'],
@@ -824,7 +876,7 @@
         icon: '✉',
         editorTitle: 'Markdown Editor', editorSubtitle: 'Write Markdown and generate email-safe HTML.',
         previewTitle: 'Markdown to Email', previewSubtitle: 'Choose a styled email template and copy it as rich HTML for Gmail or Outlook.',
-        copyLabel: 'Copy Email', copyCaption: 'Rich HTML', outputLabel: 'Hidden debug output',
+        copyLabel: 'Copy Email', copyCaption: 'Rich HTML', outputLabel: 'Email HTML debug payload',
         inputPlaceholder: '# Paste your Markdown here...',
         copy: 'Convert Markdown into styled, email-safe rich HTML for Gmail or Outlook.',
         warnings: ['Inline styles', 'Rich clipboard', 'Client-safe'],
@@ -834,7 +886,7 @@
         icon: '↧',
         editorTitle: 'Teams / Rich Text Input', editorSubtitle: 'Paste rich clipboard content from Teams, email, Confluence, Word, Jira, or any web page and clean it into Markdown.',
         previewTitle: 'Teams to Markdown', previewSubtitle: 'Clean Markdown generated from Teams or any rich text copied to the clipboard.',
-        copyLabel: 'Copy Markdown', copyCaption: 'Plain text', outputLabel: 'Hidden debug output',
+        copyLabel: 'Copy Markdown', copyCaption: 'Plain text', outputLabel: 'Markdown debug payload',
         inputPlaceholder: 'Click Paste Rich Text to import Teams or any rich formatted clipboard content...',
         copy: 'Turn Teams messages or any rich clipboard HTML from Confluence, Word, Gmail, Jira, or web pages into clean Markdown.',
         warnings: ['Clipboard API', 'HTML cleanup', 'Local only'],
@@ -1532,6 +1584,86 @@
       codeBlocksEl.textContent = String((src.match(/```/g) || []).length / 2 | 0);
       lineCountEl.textContent = String(Math.max(1, src.split('\n').length));
     }
+    const appIconUrls = {
+      teams: 'https://cdn.simpleicons.org/microsoftteams/6264A7',
+      jira: 'https://cdn.simpleicons.org/jira/2684FF',
+      gmail: 'https://cdn.simpleicons.org/gmail/EA4335',
+      confluence: 'https://cdn.simpleicons.org/confluence/172B4D',
+      word: 'https://cdn.simpleicons.org/microsoftword/2B579A',
+      markdown: 'https://cdn.simpleicons.org/markdown/FFFFFF'
+    };
+
+    function iconImg(key, extraClass = '') {
+      const src = appIconUrls[key];
+      if (!src) return `<span class="quick-icon ${extraClass}">${key || '•'}</span>`;
+      return `<span class="quick-icon ${extraClass}"><img src="${src}" alt="" loading="lazy" /></span>`;
+    }
+
+    const quickContexts = {
+      teams: {
+        title: 'Teams output helpers',
+        text: 'Tune Markdown for a Teams chat composer, then copy rich HTML locally.',
+        actions: [
+          { label: 'Teams sample', icon: 'teams', action: 'sample', sample: 'teams' },
+          { label: 'Templates', textIcon: '▤', action: 'drawer', drawer: 'templates' },
+          { label: 'Profiles', textIcon: '◈', action: 'drawer', drawer: 'profiles' },
+          { label: 'Copy for Teams', textIcon: '⧉', action: 'copy', primary: true }
+        ]
+      },
+      jira: {
+        title: 'Jira markup helpers',
+        text: 'Convert Markdown into Jira wiki markup for tickets, descriptions and comments.',
+        actions: [
+          { label: 'Jira sample', icon: 'jira', action: 'sample', sample: 'jira' },
+          { label: 'Profiles', textIcon: '◈', action: 'drawer', drawer: 'profiles' },
+          { label: 'Local history', textIcon: '◷', action: 'drawer', drawer: 'history' },
+          { label: 'Copy for Jira', textIcon: '⧉', action: 'copy', primary: true }
+        ]
+      },
+      email: {
+        title: 'Email template helpers',
+        text: 'Choose a template style and copy rich email HTML for Gmail or Outlook.',
+        actions: [
+          { label: 'Executive email', icon: 'gmail', action: 'template', template: 'executive-email' },
+          { label: 'Newsletter', icon: 'gmail', action: 'template', template: 'newsletter-email' },
+          { label: 'Profiles', textIcon: '◈', action: 'drawer', drawer: 'profiles' },
+          { label: 'Copy Email', textIcon: '⧉', action: 'copy', primary: true }
+        ]
+      },
+      clipboard: {
+        title: 'Paste from app helpers',
+        text: 'Import Teams or any rich text from your clipboard. The cleanup stays inside your browser.',
+        actions: [
+          { label: 'From Teams', icon: 'teams', action: 'paste', source: 'Teams' },
+          { label: 'From Confluence', icon: 'confluence', action: 'paste', source: 'Confluence' },
+          { label: 'From Gmail', icon: 'gmail', action: 'paste', source: 'Gmail' },
+          { label: 'From Word', icon: 'word', action: 'paste', source: 'Word' },
+          { label: 'From Jira', icon: 'jira', action: 'paste', source: 'Jira' }
+        ]
+      }
+    };
+
+    const contextualSamples = {
+      teams: sample,
+      jira: ['# Jira issue summary', '', '**Acceptance criteria**', '', '- [ ] Given a valid request, when it is processed, then the result is persisted.', '- [ ] Edge cases are covered.', '', '```java', 'public Result handle(Request request) {', '    return service.execute(request);', '}', '```'].join('\n'),
+      email: ['# Weekly delivery update', '', '**Status:** On track', '', 'Hello team,', '', 'Here is a concise summary of this week\'s delivery progress.', '', '- Completed the planned rollout.', '- Verified monitoring and fallback paths.', '- Next milestone remains unchanged.', '', 'Thanks,'].join('\n')
+    };
+
+    function renderQuickStrip() {
+      const context = quickContexts[activeUtility] || quickContexts.teams;
+      quickTitleEl.textContent = context.title;
+      quickTextEl.textContent = context.text;
+      quickActionsEl.innerHTML = context.actions.map(action => {
+        const icon = action.icon ? iconImg(action.icon) : `<span class="quick-icon">${action.textIcon || '•'}</span>`;
+        return `<button class="button helper-button ${action.primary ? 'primary' : ''}" data-quick-action="${action.action}" data-source="${action.source || ''}" data-drawer="${action.drawer || ''}" data-template="${action.template || ''}" data-sample="${action.sample || ''}">${icon}<span>${htmlEscape(action.label)}</span></button>`;
+      }).join('');
+    }
+
+    function loadContextSample(kind = activeUtility) {
+      const value = contextualSamples[kind] || sample;
+      loadText(value);
+    }
+
     function renderProfiles() {
       const options = profiles[activeUtility] || [];
       const selected = getActiveProfile();
@@ -1571,6 +1703,7 @@
       loadFileBtn.hidden = activeUtility === 'clipboard';
       pasteRichBtn.hidden = activeUtility !== 'clipboard';
       document.querySelectorAll('.toolbar-markdown-only').forEach(el => el.classList.toggle('hidden', activeUtility === 'clipboard'));
+      renderQuickStrip();
       renderProfiles();
       renderWarnings();
       localStorage.setItem('mcl.activeUtility', activeUtility);
@@ -1637,9 +1770,15 @@
 
     function openDrawer(kind) {
       renderDrawer(kind);
+      drawerBackdropEl.hidden = false;
+      requestAnimationFrame(() => drawerBackdropEl.classList.add('open'));
       drawerEl.classList.add('open');
     }
-    function closeDrawer() { drawerEl.classList.remove('open'); }
+    function closeDrawer() {
+      drawerEl.classList.remove('open');
+      drawerBackdropEl.classList.remove('open');
+      window.setTimeout(() => { if (!drawerEl.classList.contains('open')) drawerBackdropEl.hidden = true; }, 180);
+    }
     function itemButton(label, className, dataId) { return `<button class="toolbar-button ${className}" data-id="${dataId}">${label}</button>`; }
     function renderDrawer(kind) {
       const allSnippets = [...builtInSnippets, ...savedSnippets];
@@ -1764,10 +1903,29 @@
     document.getElementById('openTemplatesBtn').addEventListener('click', () => openDrawer('templates'));
     document.getElementById('openSnippetsBtn').addEventListener('click', () => openDrawer('snippets'));
     closeDrawerBtn.addEventListener('click', closeDrawer);
+    drawerBackdropEl.addEventListener('click', closeDrawer);
+    document.addEventListener('pointerdown', (event) => {
+      if (!drawerEl.classList.contains('open')) return;
+      if (drawerEl.contains(event.target)) return;
+      if (event.target.closest('.drawer-nav, #privacyButton, #pwaButton, #openTemplatesBtn, #openSnippetsBtn')) return;
+      closeDrawer();
+    }, true);
     document.getElementById('commandButton').addEventListener('click', openPalette);
     document.getElementById('toggleInspectorBtn').addEventListener('click', () => setInspectorVisible(!inspectorVisible));
     document.querySelectorAll('[data-split]').forEach(btn => btn.addEventListener('click', () => setSplitMode(btn.dataset.split)));
-    document.querySelectorAll('.paste-helper').forEach(btn => btn.addEventListener('click', () => pasteRichText(btn.dataset.source)));
+    quickActionsEl.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-quick-action]');
+      if (!btn) return;
+      const action = btn.dataset.quickAction;
+      if (action === 'paste') pasteRichText(btn.dataset.source || 'Clipboard');
+      if (action === 'copy') copyCurrentOutput();
+      if (action === 'drawer') openDrawer(btn.dataset.drawer);
+      if (action === 'sample') loadContextSample(btn.dataset.sample || activeUtility);
+      if (action === 'template') { const t = getTemplate(btn.dataset.template); if (t) loadText(t.body); }
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && drawerEl.classList.contains('open')) closeDrawer();
+    });
     profileSelect.addEventListener('change', () => setActiveProfile(profileSelect.value));
     loadFileBtn.addEventListener('click', () => fileInput.click());
     pasteRichBtn.addEventListener('click', () => pasteRichText('Clipboard'));
