@@ -1314,8 +1314,15 @@
 
       return `${escapeCodeText(indent)}${bullet}${highlightYamlValue(rest)}`;
     }
+    function createUniqueId(prefix = 'id') {
+      if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
+        return `${prefix}-${globalThis.crypto.randomUUID()}`;
+      }
+      return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+
     function renderCodeBlock(code, lang = 'json') {
-      const blockId = `codeBlockEditor-${crypto.randomUUID()}`;
+      const blockId = createUniqueId('codeBlockEditor');
       const language = (lang || 'json').toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'json';
       const lines = code.replace(/\r\n?/g, '\n').split('\n');
       const highlighted = lines.map(line => {
@@ -1331,13 +1338,21 @@
 
     function mdInlineToJira(text) {
       const { replaced, stash } = protectCodeSpans(text);
+      const boldStash = [];
       let s = replaced;
       s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => `${alt || url} (${url})`);
       s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => `[${label}|${url}]`);
-      s = s.replace(/\*\*([^*\n]+)\*\*/g, '*$1*');
-      s = s.replace(/__([^_\n]+)__/g, '*$1*');
+      s = s.replace(/\*\*([^*\n]+)\*\*/g, (_, value) => {
+        const id = boldStash.push(value) - 1;
+        return `@@BOLD${id}@@`;
+      });
+      s = s.replace(/__([^_\n]+)__/g, (_, value) => {
+        const id = boldStash.push(value) - 1;
+        return `@@BOLD${id}@@`;
+      });
       s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '_$1_');
       s = s.replace(/(?<!_)_([^_\n]+)_(?!_)/g, '_$1_');
+      s = s.replace(/@@BOLD(\d+)@@/g, (_, n) => `*${boldStash[Number(n)]}*`);
       s = s.replace(/~~([^~\n]+)~~/g, '-$1-');
       s = s.replace(/@@CODE(\d+)@@/g, (_, n) => `{{${stash[Number(n)]}}}`);
       return s;
