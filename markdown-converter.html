@@ -1,0 +1,1742 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Markdown Copy Lab</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400..700,0..1,-50..200" rel="stylesheet">
+  <script type="module" src="https://esm.run/@material/web/all.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --md-sys-color-primary: #6750a4;
+      --md-sys-color-on-primary: #ffffff;
+      --md-sys-color-primary-container: #eaddff;
+      --md-sys-color-on-primary-container: #21005d;
+      --md-sys-color-secondary: #625b71;
+      --md-sys-color-secondary-container: #e8def8;
+      --md-sys-color-tertiary: #7d5260;
+      --md-sys-color-surface: #fffbff;
+      --md-sys-color-surface-container-low: #f7f2fa;
+      --md-sys-color-surface-container: #f3edf7;
+      --md-sys-color-surface-container-high: #ece6f0;
+      --md-sys-color-surface-container-highest: #e6e0e9;
+      --md-sys-color-on-surface: #1d1b20;
+      --md-sys-color-on-surface-variant: #49454f;
+      --md-sys-color-outline: #79747e;
+      --md-sys-color-outline-variant: #cac4d0;
+      --md-sys-color-inverse-surface: #322f35;
+      --md-sys-color-inverse-on-surface: #f5eff7;
+      --md-sys-color-scrim: #000000;
+      --app-max-width: 1920px;
+      --app-radius: 28px;
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      font-family: Inter, Roboto, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--md-sys-color-on-surface);
+      background:
+        radial-gradient(1100px 620px at 0% -10%, rgba(103, 80, 164, .20), transparent 58%),
+        radial-gradient(900px 520px at 94% 5%, rgba(125, 82, 96, .16), transparent 48%),
+        linear-gradient(180deg, #fffbff 0%, #f7f2fa 48%, #f3edf7 100%);
+    }
+
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 22px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app-shell {
+      max-width: var(--app-max-width);
+      margin: 0 auto;
+      padding: 24px 32px 36px;
+    }
+
+    .hero-card {
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 24px;
+      align-items: center;
+      padding: 28px;
+      border-radius: 32px;
+      background:
+        linear-gradient(135deg, rgba(103,80,164,.98), rgba(125,82,96,.92)),
+        var(--md-sys-color-primary);
+      color: var(--md-sys-color-on-primary);
+      box-shadow: 0 28px 80px rgba(56, 38, 91, .24), 0 8px 22px rgba(56, 38, 91, .18);
+      isolation: isolate;
+    }
+    .hero-card::before {
+      content: '';
+      position: absolute;
+      inset: -45% -10% auto auto;
+      width: 520px;
+      height: 520px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.18);
+      filter: blur(2px);
+      z-index: -1;
+    }
+    .hero-title { display: grid; gap: 8px; }
+    .eyebrow {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.16);
+      color: rgba(255,255,255,.90);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(32px, 4vw, 58px);
+      line-height: .95;
+      letter-spacing: -.055em;
+      max-width: 12ch;
+    }
+    .hero-copy {
+      max-width: 72ch;
+      margin: 0;
+      color: rgba(255,255,255,.82);
+      font-size: 15px;
+      line-height: 1.65;
+    }
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .hero-actions md-filled-button,
+    .hero-actions md-outlined-button {
+      --md-filled-button-container-shape: 18px;
+      --md-outlined-button-container-shape: 18px;
+      --md-outlined-button-outline-color: rgba(255,255,255,.38);
+      --md-outlined-button-label-text-color: #ffffff;
+      --md-outlined-button-hover-label-text-color: #ffffff;
+      --md-outlined-button-pressed-label-text-color: #ffffff;
+      --md-filled-button-container-color: #ffffff;
+      --md-filled-button-label-text-color: #4f378b;
+      --md-filled-button-icon-color: #4f378b;
+    }
+
+
+    .utility-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+    .utility-card {
+      appearance: none;
+      border: 1px solid rgba(121,116,126,.20);
+      min-height: 132px;
+      padding: 18px;
+      border-radius: 28px;
+      background: rgba(255,255,255,.68);
+      color: var(--md-sys-color-on-surface);
+      text-align: left;
+      cursor: pointer;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 10px;
+      box-shadow: 0 14px 44px rgba(29, 27, 32, .07);
+      backdrop-filter: blur(16px);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+    }
+    .utility-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(103,80,164,.34);
+      box-shadow: 0 24px 70px rgba(103,80,164,.16);
+    }
+    .utility-card.active {
+      background:
+        linear-gradient(135deg, rgba(234,221,255,.98), rgba(255,255,255,.88));
+      border-color: rgba(103,80,164,.50);
+      box-shadow: 0 28px 76px rgba(103,80,164,.20), inset 0 0 0 1px rgba(255,255,255,.72);
+    }
+    .utility-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .utility-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 16px;
+      display: inline-grid;
+      place-items: center;
+      color: var(--md-sys-color-on-primary-container);
+      background: var(--md-sys-color-primary-container);
+    }
+    .utility-card.active .utility-icon {
+      color: #fff;
+      background: linear-gradient(135deg, #6750a4, #8f5cf7);
+      box-shadow: 0 12px 28px rgba(103,80,164,.24);
+    }
+    .utility-badge {
+      padding: 5px 9px;
+      border-radius: 999px;
+      background: rgba(103,80,164,.09);
+      color: var(--md-sys-color-primary);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .utility-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.15;
+      letter-spacing: -.03em;
+    }
+    .utility-copy {
+      margin: 0;
+      color: var(--md-sys-color-on-surface-variant);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .utility-hint {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--md-sys-color-primary);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .clipboard-action-row {
+      display: none;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-radius: 22px;
+      border: 1px solid rgba(121,116,126,.18);
+      background: var(--md-sys-color-surface-container-low);
+    }
+    .clipboard-action-row.active { display: flex; }
+    .clipboard-action-row p {
+      margin: 0;
+      color: var(--md-sys-color-on-surface-variant);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .secondary-action-button {
+      appearance: none;
+      border: 0;
+      min-height: 44px;
+      padding: 8px 14px;
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 800;
+      color: var(--md-sys-color-on-primary-container);
+      background: linear-gradient(135deg, rgba(234,221,255,.96), rgba(255,255,255,.88));
+      box-shadow: inset 0 0 0 1px rgba(103,80,164,.20), 0 10px 22px rgba(103,80,164,.12);
+    }
+    .format-preview {
+      height: var(--workspace-panel-height);
+      overflow: auto;
+      border-radius: 26px;
+      border: 1px solid rgba(121,116,126,.22);
+      background: #ffffff;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.60), 0 22px 50px rgba(29,27,32,.10);
+    }
+    .format-preview pre {
+      margin: 0;
+      min-height: 100%;
+      padding: 22px;
+      font: 13px/1.65 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+      white-space: pre;
+      overflow: auto;
+      color: #1d1b20;
+    }
+    .email-preview-doc {
+      width: min(760px, calc(100% - 40px));
+      margin: 20px auto;
+      background: #ffffff;
+      border-radius: 18px;
+      border: 1px solid #e7e2ea;
+      box-shadow: 0 20px 56px rgba(29,27,32,.12);
+      overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+    .email-preview-head {
+      padding: 22px 26px;
+      background: linear-gradient(135deg, #6750a4, #8f5cf7);
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+    .email-preview-body { padding: 26px; color: #222; font-size: 15px; line-height: 1.55; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin: 18px 0;
+    }
+    .stat-card {
+      border-radius: 24px;
+      padding: 18px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(121,116,126,.22);
+      box-shadow: 0 14px 44px rgba(29, 27, 32, .08);
+      backdrop-filter: blur(16px);
+    }
+    .stat-label {
+      margin: 0 0 8px;
+      color: var(--md-sys-color-on-surface-variant);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .stat-value {
+      font-size: clamp(24px, 2.2vw, 36px);
+      font-weight: 800;
+      letter-spacing: -.04em;
+      color: var(--md-sys-color-on-surface);
+    }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: minmax(420px, .72fr) minmax(780px, 1.28fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .md-card {
+      min-width: 0;
+      min-height: 690px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 18px;
+      border-radius: var(--app-radius);
+      background: rgba(255,255,255,.80);
+      border: 1px solid rgba(121,116,126,.24);
+      box-shadow: 0 18px 60px rgba(29, 27, 32, .10);
+      backdrop-filter: blur(18px);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .card-header-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      flex: 0 0 auto;
+    }
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .section-icon {
+      width: 44px;
+      height: 44px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 16px;
+      color: var(--md-sys-color-on-primary-container);
+      background: var(--md-sys-color-primary-container);
+    }
+    .section-title h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -.02em;
+    }
+    .section-title p {
+      margin: 2px 0 0;
+      color: var(--md-sys-color-on-surface-variant);
+      font-size: 13px;
+    }
+
+    .editor-toolbar {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      padding: 8px;
+      border-radius: 22px;
+      background: var(--md-sys-color-surface-container-low);
+      border: 1px solid rgba(121,116,126,.18);
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .editor-toolbar md-icon-button {
+      --md-icon-button-icon-color: var(--md-sys-color-on-surface-variant);
+      --md-icon-button-hover-icon-color: var(--md-sys-color-primary);
+      --md-icon-button-pressed-icon-color: var(--md-sys-color-primary);
+    }
+    .toolbar-divider {
+      width: 1px;
+      height: 28px;
+      margin: 0 4px;
+      flex: 0 0 auto;
+      background: var(--md-sys-color-outline-variant);
+    }
+    .editor-shell {
+      display: flex;
+      min-height: 0;
+      flex: 1 1 auto;
+    }
+    textarea {
+      width: 100%;
+      min-height: 0;
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: 24px;
+      background: rgba(255,255,255,.82);
+      color: var(--md-sys-color-on-surface);
+      padding: 18px;
+      outline: none;
+      resize: none;
+      overflow: auto;
+      white-space: pre;
+      overflow-wrap: normal;
+      font: 13px/1.65 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+      transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+    textarea:focus {
+      border-color: var(--md-sys-color-primary);
+      box-shadow: 0 0 0 4px rgba(103,80,164,.14);
+      background: #ffffff;
+    }
+    #input { flex: 1 1 auto; min-height: 492px; }
+    .preview-stage {
+      border-radius: 26px;
+      overflow: hidden;
+      background: #1f1f1f;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 22px 50px rgba(0,0,0,.16);
+    }
+    #previewFrame {
+      display: block;
+      width: 100%;
+      height: var(--workspace-panel-height);
+      border: 0;
+      background: #1f1f1f;
+    }
+
+    .inspector-panel {
+      margin-top: auto;
+      border-radius: 24px;
+      background: var(--md-sys-color-surface-container-low);
+      border: 1px solid rgba(121,116,126,.18);
+      overflow: hidden;
+    }
+    .inspector-panel summary {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      list-style: none;
+      color: var(--md-sys-color-on-surface-variant);
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+    .inspector-panel summary::-webkit-details-marker { display: none; }
+    .inspector-body { padding: 0 14px 14px; }
+    #output {
+      height: 84px;
+      min-height: 84px;
+      max-height: 84px;
+      white-space: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      font-size: 12px;
+      color: #4f5868;
+      background: rgba(255,255,255,.72);
+    }
+    .status-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--md-sys-color-on-surface-variant);
+      font-size: 13px;
+    }
+    #statusChip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #146c2e;
+      font-weight: 700;
+    }
+    #statusChip::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #18a34a;
+      box-shadow: 0 0 0 4px rgba(24,163,74,.12);
+    }
+    .footer-note {
+      margin: 18px 4px 0;
+      color: var(--md-sys-color-on-surface-variant);
+      font-size: 13px;
+      text-align: center;
+    }
+    .hidden-input { display: none; }
+
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 8px;
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 26px;
+      background: rgba(255,255,255,.14);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.20), 0 18px 42px rgba(33, 0, 93, .20);
+      backdrop-filter: blur(18px);
+    }
+    .hero-button {
+      appearance: none;
+      border: 0;
+      position: relative;
+      isolation: isolate;
+      min-height: 58px;
+      padding: 10px 18px 10px 12px;
+      border-radius: 22px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      font: inherit;
+      text-align: left;
+      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+      overflow: hidden;
+    }
+    .hero-button::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      opacity: 0;
+      background: radial-gradient(220px 90px at 10% 0%, rgba(255,255,255,.42), transparent 60%);
+      transition: opacity .18s ease;
+    }
+    .hero-button:hover { transform: translateY(-2px); filter: saturate(1.06); }
+    .hero-button:hover::before { opacity: 1; }
+    .hero-button:active { transform: translateY(0) scale(.99); }
+    .hero-button:focus-visible {
+      outline: 3px solid rgba(255,255,255,.62);
+      outline-offset: 3px;
+    }
+    .hero-button-icon {
+      width: 40px;
+      height: 40px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 16px;
+      font-size: 23px;
+      flex: 0 0 auto;
+    }
+    .hero-button-copy {
+      display: grid;
+      gap: 1px;
+      min-width: 0;
+    }
+    .button-label {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: -.01em;
+      line-height: 1.15;
+      white-space: nowrap;
+    }
+    .button-caption {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      opacity: .72;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .hero-button-upload {
+      color: #fff;
+      background: rgba(255,255,255,.13);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.30), 0 10px 26px rgba(0,0,0,.12);
+    }
+    .hero-button-upload .hero-button-icon {
+      color: #fff;
+      background: rgba(255,255,255,.16);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.24);
+    }
+    .hero-button-primary {
+      color: #35145f;
+      background: linear-gradient(135deg, #ffffff 0%, #f0e9ff 58%, #ffeaf2 100%);
+      box-shadow: 0 18px 40px rgba(33, 0, 93, .22), inset 0 1px 0 rgba(255,255,255,.75);
+    }
+    .hero-button-primary .hero-button-icon {
+      color: #fff;
+      background: linear-gradient(135deg, #6750a4, #9c27b0);
+      box-shadow: 0 10px 24px rgba(103, 80, 164, .28);
+    }
+
+    .editor-with-lines {
+      flex: 1 1 auto;
+      min-height: 492px;
+      display: grid;
+      grid-template-columns: 58px minmax(0, 1fr);
+      border: 1px solid var(--md-sys-color-outline-variant);
+      border-radius: 24px;
+      background: rgba(255,255,255,.82);
+      overflow: hidden;
+      transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+    .editor-with-lines:focus-within {
+      border-color: var(--md-sys-color-primary);
+      box-shadow: 0 0 0 4px rgba(103,80,164,.14);
+      background: #ffffff;
+    }
+    .line-numbers {
+      padding: 18px 12px 18px 8px;
+      overflow: hidden;
+      user-select: none;
+      text-align: right;
+      white-space: pre;
+      color: rgba(73,69,79,.58);
+      background: linear-gradient(180deg, rgba(103,80,164,.065), rgba(255,255,255,.25));
+      border-right: 1px solid rgba(121,116,126,.18);
+      font: 13px/1.65 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+      letter-spacing: -.02em;
+    }
+    .editor-with-lines #input {
+      min-height: 492px;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      padding: 18px;
+    }
+    .editor-with-lines #input:focus {
+      border-color: transparent;
+      box-shadow: none;
+      background: transparent;
+    }
+
+
+    /* Card-local action controls */
+    .action-button {
+      appearance: none;
+      border: 0;
+      position: relative;
+      isolation: isolate;
+      min-height: 50px;
+      padding: 8px 16px 8px 10px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      font: inherit;
+      text-align: left;
+      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+      overflow: hidden;
+      flex: 0 0 auto;
+    }
+    .action-button::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      opacity: 0;
+      background: radial-gradient(220px 90px at 10% 0%, rgba(255,255,255,.50), transparent 62%);
+      transition: opacity .18s ease;
+    }
+    .action-button:hover { transform: translateY(-2px); filter: saturate(1.08); }
+    .action-button:hover::before { opacity: 1; }
+    .action-button:active { transform: translateY(0) scale(.99); }
+    .action-button:focus-visible {
+      outline: 3px solid rgba(103,80,164,.32);
+      outline-offset: 3px;
+    }
+    .action-button-icon {
+      width: 36px;
+      height: 36px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 14px;
+      font-size: 22px;
+      flex: 0 0 auto;
+    }
+    .action-button-copy {
+      display: grid;
+      gap: 1px;
+      min-width: 0;
+    }
+    .action-button-upload {
+      color: var(--md-sys-color-on-primary-container);
+      background: linear-gradient(135deg, rgba(234,221,255,.96), rgba(255,255,255,.88));
+      box-shadow: 0 12px 30px rgba(103,80,164,.16), inset 0 0 0 1px rgba(103,80,164,.20), inset 0 1px 0 rgba(255,255,255,.80);
+    }
+    .action-button-upload .action-button-icon {
+      color: #ffffff;
+      background: linear-gradient(135deg, #6750a4, #7d5260);
+      box-shadow: 0 10px 24px rgba(103,80,164,.24);
+    }
+    .action-button-primary {
+      color: #ffffff;
+      background: linear-gradient(135deg, #6750a4, #8f5cf7 56%, #b45edb);
+      box-shadow: 0 18px 44px rgba(103,80,164,.28), inset 0 1px 0 rgba(255,255,255,.22);
+    }
+    .action-button-primary .action-button-icon {
+      color: #4f378b;
+      background: rgba(255,255,255,.92);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.55);
+    }
+    .toolbar-upload {
+      min-height: 46px;
+      padding-right: 14px;
+      border-radius: 18px;
+    }
+    .toolbar-upload .button-label { font-size: 13px; }
+    .toolbar-upload .button-caption { font-size: 10px; }
+    .toolbar-upload .action-button-icon { width: 34px; height: 34px; font-size: 20px; }
+    .preview-copy {
+      min-height: 48px;
+      padding: 8px 16px 8px 10px;
+      border-radius: 20px;
+    }
+    .preview-copy .action-button-icon {
+      width: 34px;
+      height: 34px;
+      font-size: 20px;
+    }
+    .preview-copy .button-label { font-size: 13px; }
+    .preview-copy .button-caption { font-size: 10px; }
+
+    .visually-hidden {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      padding: 0 !important;
+      margin: -1px !important;
+      overflow: hidden !important;
+      clip: rect(0, 0, 0, 0) !important;
+      white-space: nowrap !important;
+      border: 0 !important;
+    }
+
+    /* Keep the Markdown editor aligned with the Teams preview.
+       The editing surface has the same responsive height as the preview iframe,
+       and long Markdown documents scroll inside the textarea instead of resizing the card. */
+    .editor-card,
+    .preview-card {
+      min-height: 0;
+      height: auto;
+      max-height: none;
+      align-self: start;
+    }
+    .editor-card .editor-shell {
+      flex: 0 0 auto;
+      min-height: 0;
+      width: 100%;
+      align-self: stretch;
+      display: flex;
+      overflow: hidden;
+    }
+    .editor-card .editor-with-lines {
+      width: 100%;
+      flex: 0 0 auto;
+      height: var(--workspace-panel-height);
+      min-height: var(--workspace-panel-height);
+      max-height: var(--workspace-panel-height);
+      align-self: stretch;
+      overflow: hidden;
+    }
+    .editor-card .line-numbers {
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .editor-card .editor-with-lines #input {
+      display: block;
+      height: 100%;
+      min-height: 0;
+      max-height: 100%;
+      overflow: auto;
+    }
+
+    @media (max-width: 1200px) {
+      .workspace-grid { grid-template-columns: 1fr; }
+      .hero-card { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 820px) {
+      .app-shell { padding: 16px; }
+      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .utility-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .workspace-grid { gap: 14px; }
+      .md-card { min-height: auto; border-radius: 24px; }
+      :root { --workspace-panel-height: clamp(420px, 58vh, 620px); }
+      .editor-card { min-height: 0; height: auto; max-height: none; }
+      .editor-card .editor-with-lines { min-height: var(--workspace-panel-height); }
+      .card-header-actions { width: 100%; justify-content: flex-start; }
+    }
+    @media (max-width: 560px) {
+      .stats-grid { grid-template-columns: 1fr; }
+      .utility-grid { grid-template-columns: 1fr; }
+      h1 { font-size: 34px; }
+      .hero-card { padding: 22px; border-radius: 26px; }
+    }
+
+
+    /* v14: workspace sizing hardening
+       Tasks 1 and 2:
+       - The editor surface is a fixed responsive panel, never content-sized.
+       - All destination previews use the same useful responsive height. */
+    :root {
+      --workspace-panel-height: clamp(560px, 46vw, 760px);
+    }
+    .workspace-grid {
+      align-items: start;
+    }
+    .md-card,
+    .editor-card,
+    .preview-card {
+      min-height: 0;
+      height: auto;
+      max-height: none;
+      align-self: start;
+    }
+    .editor-card {
+      overflow: hidden;
+    }
+    .editor-card .editor-shell {
+      flex: 0 0 var(--workspace-panel-height);
+      width: 100%;
+      height: var(--workspace-panel-height);
+      min-height: 0;
+      max-height: var(--workspace-panel-height);
+      align-self: stretch;
+      overflow: hidden;
+    }
+    .editor-card .editor-with-lines {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      max-height: 100%;
+      flex: 1 1 auto;
+      align-self: stretch;
+      overflow: hidden;
+      contain: layout paint;
+    }
+    .editor-card .line-numbers {
+      height: 100%;
+      min-height: 0;
+      max-height: 100%;
+      overflow: hidden;
+    }
+    .editor-card .editor-with-lines #input {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      max-height: 100%;
+      overflow: auto;
+    }
+    .preview-stage,
+    #previewFrame,
+    .format-preview {
+      height: var(--workspace-panel-height);
+      min-height: var(--workspace-panel-height);
+      max-height: var(--workspace-panel-height);
+    }
+    .format-preview {
+      overflow: auto;
+    }
+    .format-preview pre {
+      min-height: 0;
+    }
+    @media (max-width: 1200px) {
+      :root { --workspace-panel-height: clamp(520px, 62vh, 720px); }
+    }
+    @media (max-width: 820px) {
+      :root { --workspace-panel-height: clamp(460px, 62vh, 660px); }
+      .editor-card .editor-shell,
+      .preview-stage,
+      #previewFrame,
+      .format-preview {
+        height: var(--workspace-panel-height);
+        min-height: var(--workspace-panel-height);
+        max-height: var(--workspace-panel-height);
+      }
+    }
+
+    /* v15: dynamic utility controls */
+    #pasteRichBtn .action-button-icon {
+      background: linear-gradient(135deg, #006c4f, #00a982);
+    }
+
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero-card">
+      <div class="hero-title">
+        <span class="eyebrow"><span class="material-symbols-outlined">auto_awesome</span>Material 3 Conversion Studio</span>
+        <h1>Markdown Copy Lab</h1>
+        <p class="hero-copy">A paste-ready conversion dashboard for Teams, Jira, HTML email, and rich clipboard content. Write once in Markdown, then copy the format your destination actually understands.</p>
+      </div>
+    </header>
+
+    <section class="utility-grid" aria-label="Conversion utilities">
+      <button class="utility-card active" type="button" data-utility="teams" aria-pressed="true">
+        <span class="utility-top"><span class="utility-icon"><span class="material-symbols-outlined">forum</span></span><span class="utility-badge">Live</span></span>
+        <span><h2 class="utility-title">Markdown to Teams</h2><p class="utility-copy">Paste-ready rich HTML for Microsoft Teams chats.</p></span>
+        <span class="utility-hint"><span class="material-symbols-outlined">bolt</span>Composer preview</span>
+      </button>
+      <button class="utility-card" type="button" data-utility="jira" aria-pressed="false">
+        <span class="utility-top"><span class="utility-icon"><span class="material-symbols-outlined">confirmation_number</span></span><span class="utility-badge">Jira</span></span>
+        <span><h2 class="utility-title">Markdown to Jira</h2><p class="utility-copy">Convert Markdown into Jira wiki markup for issues and comments.</p></span>
+        <span class="utility-hint"><span class="material-symbols-outlined">data_object</span>Wiki markup</span>
+      </button>
+      <button class="utility-card" type="button" data-utility="email" aria-pressed="false">
+        <span class="utility-top"><span class="utility-icon"><span class="material-symbols-outlined">alternate_email</span></span><span class="utility-badge">Email</span></span>
+        <span><h2 class="utility-title">Markdown to HTML Email</h2><p class="utility-copy">Generate conservative HTML for Gmail, Outlook, and newsletters.</p></span>
+        <span class="utility-hint"><span class="material-symbols-outlined">mark_email_read</span>Inline styles</span>
+      </button>
+      <button class="utility-card" type="button" data-utility="clipboard" aria-pressed="false">
+        <span class="utility-top"><span class="utility-icon"><span class="material-symbols-outlined">content_paste_go</span></span><span class="utility-badge">Reverse</span></span>
+        <span><h2 class="utility-title">Rich Clipboard to Markdown</h2><p class="utility-copy">Paste rich text from Teams, email, or web pages into clean Markdown.</p></span>
+        <span class="utility-hint"><span class="material-symbols-outlined">keyboard_command_key</span>Clipboard import</span>
+      </button>
+    </section>
+
+    <section class="stats-grid" aria-label="Document statistics">
+      <article class="stat-card">
+        <p class="stat-label">Source chars</p>
+        <div id="sourceChars" class="stat-value">0</div>
+      </article>
+      <article class="stat-card">
+        <p class="stat-label">Output chars</p>
+        <div id="outputChars" class="stat-value">0</div>
+      </article>
+      <article class="stat-card">
+        <p class="stat-label">Code blocks</p>
+        <div id="codeBlocks" class="stat-value">0</div>
+      </article>
+      <article class="stat-card">
+        <p class="stat-label">Lines</p>
+        <div id="lineCount" class="stat-value">0</div>
+      </article>
+    </section>
+
+    <main class="workspace-grid">
+      <section class="md-card editor-card" aria-labelledby="editorTitle">
+        <div class="card-header">
+          <div class="section-title">
+            <span class="section-icon"><span class="material-symbols-outlined">edit_note</span></span>
+            <div>
+              <h2 id="editorTitle">Markdown Editor</h2>
+              <p id="editorSubtitle">Write, paste, format, or upload Markdown.</p>
+            </div>
+          </div>
+        </div>
+
+        <nav class="editor-toolbar" aria-label="Markdown formatting toolbar">
+          <input id="fileInput" class="hidden-input" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" />
+          <button id="loadFileBtn" class="action-button action-button-upload toolbar-upload" type="button">
+            <span class="action-button-icon material-symbols-outlined" aria-hidden="true">upload_file</span>
+            <span class="action-button-copy">
+              <span class="button-label">Upload Markdown</span>
+              <span class="button-caption">.md, .txt</span>
+            </span>
+          </button>
+          <button id="pasteRichBtn" class="action-button action-button-upload toolbar-upload" type="button" hidden>
+            <span class="action-button-icon material-symbols-outlined" aria-hidden="true">content_paste_go</span>
+            <span class="action-button-copy">
+              <span class="button-label">Paste Rich Text</span>
+              <span class="button-caption">from clipboard</span>
+            </span>
+          </button>
+          <span class="toolbar-divider" aria-hidden="true"></span>
+          <md-icon-button id="btnHeading" title="Heading" aria-label="Heading"><md-icon>title</md-icon></md-icon-button>
+          <md-icon-button id="btnBold" title="Bold" aria-label="Bold"><md-icon>format_bold</md-icon></md-icon-button>
+          <md-icon-button id="btnItalic" title="Italic" aria-label="Italic"><md-icon>format_italic</md-icon></md-icon-button>
+          <md-icon-button id="btnQuote" title="Quote" aria-label="Quote"><md-icon>format_quote</md-icon></md-icon-button>
+          <md-icon-button id="btnCodeInline" title="Inline code" aria-label="Inline code"><md-icon>code</md-icon></md-icon-button>
+          <md-icon-button id="btnLink" title="Link" aria-label="Link"><md-icon>link</md-icon></md-icon-button>
+          <span class="toolbar-divider" aria-hidden="true"></span>
+          <md-icon-button id="btnOl" title="Numbered list" aria-label="Numbered list"><md-icon>format_list_numbered</md-icon></md-icon-button>
+          <md-icon-button id="btnUl" title="Bulleted list" aria-label="Bulleted list"><md-icon>format_list_bulleted</md-icon></md-icon-button>
+          <md-icon-button id="btnCheck" title="Task list" aria-label="Task list"><md-icon>checklist</md-icon></md-icon-button>
+          <span class="toolbar-divider" aria-hidden="true"></span>
+          <md-icon-button id="btnHr" title="Divider" aria-label="Divider"><md-icon>horizontal_rule</md-icon></md-icon-button>
+          <span class="toolbar-divider" aria-hidden="true"></span>
+          <md-icon-button id="undoBtn" title="Undo toolbar action" aria-label="Undo toolbar action"><md-icon>undo</md-icon></md-icon-button>
+        </nav>
+
+        <div id="clipboardActionRow" class="clipboard-action-row" aria-live="polite" hidden></div>
+
+        <div class="editor-shell">
+          <div class="editor-with-lines">
+            <div id="lineNumbers" class="line-numbers" aria-hidden="true">1</div>
+            <textarea id="input" spellcheck="false" wrap="off" placeholder="# Paste your Markdown here..."></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="md-card preview-card" aria-labelledby="previewTitle">
+        <div class="card-header">
+          <div class="section-title">
+            <span class="section-icon"><span class="material-symbols-outlined">forum</span></span>
+            <div>
+              <h2 id="previewTitle">Teams Preview</h2>
+              <p id="previewSubtitle">Composer-style rendering, including code cards.</p>
+            </div>
+          </div>
+          <div class="card-header-actions">
+            <button id="copyBtn" class="action-button action-button-primary preview-copy" type="button">
+              <span class="action-button-icon material-symbols-outlined" aria-hidden="true">content_copy</span>
+              <span class="action-button-copy">
+                <span class="button-label">Copy for Teams</span>
+                <span class="button-caption">Rich HTML</span>
+              </span>
+            </button>
+            <span id="statusChip" class="visually-hidden" aria-live="polite">Ready</span>
+          </div>
+        </div>
+
+        <div id="previewStage" class="preview-stage">
+          <iframe id="previewFrame" title="Teams HTML preview" srcdoc=""></iframe>
+        </div>
+        <div id="formatPreview" class="format-preview" hidden><pre id="formatPreviewText"></pre></div>
+
+        <details class="inspector-panel">
+          <summary><span class="material-symbols-outlined">data_object</span> <span id="inspectorTitle">Clipboard HTML payload</span></summary>
+          <div class="inspector-body">
+            <textarea id="output" readonly spellcheck="false" placeholder="Generated HTML appears here..."></textarea>
+          </div>
+        </details>
+
+        <div class="status-line">
+          <span>Selected utility renders live while you type.</span>
+          <span>Copy output is tailored to the selected destination.</span>
+        </div>
+      </section>
+    </main>
+
+    <p class="footer-note">Choose a utility, write or import content, then copy a paste-ready payload for the destination tool.</p>
+  </div>
+
+  <script>
+    const inputEl = document.getElementById('input');
+    const lineNumbersEl = document.getElementById('lineNumbers');
+    const outputEl = document.getElementById('output');
+    const previewFrame = document.getElementById('previewFrame');
+    const statusChip = document.getElementById('statusChip');
+    const fileInput = document.getElementById('fileInput');
+    const btnHeading = document.getElementById('btnHeading');
+    const btnBold = document.getElementById('btnBold');
+    const btnItalic = document.getElementById('btnItalic');
+    const btnQuote = document.getElementById('btnQuote');
+    const btnCodeInline = document.getElementById('btnCodeInline');
+    const btnLink = document.getElementById('btnLink');
+    const btnOl = document.getElementById('btnOl');
+    const btnUl = document.getElementById('btnUl');
+    const btnCheck = document.getElementById('btnCheck');
+    const btnHr = document.getElementById('btnHr');
+    const undoBtn = document.getElementById('undoBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const copyBtnCaption = copyBtn ? copyBtn.querySelector('.button-caption') : null;
+    const loadFileBtn = document.getElementById('loadFileBtn');
+    const sourceCharsEl = document.getElementById('sourceChars');
+    const outputCharsEl = document.getElementById('outputChars');
+    const codeBlocksEl = document.getElementById('codeBlocks');
+    const lineCountEl = document.getElementById('lineCount');
+    const utilityButtons = Array.from(document.querySelectorAll('.utility-card'));
+    const editorTitleEl = document.getElementById('editorTitle');
+    const editorSubtitleEl = document.getElementById('editorSubtitle');
+    const previewTitleEl = document.getElementById('previewTitle');
+    const previewSubtitleEl = document.getElementById('previewSubtitle');
+    const previewStageEl = document.getElementById('previewStage');
+    const formatPreviewEl = document.getElementById('formatPreview');
+    const formatPreviewTextEl = document.getElementById('formatPreviewText');
+    const clipboardActionRow = document.getElementById('clipboardActionRow');
+    const pasteRichBtn = document.getElementById('pasteRichBtn');
+    const inspectorTitleEl = document.getElementById('inspectorTitle');
+
+    const sample = [
+      '# Weekly update',
+      '',
+      '**Summary**',
+      '',
+      '- Item one',
+      '- Item two with *emphasis*',
+      '- A link to [Microsoft](https://www.microsoft.com)',
+      '',
+      '> This is a quote',
+      '',
+      '```json',
+      '{',
+      '  "eventId": "0",',
+      '  "eventType": "SecurityNotification"',
+      '}',
+      '```',
+      '',
+      '## Next steps',
+      '',
+      '1. First task',
+      '2. Second task'
+    ].join('\n');
+    const undoStack = [];
+
+    let activeUtility = 'teams';
+    const utilityConfig = {
+      teams: {
+        editorTitle: 'Markdown Editor',
+        editorSubtitle: 'Write, paste, format, or upload Markdown.',
+        previewTitle: 'Teams Preview',
+        previewSubtitle: 'Composer-style rendering, including code cards.',
+        copyLabel: 'Copy for Teams',
+        copyCaption: 'Rich HTML',
+        outputLabel: 'Clipboard HTML payload',
+        outputPlaceholder: 'Generated Teams HTML appears here...',
+        inputPlaceholder: '# Paste your Markdown here...'
+      },
+      jira: {
+        editorTitle: 'Markdown Editor',
+        editorSubtitle: 'Write Markdown and convert it into Jira wiki markup.',
+        previewTitle: 'Jira Markup Preview',
+        previewSubtitle: 'Jira-specific wiki markup for issue descriptions and comments.',
+        copyLabel: 'Copy for Jira',
+        copyCaption: 'Wiki markup',
+        outputLabel: 'Jira wiki markup payload',
+        outputPlaceholder: 'Generated Jira wiki markup appears here...',
+        inputPlaceholder: '# Paste your Markdown here...'
+      },
+      email: {
+        editorTitle: 'Markdown Editor',
+        editorSubtitle: 'Write Markdown and generate email-safe HTML.',
+        previewTitle: 'HTML Email Preview',
+        previewSubtitle: 'A conservative email layout for Gmail, Outlook, and newsletters.',
+        copyLabel: 'Copy Email HTML',
+        copyCaption: 'Rich email',
+        outputLabel: 'Email HTML payload',
+        outputPlaceholder: 'Generated email HTML appears here...',
+        inputPlaceholder: '# Paste your Markdown here...'
+      },
+      clipboard: {
+        editorTitle: 'Rich Text Input',
+        editorSubtitle: 'Paste rich clipboard content from Teams, email, or web pages and clean it into Markdown.',
+        previewTitle: 'Markdown Preview',
+        previewSubtitle: 'Clean Markdown generated from rich clipboard content.',
+        copyLabel: 'Copy Markdown',
+        copyCaption: 'Plain Markdown',
+        outputLabel: 'Markdown payload',
+        outputPlaceholder: 'Generated Markdown appears here...',
+        inputPlaceholder: 'Click Paste Rich Text to import formatted clipboard content...'
+      }
+    };
+
+
+    const htmlEscape = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    function htmlToPlainText(html) { return html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n\n').replace(/<\/div>/gi, '\n').replace(/<li>/gi, '\n- ').replace(/<\/li>/gi, '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\u2060/g, '').replace(/\u200b/g, '').replace(/\n{3,}/g, '\n\n').trim(); }
+    function stripHtml(md) { return md.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ''); }
+    function flattenTable(lines, startIndex) { const out = []; const header = lines[startIndex].trim(); let i = startIndex + 1; if (i < lines.length && /^\s*\|?\s*:?[-]{3,}:?\s*(\|\s*:?[-]{3,}:?\s*)+\|?\s*$/.test(lines[i])) { const headers = header.replace(/^\|?|\|?$/g, '').split('|').map(s => s.trim()); i += 1; while (i < lines.length && /\|/.test(lines[i])) { const cells = lines[i].replace(/^\|?|\|?$/g, '').split('|').map(s => s.trim()); const parts = []; for (let j = 0; j < Math.max(headers.length, cells.length); j++) { const h = headers[j] || `Column ${j + 1}`; const c = cells[j] || ''; parts.push(`${h}: ${c}`); } out.push(`- ${parts.join(' | ')}`); i += 1; } return { lines: out, nextIndex: i }; } return null; }
+    function protectCodeSpans(text) { const stash = []; const replaced = text.replace(/`([^`]+)`/g, (_, code) => { const id = stash.push(code) - 1; return `@@CODE${id}@@`; }); return { replaced, stash }; }
+    function inlineTeamsHtml(text) { const { replaced, stash } = protectCodeSpans(text); let s = htmlEscape(replaced); s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => `${htmlEscape(alt || url)} (<a href="${htmlEscape(url)}">${htmlEscape(url)}</a>)`); s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => `<a href="${htmlEscape(url)}">${htmlEscape(text)}</a>`); s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>'); s = s.replace(/__([^_\n]+)__/g, '<strong>$1</strong>'); s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<i>$1</i>'); s = s.replace(/(?<!_)_([^_\n]+)_(?!_)/g, '<i>$1</i>'); s = s.replace(/~~([^~\n]+)~~/g, '<s>$1</s>'); s = s.replace(/@@CODE(\d+)@@/g, (_, n) => `<code>${htmlEscape(stash[Number(n)])}</code>`); return s; }
+    function makeBlank() { return '<p>&nbsp;</p>'; }
+    function makeParagraph(text) { return `<p>${inlineTeamsHtml(text)}</p>`; }
+    function makeHeadingParagraph(level, text) { return level === 1 ? `<p><span style="font-size:x-large;">${inlineTeamsHtml(text)}</span></p>` : `<p><strong>${inlineTeamsHtml(text)}</strong></p>`; }
+    function makeQuote(text) { return `<blockquote spellcheck="false"><p>${inlineTeamsHtml(text)}</p></blockquote>`; }
+    function makeList(items, ordered) { const tag = ordered ? 'ol' : 'ul'; const inner = items.map(item => `<li>${inlineTeamsHtml(item)}</li>`).join(''); return `<${tag}>${inner}</${tag}>`; }
+    function makeTable(rows) { const body = rows.map(row => `<tr>${row.map(cell => `<td><p data-is-tablecell-container="true">${inlineTeamsHtml(cell)}</p></td>`).join('')}</tr>`).join(''); return `<figure class="table"><table><tbody>${body}</tbody></table></figure>`; }
+    function escapeCodeText(code) { return htmlEscape(code).replace(/ /g, '&nbsp;').replace(/\n/g, '<br>'); }
+    function highlightJsonLine(line) { let s = escapeCodeText(line.replace(/\r\n?/g, '\n')); s = s.replace(/^([ \t]*)(&quot;([^&]*)&quot;)(\s*:)/, (_, indent, key, __, colon) => `${indent}<span class="hljs-function">${key}</span>${colon}`); s = s.replace(/:\s*&quot;([^&]*)&quot;/g, ':&nbsp;<span class="hljs-string">&quot;$1&quot;</span>'); s = s.replace(/:\s*(-?\d+(?:\.\d+)?)/g, ':&nbsp;<span class="hljs-number">$1</span>'); s = s.replace(/:\s*(true|false|null)/g, ':&nbsp;<span class="hljs-literal">$1</span>'); s = s.replace(/(&quot;[^&]+&quot;)(?=\s*:)/g, '<span class="hljs-function">$1</span>'); return s; }
+    function findJavaLineCommentIndex(raw) {
+      let quote = null;
+      let escaped = false;
+      for (let i = 0; i < raw.length - 1; i += 1) {
+        const ch = raw[i];
+        const next = raw[i + 1];
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (quote) {
+          if (ch === '\\') {
+            escaped = true;
+          } else if (ch === quote) {
+            quote = null;
+          }
+          continue;
+        }
+        if (ch === '"' || ch === "'") {
+          quote = ch;
+          continue;
+        }
+        if (ch === '/' && next === '/') return i;
+      }
+      return -1;
+    }
+    function protectJavaStrings(code) {
+      const stash = [];
+      let out = '';
+      for (let i = 0; i < code.length; i += 1) {
+        const quote = code[i];
+        if (quote !== '"' && quote !== "'") {
+          out += quote;
+          continue;
+        }
+        let literal = quote;
+        i += 1;
+        let escaped = false;
+        while (i < code.length) {
+          const ch = code[i];
+          literal += ch;
+          if (escaped) {
+            escaped = false;
+          } else if (ch === '\\') {
+            escaped = true;
+          } else if (ch === quote) {
+            break;
+          }
+          i += 1;
+        }
+        const marker = String.fromCharCode(0xe000) + String.fromCharCode(0xe100 + stash.length) + String.fromCharCode(0xe001);
+        stash.push({ marker, html: `<span class="hljs-string">${escapeCodeText(literal)}</span>` });
+        out += marker;
+      }
+      return { code: out, stash };
+    }
+    function restoreJavaStrings(html, stash) {
+      let out = html;
+      for (const item of stash) out = out.split(item.marker).join(item.html);
+      return out;
+    }
+    function highlightJavaCodePart(code) {
+      const protectedStrings = protectJavaStrings(code);
+      let working = escapeCodeText(protectedStrings.code);
+
+      // Apply token coloring in one pass before injecting spans so HTML attributes
+      // such as class="hljs-keyword" are never colored accidentally.
+      const keywordPattern = 'abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|native|new|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|void|volatile|while|var|record|sealed|permits|non-sealed|yield';
+      const tokenPattern = new RegExp(
+        `(@[A-Za-z_$][A-Za-z0-9_$]*)|` +
+        `\\b(${keywordPattern})\\b|` +
+        `\\b(true|false|null)\\b|` +
+        `\\b([A-Za-z_$][A-Za-z0-9_$]*)\\b(?=(?:&nbsp;|\\s)*\\()|` +
+        `\\b([A-Z][A-Za-z0-9_$]*)\\b|` +
+        `\\b(-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?[fFdDlL]?)\\b`,
+        'g'
+      );
+      working = working.replace(tokenPattern, (_, annotation, keyword, literal, callable, typeName, number) => {
+        if (annotation) return `<span class="hljs-function">${annotation}</span>`;
+        if (keyword) return `<span class="hljs-keyword">${keyword}</span>`;
+        if (literal) return `<span class="hljs-literal">${literal}</span>`;
+        if (callable) return `<span class="hljs-function">${callable}</span>`;
+        if (typeName) return `<span class="hljs-function">${typeName}</span>`;
+        if (number) return `<span class="hljs-number">${number}</span>`;
+        return _;
+      });
+
+      return restoreJavaStrings(working, protectedStrings.stash);
+    }
+    function highlightJavaLine(line) {
+      const raw = line.replace(/\r\n?/g, '\n');
+      if (!raw.trim()) return '&nbsp;';
+
+      const commentIndex = findJavaLineCommentIndex(raw);
+      const codePart = commentIndex >= 0 ? raw.slice(0, commentIndex) : raw;
+      const commentPart = commentIndex >= 0 ? raw.slice(commentIndex) : '';
+      const highlightedCode = highlightJavaCodePart(codePart);
+      const highlightedComment = commentPart ? `<span class="hljs-comment">${escapeCodeText(commentPart)}</span>` : '';
+      return `${highlightedCode}${highlightedComment}` || '&nbsp;';
+    }
+    function highlightYamlValue(value) {
+      const commentMatch = value.match(/^(.*?)(\s+#.*)$/);
+      const main = commentMatch ? commentMatch[1] : value;
+      const comment = commentMatch ? commentMatch[2] : '';
+      let s = escapeCodeText(main);
+      s = s.replace(/(&quot;[^&]*&quot;|'[^']*')/g, '<span class="hljs-string">$1</span>');
+      s = s.replace(/\b(true|false|null|yes|no|on|off)\b/gi, '<span class="hljs-literal">$1</span>');
+      s = s.replace(/(^|[^#A-Za-z0-9_-])(-?\d+(?:\.\d+)?)(?![A-Za-z0-9_-])/g, '$1<span class="hljs-number">$2</span>');
+      if (comment) s += `<span class="hljs-comment">${escapeCodeText(comment)}</span>`;
+      return s || '&nbsp;';
+    }
+    function highlightYamlLine(line) {
+      const raw = line.replace(/\r\n?/g, '\n');
+      if (!raw.trim()) return '&nbsp;';
+      if (/^\s*#/.test(raw)) return `<span class="hljs-comment">${escapeCodeText(raw)}</span>`;
+
+      const indentMatch = raw.match(/^(\s*)/);
+      const indent = indentMatch ? indentMatch[1] : '';
+      let rest = raw.slice(indent.length);
+      let bullet = '';
+      const bulletMatch = rest.match(/^-\s+/);
+      if (bulletMatch) {
+        bullet = '<span class="hljs-bullet">-</span>&nbsp;';
+        rest = rest.slice(bulletMatch[0].length);
+      }
+
+      const keyMatch = rest.match(/^([A-Za-z0-9_.-]+)(\s*:)(.*)$/);
+      if (keyMatch) {
+        return `${escapeCodeText(indent)}${bullet}<span class="hljs-attr">${htmlEscape(keyMatch[1])}</span>${escapeCodeText(keyMatch[2])}${highlightYamlValue(keyMatch[3])}`;
+      }
+
+      return `${escapeCodeText(indent)}${bullet}${highlightYamlValue(rest)}`;
+    }
+    function renderCodeBlock(code, lang = 'json') {
+      const blockId = `codeBlockEditor-${crypto.randomUUID()}`;
+      const language = (lang || 'json').toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'json';
+      const lines = code.replace(/\r\n?/g, '\n').split('\n');
+      const highlighted = lines.map(line => {
+        if (language === 'json') return highlightJsonLine(line);
+        if (language === 'java') return highlightJavaLine(line);
+        if (language === 'yaml' || language === 'yml') return highlightYamlLine(line);
+        return escapeCodeText(line);
+      }).join('<br>');
+      return `<p itemtype="http://schema.skype.com/CodeBlockEditor" id="${blockId}">&nbsp;</p><pre class="language-${language} skipProofing" itemid="${blockId}" spellcheck="false" corrected="true"><code>${highlighted}</code></pre>`;
+    }
+    function convertMarkdownToHtml(md) { md = stripHtml(md.replace(/\r\n?/g, '\n')); const lines = md.split('\n'); const out = []; let i = 0; while (i < lines.length) { const raw = lines[i]; const line = raw.replace(/\s+$/, ''); const trimmed = line.trim(); if (!trimmed) { out.push(makeBlank()); i += 1; continue; } if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(trimmed)) { out.push('<p>──────────</p>'); i += 1; continue; } const fence = trimmed.match(/^```(.*)$/); if (fence) { const lang = (fence[1] || '').trim() || 'json'; const codeLines = []; i += 1; while (i < lines.length && !/^```\s*$/.test(lines[i].trim())) { codeLines.push(lines[i].replace(/\s+$/, '')); i += 1; } if (i < lines.length && /^```\s*$/.test(lines[i].trim())) i += 1; out.push(renderCodeBlock(codeLines.join('\n'), lang)); continue; } if (/\|/.test(line) && i + 1 < lines.length && /^\s*\|?\s*:?[-]{3,}:?\s*(\|\s*:?[-]{3,}:?\s*)+\|?\s*$/.test(lines[i + 1])) { const header = line.replace(/^\|?|\|?$/g, '').split('|').map(s => s.trim()); let j = i + 2; const rows = []; while (j < lines.length && /\|/.test(lines[j])) { rows.push(lines[j].replace(/^\|?|\|?$/g, '').split('|').map(s => s.trim())); j += 1; } out.push(makeTable([header, ...rows])); i = j; continue; } const heading = trimmed.match(/^#{1,6}\s+(.*)$/); if (heading) { const level = Math.min(6, trimmed.match(/^#+/)[0].length); out.push(makeHeadingParagraph(level, heading[1].trim())); i += 1; continue; } const quote = trimmed.match(/^>\s?(.*)$/); if (quote) { out.push(makeQuote(quote[1].trim())); i += 1; continue; } const ul = trimmed.match(/^[-*+]\s+(.*)$/); if (ul) { const items = []; while (i < lines.length) { const m = lines[i].trim().match(/^[-*+]\s+(.*)$/); if (!m) break; items.push(m[1].trim()); i += 1; } out.push(makeList(items, false)); continue; } const ol = trimmed.match(/^\d+\.\s+(.*)$/); if (ol) { const items = []; while (i < lines.length) { const m = lines[i].trim().match(/^\d+\.\s+(.*)$/); if (!m) break; items.push(m[1].trim()); i += 1; } out.push(makeList(items, true)); continue; } out.push(makeParagraph(line)); i += 1; } return out.join(''); }
+
+
+    function mdInlineToJira(text) {
+      const { replaced, stash } = protectCodeSpans(text);
+      let s = replaced;
+      s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => `${alt || url} (${url})`);
+      s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => `[${label}|${url}]`);
+      s = s.replace(/\*\*([^*\n]+)\*\*/g, '*$1*');
+      s = s.replace(/__([^_\n]+)__/g, '*$1*');
+      s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '_$1_');
+      s = s.replace(/(?<!_)_([^_\n]+)_(?!_)/g, '_$1_');
+      s = s.replace(/~~([^~\n]+)~~/g, '-$1-');
+      s = s.replace(/@@CODE(\d+)@@/g, (_, n) => `{{${stash[Number(n)]}}}`);
+      return s;
+    }
+
+    function convertMarkdownToJira(md) {
+      md = stripHtml(md.replace(/\r\n?/g, '\n'));
+      const lines = md.split('\n');
+      const out = [];
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i].replace(/\s+$/, '');
+        const trimmed = line.trim();
+        if (!trimmed) { out.push(''); i += 1; continue; }
+        if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(trimmed)) { out.push('----'); i += 1; continue; }
+        const fence = trimmed.match(/^```(.*)$/);
+        if (fence) {
+          const lang = (fence[1] || '').trim();
+          const codeLines = [];
+          i += 1;
+          while (i < lines.length && !/^```\s*$/.test(lines[i].trim())) { codeLines.push(lines[i]); i += 1; }
+          if (i < lines.length) i += 1;
+          out.push(`{code${lang ? ':language=' + lang : ''}}`);
+          out.push(codeLines.join('\n'));
+          out.push('{code}');
+          continue;
+        }
+        if (/\|/.test(line) && i + 1 < lines.length && /^\s*\|?\s*:?[-]{3,}:?\s*(\|\s*:?[-]{3,}:?\s*)+\|?\s*$/.test(lines[i + 1])) {
+          const header = line.replace(/^\|?|\|?$/g, '').split('|').map(s => s.trim());
+          out.push(`||${header.map(mdInlineToJira).join('||')}||`);
+          i += 2;
+          while (i < lines.length && /\|/.test(lines[i])) {
+            const cells = lines[i].replace(/^\|?|\|?$/g, '').split('|').map(s => s.trim());
+            out.push(`|${cells.map(mdInlineToJira).join('|')}|`);
+            i += 1;
+          }
+          continue;
+        }
+        const heading = trimmed.match(/^(#{1,6})\s+(.*)$/);
+        if (heading) { out.push(`h${heading[1].length}. ${mdInlineToJira(heading[2].trim())}`); i += 1; continue; }
+        const quote = trimmed.match(/^>\s?(.*)$/);
+        if (quote) { out.push(`bq. ${mdInlineToJira(quote[1].trim())}`); i += 1; continue; }
+        const task = trimmed.match(/^[-*+]\s+\[( |x|X)\]\s+(.*)$/);
+        if (task) { out.push(`* ${task[1].trim() ? '(x)' : '( )'} ${mdInlineToJira(task[2].trim())}`); i += 1; continue; }
+        const ul = trimmed.match(/^[-*+]\s+(.*)$/);
+        if (ul) { out.push(`* ${mdInlineToJira(ul[1].trim())}`); i += 1; continue; }
+        const ol = trimmed.match(/^\d+\.\s+(.*)$/);
+        if (ol) { out.push(`# ${mdInlineToJira(ol[1].trim())}`); i += 1; continue; }
+        out.push(mdInlineToJira(line));
+        i += 1;
+      }
+      return out.join('\n').replace(/\n{4,}/g, '\n\n\n').trim();
+    }
+
+    function convertMarkdownToEmailHtml(md) {
+      const bodyHtml = convertMarkdownToHtml(md)
+        .replace(/<p>/g, '<p style="margin:0 0 14px;line-height:1.58;">')
+        .replace(/<ul>/g, '<ul style="margin:0 0 14px 22px;padding:0;line-height:1.58;">')
+        .replace(/<ol>/g, '<ol style="margin:0 0 14px 22px;padding:0;line-height:1.58;">')
+        .replace(/<li>/g, '<li style="margin:0 0 6px;">')
+        .replace(/<blockquote[^>]*>/g, '<blockquote style="margin:0 0 16px;padding:10px 14px;border-left:4px solid #6750a4;background:#f7f2fa;color:#49454f;border-radius:8px;">')
+        .replace(/<pre([^>]*)>/g, '<pre$1 style="margin:0 0 16px;padding:14px;border:1px solid #ded8e1;border-radius:10px;background:#f8f7fb;overflow:auto;white-space:pre-wrap;font-family:Consolas,Menlo,monospace;font-size:13px;line-height:1.5;">')
+        .replace(/<code>/g, '<code style="font-family:Consolas,Menlo,monospace;background:#f1eef5;border-radius:4px;padding:1px 4px;">')
+        .replace(/<table>/g, '<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 16px;">')
+        .replace(/<td>/g, '<td style="border:1px solid #ded8e1;padding:8px 10px;vertical-align:top;">')
+        .replace(/<a /g, '<a style="color:#6750a4;text-decoration:underline;" ');
+      return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Markdown email</title></head><body style="margin:0;background:#f7f2fa;font-family:Arial,Helvetica,sans-serif;color:#1d1b20;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f7f2fa;padding:24px 0;"><tr><td align="center"><table role="presentation" width="640" cellspacing="0" cellpadding="0" style="width:640px;max-width:calc(100% - 32px);background:#ffffff;border-radius:18px;border:1px solid #e7e2ea;overflow:hidden;"><tr><td style="padding:24px 28px;background:#6750a4;color:#ffffff;font-size:18px;font-weight:700;">Markdown Email</td></tr><tr><td style="padding:28px;font-size:15px;line-height:1.58;">${bodyHtml}</td></tr></table></td></tr></table></body></html>`;
+    }
+
+    function htmlNodeToMarkdown(node) {
+      if (node.nodeType === Node.TEXT_NODE) return node.textContent.replace(/\s+/g, ' ');
+      if (node.nodeType !== Node.ELEMENT_NODE) return '';
+      const tag = node.tagName.toLowerCase();
+      const child = () => Array.from(node.childNodes).map(htmlNodeToMarkdown).join('').trim();
+      if (tag === 'br') return '\n';
+      if (tag === 'strong' || tag === 'b') return `**${child()}**`;
+      if (tag === 'em' || tag === 'i') return `*${child()}*`;
+      if (tag === 's' || tag === 'strike' || tag === 'del') return `~~${child()}~~`;
+      if (tag === 'code') return '`' + child().replace(/`/g, '\\`') + '`';
+      if (tag === 'pre') return '\n```text\n' + node.textContent.replace(/^\n+|\n+$/g, '') + '\n```\n';
+      if (tag === 'a') return `[${child() || node.href}](${node.getAttribute('href') || node.href || ''})`;
+      if (/^h[1-6]$/.test(tag)) return '\n' + '#'.repeat(Number(tag[1])) + ' ' + child() + '\n\n';
+      if (tag === 'p' || tag === 'div') return child() + '\n\n';
+      if (tag === 'blockquote') return child().split('\n').map(l => l.trim() ? '> ' + l.trim() : '>').join('\n') + '\n\n';
+      if (tag === 'li') return '- ' + child() + '\n';
+      if (tag === 'ul' || tag === 'ol') return '\n' + Array.from(node.children).map((li, idx) => tag === 'ol' ? `${idx + 1}. ${Array.from(li.childNodes).map(htmlNodeToMarkdown).join('').trim()}\n` : htmlNodeToMarkdown(li)).join('') + '\n';
+      if (tag === 'table') {
+        const rows = Array.from(node.querySelectorAll('tr')).map(tr => Array.from(tr.children).map(td => td.textContent.trim()));
+        if (!rows.length) return '';
+        const header = rows[0];
+        const separator = header.map(() => '---');
+        const body = rows.slice(1);
+        return '\n' + [header, separator, ...body].map(row => `| ${row.join(' | ')} |`).join('\n') + '\n\n';
+      }
+      return child();
+    }
+
+    function convertHtmlToMarkdown(html, plainFallback = '') {
+      if (!html) return plainFallback || '';
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      return Array.from(doc.body.childNodes).map(htmlNodeToMarkdown).join('').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    }
+
+    function buildClipboardHtmlFragment(html) { return `<!doctype html><html><head><meta charset="utf-8"></head><body><!--StartFragment-->${html}<!--EndFragment--></body></html>`; }
+    function formatPreviewLanguage(language) {
+      const lang = String(language || 'text').toLowerCase();
+      const names = {
+        bash: 'Bash', css: 'CSS', html: 'HTML', java: 'Java', javascript: 'JavaScript', js: 'JavaScript',
+        json: 'JSON', kotlin: 'Kotlin', markdown: 'Markdown', md: 'Markdown', plaintext: 'Text', python: 'Python',
+        py: 'Python', shell: 'Shell', sql: 'SQL', text: 'Text', ts: 'TypeScript', typescript: 'TypeScript', xml: 'XML', yaml: 'YAML', yml: 'YAML'
+      };
+      return names[lang] || lang.replace(/(^|[-_\s])([a-z])/g, (_, sep, chr) => `${sep ? ' ' : ''}${chr.toUpperCase()}`);
+    }
+    function buildPreviewCodeCard(pre) {
+      const classNames = Array.from(pre.classList || []);
+      const langClass = classNames.find(name => name.startsWith('language-')) || '';
+      const language = langClass.replace('language-', '') || 'text';
+      const languageLabel = formatPreviewLanguage(language);
+      const codeEl = pre.querySelector('code');
+      const codeHtml = (codeEl ? codeEl.innerHTML : pre.innerHTML)
+        .replace(/^(?:\s|<br\s*\/?\s*>)+/i, '')
+        .replace(/(?:\s|<br\s*\/?\s*>)+$/i, '');
+      const lines = codeHtml ? codeHtml.split(/<br\s*\/?\s*>/i) : ['&nbsp;'];
+      const numberedLines = lines.map(line => `<li><span class="code-line-content">${line || '&nbsp;'}</span></li>`).join('');
+      return `<div class="teams-code-card"><div class="teams-code-title"><span class="code-icon">‹›</span><span>${htmlEscape(languageLabel)}</span><span class="code-chevron">⌄</span><span class="code-more">•••</span></div><div class="teams-code-body"><ol>${numberedLines}</ol></div></div>`;
+    }
+    function buildTeamsPreviewBody(html) {
+      const template = document.createElement('template');
+      template.innerHTML = html || '<p>&nbsp;</p>';
+      template.content.querySelectorAll('p[itemtype="http://schema.skype.com/CodeBlockEditor"]').forEach(marker => marker.remove());
+      template.content.querySelectorAll('pre').forEach(pre => {
+        const holder = document.createElement('div');
+        holder.innerHTML = buildPreviewCodeCard(pre);
+        pre.replaceWith(holder.firstElementChild);
+      });
+      return template.innerHTML;
+    }
+    function buildTeamsPreviewHtml(html) {
+      const body = buildTeamsPreviewBody(html);
+      return `<!doctype html><html><head><meta charset="utf-8"><style>
+        :root{color-scheme:dark;--teams-bg:#1f1f1f;--composer:#2b2b2b;--composer-2:#242424;--line:#666;--line-soft:#505050;--text:#f3f3f3;--muted:#c8c8c8;--dim:#9b9b9b;--accent:#8b80ff;--code-bg:#282828;--code-border:#686868;--green:#13c213;--pink:#ff8ca0;--blue:#8ab4ff;--orange:#ffb86c;}
+        *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--teams-bg);font-family:'Segoe UI',system-ui,-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text);font-size:16px;line-height:1.45;overflow:hidden}.teams-preview-wrap{height:100%;padding:18px 22px 18px;background:var(--teams-bg);display:flex;flex-direction:column;gap:6px}.teams-composer{position:relative;flex:1 1 auto;min-height:0;background:var(--composer);border:1px solid var(--line);border-bottom:3px solid var(--accent);border-radius:8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03);display:flex;flex-direction:column;overflow:hidden}.teams-composer::after{content:'';position:absolute;right:6px;top:8px;width:8px;height:50px;border-radius:999px;background:#8d8d8d}.teams-message{flex:1 1 auto;min-height:0;overflow:auto;padding:18px 21px 0 21px;scrollbar-color:#8d8d8d transparent;scrollbar-width:thin}.teams-message::-webkit-scrollbar{width:10px}.teams-message::-webkit-scrollbar-track{background:transparent}.teams-message::-webkit-scrollbar-thumb{background:#8d8d8d;border:2px solid var(--composer);border-radius:999px}.msg{max-width:100%;padding-right:19px}p{margin:0;min-height:1.45em;line-height:1.45;color:var(--text)}p:last-child{margin-bottom:0}strong{font-weight:700;color:#fff}i,em{font-style:italic;color:#f5f5f5}s{text-decoration-thickness:2px;text-decoration-color:#d7d7d7}a{color:#b9cdfd;text-decoration:underline}blockquote{margin:0 0 1.45em;padding:3px 0 3px 13px;border-left:2px solid #777;color:#dedede;background:transparent}ul,ol{margin:0 0 1.45em 24px;padding:0}li{margin:4px 0}p code,li code{font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:.92em;color:#f3f3f3;background:#363636;border:1px solid #505050;border-radius:4px;padding:1px 4px}.teams-code-card{margin:1.45em 0 0;border:1px solid var(--code-border);border-radius:9px;background:var(--code-bg);overflow:hidden;color:#e6e6e6;font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:14px;line-height:1.55}.teams-code-title{height:40px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:10px;padding:0 14px;color:#d7d7d7;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px}.code-icon{width:18px;height:18px;border:1.5px solid #d6d6d6;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;line-height:1}.code-chevron{font-size:14px;color:#d6d6d6;margin-left:2px}.code-more{margin-left:auto;letter-spacing:2px;color:#d7d7d7}.teams-code-body{overflow:auto;max-height:288px;padding:13px 0 14px}.teams-code-body ol{margin:0;padding:0;list-style:none;counter-reset:code-line}.teams-code-body li{counter-increment:code-line;display:grid;grid-template-columns:43px minmax(0,1fr);gap:14px;margin:0;padding:0 18px 0 0;white-space:pre}.teams-code-body li::before{content:counter(code-line);color:#9d9d9d;text-align:right;user-select:none}.code-line-content{min-width:0;overflow-wrap:normal}.hljs-function{color:var(--pink)}.hljs-string{color:var(--green)}.hljs-number{color:var(--green)}.hljs-literal{color:var(--blue)}.hljs-keyword{color:#c792ea}.hljs-comment{color:#8f9f8f}.hljs-attr{color:#e6e6e6;font-weight:600}.hljs-bullet{color:#d7d7d7}figure.table{margin:1.45em 0;border:1px solid var(--line-soft);border-radius:8px;overflow:auto;background:#252525}table{border-collapse:collapse;width:100%;font-size:14px}td{border:1px solid var(--line-soft);padding:6px 8px;vertical-align:top}td p{margin:0}.teams-compose-toolbar{min-height:54px;border-top:0 solid transparent;display:flex;align-items:center;justify-content:flex-end;gap:18px;padding:0 16px 11px;color:#e5e5e5;font-size:22px}.toolbar-icon{display:inline-flex;align-items:center;justify-content:center;min-width:18px;opacity:.95}.toolbar-icon.text{font-size:20px;font-weight:600}.toolbar-divider{width:1px;height:27px;background:#777}.send-icon{font-size:30px;line-height:1;transform:translateY(-1px)}.teams-hint{align-self:flex-end;color:#f2f2f2;font-size:16px;line-height:1}.teams-hint span{color:var(--accent)}@media (max-width:700px){body{font-size:14px}.teams-preview-wrap{padding:10px}.teams-message{padding:12px 12px 0}.teams-code-card{font-size:12px}.teams-code-title{font-size:12px;height:34px}.teams-compose-toolbar{font-size:18px;gap:12px}.teams-hint{font-size:12px}}
+      </style></head><body><div class="teams-preview-wrap"><div class="teams-composer"><div class="teams-message"><div class="msg">${body}</div></div><div class="teams-compose-toolbar" aria-hidden="true"><span class="toolbar-icon text">A✎</span><span class="toolbar-icon">☺</span><span class="toolbar-icon">◔</span><span class="toolbar-icon">＋</span><span class="toolbar-divider"></span><span class="toolbar-icon send-icon">▷</span></div></div><div class="teams-hint"><span>Shift+Enter</span> starts a new line.</div></div></body></html>`;
+    }
+
+    function updateLineNumbers() {
+      if (!lineNumbersEl) return;
+      const count = Math.max(1, (inputEl.value.match(/\n/g) || []).length + 1);
+      const next = Array.from({ length: count }, (_, index) => String(index + 1)).join('\n');
+      if (lineNumbersEl.textContent !== next) lineNumbersEl.textContent = next;
+      lineNumbersEl.scrollTop = inputEl.scrollTop;
+    }
+    function syncLineNumbersScroll() {
+      if (lineNumbersEl) lineNumbersEl.scrollTop = inputEl.scrollTop;
+    }
+    function getEditorCursorRatio() {
+      const value = inputEl.value || '';
+      const cursor = inputEl.selectionStart ?? value.length;
+      const currentLine = value.slice(0, cursor).split('\n').length;
+      const totalLines = Math.max(1, value.split('\n').length);
+      return totalLines <= 1 ? 0 : (currentLine - 1) / (totalLines - 1);
+    }
+    function syncPreviewScrollToEditor(scrollEl) {
+      if (!scrollEl) return;
+      const maxScroll = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight);
+      const ratio = getEditorCursorRatio();
+      const contextOffset = Math.min(90, scrollEl.clientHeight * 0.18);
+      scrollEl.scrollTop = Math.max(0, Math.min(maxScroll, Math.round(maxScroll * ratio - contextOffset)));
+    }
+    function updatePreviewDocument(html, shouldFollowCursor = false) {
+      const body = buildTeamsPreviewBody(html);
+      const doc = previewFrame.contentDocument;
+      const msg = doc && doc.querySelector('.msg');
+      const scrollEl = doc && doc.querySelector('.teams-message');
+      if (!msg || !scrollEl) {
+        previewFrame.srcdoc = buildTeamsPreviewHtml(html);
+        return;
+      }
+      const previousTop = scrollEl.scrollTop;
+      msg.innerHTML = body;
+      requestAnimationFrame(() => {
+        if (shouldFollowCursor) {
+          syncPreviewScrollToEditor(scrollEl);
+          if (document.activeElement !== inputEl) return;
+          try { inputEl.focus({ preventScroll: true }); } catch { inputEl.focus(); }
+        } else {
+          scrollEl.scrollTop = previousTop;
+        }
+      });
+    }
+
+    async function copyRichHtml(html) { const plain = htmlToPlainText(html); const fragment = buildClipboardHtmlFragment(html); if (navigator.clipboard && window.ClipboardItem) { const item = new ClipboardItem({ 'text/html': new Blob([fragment], { type: 'text/html' }), 'text/plain': new Blob([plain], { type: 'text/plain' }) }); await navigator.clipboard.write([item]); return true; } const ta = document.createElement('textarea'); ta.value = plain; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '-9999px'; document.body.appendChild(ta); ta.focus(); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; }
+    function extractEmailPlainText(emailHtml) { const doc = new DOMParser().parseFromString(emailHtml || '', 'text/html'); return (doc.body ? doc.body.innerText : htmlToPlainText(emailHtml || '')).replace(/\n{3,}/g, '\n\n').trim(); }
+        async function copyEmailHtml(emailHtml) {
+      const plain = extractEmailPlainText(emailHtml);
+      if (navigator.clipboard && window.ClipboardItem) {
+        const item = new ClipboardItem({
+          'text/html': new Blob([emailHtml], { type: 'text/html' }),
+          'text/plain': new Blob([plain], { type: 'text/plain' })
+        });
+        await navigator.clipboard.write([item]);
+        return true;
+      }
+      const doc = new DOMParser().parseFromString(emailHtml || '', 'text/html');
+      const rich = document.createElement('div');
+      rich.contentEditable = 'true';
+      rich.style.position = 'fixed';
+      rich.style.left = '-9999px';
+      rich.style.top = '-9999px';
+      rich.innerHTML = doc.body ? doc.body.innerHTML : emailHtml;
+      document.body.appendChild(rich);
+      const range = document.createRange();
+      range.selectNodeContents(rich);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      const ok = document.execCommand('copy');
+      selection.removeAllRanges();
+      rich.remove();
+      return ok;
+    }
+    async function copyPlainText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+      const ta = document.createElement('textarea');
+      ta.value = text || '';
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    }
+    function setStatus(text) { statusChip.textContent = text; }
+    function updateStats(src, result) {
+      sourceCharsEl.textContent = String(src.length);
+      outputCharsEl.textContent = String(result.length);
+      codeBlocksEl.textContent = String(Math.floor((src.match(/```/g) || []).length / 2));
+      lineCountEl.textContent = String(src ? src.split('\n').length : 0);
+    }
+    function renderEmailPreview(emailHtml) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(emailHtml, 'text/html');
+      const bodyCell = doc.querySelector('td[style*="padding:28px"]');
+      return `<div class="email-preview-doc"><div class="email-preview-head">Markdown Email</div><div class="email-preview-body">${bodyCell ? bodyCell.innerHTML : emailHtml}</div></div>`;
+    }
+
+    function renderFormatPreview(text) {
+      formatPreviewTextEl.textContent = text || '';
+    }
+
+    function setActiveUtility(next) {
+      activeUtility = next;
+      const cfg = utilityConfig[activeUtility];
+      utilityButtons.forEach(button => {
+        const selected = button.dataset.utility === activeUtility;
+        button.classList.toggle('active', selected);
+        button.setAttribute('aria-pressed', String(selected));
+      });
+      editorTitleEl.textContent = cfg.editorTitle;
+      editorSubtitleEl.textContent = cfg.editorSubtitle;
+      previewTitleEl.textContent = cfg.previewTitle;
+      previewSubtitleEl.textContent = cfg.previewSubtitle;
+      const label = copyBtn ? copyBtn.querySelector('.button-label') : null;
+      if (label) label.textContent = cfg.copyLabel;
+      if (copyBtnCaption) copyBtnCaption.textContent = cfg.copyCaption;
+      if (inspectorTitleEl) inspectorTitleEl.textContent = cfg.outputLabel;
+      outputEl.placeholder = cfg.outputPlaceholder || '';
+      inputEl.placeholder = cfg.inputPlaceholder || '';
+      const clipboardMode = activeUtility === 'clipboard';
+      loadFileBtn.hidden = clipboardMode;
+      pasteRichBtn.hidden = !clipboardMode;
+      if (clipboardActionRow) clipboardActionRow.classList.remove('active');
+      convert(false);
+    }
+
+    function convert(shouldFollowCursor = document.activeElement === inputEl) {
+      const src = inputEl.value || '';
+      let result = '';
+      updateLineNumbers();
+      if (activeUtility === 'teams') {
+        result = convertMarkdownToHtml(src).replace(/\n+/g, '');
+        outputEl.value = result;
+        previewStageEl.hidden = false;
+        formatPreviewEl.hidden = true;
+        updatePreviewDocument(result, shouldFollowCursor);
+      } else if (activeUtility === 'jira') {
+        result = convertMarkdownToJira(src);
+        outputEl.value = result;
+        previewStageEl.hidden = true;
+        formatPreviewEl.hidden = false;
+        renderFormatPreview(result);
+      } else if (activeUtility === 'email') {
+        result = convertMarkdownToEmailHtml(src);
+        outputEl.value = result;
+        previewStageEl.hidden = true;
+        formatPreviewEl.hidden = false;
+        formatPreviewTextEl.innerHTML = renderEmailPreview(result);
+      } else if (activeUtility === 'clipboard') {
+        result = src;
+        outputEl.value = result;
+        previewStageEl.hidden = true;
+        formatPreviewEl.hidden = false;
+        renderFormatPreview(result);
+      }
+      updateStats(src, result);
+      setStatus('Ready');
+    }
+    function pushUndoSnapshot() { undoStack.push({ value: inputEl.value, start: inputEl.selectionStart ?? 0, end: inputEl.selectionEnd ?? 0 }); if (undoStack.length > 100) undoStack.shift(); }
+    function restoreUndoSnapshot(snapshot) { if (!snapshot) return; inputEl.value = snapshot.value; inputEl.focus(); inputEl.setSelectionRange(snapshot.start, snapshot.end); convert(); }
+    function insertAtCursor(text, selectStartOffset = 0, selectEndOffset = 0) { pushUndoSnapshot(); const start = inputEl.selectionStart ?? inputEl.value.length; const end = inputEl.selectionEnd ?? inputEl.value.length; const before = inputEl.value.slice(0, start); const after = inputEl.value.slice(end); inputEl.value = before + text + after; const cursor = start + text.length; inputEl.focus(); inputEl.setSelectionRange(cursor + selectStartOffset, cursor + selectEndOffset); convert(); }
+    function wrapSelection(prefix, suffix = prefix) { pushUndoSnapshot(); const start = inputEl.selectionStart ?? 0; const end = inputEl.selectionEnd ?? 0; const selected = inputEl.value.slice(start, end) || 'text'; const text = `${prefix}${selected}${suffix}`; const before = inputEl.value.slice(0, start); const after = inputEl.value.slice(end); inputEl.value = before + text + after; inputEl.focus(); inputEl.setSelectionRange(start + prefix.length, start + prefix.length + selected.length); convert(); }
+    function prefixLines(marker) { pushUndoSnapshot(); const start = inputEl.selectionStart ?? 0; const end = inputEl.selectionEnd ?? 0; const value = inputEl.value; const left = value.slice(0, start); const selected = value.slice(start, end) || 'item'; const right = value.slice(end); const lines = selected.split('\n').map(line => line ? `${marker} ${line}` : marker).join('\n'); inputEl.value = left + lines + right; inputEl.focus(); inputEl.setSelectionRange(start + marker.length + 1, start + lines.length); convert(); }
+    btnHeading.addEventListener('click', () => wrapSelection('# ', ''));
+    btnBold.addEventListener('click', () => wrapSelection('**', '**'));
+    btnItalic.addEventListener('click', () => wrapSelection('*', '*'));
+    btnQuote.addEventListener('click', () => prefixLines('>'));
+    btnCodeInline.addEventListener('click', () => wrapSelection('`', '`'));
+    btnLink.addEventListener('click', () => insertAtCursor('[text](https://example.com)'));
+    btnOl.addEventListener('click', () => prefixLines('1.'));
+    btnUl.addEventListener('click', () => prefixLines('-'));
+    btnCheck.addEventListener('click', () => prefixLines('- [ ]'));
+    btnHr.addEventListener('click', () => insertAtCursor('\n---\n'));
+    undoBtn.addEventListener('click', () => restoreUndoSnapshot(undoStack.pop()));
+    inputEl.addEventListener('input', convert);
+    inputEl.addEventListener('scroll', syncLineNumbersScroll);
+    previewFrame.addEventListener('load', () => {
+      if (document.activeElement !== inputEl) return;
+      const scrollEl = previewFrame.contentDocument && previewFrame.contentDocument.querySelector('.teams-message');
+      syncPreviewScrollToEditor(scrollEl);
+    });
+    loadFileBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', async () => { const file = fileInput.files && fileInput.files[0]; if (!file) return; const text = await file.text(); inputEl.value = text; convert(); setStatus(`File loaded · ${file.name}`); });
+    copyBtn.addEventListener('click', async () => {
+      const originalCaption = copyBtnCaption ? copyBtnCaption.textContent : '';
+      try {
+        if (activeUtility === 'teams') {
+          const ok = await copyRichHtml(outputEl.value);
+          if (!ok) throw new Error('rich copy failed');
+        } else if (activeUtility === 'email') {
+          const ok = await copyEmailHtml(outputEl.value);
+          if (!ok) throw new Error('email rich copy failed');
+        } else {
+          const ok = await copyPlainText(outputEl.value);
+          if (!ok) throw new Error('plain text copy failed');
+        }
+        setStatus('Copied');
+        if (copyBtnCaption) copyBtnCaption.textContent = 'Copied';
+        setTimeout(() => { if (copyBtnCaption) copyBtnCaption.textContent = originalCaption || utilityConfig[activeUtility].copyCaption; }, 1400);
+        return;
+      } catch {
+        try {
+          if (activeUtility === 'email') {
+            await copyEmailHtml(outputEl.value);
+          } else {
+            outputEl.focus();
+            outputEl.select();
+            document.execCommand('copy');
+          }
+          setStatus('Copied');
+          if (copyBtnCaption) copyBtnCaption.textContent = 'Copied';
+        } catch {
+          setStatus('Copy failed');
+          if (copyBtnCaption) copyBtnCaption.textContent = 'Copy failed';
+        }
+        setTimeout(() => { if (copyBtnCaption) copyBtnCaption.textContent = originalCaption || utilityConfig[activeUtility].copyCaption; }, 1400);
+      }
+    });
+    utilityButtons.forEach(button => button.addEventListener('click', () => setActiveUtility(button.dataset.utility)));
+    pasteRichBtn.addEventListener('click', async () => {
+      try {
+        let html = '';
+        let plain = '';
+        if (navigator.clipboard && navigator.clipboard.read) {
+          const items = await navigator.clipboard.read();
+          for (const item of items) {
+            if (item.types.includes('text/html')) html = await (await item.getType('text/html')).text();
+            if (item.types.includes('text/plain')) plain = await (await item.getType('text/plain')).text();
+          }
+        } else if (navigator.clipboard && navigator.clipboard.readText) {
+          plain = await navigator.clipboard.readText();
+        }
+        inputEl.value = convertHtmlToMarkdown(html, plain);
+        inputEl.focus();
+        inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
+        convert(false);
+        setStatus('Clipboard imported');
+      } catch (error) {
+        setStatus('Clipboard permission needed');
+        alert('Clipboard access was blocked. Try using HTTPS or localhost, then click Paste rich text again.');
+      }
+    });
+    inputEl.value = sample;
+    setActiveUtility(activeUtility);
+  </script>
+</body>
+</html>
