@@ -1,0 +1,18 @@
+{
+  "name": "Markdown Copy Lab",
+  "short_name": "Copy Lab",
+  "description": "Browser-only Markdown conversion dashboard for Teams, Jira, email HTML and rich clipboard cleanup.",
+  "start_url": "./converter.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0F1115",
+  "theme_color": "#0F1115",
+  "icons": [
+    {
+      "src": "./markdown-copy-lab-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
