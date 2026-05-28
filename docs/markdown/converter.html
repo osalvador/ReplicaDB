@@ -125,7 +125,9 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
     }
     .side-button .app-ico img,
+    .side-button .app-ico svg,
     .helper-button img.app-mini-icon,
+    .helper-button svg.app-mini-icon,
     .app-mini-icon {
       width: 19px;
       height: 19px;
@@ -392,7 +394,7 @@
     }
     .line-numbers {
       padding: 14px 10px;
-      color: #535b68;
+      color: #a7b0c0;
       text-align: right;
       font: 13px/1.62 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
       border-right: 1px solid var(--line);
@@ -633,22 +635,22 @@
   <div class="app">
     <aside class="sidebar" aria-label="Main navigation">
       <div class="brand-mark" title="Markdown Copy Lab"><img src="./markdown-copy-lab-icon.svg" alt="Markdown Copy Lab" /></div>
-      <div class="side-group" aria-label="Utilities">
-        <button class="side-button utility-nav active" data-utility="teams"><span class="ico app-ico teams-ico"><img src="https://cdn.simpleicons.org/microsoftteams/6264A7" alt="" loading="lazy" /></span><span class="tip">Markdown to Teams</span></button>
-        <button class="side-button utility-nav" data-utility="jira"><span class="ico app-ico jira-ico"><img src="https://cdn.simpleicons.org/jira/2684FF" alt="" loading="lazy" /></span><span class="tip">Markdown to Jira</span></button>
-        <button class="side-button utility-nav" data-utility="email"><span class="ico app-ico email-ico"><img src="https://cdn.simpleicons.org/gmail/EA4335" alt="" loading="lazy" /></span><span class="tip">Markdown to Email</span></button>
-        <button class="side-button utility-nav" data-utility="clipboard"><span class="ico app-ico rich-ico source-ico-stack"><img src="https://cdn.simpleicons.org/microsoftteams/6264A7" alt="" loading="lazy" /></span><span class="tip">Teams to Markdown</span></button>
-      </div>
+      <nav class="side-group" aria-label="Utilities">
+        <button class="side-button utility-nav active" data-utility="teams" aria-label="Markdown to Teams" title="Markdown to Teams"><span class="ico app-ico teams-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4" width="11" height="13" rx="3" fill="#6264A7"/><rect x="3" y="7" width="10" height="11" rx="2" fill="#464775"/><circle cx="18" cy="8" r="2" fill="#8B8CC7"/><circle cx="17" cy="15" r="3" fill="#6264A7"/><path d="M6 10h6v2H10v5H8v-5H6z" fill="#fff"/></svg></span><span class="tip">Markdown to Teams</span></button>
+        <button class="side-button utility-nav" data-utility="jira" aria-label="Markdown to Jira" title="Markdown to Jira"><span class="ico app-ico jira-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 12 12 21 3 12z" fill="#2684FF"/><path d="M12 7.2 16.8 12 12 16.8 7.2 12z" fill="#DEEBFF"/><path d="M12 3v4.2L7.2 12H3z" fill="#0052CC" opacity=".72"/></svg></span><span class="tip">Markdown to Jira</span></button>
+        <button class="side-button utility-nav" data-utility="email" aria-label="Markdown to Email" title="Markdown to Email"><span class="ico app-ico email-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2.5" fill="#EA4335"/><path d="M5 8 12 13 19 8v8H5z" fill="#fff"/><path d="M5 8 12 13 19 8" fill="none" stroke="#EA4335" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="tip">Markdown to Email</span></button>
+        <button class="side-button utility-nav" data-utility="clipboard" aria-label="Teams to Markdown" title="Teams to Markdown"><span class="ico app-ico rich-ico source-ico-stack"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="12" height="12" rx="3" fill="#6264A7"/><rect x="3" y="7" width="10" height="10" rx="2" fill="#464775"/><path d="M6 10h5v2H9v4H7v-4H6z" fill="#fff"/><path d="M16 11v7m0 0-3-3m3 3 3-3" stroke="#E8B86D" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="tip">Teams to Markdown</span></button>
+      </nav>
       <div class="side-divider"></div>
-      <div class="side-group" aria-label="Workspace tools">
-        <button class="side-button drawer-nav" data-drawer="templates"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5"/><path d="M4 7v14h3"/><path d="M10 13h6M10 17h6"/></svg></span><span class="tip">Templates</span></button>
-        <button class="side-button drawer-nav" data-drawer="snippets"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8.2 8.8 20 20M8.2 15.2 20 4"/></svg></span><span class="tip">Saved snippets</span></button>
-        <button class="side-button drawer-nav" data-drawer="history"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.35-5.65"/><path d="M4 5v5h5"/><path d="M12 8v5l3 2"/></svg></span><span class="tip">Local history</span></button>
-        <button class="side-button drawer-nav" data-drawer="profiles"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></span><span class="tip">Conversion profiles</span></button>
+      <div class="side-group" role="group" aria-label="Workspace tools">
+        <button class="side-button drawer-nav" data-drawer="templates" aria-label="Templates" title="Templates"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5"/><path d="M4 7v14h3"/><path d="M10 13h6M10 17h6"/></svg></span><span class="tip">Templates</span></button>
+        <button class="side-button drawer-nav" data-drawer="snippets" aria-label="Saved snippets" title="Saved snippets"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8.2 8.8 20 20M8.2 15.2 20 4"/></svg></span><span class="tip">Saved snippets</span></button>
+        <button class="side-button drawer-nav" data-drawer="history" aria-label="Local history" title="Local history"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.35-5.65"/><path d="M4 5v5h5"/><path d="M12 8v5l3 2"/></svg></span><span class="tip">Local history</span></button>
+        <button class="side-button drawer-nav" data-drawer="profiles" aria-label="Conversion profiles" title="Conversion profiles"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></span><span class="tip">Conversion profiles</span></button>
       </div>
-      <div class="side-bottom side-group">
-        <button class="side-button" id="privacyButton"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 19 6v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="m9.5 12 1.8 1.8L15 10"/></svg></span><span class="tip">Privacy mode</span></button>
-        <button class="side-button" id="pwaButton"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg></span><span class="tip">PWA offline</span></button>
+      <div class="side-bottom side-group" role="group" aria-label="Workspace status">
+        <button class="side-button" id="privacyButton" aria-label="Privacy mode" title="Privacy mode"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 19 6v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="m9.5 12 1.8 1.8L15 10"/></svg></span><span class="tip">Privacy mode</span></button>
+        <button class="side-button" id="pwaButton" aria-label="PWA offline" title="PWA offline"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg></span><span class="tip">PWA offline</span></button>
       </div>
     </aside>
 
@@ -1332,14 +1334,14 @@
         .teams-format-toolbar .group{display:inline-flex;align-items:center;gap:22px}.teams-format-toolbar .sep{width:1px;height:30px;background:#777;opacity:.55}
         .fmt{display:inline-flex;align-items:center;justify-content:center;min-width:18px;min-height:24px;color:#e9e9e9;font-size:22px;line-height:1;font-weight:500;opacity:.96}
         .fmt.bold{font-weight:800}.fmt.italic{font-style:italic}.fmt.under{text-decoration:underline}.fmt.strike{text-decoration:line-through}.fmt.active{color:#8c83ff}.fmt.code{font-size:20px}.fmt.more{letter-spacing:4px;transform:translateY(-2px)}.fmt.trash{margin-left:auto;font-size:26px;color:#f0f0f0}
-        .teams-message{flex:1 1 auto;min-height:0;overflow:auto;padding:28px 30px 28px;scrollbar-color:#8d8d8d transparent;scrollbar-width:thin}.teams-message::-webkit-scrollbar{width:10px}.teams-message::-webkit-scrollbar-track{background:transparent}.teams-message::-webkit-scrollbar-thumb{background:#8d8d8d;border:2px solid var(--composer);border-radius:999px}
-        .msg{max-width:100%;padding-right:12px}p{margin:0;min-height:1.45em;line-height:1.45;color:var(--text)}p:last-child{margin-bottom:0}strong{font-weight:700;color:#fff}i,em{font-style:italic;color:#f5f5f5}s{text-decoration-thickness:2px;text-decoration-color:#d7d7d7}a{color:#b9cdfd;text-decoration:underline}
-        blockquote{margin:0 0 64px;padding:2px 0 2px 20px;border-left:3px solid #8a8a8a;border-radius:0;color:#f2f2f2;background:transparent;font-size:17px;line-height:1.45}blockquote p{margin:0!important;min-height:0;color:#f2f2f2}
-        ul,ol{margin:0 0 1.45em 24px;padding:0}li{margin:4px 0}p code,li code{font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:.92em;color:#f3f3f3;background:#363636;border:1px solid #505050;border-radius:4px;padding:1px 4px}
-        .teams-code-card{margin:1.45em 0 0;border:1px solid var(--code-border);border-radius:9px;background:var(--code-bg);overflow:hidden;color:#e6e6e6;font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:15px;line-height:1.55}
-        .teams-code-title{height:48px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:12px;padding:0 16px;color:#d7d7d7;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:17px}.code-icon{width:20px;height:20px;border:1.5px solid #d6d6d6;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1}.code-chevron{font-size:14px;color:#d6d6d6;margin-left:3px}.code-more{margin-left:auto;letter-spacing:3px;color:#d7d7d7}
-        .teams-code-body{overflow:auto;max-height:320px;padding:16px 0 18px}.teams-code-body ol{margin:0;padding:0;list-style:none;counter-reset:code-line}.teams-code-body li{counter-increment:code-line;display:grid;grid-template-columns:48px minmax(0,1fr);gap:16px;margin:0;padding:0 20px 0 0;white-space:pre}.teams-code-body li::before{content:counter(code-line);color:#9d9d9d;text-align:right;user-select:none}.code-line-content{min-width:0;overflow-wrap:normal}
-        .teams-code-card .hljs-function,.teams-code-card .hljs-attr{color:#ff8797!important;font-weight:600}.teams-code-card .hljs-string{color:#16c60c!important}.teams-code-card .hljs-number{color:#16c60c!important}.teams-code-card .hljs-literal{color:#86b6ff!important}.teams-code-card .hljs-keyword{color:#c792ea!important}.teams-code-card .hljs-comment{color:#8f9f8f!important;font-style:italic}.teams-code-card .hljs-bullet{color:#d7d7d7!important}.teams-code-card code span{font-family:inherit}
+        .teams-message{flex:1 1 auto;min-height:0;overflow:auto;padding:24px 26px 24px;scrollbar-color:#8d8d8d transparent;scrollbar-width:thin}.teams-message::-webkit-scrollbar{width:10px}.teams-message::-webkit-scrollbar-track{background:transparent}.teams-message::-webkit-scrollbar-thumb{background:#8d8d8d;border:2px solid var(--composer);border-radius:999px}
+        .msg{max-width:100%;padding-right:12px}p{margin:0;min-height:1.35em;line-height:1.35;color:var(--text)}p:last-child{margin-bottom:0}p:has(+ .teams-code-card),p:has(+ blockquote){min-height:.65em}strong{font-weight:700;color:#fff}i,em{font-style:italic;color:#f5f5f5}s{text-decoration-thickness:2px;text-decoration-color:#d7d7d7}a{color:#9fb0ff;text-decoration:underline;text-underline-offset:2px}
+        blockquote{position:relative;margin:14px 0 18px;padding:0 0 0 28px;min-height:56px;display:flex;align-items:center;border:1px solid #686868;border-radius:7px;background:#252525;color:#f2f2f2;font-size:17px;line-height:1.42;box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}blockquote::before{content:'';position:absolute;left:7px;top:8px;bottom:8px;width:4px;border-radius:999px;background:#8a8a8a}blockquote p{margin:0!important;padding:12px 14px 12px 0;min-height:0;color:#f2f2f2}
+        ul,ol{margin:0 0 16px 24px;padding:0}li{margin:4px 0}p code,li code{font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:.92em;color:#f3f3f3;background:#363636;border:1px solid #505050;border-radius:4px;padding:1px 4px}
+        .teams-code-card{margin:14px 0 18px;border:1px solid var(--code-border);border-radius:9px;background:var(--code-bg);overflow:hidden;color:#e6e6e6;font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:15px;line-height:1.5}
+        .teams-code-title{height:43px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:12px;padding:0 16px;color:#d7d7d7;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:16px}.code-icon{width:20px;height:20px;border:1.5px solid #d6d6d6;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1}.code-chevron{font-size:14px;color:#d6d6d6;margin-left:3px}.code-more{margin-left:auto;letter-spacing:3px;color:#d7d7d7}
+        .teams-code-body{overflow:auto;max-height:320px;padding:13px 0 14px}.teams-code-body ol{margin:0;padding:0;list-style:none;counter-reset:code-line}.teams-code-body li{counter-increment:code-line;display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;margin:0;padding:0 18px 0 0;white-space:pre}.teams-code-body li::before{content:counter(code-line);color:#b2b2b2;text-align:right;user-select:none}.code-line-content{min-width:0;overflow-wrap:normal}
+        .teams-code-card .hljs-function,.teams-code-card .hljs-title{color:#dcdcaa!important}.teams-code-card .hljs-attr{color:#ff8797!important;font-weight:600}.teams-code-card .hljs-string{color:#16c60c!important}.teams-code-card .hljs-number{color:#16c60c!important}.teams-code-card .hljs-literal{color:#86b6ff!important}.teams-code-card .hljs-keyword{color:#c792ea!important}.teams-code-card .hljs-comment{color:#8f9f8f!important;font-style:italic}.teams-code-card .hljs-bullet{color:#d7d7d7!important}.teams-code-card code span,.teams-code-card .code-line-content span{font-family:inherit}
         figure.table{margin:1.45em 0;border:1px solid var(--line-soft);border-radius:8px;overflow:auto;background:#252525}table{border-collapse:collapse;width:100%;font-size:14px}td{border:1px solid var(--line-soft);padding:6px 8px;vertical-align:top}td p{margin:0}.teams-hint{align-self:flex-end;color:#f2f2f2;font-size:16px;line-height:1}.teams-hint span{color:var(--accent)}
         @media (max-width:700px){body{font-size:14px}.teams-preview-wrap{padding:10px}.teams-format-toolbar{gap:14px;min-height:50px;padding:0 14px}.teams-format-toolbar .group{gap:13px}.fmt{font-size:18px}.teams-message{padding:18px 16px}.teams-code-card{font-size:12px}.teams-code-title{font-size:13px;height:38px}.teams-hint{font-size:12px}}
       </style></head><body><div class="teams-preview-wrap"><div class="teams-composer"><div class="teams-format-toolbar" aria-hidden="true"><span class="group"><span class="fmt bold">B</span><span class="fmt italic">I</span><span class="fmt under">U</span><span class="fmt strike">S</span></span><span class="sep"></span><span class="group"><span class="fmt">≡</span><span class="fmt active">1 2</span></span><span class="sep"></span><span class="group"><span class="fmt">▱</span><span class="fmt">A̲</span><span class="fmt">Aᴀ</span></span><span class="sep"></span><span class="group"><span class="fmt">”</span><span class="fmt">🔗</span><span class="fmt code">⌘</span><span class="fmt more">…</span></span><span class="fmt trash">🗑</span></div><div class="teams-message"><div class="msg">${body}</div></div></div><div class="teams-hint"><span>Enter</span> starts a new line.</div></div></body></html>`;
@@ -1636,19 +1638,19 @@
       codeBlocksEl.textContent = String((src.match(/```/g) || []).length / 2 | 0);
       lineCountEl.textContent = String(Math.max(1, src.split('\n').length));
     }
-    const appIconUrls = {
-      teams: 'https://cdn.simpleicons.org/microsoftteams/6264A7',
-      jira: 'https://cdn.simpleicons.org/jira/2684FF',
-      gmail: 'https://cdn.simpleicons.org/gmail/EA4335',
-      confluence: 'https://cdn.simpleicons.org/confluence/172B4D',
-      word: 'https://cdn.simpleicons.org/microsoftword/2B579A',
-      markdown: 'https://cdn.simpleicons.org/markdown/FFFFFF'
+    const appIconSvgs = {
+      teams: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4" width="11" height="13" rx="3" fill="#6264A7"/><rect x="3" y="7" width="10" height="11" rx="2" fill="#464775"/><circle cx="18" cy="8" r="2" fill="#8B8CC7"/><path d="M6 10h6v2h-2v5H8v-5H6z" fill="#fff"/></svg>',
+      jira: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 12 12 21 3 12z" fill="#2684FF"/><path d="M12 7.2 16.8 12 12 16.8 7.2 12z" fill="#DEEBFF"/></svg>',
+      gmail: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2.5" fill="#EA4335"/><path d="M5 8 12 13 19 8v8H5z" fill="#fff"/><path d="M5 8 12 13 19 8" fill="none" stroke="#EA4335" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+      confluence: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14c2.2-3.5 5.3-5.2 9.4-5.2 2.1 0 3.2.6 3.5 1.9.2.8-.1 1.7-.8 2.7-2.2 3.4-5.5 5-9.8 4.8-2-.1-3.1-.8-3.4-2.1-.1-.6.2-1.3 1.1-2.1z" fill="#172B4D"/><path d="M5 10.2C7.2 6.8 10.4 5 14.5 5c2.2 0 3.4.7 3.6 2.1.1.7-.2 1.5-.9 2.5-1.5-.9-3.4-1.2-5.4-.8-2 .4-3.7 1.3-5 2.9z" fill="#2684FF"/></svg>',
+      word: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4" width="13" height="16" rx="2" fill="#2B579A"/><rect x="3" y="7" width="10" height="10" rx="2" fill="#185ABD"/><path d="M5 10h1.5l.8 3 .9-3h1.3l.9 3 .8-3H12l-1.2 5H9.4l-.8-2.8L7.8 15H6.4z" fill="#fff"/></svg>',
+      markdown: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2" fill="#1f2937" stroke="#fff" stroke-opacity=".72"/><path d="M6 15V9h2l2 2 2-2h2v6h-2v-3.4l-2 2-2-2V15zM17 9h2v4h2l-3 3-3-3h2z" fill="#fff"/></svg>'
     };
 
     function iconImg(key, extraClass = '') {
-      const src = appIconUrls[key];
-      if (!src) return `<span class="quick-icon ${extraClass}">${key || '•'}</span>`;
-      return `<span class="quick-icon ${extraClass}"><img src="${src}" alt="" loading="lazy" /></span>`;
+      const svg = appIconSvgs[key];
+      if (!svg) return `<span class="quick-icon ${extraClass}">${key || '•'}</span>`;
+      return `<span class="quick-icon ${extraClass}">${svg}</span>`;
     }
 
     const quickContexts = {
