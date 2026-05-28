@@ -6,6 +6,9 @@
   <meta name="theme-color" content="#0F1115" />
   <meta name="description" content="A private, browser-only Markdown conversion dashboard for Teams, Jira, email HTML and rich clipboard cleanup." />
   <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./markdown-copy-lab-icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="./favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
   <title>Markdown Copy Lab · Graphite Studio</title>
   <style>
     :root {
@@ -82,6 +85,13 @@
       color: var(--accent-2);
       font-weight: 900;
       letter-spacing: -.04em;
+    }
+    .brand-mark img {
+      width: 42px;
+      height: 42px;
+      display: block;
+      border-radius: 14px;
+      filter: drop-shadow(0 8px 14px rgba(0,0,0,.34));
     }
     .side-group { display: grid; gap: 8px; }
     .side-divider { height: 1px; background: var(--line); margin: 4px 8px; }
@@ -518,7 +528,7 @@
 <body>
   <div class="app">
     <aside class="sidebar" aria-label="Main navigation">
-      <div class="brand-mark" title="Markdown Copy Lab">M</div>
+      <div class="brand-mark" title="Markdown Copy Lab"><img src="./markdown-copy-lab-icon.svg" alt="Markdown Copy Lab" /></div>
       <div class="side-group" aria-label="Utilities">
         <button class="side-button utility-nav active" data-utility="teams"><span class="ico">💬</span><span class="tip">Markdown to Teams</span></button>
         <button class="side-button utility-nav" data-utility="jira"><span class="ico">◆</span><span class="tip">Markdown to Jira</span></button>
@@ -584,7 +594,6 @@
               <input id="fileInput" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden />
               <button class="button" id="loadFileBtn">↑ Upload</button>
               <button class="button" id="pasteRichBtn" hidden>Paste Rich Text</button>
-              <button class="button" id="saveSnapshotBtn">＋ Save</button>
             </div>
           </div>
           <div class="panel-body">
@@ -675,7 +684,7 @@
             <div class="inspector-card">
               <h3>PWA offline</h3>
               <div class="pill-row"><span class="pill" id="pwaStatus">Checking…</span></div>
-              <p>Deploy <code>manifest.webmanifest</code>, <code>sw.js</code> and the icon next to this HTML to enable install/offline support.</p>
+              <p>Deploy <code>manifest.webmanifest</code>, <code>sw.js</code> and the generated icon files next to this HTML to enable install/offline support.</p>
             </div>
             <div class="inspector-card">
               <h3>Recent local history</h3>
@@ -712,7 +721,6 @@
     const fileInput = document.getElementById('fileInput');
     const loadFileBtn = document.getElementById('loadFileBtn');
     const pasteRichBtn = document.getElementById('pasteRichBtn');
-    const saveSnapshotBtn = document.getElementById('saveSnapshotBtn');
     const btnHeading = document.getElementById('btnHeading');
     const btnBold = document.getElementById('btnBold');
     const btnItalic = document.getElementById('btnItalic');
@@ -1198,19 +1206,38 @@
     function syncLineNumbersScroll() {
       if (lineNumbersEl) lineNumbersEl.scrollTop = inputEl.scrollTop;
     }
-    function getEditorCursorRatio() {
+    function getEditorCursorLine() {
       const value = inputEl.value || '';
       const cursor = inputEl.selectionStart ?? value.length;
-      const currentLine = value.slice(0, cursor).split('\n').length;
-      const totalLines = Math.max(1, value.split('\n').length);
-      return totalLines <= 1 ? 0 : (currentLine - 1) / (totalLines - 1);
+      return value.slice(0, cursor).split('\n').length;
     }
-    function syncPreviewScrollToEditor(scrollEl) {
+    function getEditorCursorRatio() {
+      const totalLines = Math.max(1, (inputEl.value || '').split('\n').length);
+      if (totalLines <= 1) return 0;
+      return Math.max(0, Math.min(1, (getEditorCursorLine() - 1) / (totalLines - 1)));
+    }
+    function syncScrollElementToEditor(scrollEl) {
       if (!scrollEl) return;
       const maxScroll = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight);
+      if (!maxScroll) { scrollEl.scrollTop = 0; return; }
       const ratio = getEditorCursorRatio();
-      const contextOffset = Math.min(90, scrollEl.clientHeight * 0.18);
-      scrollEl.scrollTop = Math.max(0, Math.min(maxScroll, Math.round(maxScroll * ratio - contextOffset)));
+      const contextOffset = Math.min(160, scrollEl.clientHeight * 0.28);
+      const target = Math.round(maxScroll * ratio - contextOffset);
+      scrollEl.scrollTop = Math.max(0, Math.min(maxScroll, target));
+    }
+    function syncTeamsPreviewScrollToEditor() {
+      const doc = previewFrame.contentDocument;
+      const scrollEl = doc && doc.querySelector('.teams-message');
+      syncScrollElementToEditor(scrollEl);
+    }
+    function syncFormatPreviewScrollToEditor() {
+      if (formatPreviewEl && !formatPreviewEl.hidden) syncScrollElementToEditor(formatPreviewEl);
+    }
+    function syncActivePreviewScrollToEditor() {
+      requestAnimationFrame(() => {
+        if (activeUtility === 'teams') syncTeamsPreviewScrollToEditor();
+        else syncFormatPreviewScrollToEditor();
+      });
     }
     function updatePreviewDocument(html, shouldFollowCursor = false) {
       const body = buildTeamsPreviewBody(html);
@@ -1218,6 +1245,9 @@
       const msg = doc && doc.querySelector('.msg');
       const scrollEl = doc && doc.querySelector('.teams-message');
       if (!msg || !scrollEl) {
+        previewFrame.onload = () => {
+          if (shouldFollowCursor) syncTeamsPreviewScrollToEditor();
+        };
         previewFrame.srcdoc = buildTeamsPreviewHtml(html);
         return;
       }
@@ -1225,7 +1255,7 @@
       msg.innerHTML = body;
       requestAnimationFrame(() => {
         if (shouldFollowCursor) {
-          syncPreviewScrollToEditor(scrollEl);
+          syncTeamsPreviewScrollToEditor();
           if (document.activeElement !== inputEl) return;
           try { inputEl.focus({ preventScroll: true }); } catch { inputEl.focus(); }
         } else {
@@ -1342,16 +1372,32 @@
     function makeId(prefix) { return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`; }
     function firstMeaningfulLine(text) { return (text || '').split('\n').map(v => v.replace(/^#+\s*/, '').trim()).find(Boolean) || 'Untitled conversion'; }
 
+    function readLocalHistoryMirror() {
+      try { return JSON.parse(localStorage.getItem('mcl.localHistory') || '[]'); }
+      catch { return []; }
+    }
+    function writeLocalHistoryMirror(items) {
+      try { localStorage.setItem('mcl.localHistory', JSON.stringify((items || []).slice(0, 50))); }
+      catch (error) { console.warn(error); }
+    }
+    function addLocalHistoryMirror(record) {
+      const next = [record, ...readLocalHistoryMirror().filter(item => item.id !== record.id)].slice(0, 50);
+      writeLocalHistoryMirror(next);
+      localHistory = next;
+    }
+
     async function loadLocalData() {
       try {
         savedSnippets = (await idbAll('snippets')).sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
         localHistory = (await idbAll('history')).sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 50);
+        writeLocalHistoryMirror(localHistory);
       } catch (error) {
         console.warn(error);
+        localHistory = readLocalHistoryMirror().sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 50);
       }
       renderRecentHistory();
     }
-    async function saveHistorySnapshot(reason = 'manual') {
+    async function saveHistorySnapshot(reason = 'copy', options = {}) {
       const record = {
         id: makeId('hist'),
         title: firstMeaningfulLine(inputEl.value),
@@ -1362,13 +1408,17 @@
         output: currentOutput || outputEl.value || '',
         createdAt: Date.now()
       };
+      addLocalHistoryMirror(record);
       try {
         await idbPut('history', record);
         await loadLocalData();
-        showToast('Saved to local history');
+        if (!options.silent) showToast('Saved to local history');
+        return true;
       } catch (error) {
         console.warn(error);
-        showToast('Could not save local history');
+        renderRecentHistory();
+        if (!options.silent) showToast('Saved to local history in this browser');
+        return true;
       }
     }
     async function saveSnippetFromSelection() {
@@ -1487,7 +1537,7 @@
     function renderRecentHistory() {
       if (!recentHistoryListEl) return;
       if (!localHistory.length) {
-        recentHistoryListEl.innerHTML = '<p class="small-text">No local history yet. Use Save or Copy to store snapshots in IndexedDB.</p>';
+        recentHistoryListEl.innerHTML = '<p class="small-text">No local history yet. Copy any conversion to store a local snapshot in this browser.</p>';
         return;
       }
       recentHistoryListEl.innerHTML = localHistory.slice(0, 4).map(item => `
@@ -1553,17 +1603,20 @@
         formatPreviewTextEl.textContent = jira || 'Jira markup will appear here.';
         formatPreviewEl.innerHTML = '<pre id="formatPreviewText"></pre>';
         formatPreviewEl.querySelector('pre').textContent = jira || 'Jira markup will appear here.';
+        if (shouldFollowCursor) syncActivePreviewScrollToEditor();
       } else if (activeUtility === 'email') {
         lastEmailHtml = convertMarkdownToEmailHtmlProfiled(src);
         currentOutput = lastEmailHtml;
         outputEl.value = lastEmailHtml;
         renderEmailPreview(lastEmailHtml);
+        if (shouldFollowCursor) syncActivePreviewScrollToEditor();
       } else if (activeUtility === 'clipboard') {
         const md = applyProfileToMarkdown(src);
         currentOutput = md;
         outputEl.value = md;
         formatPreviewEl.innerHTML = '<pre id="formatPreviewText"></pre>';
         formatPreviewEl.querySelector('pre').textContent = md || 'Markdown output will appear here.';
+        if (shouldFollowCursor) syncActivePreviewScrollToEditor();
       }
       updateStats(src, currentOutput);
     }
@@ -1599,7 +1652,7 @@
         drawerBodyEl.innerHTML = '<div class="inspector-card"><h3>Privacy mode is always on</h3><p>No conversion content is sent to a backend. Markdown, rich clipboard HTML, templates, snippets and history stay in this browser. Optional storage uses IndexedDB under this site origin.</p><div class="pill-row"><span class="pill good">Local conversion</span><span class="pill good">IndexedDB history</span><span class="pill good">No API upload</span></div></div>';
       } else if (kind === 'pwa') {
         drawerTitleEl.textContent = 'PWA offline';
-        drawerBodyEl.innerHTML = '<div class="inspector-card"><h3>Installable offline app</h3><p>This HTML can run as a PWA when deployed together with <code>manifest.webmanifest</code>, <code>sw.js</code> and <code>markdown-copy-lab-icon.svg</code> in the same folder.</p><button class="button primary" id="installPwaBtn">Install app</button></div>';
+        drawerBodyEl.innerHTML = '<div class="inspector-card"><h3>Installable offline app</h3><p>This HTML can run as a PWA when deployed together with <code>manifest.webmanifest</code>, <code>sw.js</code>, <code>markdown-copy-lab-icon.svg</code>, and the PNG icon files in the same folder.</p><button class="button primary" id="installPwaBtn">Install app</button></div>';
       }
     }
     function getTemplate(id) { return templates.find(t => t.id === id); }
@@ -1610,13 +1663,12 @@
       const allSnippets = [...builtInSnippets, ...savedSnippets];
       return [
         ...Object.keys(utilityConfig).map(key => ({ icon: utilityConfig[key].icon, title: utilityConfig[key].previewTitle, subtitle: 'Switch utility', run: () => setUtility(key) })),
-        { icon: '⧉', title: 'Copy current output', subtitle: utilityConfig[activeUtility].copyLabel, run: () => copyCurrentOutput() },
+        { icon: '⧉', title: 'Copy current output', subtitle: `${utilityConfig[activeUtility].copyLabel} + save local history`, run: () => copyCurrentOutput() },
         { icon: '◫', title: 'Split: Both', subtitle: 'Show editor and preview', run: () => setSplitMode('both') },
         { icon: '✎', title: 'Split: Editor only', subtitle: 'Focus on writing', run: () => setSplitMode('editor') },
         { icon: '◉', title: 'Split: Preview only', subtitle: 'Focus on output', run: () => setSplitMode('preview') },
         { icon: '⌁', title: 'Toggle inspector', subtitle: 'Show or hide side inspector', run: () => setInspectorVisible(!inspectorVisible) },
         { icon: '⌘', title: 'Paste rich text from clipboard', subtitle: 'Convert rich clipboard content to Markdown', run: () => pasteRichText('Clipboard') },
-        { icon: '＋', title: 'Save local history snapshot', subtitle: 'Store current conversion in IndexedDB', run: () => saveHistorySnapshot('command') },
         ...templates.map(t => ({ icon: '▤', title: `Load template: ${t.title}`, subtitle: t.tags.join(' · '), run: () => loadText(t.body) })),
         ...allSnippets.map(s => ({ icon: '✂', title: `Insert snippet: ${s.title}`, subtitle: (s.body || '').slice(0, 70), run: () => insertAtCursor(s.body) }))
       ];
@@ -1668,8 +1720,8 @@
         if (activeUtility === 'teams') await copyRichHtml(currentOutput);
         else if (activeUtility === 'email') await copyEmailHtml(lastEmailHtml || currentOutput);
         else await copyPlainText(currentOutput);
-        await saveHistorySnapshot('copy');
-        showToast(`${utilityConfig[activeUtility].copyLabel} · done`);
+        await saveHistorySnapshot('copy', { silent: true });
+        showToast(`${utilityConfig[activeUtility].copyLabel} · copied + saved locally`);
       } catch (error) {
         console.warn(error);
         showToast('Copy failed');
@@ -1710,7 +1762,6 @@
     profileSelect.addEventListener('change', () => setActiveProfile(profileSelect.value));
     loadFileBtn.addEventListener('click', () => fileInput.click());
     pasteRichBtn.addEventListener('click', () => pasteRichText('Clipboard'));
-    saveSnapshotBtn.addEventListener('click', () => saveHistorySnapshot('manual'));
     copyBtn.addEventListener('click', copyCurrentOutput);
 
     btnHeading.addEventListener('click', () => wrapSelection('# ', ''));
@@ -1725,8 +1776,10 @@
     btnHr.addEventListener('click', () => insertAtCursor('\n---\n'));
     undoBtn.addEventListener('click', () => restoreUndoSnapshot(undoStack.pop()));
     inputEl.addEventListener('input', () => convert(true));
-    inputEl.addEventListener('scroll', syncLineNumbersScroll);
-    inputEl.addEventListener('keyup', () => { if (activeUtility === 'teams') convert(true); });
+    inputEl.addEventListener('scroll', () => { syncLineNumbersScroll(); syncActivePreviewScrollToEditor(); });
+    inputEl.addEventListener('keyup', syncActivePreviewScrollToEditor);
+    inputEl.addEventListener('click', syncActivePreviewScrollToEditor);
+    inputEl.addEventListener('select', syncActivePreviewScrollToEditor);
     fileInput.addEventListener('change', async () => { const file = fileInput.files && fileInput.files[0]; if (!file) return; inputEl.value = await file.text(); convert(false); showToast(`Loaded ${file.name}`); });
 
     drawerBodyEl.addEventListener('click', async (event) => {
@@ -1740,7 +1793,12 @@
       if (btn.classList.contains('insert-snippet')) { const s = getSnippet(id); if (s) insertAtCursor(s.body); }
       if (btn.classList.contains('delete-snippet')) { await idbDelete('snippets', id); await loadLocalData(); renderDrawer('snippets'); }
       if (btn.classList.contains('restore-history')) { const h = localHistory.find(item => item.id === id); if (h) { setUtility(h.utility); activeProfile[h.utility] = h.profile; loadText(h.input); } }
-      if (btn.classList.contains('delete-history')) { await idbDelete('history', id); await loadLocalData(); renderDrawer('history'); }
+      if (btn.classList.contains('delete-history')) {
+        try { await idbDelete('history', id); } catch (error) { console.warn(error); }
+        writeLocalHistoryMirror(readLocalHistoryMirror().filter(item => item.id !== id));
+        await loadLocalData();
+        renderDrawer('history');
+      }
       if (btn.classList.contains('choose-profile')) { setUtility(btn.dataset.utility); setActiveProfile(id); }
     });
     recentHistoryListEl.addEventListener('click', (event) => {

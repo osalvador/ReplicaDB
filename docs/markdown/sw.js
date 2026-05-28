@@ -1,9 +1,13 @@
-const CACHE_NAME = 'markdown-copy-lab-graphite-v1';
+const CACHE_NAME = 'markdown-copy-lab-graphite-v4';
 const CORE_ASSETS = [
   './',
   './converter.html',
   './manifest.webmanifest',
-  './markdown-copy-lab-icon.svg'
+  './markdown-copy-lab-icon.svg',
+  './markdown-copy-lab-icon-192.png',
+  './markdown-copy-lab-icon-512.png',
+  './apple-touch-icon.png',
+  './favicon-32.png'
 ];
 
 self.addEventListener('install', event => {
