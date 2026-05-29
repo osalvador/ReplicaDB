@@ -3,2102 +3,1288 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0F1115" />
-  <meta name="description" content="A private, browser-only markup conversion dashboard for Teams, Jira, email HTML and rich clipboard cleanup." />
-  <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="icon" href="./markdown-copy-lab-icon.svg" type="image/svg+xml" />
-  <link rel="icon" href="./favicon-32.png" sizes="32x32" type="image/png" />
+  <meta name="theme-color" content="#0b0f14" />
+  <title>Markup Forge · Markdown IDE</title>
+  <link rel="icon" type="image/svg+xml" href="./markdown-copy-lab-icon.svg" />
+  <link rel="icon" type="image/png" href="./favicon-32.png" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <title>Markup Forge</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
   <style>
     :root {
       color-scheme: dark;
-      --bg: #0f1115;
-      --bg-2: #12151b;
-      --surface: #171a21;
-      --surface-2: #20242d;
-      --surface-3: #262b35;
-      --line: rgba(244, 246, 250, .10);
-      --line-strong: rgba(244, 246, 250, .18);
-      --text: #f4f6fa;
-      --muted: #9ca3af;
-      --muted-2: #737b89;
+      --bg: #090c11;
+      --bg-2: #0c1118;
+      --panel: #121821;
+      --panel-2: #161d27;
+      --panel-3: #1b2430;
+      --text: #eef3f8;
+      --muted: #9aa6b6;
+      --soft: #c6cfda;
+      --line: rgba(172, 184, 199, .18);
+      --line-strong: rgba(214, 224, 236, .28);
       --accent: #e8b86d;
-      --accent-2: #f5d39a;
-      --accent-soft: rgba(232, 184, 109, .14);
-      --success: #4ade80;
-      --danger: #fb7185;
-      --info: #67e8f9;
-      --radius-xl: 28px;
-      --radius-lg: 20px;
-      --radius-md: 14px;
-      --sidebar-w: 76px;
-      --panel-h: clamp(680px, calc(100vh - 212px), 1120px);
-      --shadow: 0 24px 90px rgba(0, 0, 0, .35), 0 8px 26px rgba(0, 0, 0, .22);
+      --accent-2: #f0cc88;
+      --accent-ink: #15100a;
+      --ok: #57d68d;
+      --warn: #ffcc66;
+      --danger: #ff7a8a;
+      --shadow: 0 24px 80px rgba(0, 0, 0, .38), 0 2px 12px rgba(0, 0, 0, .35);
+      --radius-lg: 28px;
+      --radius-md: 18px;
+      --radius-sm: 12px;
+      --app-pad: 18px;
+      --topbar-h: 74px;
+      --status-h: 54px;
+      --font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
     }
 
     * { box-sizing: border-box; }
-    [hidden] { display: none !important; }
-    html, body { min-height: 100%; }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    html, body { height: 100%; }
     body {
       margin: 0;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+      font-family: var(--font-ui);
       color: var(--text);
       background:
-        radial-gradient(900px 520px at 12% 0%, rgba(232, 184, 109, .10), transparent 60%),
-        radial-gradient(720px 420px at 92% 8%, rgba(103, 232, 249, .08), transparent 56%),
-        linear-gradient(180deg, #0c0e12 0%, var(--bg) 48%, #0b0d11 100%);
-      overflow-x: hidden;
+        radial-gradient(900px 500px at 12% -10%, rgba(232, 184, 109, .13), transparent 55%),
+        radial-gradient(720px 520px at 90% 0%, rgba(67, 101, 133, .18), transparent 58%),
+        linear-gradient(180deg, #0a0e13 0%, var(--bg) 62%, #07090c 100%);
     }
 
-    button, input, textarea, select { font: inherit; }
-    button { color: inherit; }
+    button, input, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .55; }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
 
     .app {
-      min-height: 100vh;
+      height: 100%;
       display: grid;
-      grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
-    }
-
-    .sidebar {
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      padding: 16px 10px;
-      background: rgba(15, 17, 21, .86);
-      border-right: 1px solid var(--line);
-      backdrop-filter: blur(20px);
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      z-index: 20;
-    }
-    .brand-mark {
-      width: 52px;
-      height: 52px;
-      border-radius: 19px;
-      display: grid;
-      place-items: center;
-      background: linear-gradient(135deg, #2b2f3a, #101218 50%, rgba(232,184,109,.20));
-      border: 1px solid var(--line-strong);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 18px 34px rgba(0,0,0,.32);
-      color: var(--accent-2);
-      font-weight: 900;
-      letter-spacing: -.04em;
-    }
-    .brand-mark img {
-      width: 42px;
-      height: 42px;
-      display: block;
-      border-radius: 14px;
-      filter: drop-shadow(0 8px 14px rgba(0,0,0,.34));
-    }
-    .side-group { display: grid; gap: 8px; }
-    .side-divider { height: 1px; background: var(--line); margin: 4px 8px; }
-    .side-button {
-      appearance: none;
-      border: 1px solid transparent;
-      width: 52px;
-      height: 52px;
-      border-radius: 18px;
-      background: transparent;
-      display: grid;
-      place-items: center;
-      cursor: pointer;
-      color: var(--muted);
-      position: relative;
-      transition: transform .16s ease, background .16s ease, border-color .16s ease, color .16s ease;
-    }
-    .side-button:hover { transform: translateY(-1px); background: rgba(255,255,255,.05); color: var(--text); border-color: var(--line); }
-    .side-button.active { background: var(--accent-soft); color: var(--accent-2); border-color: rgba(232,184,109,.34); }
-    .side-button .ico { font-size: 22px; }
-    .side-button .ico.app-ico {
-      width: 32px;
-      height: 32px;
-      border-radius: 12px;
-      display: inline-grid;
-      place-items: center;
-      position: relative;
-      border: 1px solid var(--line-strong);
-      background: rgba(255,255,255,.045);
-      overflow: hidden;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
-    }
-    .side-button .app-ico img,
-    .side-button .app-ico svg,
-    .helper-button img.app-mini-icon,
-    .helper-button svg.app-mini-icon,
-    .app-mini-icon {
-      width: 19px;
-      height: 19px;
-      display: block;
-      object-fit: contain;
-      filter: saturate(.92) brightness(1.16) drop-shadow(0 2px 5px rgba(0,0,0,.22));
-    }
-    .side-button.active .ico.app-ico { border-color: rgba(232,184,109,.45); background: rgba(232,184,109,.10); }
-    .side-button .ico.tool-ico {
-      width: 28px;
-      height: 28px;
-      display: inline-grid;
-      place-items: center;
-      color: var(--muted);
-    }
-    .side-button .ico.tool-ico svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.9; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-    .side-button.active .ico.tool-ico, .side-button:hover .ico.tool-ico { color: var(--accent-2); }
-    .source-ico-stack { position: relative; }
-    .source-ico-stack::after {
-      content: '↓';
-      position: absolute;
-      right: -5px;
-      bottom: -5px;
-      width: 16px;
-      height: 16px;
-      border-radius: 7px;
-      display: grid;
-      place-items: center;
-      color: #071014;
-      background: var(--accent);
-      border: 1px solid rgba(0,0,0,.32);
-      font-size: 11px;
-      font-weight: 900;
-    }
-    .side-button .tip {
-      position: absolute;
-      left: 64px;
-      top: 50%;
-      transform: translateY(-50%);
-      padding: 8px 10px;
-      border-radius: 12px;
-      background: #0b0d11;
-      border: 1px solid var(--line-strong);
-      color: var(--text);
-      font-size: 12px;
-      white-space: nowrap;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .12s ease;
-      box-shadow: 0 12px 30px rgba(0,0,0,.35);
-    }
-    .side-button:hover .tip { opacity: 1; }
-    .side-bottom { margin-top: auto; }
-
-    .main-shell {
-      min-width: 0;
-      padding: 22px 26px 34px;
-      display: grid;
-      gap: 18px;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+      padding: var(--app-pad);
     }
 
     .topbar {
+      min-width: 0;
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: 18px;
       align-items: center;
+      gap: 18px;
+      min-height: 92px;
       padding: 20px 22px;
       border: 1px solid var(--line);
-      border-radius: 30px;
-      background: linear-gradient(135deg, rgba(23,26,33,.94), rgba(32,36,45,.82));
-      box-shadow: var(--shadow);
-      overflow: hidden;
-      position: relative;
+      border-radius: 26px;
+      background: linear-gradient(135deg, rgba(22, 29, 39, .86), rgba(14, 19, 27, .92));
+      box-shadow: 0 14px 44px rgba(0, 0, 0, .28);
     }
-    .topbar::after {
-      content: '';
-      position: absolute;
-      right: -110px;
-      top: -170px;
-      width: 360px;
-      height: 360px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(232,184,109,.18), transparent 58%);
-      pointer-events: none;
+
+    .brand {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 16px;
     }
-    .title-stack { min-width: 0; position: relative; z-index: 1; }
+    .brand-logo {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      border: 1px solid rgba(232, 184, 109, .38);
+      background: linear-gradient(135deg, rgba(232, 184, 109, .17), rgba(20, 25, 32, .88));
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+    }
+    .brand-logo img { width: 26px; height: 26px; display: block; }
+    .brand-title { min-width: 0; }
     .eyebrow {
-      margin: 0 0 8px;
+      margin: 0 0 2px;
       color: var(--accent-2);
-      font-size: 11px;
-      font-weight: 800;
+      font-size: 10px;
+      font-weight: 900;
       letter-spacing: .16em;
       text-transform: uppercase;
+      white-space: nowrap;
     }
     h1 {
       margin: 0;
-      font-size: clamp(28px, 4vw, 48px);
-      line-height: .95;
-      letter-spacing: -.06em;
+      font-size: clamp(24px, 2vw, 32px);
+      line-height: 1.08;
+      letter-spacing: -.055em;
+      white-space: nowrap;
     }
-    .top-copy {
-      margin: 10px 0 0;
+    .tagline {
+      margin: 5px 0 0;
       color: var(--muted);
-      max-width: none;
-      line-height: 1.55;
-      font-size: 14px;
+      font-size: 13px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .top-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; position: relative; z-index: 1; }
 
-    .button, .icon-button, .segment-button, .toolbar-button, .link-button {
-      appearance: none;
+    .top-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .segmented {
+      display: inline-flex;
+      padding: 4px;
+      border-radius: 999px;
+      background: #0d1219;
       border: 1px solid var(--line);
-      border-radius: 16px;
-      background: rgba(255,255,255,.04);
-      color: var(--text);
-      min-height: 42px;
+    }
+    .segmented button {
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .segmented button.active {
+      color: var(--accent-ink);
+      background: linear-gradient(135deg, var(--accent), #d49a43);
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      min-height: 40px;
       padding: 9px 13px;
-      cursor: pointer;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      transition: transform .16s ease, border-color .16s ease, background .16s ease, color .16s ease, box-shadow .16s ease;
-      text-decoration: none;
-    }
-    .button:hover, .icon-button:hover, .segment-button:hover, .toolbar-button:hover, .link-button:hover { transform: translateY(-1px); border-color: rgba(232,184,109,.40); background: rgba(255,255,255,.07); }
-    .button.primary { background: linear-gradient(135deg, var(--accent), #d19949); color: #121212; font-weight: 900; border-color: transparent; box-shadow: 0 14px 34px rgba(232,184,109,.18); }
-    .button.primary:hover { box-shadow: 0 18px 45px rgba(232,184,109,.24); }
-    .button.ghost { color: var(--muted); }
-    .button .subcap { font-size: 11px; opacity: .72; font-weight: 700; }
-    .icon-button { width: 42px; padding: 0; border-radius: 15px; }
-    .segmented { display: flex; gap: 4px; padding: 4px; border-radius: 18px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
-    .segment-button { min-height: 34px; border: 0; border-radius: 13px; padding: 7px 10px; color: var(--muted); background: transparent; }
-    .segment-button.active { background: var(--accent-soft); color: var(--accent-2); }
-
-    .quick-strip {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 14px;
-      align-items: center;
-      min-height: 92px;
-      padding: 16px 20px;
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      background: linear-gradient(135deg, rgba(23,26,33,.78), rgba(15,17,21,.74));
-      backdrop-filter: blur(16px);
-    }
-    .quick-copy { min-width: 0; }
-    .quick-controls { display: flex; justify-content: flex-end; align-items: center; }
-    .quick-title { color: var(--accent-2); font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
-    .quick-strip .small-text { max-width: none; width: 100%; font-size: 13px; line-height: 1.55; color: var(--muted); }
-    .helper-row { display: none; }
-    .helper-button { min-height: 34px; padding: 6px 10px; border-radius: 999px; font-size: 12px; color: var(--muted); }
-    .helper-button .quick-icon {
-      width: 20px;
-      height: 20px;
-      border-radius: 8px;
-      display: inline-grid;
-      place-items: center;
-      background: rgba(255,255,255,.055);
-      border: 1px solid var(--line);
-      font-size: 12px;
-      color: var(--accent-2);
-    }
-    .helper-button .quick-icon img { width: 15px; height: 15px; display:block; object-fit: contain; }
-
-
-    .panel-title { min-width: 0; }
-    .panel-title > div { min-width: 0; }
-    .panel-title p { max-width: min(72ch, calc(100vw - 360px)); overflow-wrap: normal; }
-    .panel-actions { flex: 0 0 auto; }
-    #pasteRichBtn { white-space: nowrap; min-width: 166px; font-weight: 900; background: linear-gradient(135deg, var(--accent), #d19949); color: #121212; border-color: transparent; box-shadow: 0 14px 34px rgba(232,184,109,.18); }
-    #pasteRichBtn:hover { box-shadow: 0 18px 45px rgba(232,184,109,.24); }
-
-    .workspace {
-      display: grid;
-      grid-template-columns: minmax(380px, .92fr) minmax(520px, 1.18fr) 320px;
-      gap: 16px;
-      align-items: start;
-    }
-    .workspace.editor-only { grid-template-columns: minmax(0, 1fr) 320px; }
-    .workspace.preview-only { grid-template-columns: minmax(0, 1fr) 320px; }
-    .workspace.editor-only .preview-panel { display: none; }
-    .workspace.preview-only .editor-panel { display: none; }
-    .workspace.inspector-collapsed { grid-template-columns: minmax(380px, .94fr) minmax(520px, 1.24fr); }
-    .workspace.inspector-collapsed .inspector-panel { display: none; }
-    .workspace.editor-only.inspector-collapsed { grid-template-columns: minmax(0, 1fr); }
-    .workspace.preview-only.inspector-collapsed { grid-template-columns: minmax(0, 1fr); }
-
-    .panel {
-      min-width: 0;
-      height: var(--panel-h);
-      display: flex;
-      flex-direction: column;
-      border-radius: var(--radius-xl);
-      border: 1px solid var(--line);
-      background: linear-gradient(180deg, rgba(23,26,33,.94), rgba(17,19,24,.94));
-      box-shadow: 0 20px 70px rgba(0,0,0,.32);
-      overflow: hidden;
-    }
-    .panel-header {
-      min-height: 76px;
-      padding: 16px 18px;
-      border-bottom: 1px solid var(--line);
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 14px;
-      flex: 0 0 auto;
-    }
-    .panel-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    .panel-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 16px;
-      display: grid;
-      place-items: center;
-      background: rgba(232,184,109,.12);
-      border: 1px solid rgba(232,184,109,.20);
-      color: var(--accent-2);
-      flex: 0 0 auto;
-    }
-    .panel-title h2 { margin: 0; font-size: 16px; letter-spacing: -.02em; line-height: 1.12; }
-    .panel-title p { margin: 3px 0 0; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .panel-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
-    .editor-panel .panel-header, .preview-panel .panel-header { grid-template-columns: minmax(0, 1fr) max-content; }
-    .editor-panel .panel-actions, .preview-panel .panel-actions { max-width: 100%; }
-    .editor-panel .panel-title p { max-width: 100%; }
-    @media (max-width: 1220px) {
-      .editor-panel .panel-header, .preview-panel .panel-header { grid-template-columns: 1fr; align-items: start; }
-      .editor-panel .panel-actions, .preview-panel .panel-actions { justify-content: flex-start; }
-    }
-    .preview-profile {
-      min-height: 42px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 10px;
-      border-radius: 16px;
-      border: 1px solid var(--line);
       background: rgba(255,255,255,.035);
-      color: var(--muted);
+      color: var(--soft);
+      font-weight: 800;
+      text-decoration: none;
+      transition: transform .15s ease, border-color .15s ease, background .15s ease;
       white-space: nowrap;
     }
-    .preview-profile span {
-      font-size: 10px;
-      font-weight: 900;
-      letter-spacing: .10em;
-      text-transform: uppercase;
-      color: var(--muted-2);
+    .btn:hover { transform: translateY(-1px); border-color: rgba(232,184,109,.42); background: rgba(255,255,255,.06); }
+    .btn.primary {
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--accent), #d69a43);
+      color: #090c11;
+      box-shadow: 0 12px 28px rgba(232, 184, 109, .22);
     }
-    .preview-profile select {
-      min-width: 150px;
-      max-width: 230px;
-      border: 0;
-      outline: 0;
-      color: var(--text);
-      background: transparent;
+    .btn.danger:hover { border-color: rgba(255,122,138,.55); color: #ffdbe0; }
+    .btn.small { min-height: 34px; padding: 7px 10px; font-size: 12px; }
+    .icon { width: 18px; height: 18px; display: inline-block; flex: 0 0 auto; }
+
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+    .workspace.editor-only { grid-template-columns: minmax(0, 1fr); }
+    .workspace.preview-only { grid-template-columns: minmax(0, 1fr); }
+    .workspace.editor-only .preview-panel { display: none; }
+    .workspace.preview-only .editor-panel { display: none; }
+
+    .panel {
+      min-height: 0;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, rgba(18, 24, 33, .96), rgba(12, 17, 24, .96));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-header {
+      min-height: 78px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex: 0 0 auto;
+    }
+    .panel-title { min-width: 0; display: flex; align-items: center; gap: 14px; }
+    .panel-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: var(--accent-2);
+      border: 1px solid rgba(232,184,109,.26);
+      background: rgba(232,184,109,.10);
+      flex: 0 0 auto;
+    }
+    .panel-title h2 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.05;
+      letter-spacing: -.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .panel-title p {
+      margin: 4px 0 0;
+      color: var(--muted);
       font-size: 12px;
-      font-weight: 800;
-      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 62ch;
     }
-    .preview-profile select option { color: #111; background: #f7f2ea; }
-    .panel-body { min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+    .panel-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 
-    .editor-toolbar { display: flex; gap: 8px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; flex: 0 0 auto; }
-    .toolbar-button { min-height: 36px; padding: 7px 10px; border-radius: 13px; color: var(--muted); background: rgba(255,255,255,.035); white-space: nowrap; }
-    .toolbar-button strong { color: var(--text); }
-    .toolbar-sep { width: 1px; min-width: 1px; margin: 6px 2px; background: var(--line); }
-    .toolbar-markdown-only.hidden { display: none; }
-
-    .editor-frame {
+    .editor-shell {
       min-height: 0;
       flex: 1 1 auto;
       display: grid;
       grid-template-columns: 56px minmax(0, 1fr);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      overflow: hidden;
-      background: #0d0f14;
+      background: #0d1118;
     }
     .line-numbers {
-      padding: 14px 10px;
-      color: #a7b0c0;
-      text-align: right;
-      font: 13px/1.62 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
-      border-right: 1px solid var(--line);
+      margin: 0;
+      padding: 18px 10px 18px 0;
       overflow: hidden;
+      text-align: right;
+      color: #a7b0c0;
+      background: #10151d;
+      border-right: 1px solid var(--line);
+      font: 13px/1.65 var(--font-mono);
       user-select: none;
-      white-space: pre;
-      background: #10131a;
     }
-    textarea.editor-input {
+    textarea {
       width: 100%;
       height: 100%;
       min-height: 0;
-      border: 0;
-      outline: none;
       resize: none;
-      overflow: auto;
-      padding: 14px 16px;
-      background: #0d0f14;
+      border: 0;
+      outline: 0;
+      padding: 18px 20px;
       color: var(--text);
-      font: 13px/1.62 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
-      white-space: pre;
+      background: transparent;
+      font: 14px/1.65 var(--font-mono);
+      caret-color: var(--accent);
       tab-size: 2;
-      scrollbar-color: #3b4250 transparent;
+      white-space: pre;
+      overflow: auto;
     }
-    textarea.editor-input::placeholder { color: #535b68; }
+    textarea::placeholder { color: #697487; }
 
-    .preview-stage {
+
+    .github-editor {
       min-height: 0;
       flex: 1 1 auto;
       display: flex;
       flex-direction: column;
+      margin: 14px;
+      border: 1px solid var(--line-strong);
+      border-radius: 14px;
+      overflow: hidden;
+      background: #0d1117;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
     }
-    #previewFrame {
-      flex: 1 1 auto;
-      min-height: 0;
-      width: 100%;
+    .github-editor:focus-within {
+      border-color: #1f6feb;
+      box-shadow: 0 0 0 2px rgba(31, 111, 235, .32), inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+    .gh-editor-top {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      min-height: 52px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+    }
+    .gh-tabs {
+      align-self: stretch;
+      display: flex;
+      align-items: stretch;
+    }
+    .gh-tab {
       border: 0;
-      border-radius: 22px;
-      background: #1f1f1f;
+      border-right: 1px solid #30363d;
+      padding: 0 24px;
+      min-width: 124px;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      background: transparent;
+      color: #8b949e;
+      font-weight: 700;
+      font-size: 14px;
     }
-    .format-preview {
-      flex: 1 1 auto;
+    .gh-tab.active {
+      color: #f0f6fc;
+      background: #0d1117;
+      box-shadow: inset 0 2px 0 #2f81f7;
+    }
+    .gh-toolbar {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 3px;
+      padding: 8px 10px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+    .gh-tool,
+    .gh-tool-sep {
+      flex: 0 0 auto;
+    }
+    .gh-tool {
+      border: 0;
+      width: 34px;
+      height: 34px;
+      border-radius: 7px;
+      display: inline-grid;
+      place-items: center;
+      background: transparent;
+      color: #8b949e;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .gh-tool:hover,
+    .gh-tool:focus-visible {
+      color: #f0f6fc;
+      background: #21262d;
+      outline: none;
+    }
+    .gh-tool svg { width: 18px; height: 18px; display: block; }
+    .gh-tool .tool-text { font-size: 17px; line-height: 1; }
+    .gh-tool .tool-text.small { font-size: 13px; }
+    .gh-tool-sep {
+      width: 1px;
+      height: 24px;
+      margin: 0 5px;
+      background: #30363d;
+    }
+    .gh-editor-body {
       min-height: 0;
-      overflow: auto;
-      border-radius: 22px;
-      border: 1px solid var(--line);
-      background: #0d0f14;
+      flex: 1 1 auto;
+      display: grid;
     }
-    .format-preview pre {
-      margin: 0;
-      min-height: 100%;
-      padding: 18px;
-      color: #d7dce5;
-      font: 13px/1.62 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    .gh-editor-input {
+      grid-area: 1 / 1;
+      min-height: 0;
+      padding: 20px 22px;
+      color: #f0f6fc;
+      background: #0d1117;
+      font: 14px/1.65 var(--font-mono);
       white-space: pre;
       overflow: auto;
     }
-    .email-preview-doc {
-      width: min(760px, calc(100% - 34px));
-      margin: 18px auto;
-      background: #ffffff;
-      border-radius: 18px;
-      border: 1px solid #252a34;
-      box-shadow: 0 22px 56px rgba(0,0,0,.28);
-      overflow: hidden;
-      font-family: Arial, Helvetica, sans-serif;
-      color: #20242d;
-    }
-    .email-preview-head { padding: 22px 26px; background: #171a21; color: #e8b86d; font-weight: 700; letter-spacing: .02em; }
-    .email-preview-body { padding: 26px; color: #20242d; font-size: 15px; line-height: 1.55; }
-    .email-preview-doc pre { background: #0f172a !important; color: #e5e7eb !important; border-color: #334155 !important; }
-    .email-preview-doc pre code { background: transparent !important; color: inherit !important; padding: 0 !important; border-radius: 0 !important; }
-    .email-preview-doc code { background: #1e293b !important; color: #e5e7eb !important; }
-
-    .raw-output {
-      display: none !important;
-      flex: 0 0 118px;
+    .gh-editor-input::placeholder { color: #7d8590; }
+    .gh-composer-preview {
+      grid-area: 1 / 1;
       min-height: 0;
-      border-top: 1px solid var(--line);
-      padding-top: 12px;
+      overflow: auto;
+      display: none;
+      padding: 22px;
+      background: #0d1117;
+      color: #c9d1d9;
+      font: 15px/1.62 var(--font-ui);
     }
-    .raw-output summary {
-      cursor: pointer;
+    .github-editor.preview-mode .gh-editor-input { display: none; }
+    .github-editor.preview-mode .gh-composer-preview { display: block; }
+    .gh-composer-preview .preview-inner-lite {
+      max-width: none;
+      margin: 0;
+    }
+    .gh-composer-preview h1,
+    .gh-composer-preview h2,
+    .gh-composer-preview h3,
+    .gh-composer-preview h4,
+    .gh-composer-preview h5,
+    .gh-composer-preview h6 {
+      color: #f0f6fc;
+      line-height: 1.25;
+      margin: 1.1em 0 .45em;
+    }
+    .gh-composer-preview h1:first-child,
+    .gh-composer-preview h2:first-child,
+    .gh-composer-preview h3:first-child { margin-top: 0; }
+    .gh-composer-preview p { margin: 0 0 1em; }
+    .gh-composer-preview a { color: #58a6ff; }
+    .gh-composer-preview ul,
+    .gh-composer-preview ol { margin: 0 0 1em 1.35em; padding: 0; }
+    .gh-composer-preview blockquote {
+      margin: 1em 0;
+      padding: 0 1em;
+      color: #8b949e;
+      border-left: .25em solid #30363d;
+    }
+    .gh-composer-preview code {
+      font-family: var(--font-mono);
+      padding: .2em .4em;
+      border-radius: 6px;
+      background: rgba(110,118,129,.4);
+      color: #f0f6fc;
+      font-size: 85%;
+    }
+    .gh-composer-preview pre {
+      margin: 1em 0;
+      padding: 16px;
+      overflow: auto;
+      border-radius: 8px;
+      background: #161b22;
+      border: 1px solid #30363d;
+    }
+    .gh-composer-preview pre code { padding: 0; background: transparent; border: 0; }
+    .gh-composer-preview table { width: 100%; border-collapse: collapse; margin: 1em 0; display: block; overflow-x: auto; }
+    .gh-composer-preview th,
+    .gh-composer-preview td { border: 1px solid #30363d; padding: 6px 10px; }
+    .gh-composer-preview th { background: #161b22; }
+
+
+    .preview {
+      min-height: 0;
+      flex: 1 1 auto;
+      overflow: auto;
+      padding: 24px;
+      background: #090d13;
+      color: #d6deea;
+      font: 16px/1.65 var(--font-ui);
+    }
+    .preview-inner {
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      min-height: 100%;
+    }
+    .preview-inner.mode-teams { display: flex; flex-direction: column; }
+    .preview-inner.mode-jira,
+    .preview-inner.mode-html { display: block; }
+    .preview h1, .preview h2, .preview h3, .preview h4, .preview h5, .preview h6 { color: #f3f6fb; line-height: 1.18; margin: 1.2em 0 .45em; letter-spacing: -.03em; }
+    .preview h1:first-child, .preview h2:first-child, .preview h3:first-child { margin-top: 0; }
+    .preview p { margin: 0 0 1em; }
+    .preview a { color: #93b4ff; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    .preview ul, .preview ol { margin: 0 0 1em 1.4em; padding: 0; }
+    .preview blockquote {
+      margin: 1.1em 0;
+      padding: .7em 1em;
+      border-left: 4px solid #8a94a6;
+      background: #151a22;
+      color: #dce3ef;
+      border-radius: 10px;
+    }
+    .preview code {
+      font-family: var(--font-mono);
+      background: #161c26;
+      color: #f3f6fb;
+      border: 1px solid #303a49;
+      border-radius: 6px;
+      padding: .08em .34em;
+      font-size: .92em;
+    }
+    .preview pre {
+      margin: 1.2em 0;
+      padding: 16px;
+      overflow: auto;
+      border-radius: 14px;
+      border: 1px solid #2a3442;
+      background: #111827;
+      color: #e5e7eb;
+      line-height: 1.55;
+    }
+    .preview pre code { border: 0; padding: 0; background: transparent; color: inherit; }
+    .preview table { width: 100%; border-collapse: collapse; margin: 1.2em 0; display: block; overflow-x: auto; }
+    .preview th, .preview td { border: 1px solid #303a49; padding: 8px 10px; text-align: left; }
+    .preview th { background: #161c26; }
+    .preview hr { border: 0; border-top: 1px solid #303a49; margin: 2em 0; }
+    .hljs-keyword { color: #c084fc; }
+    .hljs-string { color: #4ade80; }
+    .hljs-number { color: #7dd3fc; }
+    .hljs-comment { color: #94a3b8; font-style: italic; }
+    .hljs-attr { color: #fb7185; }
+
+    .statusbar {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(18, 24, 33, .82);
       color: var(--muted);
       font-size: 12px;
-      font-weight: 800;
-      letter-spacing: .10em;
-      text-transform: uppercase;
-      margin-bottom: 8px;
     }
-    #output {
-      width: 100%;
-      height: 78px;
-      resize: none;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 10px;
-      background: #0d0f14;
-      color: #8791a2;
-      font: 11px/1.5 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
-      white-space: pre;
-      overflow: auto;
-    }
-
-    .inspector-panel { gap: 0; }
-    .inspector-scroll { padding: 14px; overflow: auto; display: grid; gap: 12px; }
-    .inspector-card {
-      padding: 14px;
-      border-radius: 20px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,.035);
-      display: grid;
-      gap: 10px;
-    }
-    .inspector-card h3 { margin: 0; font-size: 13px; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
-    .inspector-card p, .small-text { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
-    .stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
-    .mini-stat { padding: 10px; border-radius: 15px; background: rgba(0,0,0,.18); border: 1px solid var(--line); }
-    .mini-stat span { display: block; color: var(--muted-2); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
-    .mini-stat strong { display: block; margin-top: 3px; font-size: 18px; letter-spacing: -.04em; }
-    .select {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 10px 12px;
-      color: var(--text);
-      background: #0d0f14;
-    }
-    .pill-row { display: flex; flex-wrap: wrap; gap: 6px; }
-    .pill { padding: 5px 8px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid var(--line); color: var(--muted); font-size: 11px; }
-    .pill.good { color: var(--success); border-color: rgba(74,222,128,.24); background: rgba(74,222,128,.08); }
-    .pill.warn { color: var(--accent-2); border-color: rgba(232,184,109,.24); background: rgba(232,184,109,.08); }
-    .list { display: grid; gap: 8px; }
-    .list-item { padding: 10px; border-radius: 14px; background: rgba(0,0,0,.16); border: 1px solid var(--line); display: grid; gap: 6px; }
-    .list-item strong { font-size: 12px; }
-    .list-item span { color: var(--muted); font-size: 11px; }
-    .list-item button { justify-self: start; }
-
-    .drawer-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.42);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity .18s ease;
-      z-index: 79;
-    }
-    .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
-    .drawer {
-      position: fixed;
-      right: 22px;
-      top: 22px;
-      bottom: 22px;
-      width: min(440px, calc(100vw - 44px));
-      background: rgba(23,26,33,.96);
-      border: 1px solid var(--line-strong);
-      border-radius: 30px;
-      box-shadow: var(--shadow);
-      z-index: 90;
-      transform: translateX(calc(100% + 34px));
-      transition: transform .22s ease;
+    .stats {
       display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      backdrop-filter: blur(18px);
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-width: 0;
     }
-    .drawer.open { transform: translateX(0); }
-    .drawer-header { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:18px; border-bottom:1px solid var(--line); }
-    .drawer-header h2 { margin:0; font-size:18px; letter-spacing:-.03em; }
-    .drawer-body { padding: 14px; overflow:auto; display:grid; gap:12px; }
-
-    .palette-backdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.52);
-      z-index: 80;
-      display: none;
-      place-items: start center;
-      padding-top: 10vh;
-      backdrop-filter: blur(8px);
+    .stat {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 6px;
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.03);
+      white-space: nowrap;
     }
-    .palette-backdrop.open { display: grid; }
-    .palette {
-      width: min(720px, calc(100vw - 32px));
-      border-radius: 28px;
-      border: 1px solid var(--line-strong);
-      background: rgba(17,19,24,.98);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    .palette input { width:100%; border:0; outline:0; padding:18px 20px; background:#0d0f14; color:var(--text); font-size:16px; border-bottom:1px solid var(--line); }
-    .palette-results { max-height: 420px; overflow:auto; padding:10px; display:grid; gap:6px; }
-    .palette-item { display:grid; grid-template-columns:34px minmax(0,1fr) auto; gap:10px; align-items:center; padding:10px; border-radius:16px; cursor:pointer; border:1px solid transparent; }
-    .palette-item:hover, .palette-item.active { background:rgba(232,184,109,.10); border-color:rgba(232,184,109,.24); }
-    .palette-item strong { display:block; font-size:13px; }
-    .palette-item span { display:block; color:var(--muted); font-size:11px; margin-top:2px; }
-    .kbd { padding: 2px 6px; border-radius: 7px; background: rgba(255,255,255,.08); border: 1px solid var(--line); color: var(--muted); font-size: 11px; }
-
+    .stat strong { color: var(--soft); font-size: 13px; }
+    .doc-info { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .toast {
       position: fixed;
-      left: 50%;
-      bottom: 24px;
-      transform: translateX(-50%) translateY(20px);
-      padding: 12px 16px;
-      border-radius: 999px;
-      border: 1px solid var(--line-strong);
-      background: rgba(17,19,24,.98);
-      color: var(--text);
-      box-shadow: var(--shadow);
+      right: 22px;
+      bottom: 22px;
+      z-index: 30;
+      padding: 12px 14px;
+      border-radius: 14px;
+      color: #091016;
+      background: linear-gradient(135deg, var(--accent), #d69a43);
+      box-shadow: 0 14px 34px rgba(0,0,0,.35);
+      font-weight: 900;
       opacity: 0;
+      transform: translateY(12px);
       pointer-events: none;
       transition: opacity .18s ease, transform .18s ease;
-      z-index: 90;
-      font-size: 13px;
     }
-    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    input[type="file"] { display: none; }
 
-    @media (max-width: 1380px) {
-      .workspace { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-      .inspector-panel { grid-column: 1 / -1; height: auto; max-height: 420px; }
-      .inspector-scroll { grid-template-columns: repeat(3, minmax(0,1fr)); }
-      .inspector-card { min-width: 0; }
-      .workspace.inspector-collapsed { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+    .output-tabs {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #0d1219;
     }
-    @media (max-width: 940px) {
-      :root { --sidebar-w: 0px; --panel-h: 620px; }
-      .app { grid-template-columns: 1fr; }
-      .sidebar {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        top: auto;
-        height: 68px;
-        flex-direction: row;
-        align-items: center;
-        justify-content: flex-start;
-        gap: 8px;
-        border-top: 1px solid var(--line);
-        border-right: 0;
-        border-radius: 0;
-        padding: 8px max(10px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
-        overflow-x: auto;
-        overflow-y: hidden;
-        z-index: 70;
-      }
-      .brand-mark, .side-divider, .side-bottom { display: none; }
-      .side-group { display: flex; flex: 0 0 auto; gap: 8px; }
-      .side-button { width: 48px; height: 48px; border-radius: 16px; flex: 0 0 auto; }
-      .side-button .tip { display:none; }
-      .main-shell { padding: 14px 14px calc(92px + env(safe-area-inset-bottom)); }
-      .topbar { grid-template-columns: 1fr; }
-      .top-copy { white-space: normal; overflow: visible; text-overflow: clip; }
-      .workspace, .workspace.inspector-collapsed, .workspace.editor-only, .workspace.preview-only { grid-template-columns: 1fr; }
-      .quick-strip { grid-template-columns: 1fr; }
-      .quick-controls { justify-content: flex-start; }
-      .helper-row { justify-content:flex-start; }
-      .inspector-scroll { grid-template-columns: 1fr; }
+    .output-tab {
+      border: 0;
+      border-radius: 999px;
+      min-height: 34px;
+      padding: 7px 13px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .02em;
+    }
+    .output-tab.active {
+      color: var(--accent-ink);
+      background: linear-gradient(135deg, var(--accent), #d69a43);
+    }
+    .output-profile-select {
+      min-height: 38px;
+      max-width: 210px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #0d1219;
+      color: var(--soft);
+      font: 800 12px/1 var(--font-ui);
+      padding: 0 34px 0 12px;
+    }
+    .preview-panel .panel-actions { flex-wrap: wrap; }
+    .preview-output-code {
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0;
+      font: 13px/1.65 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+      color: #d6deea;
+      background: #0f131a;
+      border: 1px solid #2d3440;
+      border-radius: 16px;
+      padding: 18px;
+      min-height: 100%;
+    }
+    .teams-sent-scroll {
+      min-height: 100%;
+      width: 100%;
+      overflow: auto;
+      padding: 18px;
+      background: #19191c;
+      border-radius: 18px;
+      color: #e8e8ea;
+      font: 14px/1.43 "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, "Helvetica Neue", Arial, var(--font-ui);
+      -webkit-font-smoothing: antialiased;
+    }
+    .teams-sent-message {
+      position: relative;
+      max-width: none;
+      margin: 0;
+      padding: 14px 18px 10px;
+      border-radius: 10px;
+      background: #2a2b3d;
+      color: #e8e8ea;
+    }
+    .teams-sent-meta {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 6px;
+      color: #b7b7c2;
+      font-size: 12px;
+    }
+    .teams-sent-status { color: #7b8cff; }
+    .teams-content {
+      width: 100%;
+      padding: 0;
+      line-height: 1.4;
+    }
+    .teams-content h1, .teams-content h2, .teams-content h3, .teams-content h4 { margin: 0 0 6px; color: #fff; line-height: 1.2; }
+    /* Spacing between blocks comes from the blank-line empty paragraphs that
+       Teams itself emits (<p>&nbsp;</p>), so content paragraphs have no margin. */
+    .teams-content p { margin: 0; }
+    /* Blank-line spacer paragraphs: Teams renders a smaller gap than a full line. */
+    .teams-content p.teams-blank { height: 10px; line-height: 10px; font-size: 0; }
+    .teams-content p span[style*="x-large"] { font-size: 22px; font-weight: 700; color: #fff; line-height: 1.3; }
+    .teams-content strong { font-weight: 700; color: #fff; }
+    .teams-content ul, .teams-content ol { margin: 0 0 0 26px; padding: 0; }
+    .teams-content li { margin: 1px 0; }
+    .teams-content a { color: #a6b6ff; }
+    .teams-content code:not(pre code) {
+      background: #1b1b1f;
+      border: 0.2px solid #878181;
+      border-radius: 4px;
+      padding: 8px 6px;
+      /*color: #e67b9c;*/
+      font: 12.5px/1.5 var(--font-mono);
+    }
+    .teams-content blockquote {
+      margin: 6px 0;
+      padding: 7px 14px;
+      border: 1px solid #3a3a42;
+      border-left: 4px solid #6f6f7d;
+      border-radius: 4px;
+      background: #1b1b1f;
+      color: #f0f0f0;
+    }
+    .teams-content blockquote p { margin: 0; }
+    .teams-content figure.table { margin: 0; width: 100%; overflow-x: auto; }
+    /* Override the generic `.preview table { display: block }` (used for
+       horizontal scrolling) so the Teams table behaves as a real table and its
+       columns stretch to fill 100% of the bubble width, like in Teams. */
+    .teams-content figure.table table { display: table; border-collapse: collapse; width: 100%; table-layout: auto; background: #1b1b1f; }
+    .teams-content figure.table td {
+      border: 1px solid #878181;
+      padding: 1px 12px;
+      vertical-align: top;
+      color: #e8e8ea;
+      line-height: 1.5;
+      background: #1b1b1f;
+    }
+    .teams-content figure.table td p { margin: 0; }
+    .teams-content figure.table tr:first-child td { font-weight: 400; color: #e8e8ea; }
+    .teams-code-card {
+      margin: 4px 0;
+      border: 1px solid #5c5f66;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #242424;
+    }
+    .teams-code-head {
+      min-height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 6px 12px;
+      border-bottom: 1px solid #55585f;
+      color: #d5d5d5;
+      font-weight: 700;
+    }
+    .teams-code-head small { color: #d5d5d5; font: inherit; }
+    .teams-code-card pre {
+      margin: 0;
+      padding: 10px 14px;
+      overflow: auto;
+      background: #242424;
+      color: #e8e8e8;
+      border: 0;
+      border-radius: 0;
+      font: 13px/1.5 var(--font-mono);
+    }
+    .teams-code-line { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; }
+    .teams-code-line-number { color: #a2a2a2; text-align: right; user-select: none; }
+
+    @media (max-width: 980px) {
+      body { overflow: auto; }
+      .app { min-height: 100%; height: auto; grid-template-rows: auto auto auto; padding: 12px; }
+      .topbar { grid-template-columns: 1fr; align-items: start; }
+      .top-actions { justify-content: flex-start; overflow-x: auto; padding-bottom: 2px; }
+      .tagline { white-space: normal; }
+      .workspace { grid-template-columns: 1fr; min-height: 900px; }
+      .workspace.split { grid-template-columns: 1fr; }
+      .workspace.editor-only, .workspace.preview-only { min-height: 720px; }
+      .panel { min-height: 620px; }
+      .preview { padding: 16px; }
+      .preview-inner { padding: 22px; }
+      .statusbar { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <div class="app">
-    <aside class="sidebar" aria-label="Main navigation">
-      <div class="brand-mark" title="Markup Forge"><img src="./markdown-copy-lab-icon.svg" alt="Markup Forge" /></div>
-      <nav class="side-group" aria-label="Utilities">
-        <button class="side-button utility-nav active" data-utility="teams" aria-label="Markdown to Teams" title="Markdown to Teams"><span class="ico app-ico teams-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4" width="11" height="13" rx="3" fill="#6264A7"/><rect x="3" y="7" width="10" height="11" rx="2" fill="#464775"/><circle cx="18" cy="8" r="2" fill="#8B8CC7"/><circle cx="17" cy="15" r="3" fill="#6264A7"/><path d="M6 10h6v2H10v5H8v-5H6z" fill="#fff"/></svg></span><span class="tip">Markdown to Teams</span></button>
-        <button class="side-button utility-nav" data-utility="jira" aria-label="Markdown to Jira" title="Markdown to Jira"><span class="ico app-ico jira-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 12 12 21 3 12z" fill="#2684FF"/><path d="M12 7.2 16.8 12 12 16.8 7.2 12z" fill="#DEEBFF"/><path d="M12 3v4.2L7.2 12H3z" fill="#0052CC" opacity=".72"/></svg></span><span class="tip">Markdown to Jira</span></button>
-        <button class="side-button utility-nav" data-utility="email" aria-label="Markdown to Email" title="Markdown to Email"><span class="ico app-ico email-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2.5" fill="#EA4335"/><path d="M5 8 12 13 19 8v8H5z" fill="#fff"/><path d="M5 8 12 13 19 8" fill="none" stroke="#EA4335" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="tip">Markdown to Email</span></button>
-        <button class="side-button utility-nav" data-utility="clipboard" aria-label="Teams to Markdown" title="Teams to Markdown"><span class="ico app-ico rich-ico source-ico-stack"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="12" height="12" rx="3" fill="#6264A7"/><rect x="3" y="7" width="10" height="10" rx="2" fill="#464775"/><path d="M6 10h5v2H9v4H7v-4H6z" fill="#fff"/><path d="M16 11v7m0 0-3-3m3 3 3-3" stroke="#E8B86D" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="tip">Teams to Markdown</span></button>
-      </nav>
-      <div class="side-divider"></div>
-      <div class="side-group" role="group" aria-label="Workspace tools">
-        <button class="side-button drawer-nav" data-drawer="templates" aria-label="Templates" title="Templates"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5"/><path d="M4 7v14h3"/><path d="M10 13h6M10 17h6"/></svg></span><span class="tip">Templates</span></button>
-        <button class="side-button drawer-nav" data-drawer="snippets" aria-label="Saved snippets" title="Saved snippets"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l2 2v16H5z"/><path d="M8 3v6h8V3"/><path d="M8 15h8v6H8z"/><path d="M10 6h4"/></svg></span><span class="tip">Saved snippets</span></button>
-        <button class="side-button drawer-nav" data-drawer="history" aria-label="Local history" title="Local history"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.35-5.65"/><path d="M4 5v5h5"/><path d="M12 8v5l3 2"/></svg></span><span class="tip">Local history</span></button>
-        <button class="side-button drawer-nav" data-drawer="profiles" aria-label="Conversion profiles" title="Conversion profiles"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></span><span class="tip">Conversion profiles</span></button>
-      </div>
-      <div class="side-bottom side-group" role="group" aria-label="Workspace status">
-        <button class="side-button drawer-nav" data-drawer="dashboard" aria-label="Usage dashboard" title="Usage dashboard"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6"/><path d="M4 4h3M17 4h3M4 20h3M17 20h3"/></svg></span><span class="tip">Usage dashboard</span></button>
-        <button class="side-button" id="privacyButton" aria-label="Privacy mode" title="Privacy mode"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 19 6v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="m9.5 12 1.8 1.8L15 10"/></svg></span><span class="tip">Privacy mode</span></button>
-        <button class="side-button" id="pwaButton" aria-label="PWA offline" title="PWA offline"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg></span><span class="tip">PWA offline</span></button>
-      </div>
-    </aside>
-
-    <div class="main-shell">
-      <header class="topbar">
-        <div class="title-stack">
-          <p class="eyebrow">Browser-only conversion workspace</p>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true"><img src="./markdown-copy-lab-icon.svg" alt="" /></div>
+        <div class="brand-title">
+          <p class="eyebrow">Browser-only Markdown IDE</p>
           <h1>Markup Forge</h1>
-          <p class="top-copy" id="activeUtilityCopy">Convert Markdown into paste-ready Teams chat, Jira wiki markup, styled email HTML, or clean Markdown from Teams and other rich clipboard content.</p>
+          <p class="tagline">One Markdown source. Every output you need.</p>
         </div>
-        <div class="top-actions" aria-hidden="true"></div>
-      </header>
+      </div>
+      <div class="top-actions" aria-label="Document actions">
+        <div class="segmented" aria-label="View mode">
+          <button id="modeSplit" class="active" type="button">Split</button>
+          <button id="modeEditor" type="button">Editor</button>
+          <button id="modePreview" type="button">Preview</button>
+        </div>
+        <button id="downloadBtn" class="btn primary" type="button">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Download .md
+        </button>
+        <button id="clearBtn" class="btn danger" type="button">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Clear
+        </button>
+      </div>
+    </header>
 
-      <section class="quick-strip" id="quickStrip">
-        <div class="quick-copy">
-          <div class="quick-title" id="quickTitle">Teams output helpers</div>
-          <p class="small-text" id="quickText">Tune Markdown for a Teams chat composer, then copy rich HTML locally.</p>
-        </div>
-        <div class="quick-controls">
-          <div class="segmented" aria-label="Split mode">
-            <button class="segment-button active" data-split="both">Both</button>
-            <button class="segment-button" data-split="editor">Editor</button>
-            <button class="segment-button" data-split="preview">Preview</button>
+    <main id="workspace" class="workspace split">
+      <section class="panel editor-panel" aria-labelledby="sourceTitle">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4zM8 9l3 3-3 3m5 0h3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div>
+              <h2 id="sourceTitle">Markdown Source</h2>
+              <p>The editable source of truth for the document.</p>
+            </div>
+          </div>
+          <div class="panel-actions">
+            <label class="btn small" for="fileInput" title="Open Markdown or text file">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v10m0-10 4 4m-4-4-4 4M5 13v5a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Open
+            </label>
+            <input id="fileInput" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" />
+            <button id="insertSampleBtn" class="btn small" type="button">Load sample</button>
           </div>
         </div>
-        <div class="helper-row" id="quickActions" aria-label="Context actions"></div>
+        <div id="githubEditor" class="github-editor">
+          <div class="gh-editor-top">
+            <div class="gh-tabs" role="presentation" aria-label="Markdown editor">
+              <span class="gh-tab active" aria-current="true">Write</span>
+            </div>
+            <div class="gh-toolbar" aria-label="Markdown formatting toolbar">
+              <button class="gh-tool" type="button" data-md-action="heading" aria-label="Add heading" title="Heading"><span class="tool-text">H</span></button>
+              <button class="gh-tool" type="button" data-md-action="bold" aria-label="Add bold text" title="Bold"><span class="tool-text">B</span></button>
+              <button class="gh-tool" type="button" data-md-action="italic" aria-label="Add italic text" title="Italic"><span class="tool-text"><em>I</em></span></button>
+              <button class="gh-tool" type="button" data-md-action="quote" aria-label="Add quote" title="Quote"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 7h10M7 12h8M7 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 6v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+              <button class="gh-tool" type="button" data-md-action="code" aria-label="Add inline code" title="Code"><span class="tool-text small">&lt;&gt;</span></button>
+              <button class="gh-tool" type="button" data-md-action="link" aria-label="Add link" title="Link"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L10.9 5.03" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 11a5 5 0 0 0-7.07 0L4.8 13.12a5 5 0 0 0 7.07 7.07l1.2-1.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+              <span class="gh-tool-sep" aria-hidden="true"></span>
+              <button class="gh-tool" type="button" data-md-action="ul" aria-label="Add bulleted list" title="Bulleted list"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 6h.01M4 12h.01M4 18h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button>
+              <button class="gh-tool" type="button" data-md-action="ol" aria-label="Add numbered list" title="Numbered list"><span class="tool-text small">1.</span></button>
+              <button class="gh-tool" type="button" data-md-action="task" aria-label="Add task list" title="Task list"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="m3.5 6 1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <span class="gh-tool-sep" aria-hidden="true"></span>
+              <button class="gh-tool" type="button" data-md-action="codeblock" aria-label="Insert code block" title="Code block"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 18 3 12l6-6M15 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            </div>
+          </div>
+          <div class="gh-editor-body">
+            <pre id="lineNumbers" class="line-numbers" hidden aria-hidden="true">1</pre>
+            <textarea id="editor" class="gh-editor-input" spellcheck="false" wrap="off" aria-label="Markdown source editor" placeholder="Use Markdown to format your document"></textarea>
+
+          </div>
+        </div>
       </section>
 
-      <main class="workspace" id="workspace">
-        <section class="panel editor-panel">
-          <div class="panel-header">
-            <div class="panel-title">
-              <div class="panel-icon">✎</div>
-              <div>
-                <h2 id="editorTitle">Markdown Editor</h2>
-                <p id="editorSubtitle">Write, paste, format, or upload Markdown.</p>
-              </div>
-            </div>
-            <div class="panel-actions">
-              <input id="fileInput" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden />
-              <button class="button" id="loadFileBtn">↑ Upload</button>
-              <button class="button primary" id="pasteRichBtn" hidden>Paste Rich Text</button>
+      <section class="panel preview-panel" aria-labelledby="previewTitle">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-icon" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M4 5h16v14H4zM8 9h8M8 13h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div>
+              <h2 id="previewTitle">Live Preview</h2>
+              <p>Rendered locally from your Markdown source.</p>
             </div>
           </div>
-          <div class="panel-body">
-            <div class="editor-toolbar" aria-label="Markdown editing toolbar">
-              <button class="toolbar-button toolbar-markdown-only" id="btnHeading">H</button>
-              <button class="toolbar-button toolbar-markdown-only" id="btnBold"><strong>B</strong></button>
-              <button class="toolbar-button toolbar-markdown-only" id="btnItalic"><em>I</em></button>
-              <button class="toolbar-button toolbar-markdown-only" id="btnQuote">❝</button>
-              <button class="toolbar-button toolbar-markdown-only" id="btnCodeInline">&lt;/&gt;</button>
-              <button class="toolbar-button toolbar-markdown-only" id="btnLink">🔗</button>
-              <span class="toolbar-sep toolbar-markdown-only"></span>
-              <button class="toolbar-button toolbar-markdown-only" id="btnOl">1.</button>
-              <button class="toolbar-button toolbar-markdown-only" id="btnUl">•</button>
-              <button class="toolbar-button toolbar-markdown-only" id="btnCheck">☑</button>
-              <button class="toolbar-button toolbar-markdown-only" id="btnHr">―</button>
-              <span class="toolbar-sep toolbar-markdown-only"></span>
-              <button class="toolbar-button toolbar-markdown-only" id="undoBtn">↶ Undo</button>
-              <button class="toolbar-button" id="openTemplatesBtn">Templates</button>
-              <button class="toolbar-button" id="openSnippetsBtn">Snippets</button>
+          <div class="panel-actions">
+            <div class="output-tabs" role="tablist" aria-label="Output format tabs">
+              <button class="output-tab active" type="button" role="tab" aria-selected="true" data-output-format="teams">Teams</button>
+              <button class="output-tab" type="button" role="tab" aria-selected="false" data-output-format="jira">Jira</button>
+              <button class="output-tab" type="button" role="tab" aria-selected="false" data-output-format="html">HTML</button>
             </div>
-            <div class="editor-frame">
-              <pre class="line-numbers" id="lineNumbers">1</pre>
-              <textarea id="input" class="editor-input" spellcheck="false" wrap="off" placeholder="# Paste your Markdown here..."></textarea>
-            </div>
+            <button id="copyBtn" class="btn primary" type="button">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 9h10v10H9zM5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+              <span id="copyBtnLabel">Copy Markdown</span>
+            </button>
           </div>
-        </section>
+        </div>
+        <div id="preview" class="preview" tabindex="0" aria-label="Rendered Markdown preview">
+          <article id="previewInner" class="preview-inner"></article>
+        </div>
+      </section>
+    </main>
 
-        <section class="panel preview-panel">
-          <div class="panel-header">
-            <div class="panel-title">
-              <div class="panel-icon">◉</div>
-              <div>
-                <h2 id="previewTitle">Teams Preview</h2>
-                <p id="previewSubtitle">Composer-style rendering, including code cards.</p>
-              </div>
-            </div>
-            <div class="panel-actions">
-              <label class="preview-profile" title="Conversion profile used by this output"><span>Profile</span><select id="previewProfileSelect" aria-label="Conversion profile"></select></label>
-              <button class="button primary" id="copyBtn"><span id="copyBtnLabel">Copy for Teams</span><span class="subcap" id="copyBtnCaption">Rich HTML</span></button>
-            </div>
-          </div>
-          <div class="panel-body">
-            <div class="preview-stage" id="previewStage">
-              <iframe id="previewFrame" title="Conversion preview" srcdoc=""></iframe>
-              <div class="format-preview" id="formatPreview" hidden><pre id="formatPreviewText"></pre></div>
-            </div>
-            <textarea id="output" hidden readonly spellcheck="false" aria-hidden="true"></textarea>
-          </div>
-        </section>
-
-        <aside class="panel inspector-panel" id="inspectorPanel">
-          <div class="panel-header">
-            <div class="panel-title">
-              <div class="panel-icon">⌁</div>
-              <div>
-                <h2>Inspector</h2>
-                <p>Stats, profile, privacy and local history.</p>
-              </div>
-            </div>
-          </div>
-          <div class="inspector-scroll">
-            <div class="inspector-card">
-              <h3>Live stats</h3>
-              <div class="stat-grid">
-                <div class="mini-stat"><span>Source</span><strong id="sourceChars">0</strong></div>
-                <div class="mini-stat"><span>Output</span><strong id="outputChars">0</strong></div>
-                <div class="mini-stat"><span>Code</span><strong id="codeBlocks">0</strong></div>
-                <div class="mini-stat"><span>Lines</span><strong id="lineCount">0</strong></div>
-              </div>
-            </div>
-            <div class="inspector-card">
-              <h3>Conversion profile</h3>
-              <select class="select" id="profileSelect"></select>
-              <p id="profileDescription">Choose how strict or compact the conversion should be.</p>
-            </div>
-            <div class="inspector-card">
-              <h3>Compatibility</h3>
-              <div class="pill-row" id="warningPills"></div>
-              <p id="compatibilityText">Teams paste behavior may differ by client version.</p>
-            </div>
-            <div class="inspector-card">
-              <h3>Privacy mode</h3>
-              <span class="pill good">Always on</span>
-              <p>Conversions are executed locally in this browser. Your Markdown and rich clipboard content are not sent to any API or server.</p>
-            </div>
-            <div class="inspector-card">
-              <h3>PWA offline</h3>
-              <div class="pill-row"><span class="pill" id="pwaStatus">Checking…</span></div>
-              <p>Deploy <code>manifest.webmanifest</code>, <code>sw.js</code> and the generated icon files next to this HTML to enable install/offline support.</p>
-            </div>
-            <div class="inspector-card">
-              <h3>Recent local history</h3>
-              <div class="list" id="recentHistoryList"><p class="small-text">No local history yet.</p></div>
-            </div>
-          </div>
-        </aside>
-      </main>
-    </div>
+    <footer class="statusbar">
+      <div class="stats" aria-label="Document statistics">
+        <span class="stat">Words <strong id="wordCount">0</strong></span>
+        <span class="stat">Characters <strong id="charCount">0</strong></span>
+        <span class="stat">Lines <strong id="lineCount">1</strong></span>
+        <span class="stat">Headings <strong id="headingCount">0</strong></span>
+      </div>
+      <div id="docInfo" class="doc-info">Unsaved local document · Autosaved in this browser</div>
+    </footer>
   </div>
 
-  <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
-  <aside class="drawer" id="drawer" aria-label="Workspace drawer">
-    <div class="drawer-header">
-      <h2 id="drawerTitle">Templates</h2>
-      <button class="icon-button" id="closeDrawerBtn">×</button>
-    </div>
-    <div class="drawer-body" id="drawerBody"></div>
-  </aside>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <div class="toast" id="toast">Ready</div>
+  <script type="module">
+    import {
+      htmlEscape,
+      convertMarkdownToJira,
+      renderMarkdownForTeams,
+      getHtmlOutput,
+      markdownForOutput,
+      buildTeamsClipboard
+    } from './converter-core.js';
 
-  <script>
-    const inputEl = document.getElementById('input');
-    const lineNumbersEl = document.getElementById('lineNumbers');
-    const outputEl = document.getElementById('output');
-    const previewFrame = document.getElementById('previewFrame');
+    const STORAGE_KEY = 'markup-forge.ide.markdown.v1';
+    const FILE_KEY = 'markup-forge.ide.filename.v1';
+    const DEFAULT_FILENAME = 'markup-forge-document.md';
+    const SAMPLE = `# Weekly update
+
+**Summary**
+
+- Item one
+- Item two with *emphasis*
+- A link to [Microsoft](https://www.microsoft.com)
+
+> This is a quote that should be easy to read in the preview.
+
+\`inline code\` works too.
+
+\`\`\`json
+{
+  "eventId": "0",
+  "eventType": "SecurityNotification"
+}
+\`\`\`
+
+## Table
+
+| Area | Status |
+| --- | --- |
+| Markdown IDE | Ready |
+| Local preview | Ready |
+`;
+
+    const state = {
+      filename: localStorage.getItem(FILE_KEY) || DEFAULT_FILENAME,
+      viewMode: 'split',
+      renderTimer: 0
+    };
+
+    const editor = document.getElementById('editor');
+    const lineNumbers = document.getElementById('lineNumbers');
+    const githubEditor = document.getElementById('githubEditor');
+    const preview = document.getElementById('preview');
+    const previewInner = document.getElementById('previewInner');
     const fileInput = document.getElementById('fileInput');
-    const loadFileBtn = document.getElementById('loadFileBtn');
-    const pasteRichBtn = document.getElementById('pasteRichBtn');
-    const btnHeading = document.getElementById('btnHeading');
-    const btnBold = document.getElementById('btnBold');
-    const btnItalic = document.getElementById('btnItalic');
-    const btnQuote = document.getElementById('btnQuote');
-    const btnCodeInline = document.getElementById('btnCodeInline');
-    const btnLink = document.getElementById('btnLink');
-    const btnOl = document.getElementById('btnOl');
-    const btnUl = document.getElementById('btnUl');
-    const btnCheck = document.getElementById('btnCheck');
-    const btnHr = document.getElementById('btnHr');
-    const undoBtn = document.getElementById('undoBtn');
     const copyBtn = document.getElementById('copyBtn');
     const copyBtnLabel = document.getElementById('copyBtnLabel');
-    const copyBtnCaption = document.getElementById('copyBtnCaption');
-    const sourceCharsEl = document.getElementById('sourceChars');
-    const outputCharsEl = document.getElementById('outputChars');
-    const codeBlocksEl = document.getElementById('codeBlocks');
-    const lineCountEl = document.getElementById('lineCount');
-    const editorTitleEl = document.getElementById('editorTitle');
-    const editorSubtitleEl = document.getElementById('editorSubtitle');
-    const previewTitleEl = document.getElementById('previewTitle');
-    const previewSubtitleEl = document.getElementById('previewSubtitle');
-    const activeUtilityCopyEl = document.getElementById('activeUtilityCopy');
-    const previewStageEl = document.getElementById('previewStage');
-    const formatPreviewEl = document.getElementById('formatPreview');
-    const formatPreviewTextEl = document.getElementById('formatPreviewText');
-    const inspectorTitleEl = document.getElementById('inspectorTitle');
-    const profileSelect = document.getElementById('profileSelect');
-    const previewProfileSelect = document.getElementById('previewProfileSelect');
-    const profileDescriptionEl = document.getElementById('profileDescription');
-    const warningPillsEl = document.getElementById('warningPills');
-    const compatibilityTextEl = document.getElementById('compatibilityText');
-    const recentHistoryListEl = document.getElementById('recentHistoryList');
-    const pwaStatusEl = document.getElementById('pwaStatus');
-    const workspaceEl = document.getElementById('workspace');
-    const drawerEl = document.getElementById('drawer');
-    const drawerBackdropEl = document.getElementById('drawerBackdrop');
-    const drawerTitleEl = document.getElementById('drawerTitle');
-    const drawerBodyEl = document.getElementById('drawerBody');
-    const closeDrawerBtn = document.getElementById('closeDrawerBtn');
-    const quickTitleEl = document.getElementById('quickTitle');
-    const quickTextEl = document.getElementById('quickText');
-    const quickActionsEl = document.getElementById('quickActions');
-    const paletteBackdrop = document.getElementById('paletteBackdrop');
-    const paletteInput = document.getElementById('paletteInput');
-    const paletteResults = document.getElementById('paletteResults');
-    const toastEl = document.getElementById('toast');
-
-    const undoStack = [];
-    let activeUtility = localStorage.getItem('mcl.activeUtility') || 'teams';
-    let splitMode = localStorage.getItem('mcl.splitMode') || 'both';
-    let inspectorVisible = false;
-    let activeProfile = JSON.parse(localStorage.getItem('mcl.activeProfiles') || '{}');
-    let currentOutput = '';
-    let lastEmailHtml = '';
-    let savedSnippets = [];
-    let localHistory = [];
-    let installPromptEvent = null;
-    let dbPromise = null;
-
-    const sample = [
-      '# Weekly update', '', '**Summary**', '',
-      '- Item one', '- Item two with *emphasis*', '- A link to [Microsoft](https://www.microsoft.com)', '',
-      '> This is a quote', '', '```json', '{', '  "eventId": "0",', '  "eventType": "SecurityNotification"', '}', '```', '',
-      '## Next steps', '', '1. First task', '2. Second task'
-    ].join('\n');
-
-    const utilityConfig = {
-      teams: {
-        icon: 'T',
-        editorTitle: 'Markdown Editor', editorSubtitle: 'Write, paste, format, or upload Markdown.',
-        previewTitle: 'Teams Preview', previewSubtitle: 'Composer-style rendering, including code cards.',
-        copyLabel: 'Copy for Teams', copyCaption: 'Rich HTML', outputLabel: 'Clipboard HTML payload',
-        inputPlaceholder: '# Paste your Markdown here...',
-        copy: 'Convert Markdown into paste-ready rich HTML for Microsoft Teams chat.',
-        warnings: ['Teams-safe HTML', 'Code cards', 'Tables experimental'],
-        compatibility: 'Best for Teams chat compose boxes. Nested lists and complex tables may still be flattened by Teams.'
-      },
-      jira: {
-        icon: 'J',
-        editorTitle: 'Markdown Editor', editorSubtitle: 'Write Markdown and convert it into Jira wiki markup.',
-        previewTitle: 'Jira Markup Preview', previewSubtitle: 'Jira-specific wiki markup for issue descriptions and comments.',
-        copyLabel: 'Copy for Jira', copyCaption: 'Wiki markup', outputLabel: 'Jira wiki markup payload',
-        inputPlaceholder: '# Paste your Markdown here...',
-        copy: 'Convert Markdown into Jira wiki markup for descriptions, comments and tickets.',
-        warnings: ['Wiki markup', 'Tables supported', 'No rich HTML'],
-        compatibility: 'Optimized for Jira wiki markup fields. Jira Cloud Markdown fields may behave differently.'
-      },
-      email: {
-        icon: '✉',
-        editorTitle: 'Markdown Editor', editorSubtitle: 'Write Markdown and generate email-safe HTML.',
-        previewTitle: 'Markdown to Email', previewSubtitle: 'Choose a styled email template and copy it as rich HTML for Gmail or Outlook.',
-        copyLabel: 'Copy Email', copyCaption: 'Rich HTML', outputLabel: 'Email HTML debug payload',
-        inputPlaceholder: '# Paste your Markdown here...',
-        copy: 'Convert Markdown into styled, email-safe rich HTML for Gmail or Outlook.',
-        warnings: ['Inline styles', 'Rich clipboard', 'Client-safe'],
-        compatibility: 'Email clients vary. This output uses conservative inline styles and a text/plain fallback.'
-      },
-      clipboard: {
-        icon: '↧',
-        editorTitle: 'Teams / Rich Text Input', editorSubtitle: 'Paste rich clipboard content from Teams, email, Confluence, Word, Jira, or any web page and clean it into Markdown.',
-        previewTitle: 'Markdown Preview', previewSubtitle: 'Clean Markdown generated from Teams or any rich text copied to the clipboard.',
-        copyLabel: 'Copy Markdown', copyCaption: 'Plain text', outputLabel: 'Markdown debug payload',
-        inputPlaceholder: 'Click Paste Rich Text to import Teams or any rich formatted clipboard content...',
-        copy: 'Turn Teams messages or any rich clipboard HTML from Confluence, Word, Gmail, Jira, or web pages into clean Markdown.',
-        warnings: ['Clipboard API', 'HTML cleanup', 'Local only'],
-        compatibility: 'The browser may ask for clipboard permission. Some apps expose richer HTML than others.'
-      }
+    const outputTabs = Array.from(document.querySelectorAll('[data-output-format]'));
+    const outputFormat = { value: 'teams' };
+    // Each output format always uses its first (default) profile. The profile
+    // dropdown was removed: Teams is always "Teams Rich".
+    const defaultProfiles = { teams: 'teams-rich', jira: 'jira-wiki', html: 'html-document' };
+    const downloadBtn = document.getElementById('downloadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const insertSampleBtn = document.getElementById('insertSampleBtn');
+    const workspace = document.getElementById('workspace');
+    const docInfo = document.getElementById('docInfo');
+    const toast = document.getElementById('toast');
+    const statsEls = {
+      words: document.getElementById('wordCount'),
+      chars: document.getElementById('charCount'),
+      lines: document.getElementById('lineCount'),
+      headings: document.getElementById('headingCount')
+    };
+    const modeButtons = {
+      split: document.getElementById('modeSplit'),
+      editor: document.getElementById('modeEditor'),
+      preview: document.getElementById('modePreview')
     };
 
-    const profiles = {
-      teams: [
-        { id: 'rich', name: 'Teams Rich', description: 'Preserve spacing, links, lists, quotes, code blocks and basic tables.' },
-        { id: 'compact', name: 'Teams Compact', description: 'Merge wrapped paragraph lines while preserving blank paragraphs, lists and code fences.' },
-        { id: 'plain-safe', name: 'Teams Plain-safe', description: 'Keep Teams-compatible HTML while avoiding decorative separators.' }
-      ],
-      jira: [
-        { id: 'wiki', name: 'Jira Wiki Markup', description: 'Standard Jira wiki syntax for comments and issue descriptions.' },
-        { id: 'compact', name: 'Jira Compact', description: 'Reduce repeated blank lines and trim output aggressively.' },
-        { id: 'code-heavy', name: 'Jira Code-heavy', description: 'Preserve fenced code blocks and language hints.' }
-      ],
-      email: [
-        { id: 'executive', name: 'Executive Email', description: 'Premium email card with branded header and generous spacing.' },
-        { id: 'minimal', name: 'Minimal Email', description: 'White layout, fewer visual accents, very conservative HTML.' },
-        { id: 'technical', name: 'Technical Email', description: 'Better spacing for code, lists and technical updates.' },
-        { id: 'newsletter', name: 'Newsletter Email', description: 'Wider editorial layout with a stronger header and callout feel.' },
-        { id: 'status', name: 'Status Update Email', description: 'Compact professional update for weekly reports and operational status.' },
-        { id: 'memo', name: 'Plain Memo Email', description: 'Lightweight memo style with almost no decoration.' },
-        { id: 'alert', name: 'Alert Email', description: 'High-contrast notification layout for incidents, blockers or urgent changes.' }
-      ],
-      clipboard: [
-        { id: 'clean', name: 'Clean Markdown', description: 'Balanced cleanup that preserves headings, links, lists and code.' },
-        { id: 'compact', name: 'Compact Markdown', description: 'Collapse excessive blank lines for chat-ready Markdown.' },
-        { id: 'docs', name: 'Docs Markdown', description: 'Preserve more spacing for documentation pages.' }
-      ]
-    };
+    function currentProfile() {
+      return defaultProfiles[outputFormat.value] || '';
+    }
 
-    const templates = [
-      { id: 'weekly', title: 'Weekly report', tags: ['status','teams','email'], body: '# Weekly report\n\n**Summary**\n\n- What shipped\n- What is blocked\n- What changed\n\n## Risks\n\n- Risk one\n\n## Next steps\n\n1. Action one\n2. Action two' },
-      { id: 'incident', title: 'Incident report', tags: ['ops','jira'], body: '# Incident report\n\n**Impact**\n\nDescribe customer or system impact.\n\n## Timeline\n\n- 10:00 Detection\n- 10:10 Mitigation started\n- 10:30 Service restored\n\n## Root cause\n\nTBD\n\n## Follow-ups\n\n- [ ] Action item' },
-      { id: 'adr', title: 'Architecture decision record', tags: ['architecture','docs'], body: '# ADR: Decision title\n\n## Context\n\nWhat problem are we solving?\n\n## Decision\n\nWhat did we choose?\n\n## Consequences\n\n- Positive consequence\n- Trade-off\n\n## Alternatives considered\n\n1. Option A\n2. Option B' },
-      { id: 'release', title: 'Release notes', tags: ['release','email'], body: '# Release notes\n\n## Highlights\n\n- New capability\n- Improved behavior\n\n## Fixes\n\n- Fixed issue one\n\n## Upgrade notes\n\n```bash\ncommand --example\n```' },
-      { id: 'customer-email', title: 'Customer update email', tags: ['email'], body: '# Project update\n\nHi team,\n\nHere is the latest status update.\n\n**Progress**\n\n- Milestone one completed\n- Milestone two in progress\n\n**Next steps**\n\n1. Confirm scope\n2. Schedule rollout\n\nThanks,' },
-      { id: 'email-newsletter', title: 'Newsletter email', tags: ['email','newsletter'], body: '# Product newsletter\n\n**This week at a glance**\n\n- Highlight one\n- Highlight two\n- Customer impact\n\n## Featured update\n\nDescribe the most important change in one short paragraph.\n\n## What is next\n\n1. Next milestone\n2. Upcoming release' },
-      { id: 'email-alert', title: 'Incident alert email', tags: ['email','ops'], body: '# Important notice\n\n**Impact**\n\nDescribe who is affected and what is happening.\n\n**Current status**\n\n- Detection time: TBD\n- Mitigation: In progress\n- Next update: TBD\n\n## Action required\n\nPlease review the mitigation steps.' },
-      { id: 'email-memo', title: 'Executive memo email', tags: ['email','memo'], body: '# Executive memo\n\n**Decision needed**\n\nSummarize the decision in one sentence.\n\n## Context\n\nWhy this matters now.\n\n## Recommendation\n\n- Option recommended\n- Main trade-off\n- Expected outcome' }
-    ];
-
-    const builtInSnippets = [
-      { id: 'acceptance', title: 'Acceptance criteria', body: '## Acceptance criteria\n\n- [ ] Given ... when ... then ...\n- [ ] Edge cases covered\n- [ ] Observability added' },
-      { id: 'dod', title: 'Definition of done', body: '**Definition of done**\n\n- Tests added\n- Documentation updated\n- Monitoring checked\n- Rollback plan reviewed' },
-      { id: 'risk', title: 'Risk block', body: '> **Risk:** Describe the risk, impact, probability and mitigation.' },
-      { id: 'code-java', title: 'Java code block', body: '```java\npublic Result execute(Request request) {\n    return service.call(request);\n}\n```' },
-      { id: 'code-yaml', title: 'YAML config block', body: '```yaml\nresilience4j:\n  circuitbreaker:\n    instances:\n      serviceA:\n        failureRateThreshold: 50\n```' }
-    ];
-
-    const htmlEscape = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    function htmlToPlainText(html) { return html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n\n').replace(/<\/div>/gi, '\n').replace(/<li>/gi, '\n- ').replace(/<\/li>/gi, '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\u2060/g, '').replace(/\u200b/g, '').replace(/\n{3,}/g, '\n\n').trim(); }
-    function stripHtml(md) { return md.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, ''); }
-    function flattenTable(lines, startIndex) { const out = []; const header = lines[startIndex].trim(); let i = startIndex + 1; if (i < lines.length && /^\s*\|?\s*:?[-]{3,}:?\s*(\|\s*:?[-]{3,}:?\s*)+\|?\s*$/.test(lines[i])) { const headers = header.replace(/^\|?|\|?$/g, '').split('|').map(s => s.trim()); i += 1; while (i < lines.length && /\|/.test(lines[i])) { const cells = lines[i].replace(/^\|?|\|?$/g, '').split('|').map(s => s.trim()); const parts = []; for (let j = 0; j < Math.max(headers.length, cells.length); j++) { const h = headers[j] || `Column ${j + 1}`; const c = cells[j] || ''; parts.push(`${h}: ${c}`); } out.push(`- ${parts.join(' | ')}`); i += 1; } return { lines: out, nextIndex: i }; } return null; }
-    function protectCodeSpans(text) { const stash = []; const replaced = text.replace(/`([^`]+)`/g, (_, code) => { const id = stash.push(code) - 1; return `@@CODE${id}@@`; }); return { replaced, stash }; }
-    function inlineTeamsHtml(text) { const { replaced, stash } = protectCodeSpans(text); let s = htmlEscape(replaced); s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => `${htmlEscape(alt || url)} (<a href="${htmlEscape(url)}">${htmlEscape(url)}</a>)`); s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => `<a href="${htmlEscape(url)}">${htmlEscape(text)}</a>`); s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>'); s = s.replace(/__([^_\n]+)__/g, '<strong>$1</strong>'); s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<i>$1</i>'); s = s.replace(/(?<!_)_([^_\n]+)_(?!_)/g, '<i>$1</i>'); s = s.replace(/~~([^~\n]+)~~/g, '<s>$1</s>'); s = s.replace(/@@CODE(\d+)@@/g, (_, n) => `<code>${htmlEscape(stash[Number(n)])}</code>`); return s; }
-    function makeBlank() { return '<p>&nbsp;</p>'; }
-    function makeParagraph(text) { return `<p>${inlineTeamsHtml(text)}</p>`; }
-    function makeHeadingParagraph(level, text) { return level === 1 ? `<p><span style="font-size:x-large;">${inlineTeamsHtml(text)}</span></p>` : `<p><strong>${inlineTeamsHtml(text)}</strong></p>`; }
-    function makeQuote(text) { return `<blockquote spellcheck="false"><p>${inlineTeamsHtml(text)}</p></blockquote>`; }
-    function makeList(items, ordered) { const tag = ordered ? 'ol' : 'ul'; const inner = items.map(item => `<li>${inlineTeamsHtml(item)}</li>`).join(''); return `<${tag}>${inner}</${tag}>`; }
-    function makeTable(rows) { const body = rows.map(row => `<tr>${row.map(cell => `<td><p data-is-tablecell-container="true">${inlineTeamsHtml(cell)}</p></td>`).join('')}</tr>`).join(''); return `<figure class="table"><table><tbody>${body}</tbody></table></figure>`; }
-    function escapeCodeText(code) { return htmlEscape(code).replace(/ /g, '&nbsp;').replace(/\n/g, '<br>'); }
-    function highlightJsonLine(line) { let s = escapeCodeText(line.replace(/\r\n?/g, '\n')); s = s.replace(/^([ \t]*)(&quot;([^&]*)&quot;)(\s*:)/, (_, indent, key, __, colon) => `${indent}<span class="hljs-function">${key}</span>${colon}`); s = s.replace(/:\s*&quot;([^&]*)&quot;/g, ':&nbsp;<span class="hljs-string">&quot;$1&quot;</span>'); s = s.replace(/:\s*(-?\d+(?:\.\d+)?)/g, ':&nbsp;<span class="hljs-number">$1</span>'); s = s.replace(/:\s*(true|false|null)/g, ':&nbsp;<span class="hljs-literal">$1</span>'); s = s.replace(/(&quot;[^&]+&quot;)(?=\s*:)/g, '<span class="hljs-function">$1</span>'); return s; }
-    function findJavaLineCommentIndex(raw) {
-      let quote = null;
-      let escaped = false;
-      for (let i = 0; i < raw.length - 1; i += 1) {
-        const ch = raw[i];
-        const next = raw[i + 1];
-        if (escaped) {
-          escaped = false;
-          continue;
-        }
-        if (quote) {
-          if (ch === '\\') {
-            escaped = true;
-          } else if (ch === quote) {
-            quote = null;
-          }
-          continue;
-        }
-        if (ch === '"' || ch === "'") {
-          quote = ch;
-          continue;
-        }
-        if (ch === '/' && next === '/') return i;
+    function getCurrentOutput() {
+      const profile = currentProfile();
+      const markdown = markdownForOutput(editor.value, profile);
+      const format = outputFormat.value;
+      if (format === 'html') {
+        const html = getHtmlOutput(markdown, profile, state.filename || DEFAULT_FILENAME);
+        return { text: html, html, label: profile === 'html-fragment' ? 'HTML fragment' : 'HTML document' };
       }
-      return -1;
-    }
-    function protectJavaStrings(code) {
-      const stash = [];
-      let out = '';
-      for (let i = 0; i < code.length; i += 1) {
-        const quote = code[i];
-        if (quote !== '"' && quote !== "'") {
-          out += quote;
-          continue;
-        }
-        let literal = quote;
-        i += 1;
-        let escaped = false;
-        while (i < code.length) {
-          const ch = code[i];
-          literal += ch;
-          if (escaped) {
-            escaped = false;
-          } else if (ch === '\\') {
-            escaped = true;
-          } else if (ch === quote) {
-            break;
-          }
-          i += 1;
-        }
-        const marker = String.fromCharCode(0xe000) + String.fromCharCode(0xe100 + stash.length) + String.fromCharCode(0xe001);
-        stash.push({ marker, html: `<span class="hljs-string">${escapeCodeText(literal)}</span>` });
-        out += marker;
-      }
-      return { code: out, stash };
-    }
-    function restoreJavaStrings(html, stash) {
-      let out = html;
-      for (const item of stash) out = out.split(item.marker).join(item.html);
-      return out;
-    }
-    function highlightJavaCodePart(code) {
-      const protectedStrings = protectJavaStrings(code);
-      let working = escapeCodeText(protectedStrings.code);
-
-      // Apply token coloring in one pass before injecting spans so HTML attributes
-      // such as class="hljs-keyword" are never colored accidentally.
-      const keywordPattern = 'abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|extends|final|finally|float|for|goto|if|implements|import|instanceof|int|interface|long|native|new|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|try|void|volatile|while|var|record|sealed|permits|non-sealed|yield';
-      const tokenPattern = new RegExp(
-        `(@[A-Za-z_$][A-Za-z0-9_$]*)|` +
-        `\\b(${keywordPattern})\\b|` +
-        `\\b(true|false|null)\\b|` +
-        `\\b([A-Za-z_$][A-Za-z0-9_$]*)\\b(?=(?:&nbsp;|\\s)*\\()|` +
-        `\\b([A-Z][A-Za-z0-9_$]*)\\b|` +
-        `\\b(-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?[fFdDlL]?)\\b`,
-        'g'
-      );
-      working = working.replace(tokenPattern, (_, annotation, keyword, literal, callable, typeName, number) => {
-        if (annotation) return `<span class="hljs-function">${annotation}</span>`;
-        if (keyword) return `<span class="hljs-keyword">${keyword}</span>`;
-        if (literal) return `<span class="hljs-literal">${literal}</span>`;
-        if (callable) return `<span class="hljs-function">${callable}</span>`;
-        if (typeName) return `<span class="hljs-function">${typeName}</span>`;
-        if (number) return `<span class="hljs-number">${number}</span>`;
-        return _;
-      });
-
-      return restoreJavaStrings(working, protectedStrings.stash);
-    }
-    function highlightJavaLine(line) {
-      const raw = line.replace(/\r\n?/g, '\n');
-      if (!raw.trim()) return '&nbsp;';
-
-      const commentIndex = findJavaLineCommentIndex(raw);
-      const codePart = commentIndex >= 0 ? raw.slice(0, commentIndex) : raw;
-      const commentPart = commentIndex >= 0 ? raw.slice(commentIndex) : '';
-      const highlightedCode = highlightJavaCodePart(codePart);
-      const highlightedComment = commentPart ? `<span class="hljs-comment">${escapeCodeText(commentPart)}</span>` : '';
-      return `${highlightedCode}${highlightedComment}` || '&nbsp;';
-    }
-    function highlightYamlValue(value) {
-      const commentMatch = value.match(/^(.*?)(\s+#.*)$/);
-      const main = commentMatch ? commentMatch[1] : value;
-      const comment = commentMatch ? commentMatch[2] : '';
-      let s = escapeCodeText(main);
-      s = s.replace(/(&quot;[^&]*&quot;|'[^']*')/g, '<span class="hljs-string">$1</span>');
-      s = s.replace(/\b(true|false|null|yes|no|on|off)\b/gi, '<span class="hljs-literal">$1</span>');
-      s = s.replace(/(^|[^#A-Za-z0-9_-])(-?\d+(?:\.\d+)?)(?![A-Za-z0-9_-])/g, '$1<span class="hljs-number">$2</span>');
-      if (comment) s += `<span class="hljs-comment">${escapeCodeText(comment)}</span>`;
-      return s || '&nbsp;';
-    }
-    function highlightYamlLine(line) {
-      const raw = line.replace(/\r\n?/g, '\n');
-      if (!raw.trim()) return '&nbsp;';
-      if (/^\s*#/.test(raw)) return `<span class="hljs-comment">${escapeCodeText(raw)}</span>`;
-
-      const indentMatch = raw.match(/^(\s*)/);
-      const indent = indentMatch ? indentMatch[1] : '';
-      let rest = raw.slice(indent.length);
-      let bullet = '';
-      const bulletMatch = rest.match(/^-\s+/);
-      if (bulletMatch) {
-        bullet = '<span class="hljs-bullet">-</span>&nbsp;';
-        rest = rest.slice(bulletMatch[0].length);
-      }
-
-      const keyMatch = rest.match(/^([A-Za-z0-9_.-]+)(\s*:)(.*)$/);
-      if (keyMatch) {
-        return `${escapeCodeText(indent)}${bullet}<span class="hljs-attr">${htmlEscape(keyMatch[1])}</span>${escapeCodeText(keyMatch[2])}${highlightYamlValue(keyMatch[3])}`;
-      }
-
-      return `${escapeCodeText(indent)}${bullet}${highlightYamlValue(rest)}`;
-    }
-    function createUniqueId(prefix = 'id') {
-      if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
-        return `${prefix}-${globalThis.crypto.randomUUID()}`;
-      }
-      return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      if (format === 'jira') return { text: convertMarkdownToJira(markdown), label: profile === 'jira-plain' ? 'Jira plain text' : 'Jira markup' };
+      const teams = buildTeamsClipboard(markdown);
+      return { text: teams.text, html: teams.html, bodyHtml: teams.body, label: profile === 'teams-compact' ? 'Teams compact HTML' : 'Teams HTML' };
     }
 
-    function renderCodeBlock(code, lang = 'json') {
-      const blockId = createUniqueId('codeBlockEditor');
-      const language = (lang || 'json').toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'json';
-      const lines = code.replace(/\r\n?/g, '\n').split('\n');
-      const highlighted = lines.map(line => {
-        if (language === 'json') return highlightJsonLine(line);
-        if (language === 'java') return highlightJavaLine(line);
-        if (language === 'yaml' || language === 'yml') return highlightYamlLine(line);
-        return escapeCodeText(line);
-      }).join('<br>');
-      return `<p itemtype="http://schema.skype.com/CodeBlockEditor" id="${blockId}">&nbsp;</p><pre class="language-${language} skipProofing" itemid="${blockId}" spellcheck="false" corrected="true"><code>${highlighted}</code></pre>`;
-    }
-    function convertMarkdownToHtml(md) { md = stripHtml(md.replace(/\r\n?/g, '\n')); const lines = md.split('\n'); const out = []; let i = 0; while (i < lines.length) { const raw = lines[i]; const line = raw.replace(/\s+$/, ''); const trimmed = line.trim(); if (!trimmed) { out.push(makeBlank()); i += 1; continue; } if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(trimmed)) { out.push('<p>──────────</p>'); i += 1; continue; } const fence = trimmed.match(/^```(.*)$/); if (fence) { const lang = (fence[1] || '').trim() || 'json'; const codeLines = []; i += 1; while (i < lines.length && !/^```\s*$/.test(lines[i].trim())) { codeLines.push(lines[i].replace(/\s+$/, '')); i += 1; } if (i < lines.length && /^```\s*$/.test(lines[i].trim())) i += 1; out.push(renderCodeBlock(codeLines.join('\n'), lang)); continue; } if (/\|/.test(line) && i + 1 < lines.length && /^\s*\|?\s*:?[-]{3,}:?\s*(\|\s*:?[-]{3,}:?\s*)+\|?\s*$/.test(lines[i + 1])) { const header = line.replace(/^\|?|\|?$/g, '').split('|').map(s => s.trim()); let j = i + 2; const rows = []; while (j < lines.length && /\|/.test(lines[j])) { rows.push(lines[j].replace(/^\|?|\|?$/g, '').split('|').map(s => s.trim())); j += 1; } out.push(makeTable([header, ...rows])); i = j; continue; } const heading = trimmed.match(/^#{1,6}\s+(.*)$/); if (heading) { const level = Math.min(6, trimmed.match(/^#+/)[0].length); out.push(makeHeadingParagraph(level, heading[1].trim())); i += 1; continue; } const quote = trimmed.match(/^>\s?(.*)$/); if (quote) { out.push(makeQuote(quote[1].trim())); i += 1; continue; } const ul = trimmed.match(/^[-*+]\s+(.*)$/); if (ul) { const items = []; while (i < lines.length) { const m = lines[i].trim().match(/^[-*+]\s+(.*)$/); if (!m) break; items.push(m[1].trim()); i += 1; } out.push(makeList(items, false)); continue; } const ol = trimmed.match(/^\d+\.\s+(.*)$/); if (ol) { const items = []; while (i < lines.length) { const m = lines[i].trim().match(/^\d+\.\s+(.*)$/); if (!m) break; items.push(m[1].trim()); i += 1; } out.push(makeList(items, true)); continue; } out.push(makeParagraph(line)); i += 1; } return out.join(''); }
-
-
-    function mdInlineToJira(text) {
-      const { replaced, stash } = protectCodeSpans(text);
-      const boldStash = [];
-      let s = replaced;
-      s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => `${alt || url} (${url})`);
-      s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => `[${label}|${url}]`);
-      s = s.replace(/\*\*([^*\n]+)\*\*/g, (_, value) => {
-        const id = boldStash.push(value) - 1;
-        return `@@BOLD${id}@@`;
-      });
-      s = s.replace(/__([^_\n]+)__/g, (_, value) => {
-        const id = boldStash.push(value) - 1;
-        return `@@BOLD${id}@@`;
-      });
-      s = s.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '_$1_');
-      s = s.replace(/(?<!_)_([^_\n]+)_(?!_)/g, '_$1_');
-      s = s.replace(/@@BOLD(\d+)@@/g, (_, n) => `*${boldStash[Number(n)]}*`);
-      s = s.replace(/~~([^~\n]+)~~/g, '-$1-');
-      s = s.replace(/@@CODE(\d+)@@/g, (_, n) => `{{${stash[Number(n)]}}}`);
-      return s;
+    function syncOutputProfileOptions() {
+      /* Profile dropdown removed: each format always uses its default profile. */
     }
 
-    function convertMarkdownToJira(md) {
-      md = stripHtml(md.replace(/\r\n?/g, '\n'));
-      const lines = md.split('\n');
-      const out = [];
-      let i = 0;
-      while (i < lines.length) {
-        const line = lines[i].replace(/\s+$/, '');
-        const trimmed = line.trim();
-        if (!trimmed) { out.push(''); i += 1; continue; }
-        if (/^(?:-{3,}|\*{3,}|_{3,})$/.test(trimmed)) { out.push('----'); i += 1; continue; }
-        const fence = trimmed.match(/^```(.*)$/);
-        if (fence) {
-          const lang = (fence[1] || '').trim();
-          const codeLines = [];
-          i += 1;
-          while (i < lines.length && !/^```\s*$/.test(lines[i].trim())) { codeLines.push(lines[i]); i += 1; }
-          if (i < lines.length) i += 1;
-          out.push(`{code${lang ? ':language=' + lang : ''}}`);
-          out.push(codeLines.join('\n'));
-          out.push('{code}');
-          continue;
-        }
-        if (/\|/.test(line) && i + 1 < lines.length && /^\s*\|?\s*:?[-]{3,}:?\s*(\|\s*:?[-]{3,}:?\s*)+\|?\s*$/.test(lines[i + 1])) {
-          const header = line.replace(/^\|?|\|?$/g, '').split('|').map(s => s.trim());
-          out.push(`||${header.map(mdInlineToJira).join('||')}||`);
-          i += 2;
-          while (i < lines.length && /\|/.test(lines[i])) {
-            const cells = lines[i].replace(/^\|?|\|?$/g, '').split('|').map(s => s.trim());
-            out.push(`|${cells.map(mdInlineToJira).join('|')}|`);
-            i += 1;
-          }
-          continue;
-        }
-        const heading = trimmed.match(/^(#{1,6})\s+(.*)$/);
-        if (heading) { out.push(`h${heading[1].length}. ${mdInlineToJira(heading[2].trim())}`); i += 1; continue; }
-        const quote = trimmed.match(/^>\s?(.*)$/);
-        if (quote) { out.push(`bq. ${mdInlineToJira(quote[1].trim())}`); i += 1; continue; }
-        const task = trimmed.match(/^[-*+]\s+\[( |x|X)\]\s+(.*)$/);
-        if (task) { out.push(`* ${task[1].trim() ? '(x)' : '( )'} ${mdInlineToJira(task[2].trim())}`); i += 1; continue; }
-        const ul = trimmed.match(/^[-*+]\s+(.*)$/);
-        if (ul) { out.push(`* ${mdInlineToJira(ul[1].trim())}`); i += 1; continue; }
-        const ol = trimmed.match(/^\d+\.\s+(.*)$/);
-        if (ol) { out.push(`# ${mdInlineToJira(ol[1].trim())}`); i += 1; continue; }
-        out.push(mdInlineToJira(line));
-        i += 1;
-      }
-      return out.join('\n').replace(/\n{4,}/g, '\n\n\n').trim();
-    }
-
-    function inlineEmailBodyHtml(md, profile = 'executive') {
-      const accent = profile === 'alert' ? '#fb7185' : profile === 'newsletter' ? '#14b8a6' : profile === 'status' ? '#38bdf8' : '#e8b86d';
-      const soft = profile === 'minimal' || profile === 'memo' ? '#f8fafc' : '#f7f3ea';
-      return convertMarkdownToHtml(md)
-        .replace(/<p>/g, '<p style="margin:0 0 14px;line-height:1.58;">')
-        .replace(/<ul>/g, '<ul style="margin:0 0 14px 22px;padding:0;line-height:1.58;">')
-        .replace(/<ol>/g, '<ol style="margin:0 0 14px 22px;padding:0;line-height:1.58;">')
-        .replace(/<li>/g, '<li style="margin:0 0 6px;">')
-        .replace(/<blockquote[^>]*>/g, `<blockquote style="margin:0 0 16px;padding:10px 14px;border-left:4px solid ${accent};background:${soft};color:#49454f;border-radius:8px;">`)
-        .replace(/<pre([^>]*)>/g, '<pre$1 style="margin:0 0 16px;padding:14px;border:1px solid #d7dde8;border-radius:10px;background:#0f172a;color:#e5e7eb;overflow:auto;white-space:pre-wrap;font-family:Consolas,Menlo,monospace;font-size:13px;line-height:1.5;">')
-        .replace(/<code>/g, '<code style="font-family:Consolas,Menlo,monospace;background:#1e293b;color:#e5e7eb;border-radius:4px;padding:1px 4px;">')
-        .replace(/<pre([^>]*)><code style="[^"]*">/g, '<pre$1><code style="font-family:Consolas,Menlo,monospace;background:transparent;color:inherit;padding:0;border-radius:0;">')
-        .replace(/<table>/g, '<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 16px;">')
-        .replace(/<td>/g, '<td style="border:1px solid #d7dde8;padding:8px 10px;vertical-align:top;">')
-        .replace(/<a /g, `<a style="color:${accent};text-decoration:underline;" `);
-    }
-
-    function buildEmailTemplate(bodyHtml, profile = 'executive') {
-      const templates = {
-        executive: { title: 'Executive update', bg: '#f4f1ea', card: '#ffffff', headerBg: '#171a21', headerColor: '#e8b86d', width: 680, border: '#e7dfd2', radius: 20, preheader: 'A concise Markdown-generated update.' },
-        minimal: { title: 'Markdown email', bg: '#ffffff', card: '#ffffff', headerBg: '#ffffff', headerColor: '#111827', width: 640, border: '#e5e7eb', radius: 0, preheader: 'Plain, conservative email layout.' },
-        technical: { title: 'Technical update', bg: '#eef2f7', card: '#ffffff', headerBg: '#0f172a', headerColor: '#67e8f9', width: 720, border: '#cbd5e1', radius: 16, preheader: 'Technical notes, code blocks and implementation details.' },
-        newsletter: { title: 'Team newsletter', bg: '#ecfeff', card: '#ffffff', headerBg: '#0f766e', headerColor: '#ffffff', width: 720, border: '#99f6e4', radius: 22, preheader: 'Editorial update generated from Markdown.' },
-        status: { title: 'Status update', bg: '#f8fafc', card: '#ffffff', headerBg: '#1e3a8a', headerColor: '#dbeafe', width: 660, border: '#bfdbfe', radius: 16, preheader: 'Compact status email.' },
-        memo: { title: 'Memo', bg: '#ffffff', card: '#ffffff', headerBg: '#ffffff', headerColor: '#111827', width: 620, border: '#ffffff', radius: 0, preheader: 'Simple memo generated from Markdown.' },
-        alert: { title: 'Important notice', bg: '#fff1f2', card: '#ffffff', headerBg: '#991b1b', headerColor: '#ffffff', width: 660, border: '#fecdd3', radius: 16, preheader: 'Important Markdown-generated notification.' }
+    function updateCopyLabel() {
+      if (!copyBtnLabel) return;
+      const labels = {
+        teams: 'Copy for Teams',
+        html: 'Copy HTML',
+        jira: 'Copy Jira'
       };
-      const t = templates[profile] || templates.executive;
-      const headerBorder = profile === 'minimal' || profile === 'memo' ? `border-bottom:1px solid ${t.border};` : '';
-      const header = profile === 'memo' ? '' : `<tr><td style="padding:22px 28px;background:${t.headerBg};color:${t.headerColor};font-size:18px;font-weight:700;letter-spacing:.01em;${headerBorder}">${t.title}</td></tr>`;
-      const outerPadding = profile === 'memo' ? '16px 0' : '24px 0';
-      return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${t.title}</title></head><body style="margin:0;background:${t.bg};font-family:Arial,Helvetica,sans-serif;color:#1d1b20;"><div style="display:none;max-height:0;overflow:hidden;color:transparent;opacity:0;">${t.preheader}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${t.bg};padding:${outerPadding};"><tr><td align="center"><table role="presentation" width="${t.width}" cellspacing="0" cellpadding="0" style="width:${t.width}px;max-width:calc(100% - 32px);background:${t.card};border-radius:${t.radius}px;border:1px solid ${t.border};overflow:hidden;">${header}<tr><td style="padding:${profile === 'memo' ? '8px 16px' : '28px'};font-size:${profile === 'technical' ? '14px' : '15px'};line-height:${profile === 'technical' ? '1.62' : '1.58'};">${bodyHtml}</td></tr></table></td></tr></table></body></html>`;
-    }
-
-    function convertMarkdownToEmailHtml(md, profile = getActiveProfile()) {
-      const bodyHtml = inlineEmailBodyHtml(md, profile);
-      return buildEmailTemplate(bodyHtml, profile);
-    }
-
-    function htmlNodeToMarkdown(node) {
-      if (node.nodeType === Node.TEXT_NODE) return node.textContent.replace(/\s+/g, ' ');
-      if (node.nodeType !== Node.ELEMENT_NODE) return '';
-      const tag = node.tagName.toLowerCase();
-      const child = () => Array.from(node.childNodes).map(htmlNodeToMarkdown).join('').trim();
-      if (tag === 'br') return '\n';
-      if (tag === 'strong' || tag === 'b') return `**${child()}**`;
-      if (tag === 'em' || tag === 'i') return `*${child()}*`;
-      if (tag === 's' || tag === 'strike' || tag === 'del') return `~~${child()}~~`;
-      if (tag === 'code') return '`' + child().replace(/`/g, '\\`') + '`';
-      if (tag === 'pre') return '\n```text\n' + node.textContent.replace(/^\n+|\n+$/g, '') + '\n```\n';
-      if (tag === 'a') return `[${child() || node.href}](${node.getAttribute('href') || node.href || ''})`;
-      if (/^h[1-6]$/.test(tag)) return '\n' + '#'.repeat(Number(tag[1])) + ' ' + child() + '\n\n';
-      if (tag === 'p' || tag === 'div') return child() + '\n\n';
-      if (tag === 'blockquote') return child().split('\n').map(l => l.trim() ? '> ' + l.trim() : '>').join('\n') + '\n\n';
-      if (tag === 'li') return '- ' + child() + '\n';
-      if (tag === 'ul' || tag === 'ol') return '\n' + Array.from(node.children).map((li, idx) => tag === 'ol' ? `${idx + 1}. ${Array.from(li.childNodes).map(htmlNodeToMarkdown).join('').trim()}\n` : htmlNodeToMarkdown(li)).join('') + '\n';
-      if (tag === 'table') {
-        const rows = Array.from(node.querySelectorAll('tr')).map(tr => Array.from(tr.children).map(td => td.textContent.trim()));
-        if (!rows.length) return '';
-        const header = rows[0];
-        const separator = header.map(() => '---');
-        const body = rows.slice(1);
-        return '\n' + [header, separator, ...body].map(row => `| ${row.join(' | ')} |`).join('\n') + '\n\n';
-      }
-      return child();
-    }
-
-    function convertHtmlToMarkdown(html, plainFallback = '') {
-      if (!html) return plainFallback || '';
-      const doc = new DOMParser().parseFromString(html, 'text/html');
-      return Array.from(doc.body.childNodes).map(htmlNodeToMarkdown).join('').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
-    }
-
-    function buildClipboardHtmlFragment(html) { return `<!doctype html><html><head><meta charset="utf-8"></head><body><!--StartFragment-->${html}<!--EndFragment--></body></html>`; }
-    function formatPreviewLanguage(language) {
-      const lang = String(language || 'text').toLowerCase();
-      const names = {
-        bash: 'Bash', css: 'CSS', html: 'HTML', java: 'Java', javascript: 'JavaScript', js: 'JavaScript',
-        json: 'JSON', kotlin: 'Kotlin', markdown: 'Markdown', md: 'Markdown', plaintext: 'Text', python: 'Python',
-        py: 'Python', shell: 'Shell', sql: 'SQL', text: 'Text', ts: 'TypeScript', typescript: 'TypeScript', xml: 'XML', yaml: 'YAML', yml: 'YAML'
-      };
-      return names[lang] || lang.replace(/(^|[-_\s])([a-z])/g, (_, sep, chr) => `${sep ? ' ' : ''}${chr.toUpperCase()}`);
-    }
-    function buildPreviewCodeCard(pre) {
-      const classNames = Array.from(pre.classList || []);
-      const langClass = classNames.find(name => name.startsWith('language-')) || '';
-      const language = langClass.replace('language-', '') || 'text';
-      const languageLabel = formatPreviewLanguage(language);
-      const codeEl = pre.querySelector('code');
-      const codeHtml = (codeEl ? codeEl.innerHTML : pre.innerHTML)
-        .replace(/^(?:\s|<br\s*\/?\s*>)+/i, '')
-        .replace(/(?:\s|<br\s*\/?\s*>)+$/i, '');
-      const lines = codeHtml ? codeHtml.split(/<br\s*\/?\s*>/i) : ['&nbsp;'];
-      const numberedLines = lines.map(line => `<li><span class="code-line-content">${line || '&nbsp;'}</span></li>`).join('');
-      return `<div class="teams-code-card"><div class="teams-code-title"><span class="code-icon">‹›</span><span>${htmlEscape(languageLabel)}</span><span class="code-chevron">⌄</span><span class="code-more">•••</span></div><div class="teams-code-body"><ol>${numberedLines}</ol></div></div>`;
-    }
-    function buildTeamsPreviewBody(html) {
-      const template = document.createElement('template');
-      template.innerHTML = html || '<p>&nbsp;</p>';
-      template.content.querySelectorAll('p[itemtype="http://schema.skype.com/CodeBlockEditor"]').forEach(marker => marker.remove());
-      template.content.querySelectorAll('pre').forEach(pre => {
-        const holder = document.createElement('div');
-        holder.innerHTML = buildPreviewCodeCard(pre);
-        pre.replaceWith(holder.firstElementChild);
+      copyBtnLabel.textContent = labels[outputFormat.value] || 'Copy Output';
+      outputTabs.forEach(tab => {
+        const active = tab.dataset.outputFormat === outputFormat.value;
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', String(active));
       });
-      return template.innerHTML;
     }
-    function buildTeamsPreviewHtml(html) {
-      const body = buildTeamsPreviewBody(html);
-      return `<!doctype html><html><head><meta charset="utf-8"><style>
-        :root{--teams-bg:#1f1f1f;--composer:#242424;--line:#5b5b5b;--line-soft:#494949;--text:#f1f1f1;--accent:#7b6ff6;--code-bg:#242424;--code-border:#626262;--pink:#ff8797;--green:#16c60c;--blue:#86b6ff;}
-        *{box-sizing:border-box}html,body{height:100%}
-        body{margin:0;background:var(--teams-bg);font-family:'Segoe UI',system-ui,-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text);font-size:16px;line-height:1.45;overflow:hidden}
-        .teams-preview-wrap{height:100%;padding:18px 22px;background:var(--teams-bg);display:flex;flex-direction:column;gap:8px}
-        .teams-composer{position:relative;flex:1 1 auto;min-height:0;background:var(--composer);border:1px solid var(--line);border-bottom:3px solid var(--accent);border-radius:8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03);display:flex;flex-direction:column;overflow:hidden}
-        .teams-format-toolbar{min-height:62px;display:flex;align-items:center;gap:24px;padding:0 22px;color:#e6e6e6;background:var(--composer);flex:0 0 auto}
-        .teams-format-toolbar .group{display:inline-flex;align-items:center;gap:22px}.teams-format-toolbar .sep{width:1px;height:30px;background:#777;opacity:.55}
-        .fmt{display:inline-flex;align-items:center;justify-content:center;min-width:18px;min-height:24px;color:#e9e9e9;font-size:22px;line-height:1;font-weight:500;opacity:.96}
-        .fmt.bold{font-weight:800}.fmt.italic{font-style:italic}.fmt.under{text-decoration:underline}.fmt.strike{text-decoration:line-through}.fmt.active{color:#8c83ff}.fmt.code{font-size:20px}.fmt.more{letter-spacing:4px;transform:translateY(-2px)}.fmt.trash{margin-left:auto;font-size:26px;color:#f0f0f0}
-        .teams-message{flex:1 1 auto;min-height:0;overflow:auto;padding:24px 26px 24px;scrollbar-color:#8d8d8d transparent;scrollbar-width:thin}.teams-message::-webkit-scrollbar{width:10px}.teams-message::-webkit-scrollbar-track{background:transparent}.teams-message::-webkit-scrollbar-thumb{background:#8d8d8d;border:2px solid var(--composer);border-radius:999px}
-        .msg{max-width:100%;padding-right:12px}p{margin:0;min-height:1.35em;line-height:1.35;color:var(--text)}p:last-child{margin-bottom:0}p:has(+ .teams-code-card),p:has(+ blockquote){min-height:.65em}strong{font-weight:700;color:#fff}i,em{font-style:italic;color:#f5f5f5}s{text-decoration-thickness:2px;text-decoration-color:#d7d7d7}a{color:#9fb0ff;text-decoration:underline;text-underline-offset:2px}
-        blockquote{position:relative;margin:14px 0 18px;padding:0 0 0 28px;min-height:56px;display:flex;align-items:center;border:1px solid #686868;border-radius:7px;background:#252525;color:#f2f2f2;font-size:17px;line-height:1.42;box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}blockquote::before{content:'';position:absolute;left:7px;top:8px;bottom:8px;width:4px;border-radius:999px;background:#8a8a8a}blockquote p{margin:0!important;padding:12px 14px 12px 0;min-height:0;color:#f2f2f2}
-        ul,ol{margin:0 0 16px 24px;padding:0}li{margin:4px 0}p code,li code{font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:.92em;color:#f3f3f3;background:#363636;border:1px solid #505050;border-radius:4px;padding:1px 4px}
-        .teams-code-card{margin:14px 0 18px;border:1px solid var(--code-border);border-radius:9px;background:var(--code-bg);overflow:hidden;color:#e6e6e6;font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:15px;line-height:1.5}
-        .teams-code-title{height:43px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:12px;padding:0 16px;color:#d7d7d7;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:16px}.code-icon{width:20px;height:20px;border:1.5px solid #d6d6d6;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1}.code-chevron{font-size:14px;color:#d6d6d6;margin-left:3px}.code-more{margin-left:auto;letter-spacing:3px;color:#d7d7d7}
-        .teams-code-body{overflow:auto;max-height:320px;padding:13px 0 14px}.teams-code-body ol{margin:0;padding:0;list-style:none;counter-reset:code-line}.teams-code-body li{counter-increment:code-line;display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;margin:0;padding:0 18px 0 0;white-space:pre}.teams-code-body li::before{content:counter(code-line);color:#b2b2b2;text-align:right;user-select:none}.code-line-content{min-width:0;overflow-wrap:normal}
-        .teams-code-card .hljs-function,.teams-code-card .hljs-title{color:#dcdcaa!important}.teams-code-card .hljs-attr{color:#ff8797!important;font-weight:600}.teams-code-card .hljs-string{color:#16c60c!important}.teams-code-card .hljs-number{color:#16c60c!important}.teams-code-card .hljs-literal{color:#86b6ff!important}.teams-code-card .hljs-keyword{color:#c792ea!important}.teams-code-card .hljs-comment{color:#8f9f8f!important;font-style:italic}.teams-code-card .hljs-bullet{color:#d7d7d7!important}.teams-code-card code span,.teams-code-card .code-line-content span{font-family:inherit}
-        figure.table{margin:1.45em 0;border:1px solid var(--line-soft);border-radius:8px;overflow:auto;background:#252525}table{border-collapse:collapse;width:100%;font-size:14px}td{border:1px solid var(--line-soft);padding:6px 8px;vertical-align:top}td p{margin:0}.teams-hint{align-self:flex-end;color:#f2f2f2;font-size:16px;line-height:1}.teams-hint span{color:var(--accent)}
-        @media (max-width:700px){body{font-size:14px}.teams-preview-wrap{padding:10px}.teams-format-toolbar{gap:14px;min-height:50px;padding:0 14px}.teams-format-toolbar .group{gap:13px}.fmt{font-size:18px}.teams-message{padding:18px 16px}.teams-code-card{font-size:12px}.teams-code-title{font-size:13px;height:38px}.teams-hint{font-size:12px}}
-      </style></head><body><div class="teams-preview-wrap"><div class="teams-composer"><div class="teams-format-toolbar" aria-hidden="true"><span class="group"><span class="fmt bold">B</span><span class="fmt italic">I</span><span class="fmt under">U</span><span class="fmt strike">S</span></span><span class="sep"></span><span class="group"><span class="fmt">≡</span><span class="fmt active">1 2</span></span><span class="sep"></span><span class="group"><span class="fmt">▱</span><span class="fmt">A̲</span><span class="fmt">Aᴀ</span></span><span class="sep"></span><span class="group"><span class="fmt">”</span><span class="fmt">🔗</span><span class="fmt code">⌘</span><span class="fmt more">…</span></span><span class="fmt trash">🗑</span></div><div class="teams-message"><div class="msg">${body}</div></div></div><div class="teams-hint"><span>Enter</span> starts a new line.</div></div></body></html>`;
-    }
-
 
     function updateLineNumbers() {
-      if (!lineNumbersEl) return;
-      const count = Math.max(1, (inputEl.value.match(/\n/g) || []).length + 1);
-      const next = Array.from({ length: count }, (_, index) => String(index + 1)).join('\n');
-      if (lineNumbersEl.textContent !== next) lineNumbersEl.textContent = next;
-      lineNumbersEl.scrollTop = inputEl.scrollTop;
-    }
-    function syncLineNumbersScroll() {
-      if (lineNumbersEl) lineNumbersEl.scrollTop = inputEl.scrollTop;
-    }
-    function getEditorCursorLine() {
-      const value = inputEl.value || '';
-      const cursor = inputEl.selectionStart ?? value.length;
-      return value.slice(0, cursor).split('\n').length;
-    }
-    function getEditorCursorRatio() {
-      const totalLines = Math.max(1, (inputEl.value || '').split('\n').length);
-      if (totalLines <= 1) return 0;
-      return Math.max(0, Math.min(1, (getEditorCursorLine() - 1) / (totalLines - 1)));
-    }
-    function getEditorScrollRatio() {
-      const maxScroll = Math.max(0, inputEl.scrollHeight - inputEl.clientHeight);
-      if (!maxScroll) return getEditorCursorRatio();
-      return Math.max(0, Math.min(1, inputEl.scrollTop / maxScroll));
-    }
-    function isEditorNearBottom() {
-      const maxScroll = Math.max(0, inputEl.scrollHeight - inputEl.clientHeight);
-      if (!maxScroll) return true;
-      const cursorLine = getEditorCursorLine();
-      const totalLines = Math.max(1, (inputEl.value || '').split('\n').length);
-      return (maxScroll - inputEl.scrollTop) < 36 || cursorLine >= totalLines - 1;
-    }
-    function syncScrollElementToEditor(scrollEl, options = {}) {
-      if (!scrollEl) return;
-      const maxScroll = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight);
-      if (!maxScroll) { scrollEl.scrollTop = 0; return; }
-      if (options.forceBottom || isEditorNearBottom()) {
-        scrollEl.scrollTop = maxScroll;
-        return;
-      }
-      const scrollRatio = getEditorScrollRatio();
-      const cursorRatio = getEditorCursorRatio();
-      const ratio = Math.max(scrollRatio, Math.min(1, cursorRatio + 0.03));
-      scrollEl.scrollTop = Math.max(0, Math.min(maxScroll, Math.round(maxScroll * ratio)));
-    }
-    function syncTeamsPreviewScrollToEditor(options = {}) {
-      const doc = previewFrame.contentDocument;
-      const scrollEl = doc && doc.querySelector('.teams-message');
-      syncScrollElementToEditor(scrollEl, options);
-    }
-    function syncFormatPreviewScrollToEditor(options = {}) {
-      if (formatPreviewEl && !formatPreviewEl.hidden) syncScrollElementToEditor(formatPreviewEl, options);
-    }
-    function syncActivePreviewScrollToEditor(options = {}) {
-      requestAnimationFrame(() => {
-        if (activeUtility === 'teams') syncTeamsPreviewScrollToEditor(options);
-        else syncFormatPreviewScrollToEditor(options);
-        window.setTimeout(() => {
-          if (activeUtility === 'teams') syncTeamsPreviewScrollToEditor(options);
-          else syncFormatPreviewScrollToEditor(options);
-        }, 0);
-      });
-    }
-    function updatePreviewDocument(html, shouldFollowCursor = false) {
-      const body = buildTeamsPreviewBody(html);
-      const doc = previewFrame.contentDocument;
-      const msg = doc && doc.querySelector('.msg');
-      const scrollEl = doc && doc.querySelector('.teams-message');
-      if (!msg || !scrollEl) {
-        previewFrame.onload = () => {
-          if (shouldFollowCursor) syncTeamsPreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
-        };
-        previewFrame.srcdoc = buildTeamsPreviewHtml(html);
-        return;
-      }
-      const previousTop = scrollEl.scrollTop;
-      msg.innerHTML = body;
-      requestAnimationFrame(() => {
-        if (shouldFollowCursor) {
-          syncTeamsPreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
-          if (document.activeElement !== inputEl) return;
-          try { inputEl.focus({ preventScroll: true }); } catch { inputEl.focus(); }
-        } else {
-          scrollEl.scrollTop = previousTop;
-        }
-      });
+      if (!lineNumbers) return;
+      const lines = Math.max(1, editor.value.split('\n').length);
+      lineNumbers.textContent = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
+      lineNumbers.scrollTop = editor.scrollTop;
     }
 
-    async function copyRichHtml(html) { const plain = htmlToPlainText(html); const fragment = buildClipboardHtmlFragment(html); if (navigator.clipboard && window.ClipboardItem) { const item = new ClipboardItem({ 'text/html': new Blob([fragment], { type: 'text/html' }), 'text/plain': new Blob([plain], { type: 'text/plain' }) }); await navigator.clipboard.write([item]); return true; } const ta = document.createElement('textarea'); ta.value = plain; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '-9999px'; document.body.appendChild(ta); ta.focus(); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; }
-    function extractEmailPlainText(emailHtml) { const doc = new DOMParser().parseFromString(emailHtml || '', 'text/html'); return (doc.body ? doc.body.innerText : htmlToPlainText(emailHtml || '')).replace(/\n{3,}/g, '\n\n').trim(); }
-        async function copyEmailHtml(emailHtml) {
-      const plain = extractEmailPlainText(emailHtml);
-      if (navigator.clipboard && window.ClipboardItem) {
-        const item = new ClipboardItem({
-          'text/html': new Blob([emailHtml], { type: 'text/html' }),
-          'text/plain': new Blob([plain], { type: 'text/plain' })
-        });
-        await navigator.clipboard.write([item]);
-        return true;
+    function updateStats(markdown) {
+      const trimmed = markdown.trim();
+      const words = trimmed ? (trimmed.match(/\b[\p{L}\p{N}_'-]+\b/gu) || []).length : 0;
+      const chars = markdown.length;
+      const lines = Math.max(1, markdown.split('\n').length);
+      const headings = (markdown.match(/^#{1,6}\s+/gm) || []).length;
+      statsEls.words.textContent = words;
+      statsEls.chars.textContent = chars;
+      statsEls.lines.textContent = lines;
+      statsEls.headings.textContent = headings;
+    }
+
+    function setDocInfo() {
+      docInfo.textContent = `${state.filename || DEFAULT_FILENAME} · Autosaved locally · Browser-only`;
+    }
+
+    function previewScroller() {
+      const inner = previewInner.querySelector('.teams-sent-scroll');
+      if (inner && inner.scrollHeight - inner.clientHeight > 2) return inner;
+      return preview;
+    }
+
+    // Keep the preview aligned with the editor using the editor's scroll ratio.
+    // Driving the preview from the editor (rather than the reverse) avoids the
+    // jump-to-top that happened when the preview innerHTML was rebuilt on every
+    // keystroke, and keeps the same region visible while typing.
+    function syncPreviewScroll() {
+      const editorMax = editor.scrollHeight - editor.clientHeight;
+      const ratio = editorMax > 0 ? editor.scrollTop / editorMax : 0;
+      const scroller = previewScroller();
+      const scrollerMax = scroller.scrollHeight - scroller.clientHeight;
+      scroller.scrollTop = ratio * scrollerMax;
+    }
+
+    function renderPreview(markdown) {
+      syncOutputProfileOptions();
+      const format = outputFormat.value;
+      const profile = currentProfile();
+      const source = markdownForOutput(markdown, profile);
+      previewInner.className = `preview-inner mode-${format}`;
+      if (format === 'html') {
+        previewInner.innerHTML = `<pre class="preview-output-code"><code>${htmlEscape(getHtmlOutput(source, profile, state.filename || DEFAULT_FILENAME))}</code></pre>`;
+      } else if (format === 'jira') {
+        previewInner.innerHTML = `<pre class="preview-output-code"><code>${htmlEscape(convertMarkdownToJira(source))}</code></pre>`;
+      } else {
+        previewInner.innerHTML = renderMarkdownForTeams(source);
       }
-      const doc = new DOMParser().parseFromString(emailHtml || '', 'text/html');
-      const rich = document.createElement('div');
-      rich.contentEditable = 'true';
-      rich.style.position = 'fixed';
-      rich.style.left = '-9999px';
-      rich.style.top = '-9999px';
-      rich.innerHTML = doc.body ? doc.body.innerHTML : emailHtml;
-      document.body.appendChild(rich);
-      const range = document.createRange();
-      range.selectNodeContents(rich);
+      updateCopyLabel();
+      syncPreviewScroll();
+    }
+
+    function scheduleUpdate() {
+      clearTimeout(state.renderTimer);
+      state.renderTimer = setTimeout(() => {
+        const markdown = editor.value;
+        localStorage.setItem(STORAGE_KEY, markdown);
+        localStorage.setItem(FILE_KEY, state.filename || DEFAULT_FILENAME);
+        updateLineNumbers();
+        updateStats(markdown);
+        renderPreview(markdown);
+        setDocInfo();
+      }, 80);
+    }
+
+    function setViewMode(mode) {
+      state.viewMode = mode;
+      workspace.className = `workspace ${mode === 'split' ? 'split' : mode === 'editor' ? 'editor-only' : 'preview-only'}`;
+      Object.entries(modeButtons).forEach(([key, btn]) => btn.classList.toggle('active', key === mode));
+    }
+
+    async function loadFile(file) {
+      try {
+        const text = await file.text();
+        editor.value = text;
+        state.filename = file.name || DEFAULT_FILENAME;
+        scheduleUpdate();
+        showToast(`Opened ${state.filename}`);
+      } catch (error) {
+        console.error(error);
+        showToast('Could not open file');
+      }
+    }
+
+    function downloadMarkdown(markdown, filename) {
+      const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safeName = (filename || DEFAULT_FILENAME).replace(/\.(txt|markdown)$/i, '.md');
+      a.download = /\.md$/i.test(safeName) ? safeName : `${safeName}.md`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    // Copy rich HTML to the clipboard by selecting a hidden contenteditable
+    // element and firing the synchronous copy command. This works even when the
+    // async Clipboard API is unavailable (e.g. file:// or other insecure
+    // contexts) and is what lets Microsoft Teams paste with formatting instead
+    // of falling back to plain text.
+    function copyHtmlViaExecCommand(bodyHtml, plainText) {
+      const holder = document.createElement('div');
+      holder.contentEditable = 'true';
+      holder.setAttribute('aria-hidden', 'true');
+      holder.style.position = 'fixed';
+      holder.style.left = '-9999px';
+      holder.style.top = '0';
+      holder.style.whiteSpace = 'pre-wrap';
+      holder.innerHTML = bodyHtml;
+      document.body.appendChild(holder);
       const selection = window.getSelection();
+      const previous = selection.rangeCount ? selection.getRangeAt(0) : null;
+      const range = document.createRange();
+      range.selectNodeContents(holder);
       selection.removeAllRanges();
       selection.addRange(range);
-      const ok = document.execCommand('copy');
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch (error) { ok = false; }
       selection.removeAllRanges();
-      rich.remove();
+      if (previous) selection.addRange(previous);
+      holder.remove();
+      if (!ok && plainText !== undefined) {
+        const ta = document.createElement('textarea');
+        ta.value = plainText;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try { ok = document.execCommand('copy'); } catch (error) { ok = false; }
+        ta.remove();
+      }
       return ok;
     }
-    async function copyPlainText(text) {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-        return true;
+
+    async function copyMarkdown() {
+      const output = getCurrentOutput();
+      const isTeams = outputFormat.value === 'teams';
+      try {
+        if (isTeams && navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
+          await navigator.clipboard.write([new ClipboardItem({
+            'text/html': new Blob([output.html], { type: 'text/html' }),
+            'text/plain': new Blob([output.text], { type: 'text/plain' })
+          })]);
+        } else if (isTeams) {
+          // Insecure context (no async Clipboard API): copy rich HTML via execCommand.
+          if (!copyHtmlViaExecCommand(output.bodyHtml, output.text)) throw new Error('Rich copy failed');
+        } else {
+          if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('Clipboard API unavailable');
+          await navigator.clipboard.writeText(output.text);
+        }
+        showToast(`Copied ${output.label}`);
+      } catch (error) {
+        console.error(error);
+        if (isTeams && copyHtmlViaExecCommand(output.bodyHtml, output.text)) {
+          showToast(`Copied ${output.label}`);
+          return;
+        }
+        const helper = document.createElement('textarea');
+        helper.value = output.text;
+        helper.setAttribute('readonly', '');
+        helper.style.position = 'fixed';
+        helper.style.opacity = '0';
+        document.body.appendChild(helper);
+        helper.select();
+        document.execCommand('copy');
+        helper.remove();
+        showToast(`Copied ${output.label} using fallback`);
       }
-      const ta = document.createElement('textarea');
-      ta.value = text || '';
-      ta.style.position = 'fixed';
-      ta.style.left = '-9999px';
-      ta.style.top = '-9999px';
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      const ok = document.execCommand('copy');
-      ta.remove();
-      return ok;
+    }
+
+    function replaceWholeDocument(nextValue, nextFilename, message) {
+      editor.focus();
+      editor.setSelectionRange(0, editor.value.length);
+      document.execCommand('insertText', false, nextValue);
+      state.filename = nextFilename || DEFAULT_FILENAME;
+      scheduleUpdate();
+      showToast(message);
+    }
+
+    function clearDocument() {
+      if (editor.value && !confirm('Clear the current Markdown document?')) return;
+      replaceWholeDocument('', DEFAULT_FILENAME, 'Document cleared');
     }
 
     function showToast(message) {
-      toastEl.textContent = message;
-      toastEl.classList.add('show');
+      toast.textContent = message;
+      toast.classList.add('show');
       clearTimeout(showToast.timer);
-      showToast.timer = setTimeout(() => toastEl.classList.remove('show'), 2100);
-    }
-    function setStatus(message) { showToast(message); }
-    function getActiveProfile() { return activeProfile[activeUtility] || profiles[activeUtility][0].id; }
-    function setActiveProfile(profileId) {
-      activeProfile[activeUtility] = profileId;
-      localStorage.setItem('mcl.activeProfiles', JSON.stringify(activeProfile));
-      renderProfiles();
-      convert(false);
+      showToast.timer = setTimeout(() => toast.classList.remove('show'), 1800);
     }
 
-    function openDb() {
-      if (dbPromise) return dbPromise;
-      dbPromise = new Promise((resolve, reject) => {
-        if (!('indexedDB' in window)) { reject(new Error('IndexedDB is not available.')); return; }
-        const req = indexedDB.open('markdown-copy-lab', 1);
-        req.onupgradeneeded = () => {
-          const db = req.result;
-          if (!db.objectStoreNames.contains('history')) db.createObjectStore('history', { keyPath: 'id' });
-          if (!db.objectStoreNames.contains('snippets')) db.createObjectStore('snippets', { keyPath: 'id' });
-        };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
-      return dbPromise;
-    }
-    async function idbPut(store, value) {
-      const db = await openDb();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, 'readwrite');
-        tx.objectStore(store).put(value);
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error);
-      });
-    }
-    async function idbDelete(store, key) {
-      const db = await openDb();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, 'readwrite');
-        tx.objectStore(store).delete(key);
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error);
-      });
-    }
-    async function idbAll(store) {
-      const db = await openDb();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(store, 'readonly');
-        const req = tx.objectStore(store).getAll();
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => reject(req.error);
-      });
-    }
-    function makeId(prefix) { return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`; }
-    function firstMeaningfulLine(text) { return (text || '').split('\n').map(v => v.replace(/^#+\s*/, '').trim()).find(Boolean) || 'Untitled conversion'; }
 
-    function readLocalHistoryMirror() {
-      try { return JSON.parse(localStorage.getItem('mcl.localHistory') || '[]'); }
-      catch { return []; }
-    }
-    function writeLocalHistoryMirror(items) {
-      try { localStorage.setItem('mcl.localHistory', JSON.stringify((items || []).slice(0, 50))); }
-      catch (error) { console.warn(error); }
-    }
-    function addLocalHistoryMirror(record) {
-      const next = [record, ...readLocalHistoryMirror().filter(item => item.id !== record.id)].slice(0, 50);
-      writeLocalHistoryMirror(next);
-      localHistory = next;
+    function replaceSelection(before, after = '', placeholder = '') {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const selected = editor.value.slice(start, end) || placeholder;
+      const value = `${before}${selected}${after}`;
+      editor.focus();
+      editor.setSelectionRange(start, end);
+      document.execCommand('insertText', false, value);
+      editor.selectionStart = start + before.length;
+      editor.selectionEnd = start + before.length + selected.length;
+      editor.focus();
+      scheduleUpdate();
     }
 
-    async function loadLocalData() {
-      try {
-        savedSnippets = (await idbAll('snippets')).sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-        localHistory = (await idbAll('history')).sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 50);
-        writeLocalHistoryMirror(localHistory);
-      } catch (error) {
-        console.warn(error);
-        localHistory = readLocalHistoryMirror().sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 50);
-      }
-      renderRecentHistory();
-    }
-    async function saveHistorySnapshot(reason = 'copy', options = {}) {
-      const record = {
-        id: makeId('hist'),
-        title: firstMeaningfulLine(inputEl.value),
-        utility: activeUtility,
-        profile: getActiveProfile(),
-        reason,
-        input: inputEl.value || '',
-        output: currentOutput || outputEl.value || '',
-        createdAt: Date.now()
-      };
-      addLocalHistoryMirror(record);
-      try {
-        await idbPut('history', record);
-        await loadLocalData();
-        if (!options.silent) showToast('Saved to local history');
-        return true;
-      } catch (error) {
-        console.warn(error);
-        renderRecentHistory();
-        if (!options.silent) showToast('Saved to local history in this browser');
-        return true;
-      }
-    }
-    async function saveSnippetFromSelection() {
-      const selected = inputEl.value.slice(inputEl.selectionStart || 0, inputEl.selectionEnd || 0) || inputEl.value;
-      if (!selected.trim()) { showToast('Nothing to save as snippet'); return; }
-      const title = prompt('Snippet name', firstMeaningfulLine(selected));
-      if (!title) return;
-      const snippet = { id: makeId('snip'), title, body: selected, updatedAt: Date.now() };
-      await idbPut('snippets', snippet);
-      await loadLocalData();
-      renderDrawer('snippets');
-      showToast('Snippet saved locally');
+    function prefixSelectedLines(prefixFactory) {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const value = editor.value;
+      const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+      let lineEnd = value.indexOf('\n', end);
+      if (lineEnd === -1) lineEnd = value.length;
+      const block = value.slice(lineStart, lineEnd);
+      const lines = block.split('\n');
+      const next = lines.map((line, index) => `${prefixFactory(index)}${line || ''}`).join('\n');
+      editor.focus();
+      editor.setSelectionRange(lineStart, lineEnd);
+      document.execCommand('insertText', false, next);
+      editor.selectionStart = lineStart;
+      editor.selectionEnd = lineStart + next.length;
+      editor.focus();
+      scheduleUpdate();
     }
 
-    function compactMarkdownForTeams(md) {
-      const lines = String(md || '').replace(/\r\n?/g, '\n').split('\n');
-      const out = [];
-      let paragraph = [];
-      let inFence = false;
-      function flushParagraph() {
-        if (!paragraph.length) return;
-        out.push(paragraph.map(line => line.trim()).filter(Boolean).join(' '));
-        paragraph = [];
-      }
-      for (const raw of lines) {
-        const line = raw.replace(/\s+$/g, '');
-        const trimmed = line.trim();
-        if (/^```/.test(trimmed)) {
-          flushParagraph();
-          out.push(line);
-          inFence = !inFence;
-          continue;
-        }
-        if (inFence) { out.push(line); continue; }
-        if (!trimmed) {
-          flushParagraph();
-          if (out[out.length - 1] !== '') out.push('');
-          continue;
-        }
-        if (/^(#{1,6}\s+|>\s?|[-*+]\s+|\d+\.\s+|\|.*\||-{3,}$|\*{3,}$|_{3,}$)/.test(trimmed)) {
-          flushParagraph();
-          out.push(line);
-          continue;
-        }
-        paragraph.push(line);
-      }
-      flushParagraph();
-      return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+    function insertLink() {
+      const selected = editor.value.slice(editor.selectionStart, editor.selectionEnd) || 'link text';
+      const start = editor.selectionStart;
+      const value = `[${selected}](https://example.com)`;
+      editor.focus();
+      editor.setSelectionRange(editor.selectionStart, editor.selectionEnd);
+      document.execCommand('insertText', false, value);
+      editor.selectionStart = start + 1;
+      editor.selectionEnd = start + 1 + selected.length;
+      editor.focus();
+      scheduleUpdate();
     }
 
-    function applyProfileToTeams(html) {
-      const profile = getActiveProfile();
-      if (profile === 'compact') return html.replace(/(<p>&nbsp;<\/p>){2,}/g, '<p>&nbsp;</p>');
-      if (profile === 'plain-safe') return html.replace(/<p>──────────<\/p>/g, '<p>---</p>');
-      return html;
-    }
-    function applyProfileToJira(text) {
-      const profile = getActiveProfile();
-      if (profile === 'compact') return text.replace(/\n{3,}/g, '\n\n').trim();
-      return text;
-    }
-    function applyProfileToMarkdown(text) {
-      const profile = getActiveProfile();
-      if (profile === 'compact') return text.replace(/\n{3,}/g, '\n\n').trim();
-      if (profile === 'docs') return text.replace(/\n{4,}/g, '\n\n\n').trim();
-      return text;
-    }
-    function convertMarkdownToEmailHtmlProfiled(md) {
-      return convertMarkdownToEmailHtml(md, getActiveProfile());
+    function runToolbarAction(action) {
+      if (action === 'heading') return prefixSelectedLines(() => '## ');
+      if (action === 'bold') return replaceSelection('**', '**', 'strong text');
+      if (action === 'italic') return replaceSelection('*', '*', 'emphasized text');
+      if (action === 'quote') return prefixSelectedLines(() => '> ');
+      if (action === 'code') return replaceSelection('`', '`', 'code');
+      if (action === 'link') return insertLink();
+      if (action === 'ul') return prefixSelectedLines(() => '- ');
+      if (action === 'ol') return prefixSelectedLines(index => `${index + 1}. `);
+      if (action === 'task') return prefixSelectedLines(() => '- [ ] ');
+      if (action === 'codeblock') return replaceSelection('```\n', '\n```', 'code');
     }
 
-    function renderEmailPreview(emailHtml) {
-      const doc = new DOMParser().parseFromString(emailHtml || '', 'text/html');
-      const body = doc.body ? doc.body.innerHTML : emailHtml;
-      formatPreviewEl.innerHTML = `<div class="email-preview-doc">${body}</div>`;
-    }
-
-    function updateStats(src, out) {
-      sourceCharsEl.textContent = String(src.length);
-      outputCharsEl.textContent = String((out || '').length);
-      codeBlocksEl.textContent = String((src.match(/```/g) || []).length / 2 | 0);
-      lineCountEl.textContent = String(Math.max(1, src.split('\n').length));
-    }
-    const appIconSvgs = {
-      teams: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4" width="11" height="13" rx="3" fill="#6264A7"/><rect x="3" y="7" width="10" height="11" rx="2" fill="#464775"/><circle cx="18" cy="8" r="2" fill="#8B8CC7"/><path d="M6 10h6v2h-2v5H8v-5H6z" fill="#fff"/></svg>',
-      jira: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 12 12 21 3 12z" fill="#2684FF"/><path d="M12 7.2 16.8 12 12 16.8 7.2 12z" fill="#DEEBFF"/></svg>',
-      gmail: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2.5" fill="#EA4335"/><path d="M5 8 12 13 19 8v8H5z" fill="#fff"/><path d="M5 8 12 13 19 8" fill="none" stroke="#EA4335" stroke-width="1.6" stroke-linejoin="round"/></svg>',
-      confluence: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14c2.2-3.5 5.3-5.2 9.4-5.2 2.1 0 3.2.6 3.5 1.9.2.8-.1 1.7-.8 2.7-2.2 3.4-5.5 5-9.8 4.8-2-.1-3.1-.8-3.4-2.1-.1-.6.2-1.3 1.1-2.1z" fill="#172B4D"/><path d="M5 10.2C7.2 6.8 10.4 5 14.5 5c2.2 0 3.4.7 3.6 2.1.1.7-.2 1.5-.9 2.5-1.5-.9-3.4-1.2-5.4-.8-2 .4-3.7 1.3-5 2.9z" fill="#2684FF"/></svg>',
-      word: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4" width="13" height="16" rx="2" fill="#2B579A"/><rect x="3" y="7" width="10" height="10" rx="2" fill="#185ABD"/><path d="M5 10h1.5l.8 3 .9-3h1.3l.9 3 .8-3H12l-1.2 5H9.4l-.8-2.8L7.8 15H6.4z" fill="#fff"/></svg>',
-      markdown: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2" fill="#1f2937" stroke="#fff" stroke-opacity=".72"/><path d="M6 15V9h2l2 2 2-2h2v6h-2v-3.4l-2 2-2-2V15zM17 9h2v4h2l-3 3-3-3h2z" fill="#fff"/></svg>'
-    };
-
-    function iconImg(key, extraClass = '') {
-      const svg = appIconSvgs[key];
-      if (!svg) return `<span class="quick-icon ${extraClass}">${key || '•'}</span>`;
-      return `<span class="quick-icon ${extraClass}">${svg}</span>`;
-    }
-
-    const quickContexts = {
-      teams: {
-        title: 'Markdown to Teams',
-        text: 'Convert Markdown into paste-ready rich HTML for Microsoft Teams. Write or upload Markdown on the left, choose the Teams profile in the preview header, then use Copy for Teams. Everything runs locally in your browser.',
-        actions: []
-      },
-      jira: {
-        title: 'Markdown to Jira',
-        text: 'Convert Markdown into Jira wiki markup for issue descriptions, comments and acceptance criteria. Use the preview profile selector to choose the Jira flavor before copying the generated text.',
-        actions: []
-      },
-      email: {
-        title: 'Markdown to Email',
-        text: 'Turn Markdown into rich email HTML for Gmail or Outlook. Choose an email template/profile in the preview header, review the rendered message, then copy the formatted email body.',
-        actions: []
-      },
-      clipboard: {
-        title: 'Teams to Markdown',
-        text: 'Paste rich text copied from Teams, Confluence, Gmail, Word, Jira or any web page and clean it into Markdown. The clipboard cleanup stays inside your browser and no content is sent to a server.',
-        actions: []
-      }
-    };
-
-    const contextualSamples = {
-      teams: sample,
-      jira: ['# Jira issue summary', '', '**Acceptance criteria**', '', '- [ ] Given a valid request, when it is processed, then the result is persisted.', '- [ ] Edge cases are covered.', '', '```java', 'public Result handle(Request request) {', '    return service.execute(request);', '}', '```'].join('\n'),
-      email: ['# Weekly delivery update', '', '**Status:** On track', '', 'Hello team,', '', 'Here is a concise summary of this week\'s delivery progress.', '', '- Completed the planned rollout.', '- Verified monitoring and fallback paths.', '- Next milestone remains unchanged.', '', 'Thanks,'].join('\n')
-    };
-
-    function renderQuickStrip() {
-      const context = quickContexts[activeUtility] || quickContexts.teams;
-      quickTitleEl.textContent = context.title;
-      quickTextEl.textContent = context.text;
-      quickActionsEl.innerHTML = '';
-    }
-
-    function loadContextSample(kind = activeUtility) {
-      const value = contextualSamples[kind] || sample;
-      loadText(value);
-    }
-
-    function renderProfiles() {
-      const options = profiles[activeUtility] || [];
-      const selected = getActiveProfile();
-      const markup = options.map(p => `<option value="${p.id}" ${p.id === selected ? 'selected' : ''}>${p.name}</option>`).join('');
-      if (profileSelect) profileSelect.innerHTML = markup;
-      if (previewProfileSelect) previewProfileSelect.innerHTML = markup;
-      profileDescriptionEl.textContent = (options.find(p => p.id === selected) || options[0] || {}).description || '';
-    }
-    function renderWarnings() {
-      const cfg = utilityConfig[activeUtility];
-      warningPillsEl.innerHTML = cfg.warnings.map((warning, i) => `<span class="pill ${i === 0 ? 'good' : 'warn'}">${warning}</span>`).join('');
-      compatibilityTextEl.textContent = cfg.compatibility;
-    }
-    function renderRecentHistory() {
-      if (!recentHistoryListEl) return;
-      if (!localHistory.length) {
-        recentHistoryListEl.innerHTML = '<p class="small-text">No local history yet. Copy any conversion to store a local snapshot in this browser.</p>';
-        return;
-      }
-      recentHistoryListEl.innerHTML = localHistory.slice(0, 4).map(item => `
-        <div class="list-item">
-          <strong>${htmlEscape(item.title || 'Untitled')}</strong>
-          <span>${new Date(item.createdAt).toLocaleString()} · ${item.utility} · ${item.profile}</span>
-          <button class="toolbar-button restore-history" data-id="${item.id}">Restore</button>
-        </div>`).join('');
-    }
-    function updateUtilityChrome() {
-      const cfg = utilityConfig[activeUtility];
-      document.querySelectorAll('.utility-nav').forEach(btn => btn.classList.toggle('active', btn.dataset.utility === activeUtility));
-      editorTitleEl.textContent = cfg.editorTitle;
-      editorSubtitleEl.textContent = cfg.editorSubtitle;
-      previewTitleEl.textContent = cfg.previewTitle;
-      previewSubtitleEl.textContent = cfg.previewSubtitle;
-      activeUtilityCopyEl.textContent = cfg.copy;
-      copyBtnLabel.textContent = cfg.copyLabel;
-      copyBtnCaption.textContent = cfg.copyCaption;
-      if (inspectorTitleEl) inspectorTitleEl.textContent = cfg.outputLabel;
-      inputEl.placeholder = cfg.inputPlaceholder;
-      loadFileBtn.hidden = activeUtility === 'clipboard';
-      pasteRichBtn.hidden = activeUtility !== 'clipboard';
-      document.querySelectorAll('.toolbar-markdown-only').forEach(el => el.classList.toggle('hidden', activeUtility === 'clipboard'));
-      renderQuickStrip();
-      renderProfiles();
-      renderWarnings();
-      localStorage.setItem('mcl.activeUtility', activeUtility);
-    }
-    function setUtility(next) {
-      if (!utilityConfig[next]) return;
-      activeUtility = next;
-      updateUtilityChrome();
-      convert(false);
-    }
-    function setSplitMode(next) {
-      splitMode = next;
-      localStorage.setItem('mcl.splitMode', splitMode);
-      workspaceEl.classList.toggle('editor-only', next === 'editor');
-      workspaceEl.classList.toggle('preview-only', next === 'preview');
-      document.querySelectorAll('[data-split]').forEach(btn => btn.classList.toggle('active', btn.dataset.split === next));
-    }
-    function setInspectorVisible(visible) {
-      inspectorVisible = visible;
-      workspaceEl.classList.toggle('inspector-collapsed', !visible);
-      localStorage.setItem('mcl.inspector', visible ? 'open' : 'collapsed');
-    }
-
-    function convert(shouldFollowCursor = document.activeElement === inputEl) {
-      const src = inputEl.value || '';
-      updateLineNumbers();
-      formatPreviewEl.hidden = activeUtility === 'teams';
-      previewFrame.hidden = activeUtility !== 'teams';
-
-      if (activeUtility === 'teams') {
-        const sourceForTeams = getActiveProfile() === 'compact' ? compactMarkdownForTeams(src) : src;
-        const html = applyProfileToTeams(convertMarkdownToHtml(sourceForTeams)).replace(/\n+/g, '');
-        currentOutput = html;
-        outputEl.value = html;
-        updatePreviewDocument(html, shouldFollowCursor);
-      } else if (activeUtility === 'jira') {
-        const jira = applyProfileToJira(convertMarkdownToJira(src));
-        currentOutput = jira;
-        outputEl.value = jira;
-        formatPreviewEl.innerHTML = '<pre id="formatPreviewText"></pre>';
-        formatPreviewEl.querySelector('pre').textContent = jira || 'Jira markup will appear here.';
-        if (shouldFollowCursor) syncActivePreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
-      } else if (activeUtility === 'email') {
-        lastEmailHtml = convertMarkdownToEmailHtmlProfiled(src);
-        currentOutput = lastEmailHtml;
-        outputEl.value = lastEmailHtml;
-        renderEmailPreview(lastEmailHtml);
-        if (shouldFollowCursor) syncActivePreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
-      } else if (activeUtility === 'clipboard') {
-        const md = applyProfileToMarkdown(src);
-        currentOutput = md;
-        outputEl.value = md;
-        formatPreviewEl.innerHTML = '<pre id="formatPreviewText"></pre>';
-        formatPreviewEl.querySelector('pre').textContent = md || 'Markdown output will appear here.';
-        if (shouldFollowCursor) syncActivePreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
-      }
-      updateStats(src, currentOutput);
-    }
-
-    function pushUndoSnapshot() { undoStack.push({ value: inputEl.value, start: inputEl.selectionStart ?? 0, end: inputEl.selectionEnd ?? 0 }); if (undoStack.length > 100) undoStack.shift(); }
-    function restoreUndoSnapshot(snapshot) { if (!snapshot) return; inputEl.value = snapshot.value; inputEl.focus(); inputEl.setSelectionRange(snapshot.start, snapshot.end); convert(); }
-    function insertAtCursor(text) { pushUndoSnapshot(); const start = inputEl.selectionStart ?? inputEl.value.length; const end = inputEl.selectionEnd ?? inputEl.value.length; inputEl.value = inputEl.value.slice(0, start) + text + inputEl.value.slice(end); const cursor = start + text.length; inputEl.focus(); inputEl.setSelectionRange(cursor, cursor); convert(); }
-    function wrapSelection(prefix, suffix = prefix) { pushUndoSnapshot(); const start = inputEl.selectionStart ?? 0; const end = inputEl.selectionEnd ?? 0; const selected = inputEl.value.slice(start, end) || 'text'; inputEl.value = inputEl.value.slice(0, start) + `${prefix}${selected}${suffix}` + inputEl.value.slice(end); inputEl.focus(); inputEl.setSelectionRange(start + prefix.length, start + prefix.length + selected.length); convert(); }
-    function prefixLines(marker) { pushUndoSnapshot(); const start = inputEl.selectionStart ?? 0; const end = inputEl.selectionEnd ?? 0; const selected = inputEl.value.slice(start, end) || 'item'; const lines = selected.split('\n').map(line => line ? `${marker} ${line}` : marker).join('\n'); inputEl.value = inputEl.value.slice(0, start) + lines + inputEl.value.slice(end); inputEl.focus(); inputEl.setSelectionRange(start + marker.length + 1, start + lines.length); convert(); }
-
-    function openDrawer(kind) {
-      renderDrawer(kind);
-      drawerBackdropEl.hidden = false;
-      requestAnimationFrame(() => drawerBackdropEl.classList.add('open'));
-      drawerEl.classList.add('open');
-    }
-    function closeDrawer() {
-      drawerEl.classList.remove('open');
-      drawerBackdropEl.classList.remove('open');
-      window.setTimeout(() => { if (!drawerEl.classList.contains('open')) drawerBackdropEl.hidden = true; }, 180);
-    }
-    function itemButton(label, className, dataId) { return `<button class="toolbar-button ${className}" data-id="${dataId}">${label}</button>`; }
-    function renderDrawer(kind) {
-      const allSnippets = [...builtInSnippets, ...savedSnippets];
-      if (kind === 'dashboard') {
-        drawerTitleEl.textContent = 'Usage dashboard';
-        const byUtility = localHistory.reduce((acc, item) => { acc[item.utility] = (acc[item.utility] || 0) + 1; return acc; }, {});
-        const profileSummary = Object.entries(activeProfile).map(([utility, profile]) => `<span class="pill">${htmlEscape(utilityConfig[utility]?.previewTitle || utility)} · ${htmlEscape(profile)}</span>`).join('');
-        drawerBodyEl.innerHTML = `<div class="inspector-card"><h3>Local activity</h3><div class="stat-grid mini"><div><span>Conversions</span><strong>${localHistory.length}</strong></div><div><span>Snippets</span><strong>${savedSnippets.length}</strong></div><div><span>Profiles</span><strong>${Object.keys(activeProfile).length}</strong></div></div><p class="small-text">This dashboard is computed from local IndexedDB history stored only in this browser.</p></div><div class="inspector-card"><h3>Conversions by utility</h3><div class="pill-row">${Object.entries(utilityConfig).map(([key, cfg]) => `<span class="pill">${htmlEscape(cfg.previewTitle)} · ${byUtility[key] || 0}</span>`).join('')}</div></div><div class="inspector-card"><h3>Active profiles</h3><div class="pill-row">${profileSummary}</div></div><div class="inspector-card"><h3>Recent history</h3>${localHistory.slice(0,5).map(h => `<div class="list-item"><strong>${htmlEscape(h.title)}</strong><span>${new Date(h.createdAt).toLocaleString()} · ${h.utility} · ${h.profile}</span></div>`).join('') || '<p class="small-text">No conversions copied yet.</p>'}</div>`;
-      } else if (kind === 'templates') {
-        drawerTitleEl.textContent = 'Templates';
-        drawerBodyEl.innerHTML = templates.map(t => `<div class="list-item"><strong>${htmlEscape(t.title)}</strong><span>${t.tags.join(' · ')}</span><p class="small-text">${htmlEscape(t.body.slice(0, 110))}…</p><div class="pill-row">${itemButton('Load', 'load-template', t.id)}${itemButton('Insert', 'insert-template', t.id)}</div></div>`).join('');
-      } else if (kind === 'snippets') {
-        drawerTitleEl.textContent = 'Saved snippets';
-        drawerBodyEl.innerHTML = `<button class="button primary" id="saveSnippetNow">Save selection as snippet</button>` + allSnippets.map(s => `<div class="list-item"><strong>${htmlEscape(s.title)}</strong><p class="small-text">${htmlEscape(s.body.slice(0, 130))}…</p><div class="pill-row">${itemButton('Insert', 'insert-snippet', s.id)}${s.updatedAt ? itemButton('Delete', 'delete-snippet', s.id) : ''}</div></div>`).join('');
-      } else if (kind === 'history') {
-        drawerTitleEl.textContent = 'Local history';
-        drawerBodyEl.innerHTML = localHistory.length ? localHistory.map(h => `<div class="list-item"><strong>${htmlEscape(h.title)}</strong><span>${new Date(h.createdAt).toLocaleString()} · ${h.utility} · ${h.profile}</span><p class="small-text">${htmlEscape((h.input || '').slice(0, 130))}…</p><div class="pill-row">${itemButton('Restore', 'restore-history', h.id)}${itemButton('Delete', 'delete-history', h.id)}</div></div>`).join('') : '<p class="small-text">No local history yet. Snapshots are stored in IndexedDB on this browser only.</p>';
-      } else if (kind === 'profiles') {
-        drawerTitleEl.textContent = 'Conversion profiles';
-        drawerBodyEl.innerHTML = Object.entries(profiles).map(([utility, list]) => `<div class="inspector-card"><h3>${utilityConfig[utility].icon} ${utilityConfig[utility].previewTitle}</h3>${list.map(p => `<div class="list-item"><strong>${htmlEscape(p.name)}</strong><p class="small-text">${htmlEscape(p.description)}</p><button class="toolbar-button choose-profile" data-utility="${utility}" data-id="${p.id}">Use profile</button></div>`).join('')}</div>`).join('');
-      } else if (kind === 'privacy') {
-        drawerTitleEl.textContent = 'Privacy mode';
-        drawerBodyEl.innerHTML = '<div class="inspector-card"><h3>Privacy mode is always on</h3><p>No conversion content is sent to a backend. Markdown, rich clipboard HTML, templates, snippets and history stay in this browser. Optional storage uses IndexedDB under this site origin.</p><div class="pill-row"><span class="pill good">Local conversion</span><span class="pill good">IndexedDB history</span><span class="pill good">No API upload</span></div></div>';
-      } else if (kind === 'pwa') {
-        drawerTitleEl.textContent = 'PWA offline';
-        drawerBodyEl.innerHTML = '<div class="inspector-card"><h3>Installable offline app</h3><p>Markup Forge can run as a PWA when deployed together with <code>manifest.webmanifest</code>, <code>sw.js</code>, <code>markdown-copy-lab-icon.svg</code>, and the PNG icon files in the same folder.</p><button class="button primary" id="installPwaBtn">Install app</button></div>';
-      }
-    }
-    function getTemplate(id) { return templates.find(t => t.id === id); }
-    function getSnippet(id) { return [...builtInSnippets, ...savedSnippets].find(s => s.id === id); }
-    function loadText(text) { pushUndoSnapshot(); inputEl.value = text; inputEl.focus(); inputEl.setSelectionRange(0, 0); convert(false); }
-
-    function commandActions() {
-      const allSnippets = [...builtInSnippets, ...savedSnippets];
-      return [
-        ...Object.keys(utilityConfig).map(key => ({ icon: utilityConfig[key].icon, title: utilityConfig[key].previewTitle, subtitle: 'Switch utility', run: () => setUtility(key) })),
-        { icon: '⧉', title: 'Copy current output', subtitle: `${utilityConfig[activeUtility].copyLabel} + save local history`, run: () => copyCurrentOutput() },
-        { icon: '◫', title: 'Split: Both', subtitle: 'Show editor and preview', run: () => setSplitMode('both') },
-        { icon: '✎', title: 'Split: Editor only', subtitle: 'Focus on writing', run: () => setSplitMode('editor') },
-        { icon: '◉', title: 'Split: Preview only', subtitle: 'Focus on output', run: () => setSplitMode('preview') },
-        { icon: '⌁', title: 'Toggle inspector', subtitle: 'Show or hide side inspector', run: () => setInspectorVisible(!inspectorVisible) },
-        { icon: '↧', title: 'Paste rich text from clipboard', subtitle: 'Convert Teams or rich clipboard content to Markdown', run: () => pasteRichText('Clipboard') },
-        ...templates.map(t => ({ icon: '▤', title: `Load template: ${t.title}`, subtitle: t.tags.join(' · '), run: () => loadText(t.body) })),
-        ...allSnippets.map(s => ({ icon: '✂', title: `Insert snippet: ${s.title}`, subtitle: (s.body || '').slice(0, 70), run: () => insertAtCursor(s.body) }))
-      ];
-    }
-    function openPalette() { paletteBackdrop.classList.add('open'); paletteInput.value = ''; renderPalette(); setTimeout(() => paletteInput.focus(), 0); }
-    function closePalette() { paletteBackdrop.classList.remove('open'); }
-    function renderPalette() {
-      const query = paletteInput.value.trim().toLowerCase();
-      const actions = commandActions().filter(a => !query || `${a.title} ${a.subtitle}`.toLowerCase().includes(query));
-      paletteResults.innerHTML = actions.slice(0, 24).map((a, index) => `<div class="palette-item ${index === 0 ? 'active' : ''}" data-index="${index}"><div>${a.icon}</div><div><strong>${htmlEscape(a.title)}</strong><span>${htmlEscape(a.subtitle || '')}</span></div><kbd class="kbd">Enter</kbd></div>`).join('');
-      renderPalette.actions = actions;
-    }
-    function runPaletteIndex(index = 0) {
-      const action = (renderPalette.actions || [])[index];
-      if (!action) return;
-      closePalette();
-      action.run();
-    }
-
-    async function pasteRichText(source = 'Clipboard') {
-      try {
-        if (!navigator.clipboard || !navigator.clipboard.read) {
-          showToast('Rich clipboard read is not available in this browser');
-          return;
-        }
-        const items = await navigator.clipboard.read();
-        let html = '';
-        let plain = '';
-        for (const item of items) {
-          if (item.types.includes('text/html')) html = await (await item.getType('text/html')).text();
-          if (item.types.includes('text/plain')) plain = await (await item.getType('text/plain')).text();
-          if (html || plain) break;
-        }
-        const md = convertHtmlToMarkdown(html, plain);
-        setUtility('clipboard');
-        inputEl.value = md;
-        inputEl.focus();
-        inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
-        convert(false);
-        showToast(`Pasted rich text from ${source}`);
-      } catch (error) {
-        console.warn(error);
-        showToast('Could not read rich clipboard');
-      }
-    }
-
-    async function copyCurrentOutput() {
-      try {
-        if (activeUtility === 'teams') await copyRichHtml(currentOutput);
-        else if (activeUtility === 'email') await copyEmailHtml(lastEmailHtml || currentOutput);
-        else await copyPlainText(currentOutput);
-        console.debug('[Markup Forge] copied output', { utility: activeUtility, profile: getActiveProfile(), output: currentOutput });
-        await saveHistorySnapshot('copy', { silent: true });
-        showToast(`${utilityConfig[activeUtility].copyLabel} · copied + saved locally`);
-      } catch (error) {
-        console.warn(error);
-        showToast('Copy failed');
-      }
-    }
-
-    async function registerPwa() {
-      window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); installPromptEvent = event; pwaStatusEl.textContent = 'Install ready'; });
-      if (!('serviceWorker' in navigator)) { pwaStatusEl.textContent = 'No SW support'; return; }
-      if (location.protocol === 'file:') { pwaStatusEl.textContent = 'Needs HTTPS'; return; }
-      try {
-        const registration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
-        pwaStatusEl.textContent = registration.active || registration.waiting || registration.installing ? 'Offline ready' : 'Registered';
-      } catch (error) {
-        console.warn(error);
-        pwaStatusEl.textContent = 'Deploy sw.js';
-      }
-    }
-    async function installPwa() {
-      if (!installPromptEvent) { showToast('Install prompt is not available yet'); return; }
-      installPromptEvent.prompt();
-      await installPromptEvent.userChoice;
-      installPromptEvent = null;
-    }
-
-    // Event wiring
-    document.querySelectorAll('.utility-nav').forEach(btn => btn.addEventListener('click', () => setUtility(btn.dataset.utility)));
-    document.querySelectorAll('.drawer-nav').forEach(btn => btn.addEventListener('click', () => openDrawer(btn.dataset.drawer)));
-    document.getElementById('privacyButton').addEventListener('click', () => openDrawer('privacy'));
-    document.getElementById('pwaButton').addEventListener('click', () => openDrawer('pwa'));
-    document.getElementById('openTemplatesBtn').addEventListener('click', () => openDrawer('templates'));
-    document.getElementById('openSnippetsBtn').addEventListener('click', () => openDrawer('snippets'));
-    closeDrawerBtn.addEventListener('click', closeDrawer);
-    drawerBackdropEl.addEventListener('click', closeDrawer);
-    document.addEventListener('pointerdown', (event) => {
-      if (!drawerEl.classList.contains('open')) return;
-      if (drawerEl.contains(event.target)) return;
-      if (event.target.closest('.drawer-nav, #privacyButton, #pwaButton, #openTemplatesBtn, #openSnippetsBtn')) return;
-      closeDrawer();
-    }, true);
-    document.querySelectorAll('[data-split]').forEach(btn => btn.addEventListener('click', () => setSplitMode(btn.dataset.split)));
-    quickActionsEl.addEventListener('click', (event) => {
-      const btn = event.target.closest('[data-quick-action]');
-      if (!btn) return;
-      const action = btn.dataset.quickAction;
-      if (action === 'paste') pasteRichText(btn.dataset.source || 'Clipboard');
-      if (action === 'copy') copyCurrentOutput();
-      if (action === 'drawer') openDrawer(btn.dataset.drawer);
-      if (action === 'sample') loadContextSample(btn.dataset.sample || activeUtility);
-      if (action === 'template') { const t = getTemplate(btn.dataset.template); if (t) loadText(t.body); }
+    editor.addEventListener('input', scheduleUpdate);
+    let scrollSyncRaf = 0;
+    editor.addEventListener('scroll', () => {
+      if (lineNumbers) lineNumbers.scrollTop = editor.scrollTop;
+      if (scrollSyncRaf) return;
+      scrollSyncRaf = requestAnimationFrame(() => { scrollSyncRaf = 0; syncPreviewScroll(); });
     });
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && drawerEl.classList.contains('open')) closeDrawer();
+    document.querySelectorAll('[data-md-action]').forEach(button => {
+      button.addEventListener('click', () => runToolbarAction(button.dataset.mdAction));
     });
-    profileSelect.addEventListener('change', () => setActiveProfile(profileSelect.value));
-    previewProfileSelect.addEventListener('change', () => setActiveProfile(previewProfileSelect.value));
-    loadFileBtn.addEventListener('click', () => fileInput.click());
-    pasteRichBtn.addEventListener('click', () => pasteRichText('Clipboard'));
-    copyBtn.addEventListener('click', copyCurrentOutput);
+    fileInput.addEventListener('change', event => {
+      const file = event.target.files && event.target.files[0];
+      if (file) loadFile(file);
+      event.target.value = '';
+    });
+    copyBtn.addEventListener('click', () => copyMarkdown());
+    downloadBtn.addEventListener('click', () => downloadMarkdown(editor.value, state.filename));
+    clearBtn.addEventListener('click', clearDocument);
+    insertSampleBtn.addEventListener('click', () => {
+      if (editor.value && !confirm('Replace current content with the sample document?')) return;
+      replaceWholeDocument(SAMPLE, 'sample-markdown-document.md', 'Sample loaded');
+    });
+    modeButtons.split.addEventListener('click', () => setViewMode('split'));
+    modeButtons.editor.addEventListener('click', () => setViewMode('editor'));
+    modeButtons.preview.addEventListener('click', () => setViewMode('preview'));
+    outputTabs.forEach(tab => tab.addEventListener('click', () => { outputFormat.value = tab.dataset.outputFormat; renderPreview(editor.value); }));
 
-    btnHeading.addEventListener('click', () => wrapSelection('# ', ''));
-    btnBold.addEventListener('click', () => wrapSelection('**', '**'));
-    btnItalic.addEventListener('click', () => wrapSelection('*', '*'));
-    btnQuote.addEventListener('click', () => prefixLines('>'));
-    btnCodeInline.addEventListener('click', () => wrapSelection('`', '`'));
-    btnLink.addEventListener('click', () => insertAtCursor('[text](https://example.com)'));
-    btnOl.addEventListener('click', () => prefixLines('1.'));
-    btnUl.addEventListener('click', () => prefixLines('-'));
-    btnCheck.addEventListener('click', () => prefixLines('- [ ]'));
-    btnHr.addEventListener('click', () => insertAtCursor('\n---\n'));
-    undoBtn.addEventListener('click', () => restoreUndoSnapshot(undoStack.pop()));
-    inputEl.addEventListener('input', () => convert(true));
-    inputEl.addEventListener('scroll', () => { syncLineNumbersScroll(); syncActivePreviewScrollToEditor({ forceBottom: isEditorNearBottom() }); });
-    inputEl.addEventListener('keyup', syncActivePreviewScrollToEditor);
-    inputEl.addEventListener('click', syncActivePreviewScrollToEditor);
-    inputEl.addEventListener('select', syncActivePreviewScrollToEditor);
-    fileInput.addEventListener('change', async () => { const file = fileInput.files && fileInput.files[0]; if (!file) return; inputEl.value = await file.text(); convert(true); showToast(`Loaded ${file.name}`); });
-
-    drawerBodyEl.addEventListener('click', async (event) => {
-      const btn = event.target.closest('button');
-      if (!btn) return;
-      if (btn.id === 'saveSnippetNow') { await saveSnippetFromSelection(); return; }
-      if (btn.id === 'installPwaBtn') { await installPwa(); return; }
-      const id = btn.dataset.id;
-      if (btn.classList.contains('load-template')) { const t = getTemplate(id); if (t) loadText(t.body); }
-      if (btn.classList.contains('insert-template')) { const t = getTemplate(id); if (t) insertAtCursor(`\n${t.body}\n`); }
-      if (btn.classList.contains('insert-snippet')) { const s = getSnippet(id); if (s) insertAtCursor(s.body); }
-      if (btn.classList.contains('delete-snippet')) { await idbDelete('snippets', id); await loadLocalData(); renderDrawer('snippets'); }
-      if (btn.classList.contains('restore-history')) { const h = localHistory.find(item => item.id === id); if (h) { setUtility(h.utility); activeProfile[h.utility] = h.profile; loadText(h.input); } }
-      if (btn.classList.contains('delete-history')) {
-        try { await idbDelete('history', id); } catch (error) { console.warn(error); }
-        writeLocalHistoryMirror(readLocalHistoryMirror().filter(item => item.id !== id));
-        await loadLocalData();
-        renderDrawer('history');
+    window.addEventListener('keydown', event => {
+      const mod = event.metaKey || event.ctrlKey;
+      if (mod && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        downloadMarkdown(editor.value, state.filename);
       }
-      if (btn.classList.contains('choose-profile')) { setUtility(btn.dataset.utility); setActiveProfile(id); }
-    });
-    recentHistoryListEl.addEventListener('click', (event) => {
-      const btn = event.target.closest('.restore-history');
-      if (!btn) return;
-      const h = localHistory.find(item => item.id === btn.dataset.id);
-      if (h) { setUtility(h.utility); activeProfile[h.utility] = h.profile; loadText(h.input); }
     });
 
-    document.addEventListener('keydown', event => {
-      if (event.key === 'Escape') closeDrawer();
-    });
-
-    setSplitMode(splitMode);
-    setInspectorVisible(inspectorVisible);
-    updateUtilityChrome();
-    inputEl.value = localStorage.getItem('mcl.lastInput') || sample;
-    inputEl.addEventListener('input', () => localStorage.setItem('mcl.lastInput', inputEl.value));
-    convert(false);
-    loadLocalData();
-    registerPwa();
+    const saved = localStorage.getItem(STORAGE_KEY);
+    editor.value = saved || SAMPLE;
+    setViewMode('split');
+    syncOutputProfileOptions();
+    scheduleUpdate();
   </script>
 </body>
 </html>
