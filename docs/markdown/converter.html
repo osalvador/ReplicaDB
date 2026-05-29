@@ -268,8 +268,8 @@
 
     .quick-strip {
       display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: 8px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
       align-items: center;
       min-height: 92px;
       padding: 16px 20px;
@@ -278,6 +278,8 @@
       background: linear-gradient(135deg, rgba(23,26,33,.78), rgba(15,17,21,.74));
       backdrop-filter: blur(16px);
     }
+    .quick-copy { min-width: 0; }
+    .quick-controls { display: flex; justify-content: flex-end; align-items: center; }
     .quick-title { color: var(--accent-2); font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
     .quick-strip .small-text { max-width: none; width: 100%; font-size: 13px; line-height: 1.55; color: var(--muted); }
     .helper-row { display: none; }
@@ -333,9 +335,9 @@
       min-height: 76px;
       padding: 16px 18px;
       border-bottom: 1px solid var(--line);
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
       align-items: center;
-      justify-content: space-between;
       gap: 14px;
       flex: 0 0 auto;
     }
@@ -351,9 +353,16 @@
       color: var(--accent-2);
       flex: 0 0 auto;
     }
-    .panel-title h2 { margin: 0; font-size: 16px; letter-spacing: -.02em; }
+    .panel-title h2 { margin: 0; font-size: 16px; letter-spacing: -.02em; line-height: 1.12; }
     .panel-title p { margin: 3px 0 0; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .panel-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .panel-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
+    .editor-panel .panel-header, .preview-panel .panel-header { grid-template-columns: minmax(0, 1fr) max-content; }
+    .editor-panel .panel-actions, .preview-panel .panel-actions { max-width: 100%; }
+    .editor-panel .panel-title p { max-width: 100%; }
+    @media (max-width: 1220px) {
+      .editor-panel .panel-header, .preview-panel .panel-header { grid-template-columns: 1fr; align-items: start; }
+      .editor-panel .panel-actions, .preview-panel .panel-actions { justify-content: flex-start; }
+    }
     .preview-profile {
       min-height: 42px;
       display: inline-flex;
@@ -661,6 +670,7 @@
       .top-copy { white-space: normal; overflow: visible; text-overflow: clip; }
       .workspace, .workspace.inspector-collapsed, .workspace.editor-only, .workspace.preview-only { grid-template-columns: 1fr; }
       .quick-strip { grid-template-columns: 1fr; }
+      .quick-controls { justify-content: flex-start; }
       .helper-row { justify-content:flex-start; }
       .inspector-scroll { grid-template-columns: 1fr; }
     }
@@ -684,6 +694,7 @@
         <button class="side-button drawer-nav" data-drawer="profiles" aria-label="Conversion profiles" title="Conversion profiles"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></span><span class="tip">Conversion profiles</span></button>
       </div>
       <div class="side-bottom side-group" role="group" aria-label="Workspace status">
+        <button class="side-button drawer-nav" data-drawer="dashboard" aria-label="Usage dashboard" title="Usage dashboard"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6"/><path d="M4 4h3M17 4h3M4 20h3M17 20h3"/></svg></span><span class="tip">Usage dashboard</span></button>
         <button class="side-button" id="privacyButton" aria-label="Privacy mode" title="Privacy mode"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 19 6v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="m9.5 12 1.8 1.8L15 10"/></svg></span><span class="tip">Privacy mode</span></button>
         <button class="side-button" id="pwaButton" aria-label="PWA offline" title="PWA offline"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg></span><span class="tip">PWA offline</span></button>
       </div>
@@ -696,21 +707,20 @@
           <h1>Markup Forge</h1>
           <p class="top-copy" id="activeUtilityCopy">Convert Markdown into paste-ready Teams chat, Jira wiki markup, styled email HTML, or clean Markdown from Teams and other rich clipboard content.</p>
         </div>
-        <div class="top-actions">
-          <button class="button ghost" id="commandButton">⌘K <span class="subcap">Command</span></button>
+        <div class="top-actions" aria-hidden="true"></div>
+      </header>
+
+      <section class="quick-strip" id="quickStrip">
+        <div class="quick-copy">
+          <div class="quick-title" id="quickTitle">Teams output helpers</div>
+          <p class="small-text" id="quickText">Tune Markdown for a Teams chat composer, then copy rich HTML locally.</p>
+        </div>
+        <div class="quick-controls">
           <div class="segmented" aria-label="Split mode">
             <button class="segment-button active" data-split="both">Both</button>
             <button class="segment-button" data-split="editor">Editor</button>
             <button class="segment-button" data-split="preview">Preview</button>
           </div>
-          <button class="icon-button" id="toggleInspectorBtn" title="Toggle inspector">ⓘ</button>
-        </div>
-      </header>
-
-      <section class="quick-strip" id="quickStrip">
-        <div>
-          <div class="quick-title" id="quickTitle">Teams output helpers</div>
-          <p class="small-text" id="quickText">Tune Markdown for a Teams chat composer, then copy rich HTML locally.</p>
         </div>
         <div class="helper-row" id="quickActions" aria-label="Context actions"></div>
       </section>
@@ -838,13 +848,6 @@
     <div class="drawer-body" id="drawerBody"></div>
   </aside>
 
-  <div class="palette-backdrop" id="paletteBackdrop" aria-hidden="true">
-    <div class="palette" role="dialog" aria-label="Command palette">
-      <input id="paletteInput" placeholder="Search commands, templates, snippets…" autocomplete="off" />
-      <div class="palette-results" id="paletteResults"></div>
-    </div>
-  </div>
-
   <div class="toast" id="toast">Ready</div>
 
   <script>
@@ -956,7 +959,7 @@
       clipboard: {
         icon: '↧',
         editorTitle: 'Teams / Rich Text Input', editorSubtitle: 'Paste rich clipboard content from Teams, email, Confluence, Word, Jira, or any web page and clean it into Markdown.',
-        previewTitle: 'Teams to Markdown', previewSubtitle: 'Clean Markdown generated from Teams or any rich text copied to the clipboard.',
+        previewTitle: 'Markdown Preview', previewSubtitle: 'Clean Markdown generated from Teams or any rich text copied to the clipboard.',
         copyLabel: 'Copy Markdown', copyCaption: 'Plain text', outputLabel: 'Markdown debug payload',
         inputPlaceholder: 'Click Paste Rich Text to import Teams or any rich formatted clipboard content...',
         copy: 'Turn Teams messages or any rich clipboard HTML from Confluence, Word, Gmail, Jira, or web pages into clean Markdown.',
@@ -1887,7 +1890,12 @@
     function itemButton(label, className, dataId) { return `<button class="toolbar-button ${className}" data-id="${dataId}">${label}</button>`; }
     function renderDrawer(kind) {
       const allSnippets = [...builtInSnippets, ...savedSnippets];
-      if (kind === 'templates') {
+      if (kind === 'dashboard') {
+        drawerTitleEl.textContent = 'Usage dashboard';
+        const byUtility = localHistory.reduce((acc, item) => { acc[item.utility] = (acc[item.utility] || 0) + 1; return acc; }, {});
+        const profileSummary = Object.entries(activeProfile).map(([utility, profile]) => `<span class="pill">${htmlEscape(utilityConfig[utility]?.previewTitle || utility)} · ${htmlEscape(profile)}</span>`).join('');
+        drawerBodyEl.innerHTML = `<div class="inspector-card"><h3>Local activity</h3><div class="stat-grid mini"><div><span>Conversions</span><strong>${localHistory.length}</strong></div><div><span>Snippets</span><strong>${savedSnippets.length}</strong></div><div><span>Profiles</span><strong>${Object.keys(activeProfile).length}</strong></div></div><p class="small-text">This dashboard is computed from local IndexedDB history stored only in this browser.</p></div><div class="inspector-card"><h3>Conversions by utility</h3><div class="pill-row">${Object.entries(utilityConfig).map(([key, cfg]) => `<span class="pill">${htmlEscape(cfg.previewTitle)} · ${byUtility[key] || 0}</span>`).join('')}</div></div><div class="inspector-card"><h3>Active profiles</h3><div class="pill-row">${profileSummary}</div></div><div class="inspector-card"><h3>Recent history</h3>${localHistory.slice(0,5).map(h => `<div class="list-item"><strong>${htmlEscape(h.title)}</strong><span>${new Date(h.createdAt).toLocaleString()} · ${h.utility} · ${h.profile}</span></div>`).join('') || '<p class="small-text">No conversions copied yet.</p>'}</div>`;
+      } else if (kind === 'templates') {
         drawerTitleEl.textContent = 'Templates';
         drawerBodyEl.innerHTML = templates.map(t => `<div class="list-item"><strong>${htmlEscape(t.title)}</strong><span>${t.tags.join(' · ')}</span><p class="small-text">${htmlEscape(t.body.slice(0, 110))}…</p><div class="pill-row">${itemButton('Load', 'load-template', t.id)}${itemButton('Insert', 'insert-template', t.id)}</div></div>`).join('');
       } else if (kind === 'snippets') {
@@ -2015,8 +2023,6 @@
       if (event.target.closest('.drawer-nav, #privacyButton, #pwaButton, #openTemplatesBtn, #openSnippetsBtn')) return;
       closeDrawer();
     }, true);
-    document.getElementById('commandButton').addEventListener('click', openPalette);
-    document.getElementById('toggleInspectorBtn').addEventListener('click', () => setInspectorVisible(!inspectorVisible));
     document.querySelectorAll('[data-split]').forEach(btn => btn.addEventListener('click', () => setSplitMode(btn.dataset.split)));
     quickActionsEl.addEventListener('click', (event) => {
       const btn = event.target.closest('[data-quick-action]');
@@ -2081,13 +2087,8 @@
       if (h) { setUtility(h.utility); activeProfile[h.utility] = h.profile; loadText(h.input); }
     });
 
-    paletteInput.addEventListener('input', renderPalette);
-    paletteResults.addEventListener('click', event => { const item = event.target.closest('.palette-item'); if (item) runPaletteIndex(Number(item.dataset.index)); });
-    paletteInput.addEventListener('keydown', event => { if (event.key === 'Enter') runPaletteIndex(0); if (event.key === 'Escape') closePalette(); });
-    paletteBackdrop.addEventListener('click', event => { if (event.target === paletteBackdrop) closePalette(); });
     document.addEventListener('keydown', event => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); openPalette(); }
-      if (event.key === 'Escape') { closePalette(); closeDrawer(); }
+      if (event.key === 'Escape') closeDrawer();
     });
 
     setSplitMode(splitMode);
