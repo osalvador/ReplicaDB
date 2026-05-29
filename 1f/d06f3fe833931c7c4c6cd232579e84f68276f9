@@ -1,0 +1,90 @@
+docs/markdown/converter.html
+  s_4c58fe44ec6c2a::t_72d5cbccda0ec3 85-86
+  s_4c58fe44ec6c2a::t_54eba8008bb909 967
+  s_4c58fe44ec6c2a::t_6d783904d2d8dd 1092-1106,1108-1110,1113-1114,1116-1126,1131-1133,1135-1145,1147-1151
+  s_4c58fe44ec6c2a::t_72f6c89dd5a4ef 1012,1016-1029,1044
+  s_4c58fe44ec6c2a::t_5f5652f085182c 1249-1253
+  s_4c58fe44ec6c2a::t_60be02917cce7b 1014-1015
+  s_4c58fe44ec6c2a::t_21a2a0dd771cf7 681,691,694
+  s_4c58fe44ec6c2a::t_66c033d1a2b72c 695-697,703,706,711
+  s_4c58fe44ec6c2a::t_876ffe05bd9f1b 1013
+  h_feb0db10da3b67 682,684-685,698,704-705
+  s_4c58fe44ec6c2a::t_e9aaf28324bce3 882-883
+  s_4c58fe44ec6c2a::t_e50de40b84c5a1 966
+  s_4c58fe44ec6c2a::t_b326291c1819b9 932-934,954,971,1273
+  s_4c58fe44ec6c2a::t_ccf51c1210d45f 639,647,651,686,689-690,692
+  s_4c58fe44ec6c2a::t_0fc4149f9f8e95 699-701
+  s_4c58fe44ec6c2a::t_dd967a1d0d393f 958-963,965,1033-1037
+  s_4c58fe44ec6c2a::t_6bbfe250bf3f56 634-638,641,643-646,648-650,652-665
+  s_4c58fe44ec6c2a::t_5f8502cfcfe023 642
+  s_4c58fe44ec6c2a::t_86996fb597f5d9 702,709
+  s_4c58fe44ec6c2a::t_f02f67b0af3360 953
+  s_4c58fe44ec6c2a::t_59d722ce002bb0 666,679-680,683,687,693
+  s_4c58fe44ec6c2a::t_053a3d26b9badb 876-881,884
+  s_4c58fe44ec6c2a::t_86695278d00ee0 673-676,707-708,712
+  s_4c58fe44ec6c2a::t_f5e836eb1f5f43 667-672,677-678,714-740
+docs/markdown/.gitignore
+  s_4c58fe44ec6c2a::t_47cba3cfb0929b 1-5
+docs/markdown/tests/unit/converter-core.test.js
+  s_4c58fe44ec6c2a::t_f99322ab933ee2 1-10,17-37,39-61,63-102,104,106,114-164
+  s_4c58fe44ec6c2a::t_33a1b9fef764d7 14-16
+  s_4c58fe44ec6c2a::t_942c9722ac829b 111-113
+  s_4c58fe44ec6c2a::t_b7c6bad0aaf886 187,189,192,201-211,223-258
+  s_4c58fe44ec6c2a::t_1a1eb291069c72 165-186,188,190-191,196-200,259-260
+  s_4c58fe44ec6c2a::t_4d8b0406f3a270 103,105,107-110
+  s_4c58fe44ec6c2a::t_3f510bd1ab785d 38,62
+  s_4c58fe44ec6c2a::t_02fbae24fa456b 193-195
+  s_4c58fe44ec6c2a::t_ebff3a7950a41f 11-13
+  h_feb0db10da3b67 212-222
+docs/markdown/sw.js
+  s_4c58fe44ec6c2a::t_ed78e60cfc6ab0 4
+  h_feb0db10da3b67 1
+docs/markdown/tests/e2e/app.spec.js
+  s_4c58fe44ec6c2a::t_687c91c9b27749 64-70,86,90-91
+  s_4c58fe44ec6c2a::t_07b563840766fd 24-25,27-30
+  s_4c58fe44ec6c2a::t_01774b15b7ec94 118,120
+  s_4c58fe44ec6c2a::t_8a7c156b56c49f 1-23,26,31-42,47-49,62-63,92-112,114-117,119,121-149
+  s_4c58fe44ec6c2a::t_c7736c630ac65a 113
+  s_4c58fe44ec6c2a::t_15bbbdd833a315 150-167,169,171-172,174-182,184-185,193-195,197-201,203
+  s_4c58fe44ec6c2a::t_7421c3425486c6 168,170,173
+  s_4c58fe44ec6c2a::t_b001a5be6634c7 183,186-192,196,202
+  s_4c58fe44ec6c2a::t_b90a3a7d5e01e9 71-85,87-89
+  s_4c58fe44ec6c2a::t_cf73df2827bda5 43-46,50-61
+docs/markdown/playwright.config.js
+  s_4c58fe44ec6c2a::t_3c28c27de31a5c 1-22
+docs/markdown/tests/static-server.mjs
+  s_4c58fe44ec6c2a::t_9ef1df8296a0aa 1-42
+docs/markdown/package.json
+  s_4c58fe44ec6c2a::t_afc0d9ac4e332b 1-17
+docs/markdown/converter-core.js
+  s_4c58fe44ec6c2a::t_65b3bdc02f2d0c 267-270
+  s_4c58fe44ec6c2a::t_44d64157f47dcd 282-312,430-432
+  s_4c58fe44ec6c2a::t_c72f110dc0b346 313,315-429
+  s_4c58fe44ec6c2a::t_eaa832be76fb7d 314
+  s_4c58fe44ec6c2a::t_24e52c9d96da39 244-247
+  s_4c58fe44ec6c2a::t_48f834a81ec5d9 1-243,248-256,261,263-265,271-281,433-470
+  s_4c58fe44ec6c2a::t_6195fb8ce269aa 257-260,262,266
+docs/markdown/vitest.config.js
+  s_4c58fe44ec6c2a::t_a8197578413fce 1-9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "1fd06f3fe833931c7c4c6cd232579e84f68276f9",
+  "prompts": {},
+  "humans": {
+    "h_feb0db10da3b67": {
+      "author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  },
+  "sessions": {
+    "s_4c58fe44ec6c2a": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "22b6d4e6-a9d9-4ced-b5b6-385040abf51f",
+        "model": "gpt-4.1"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
