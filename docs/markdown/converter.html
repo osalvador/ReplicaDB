@@ -9,7 +9,7 @@
   <link rel="icon" href="./markdown-copy-lab-icon.svg" type="image/svg+xml" />
   <link rel="icon" href="./favicon-32.png" sizes="32x32" type="image/png" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <title>Markup Forge · Graphite Studio</title>
+  <title>Markup Forge</title>
   <style>
     :root {
       color-scheme: dark;
@@ -231,9 +231,12 @@
     .top-copy {
       margin: 10px 0 0;
       color: var(--muted);
-      max-width: 78ch;
+      max-width: none;
       line-height: 1.55;
       font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .top-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; position: relative; z-index: 1; }
 
@@ -630,11 +633,32 @@
     @media (max-width: 940px) {
       :root { --sidebar-w: 0px; --panel-h: 620px; }
       .app { grid-template-columns: 1fr; }
-      .sidebar { position: fixed; left: 10px; right: 10px; bottom: 10px; top: auto; height: 72px; flex-direction: row; align-items:center; justify-content:center; border: 1px solid var(--line); border-radius: 24px; padding: 8px; z-index:70; }
+      .sidebar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        height: 68px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 8px;
+        border-top: 1px solid var(--line);
+        border-right: 0;
+        border-radius: 0;
+        padding: 8px max(10px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+        overflow-x: auto;
+        overflow-y: hidden;
+        z-index: 70;
+      }
+      .brand-mark, .side-divider, .side-bottom { display: none; }
+      .side-group { display: flex; flex: 0 0 auto; gap: 8px; }
+      .side-button { width: 48px; height: 48px; border-radius: 16px; flex: 0 0 auto; }
       .side-button .tip { display:none; }
-      .side-divider, .side-bottom { display:none; }
-      .main-shell { padding: 14px 14px 96px; }
+      .main-shell { padding: 14px 14px calc(92px + env(safe-area-inset-bottom)); }
       .topbar { grid-template-columns: 1fr; }
+      .top-copy { white-space: normal; overflow: visible; text-overflow: clip; }
       .workspace, .workspace.inspector-collapsed, .workspace.editor-only, .workspace.preview-only { grid-template-columns: 1fr; }
       .quick-strip { grid-template-columns: 1fr; }
       .helper-row { justify-content:flex-start; }
@@ -668,7 +692,7 @@
     <div class="main-shell">
       <header class="topbar">
         <div class="title-stack">
-          <p class="eyebrow">Graphite Studio · Browser-only conversion workspace</p>
+          <p class="eyebrow">Browser-only conversion workspace</p>
           <h1>Markup Forge</h1>
           <p class="top-copy" id="activeUtilityCopy">Convert Markdown into paste-ready Teams chat, Jira wiki markup, styled email HTML, or clean Markdown from Teams and other rich clipboard content.</p>
         </div>
@@ -953,7 +977,7 @@
         { id: 'code-heavy', name: 'Jira Code-heavy', description: 'Preserve fenced code blocks and language hints.' }
       ],
       email: [
-        { id: 'executive', name: 'Executive Email', description: 'Premium email card with Graphite header and generous spacing.' },
+        { id: 'executive', name: 'Executive Email', description: 'Premium email card with branded header and generous spacing.' },
         { id: 'minimal', name: 'Minimal Email', description: 'White layout, fewer visual accents, very conservative HTML.' },
         { id: 'technical', name: 'Technical Email', description: 'Better spacing for code, lists and technical updates.' },
         { id: 'newsletter', name: 'Newsletter Email', description: 'Wider editorial layout with a stronger header and callout feel.' },
