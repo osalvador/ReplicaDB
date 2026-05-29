@@ -1,0 +1,17 @@
+{
+  "name": "markup-forge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tests for the Markup Forge browser-only Markdown IDE (converter.html).",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:all": "vitest run && playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "vitest": "^2.1.0"
+  }
+}

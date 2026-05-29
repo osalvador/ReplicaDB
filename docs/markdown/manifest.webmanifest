@@ -1,36 +1,15 @@
 {
   "name": "Markup Forge",
-  "short_name": "MarkupForge",
-  "description": "Private browser-only markup conversion workspace for Teams, Jira, email HTML and rich clipboard cleanup.",
+  "short_name": "Markup Forge",
+  "description": "A local-first Markdown IDE: one Markdown source, every output you need.",
   "start_url": "./converter.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0F1115",
-  "theme_color": "#0F1115",
+  "background_color": "#090c11",
+  "theme_color": "#0b0f14",
   "icons": [
-    {
-      "src": "./markdown-copy-lab-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "./markdown-copy-lab-icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./markdown-copy-lab-icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "./apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png",
-      "purpose": "any"
-    }
+    { "src": "./markdown-copy-lab-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "./markdown-copy-lab-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./markdown-copy-lab-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }
