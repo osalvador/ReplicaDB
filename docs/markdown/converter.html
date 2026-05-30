@@ -695,6 +695,7 @@
       color: #f0f0f0;
     }
     .teams-content blockquote p { margin: 0; }
+    .teams-content img { max-width: 100%; height: auto; border-radius: 6px; display: block; margin: 4px 0; }
     .teams-content figure.table { margin: 0; width: 100%; overflow-x: auto; }
     /* Override the generic `.preview table { display: block }` (used for
        horizontal scrolling) so the Teams table behaves as a real table and its
@@ -797,6 +798,10 @@
             </div>
           </div>
           <div class="panel-actions">
+            <button id="pasteTeamsBtn" class="btn small" type="button" title="Paste content copied from Teams as Markdown">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 13h6m-6 4h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Paste from Teams
+            </button>
             <label class="btn small" for="fileInput" title="Open Markdown or text file">
               <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v10m0-10 4 4m-4-4-4 4M5 13v5a3 3 0 0 0 3 3h8a3 3 0 0 0 3-3v-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Open
@@ -891,7 +896,8 @@
       renderMarkdownForTeams,
       getHtmlOutput,
       markdownForOutput,
-      buildTeamsClipboard
+      buildTeamsClipboard,
+      convertHtmlToMarkdown
     } from './converter-core.js';
 
     const STORAGE_KEY = 'markup-forge.ide.markdown.v1';
@@ -927,7 +933,8 @@
     const state = {
       filename: localStorage.getItem(FILE_KEY) || DEFAULT_FILENAME,
       viewMode: 'split',
-      renderTimer: 0
+      renderTimer: 0,
+      lastInput: 0
     };
 
     const editor = document.getElementById('editor');
@@ -938,6 +945,7 @@
     const fileInput = document.getElementById('fileInput');
     const copyBtn = document.getElementById('copyBtn');
     const copyBtnLabel = document.getElementById('copyBtnLabel');
+    const pasteTeamsBtn = document.getElementById('pasteTeamsBtn');
     const outputTabs = Array.from(document.querySelectorAll('[data-output-format]'));
     const outputFormat = { value: 'teams' };
     // Each output format always uses its first (default) profile. The profile
@@ -1026,13 +1034,24 @@
       return preview;
     }
 
-    // Keep the preview aligned with the editor using the editor's scroll ratio.
-    // Driving the preview from the editor (rather than the reverse) avoids the
-    // jump-to-top that happened when the preview innerHTML was rebuilt on every
-    // keystroke, and keeps the same region visible while typing.
-    function syncPreviewScroll() {
+    // Keep the preview aligned with the editor. While the user is typing we
+    // follow the caret line (so the part being edited stays visible even with
+    // images, whose one-line data URI maps to a tall block in the preview).
+    // When the editor is merely scrolled, we mirror its pixel scroll ratio.
+    function previewRatioFromCaret() {
+      const value = editor.value;
+      const totalLines = Math.max(1, value.split('\n').length - 1);
+      const caretLine = value.slice(0, editor.selectionStart).split('\n').length - 1;
+      return totalLines > 0 ? caretLine / totalLines : 0;
+    }
+
+    function previewRatioFromScroll() {
       const editorMax = editor.scrollHeight - editor.clientHeight;
-      const ratio = editorMax > 0 ? editor.scrollTop / editorMax : 0;
+      return editorMax > 0 ? editor.scrollTop / editorMax : 0;
+    }
+
+    function syncPreviewScroll(useCaret = false) {
+      const ratio = useCaret ? previewRatioFromCaret() : previewRatioFromScroll();
       const scroller = previewScroller();
       const scrollerMax = scroller.scrollHeight - scroller.clientHeight;
       scroller.scrollTop = ratio * scrollerMax;
@@ -1052,7 +1071,7 @@
         previewInner.innerHTML = renderMarkdownForTeams(source);
       }
       updateCopyLabel();
-      syncPreviewScroll();
+      syncPreviewScroll(document.activeElement === editor);
     }
 
     function scheduleUpdate() {
@@ -1189,6 +1208,177 @@
       replaceWholeDocument('', DEFAULT_FILENAME, 'Document cleared');
     }
 
+    function blobToDataUrl(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    // Insert text at the current caret position without destroying the rest of
+    // the document. Uses execCommand so the change is part of the native undo
+    // stack and the textarea keeps focus.
+    function insertTextAtCursor(text) {
+      editor.focus();
+      document.execCommand('insertText', false, text);
+      scheduleUpdate();
+    }
+
+    // Detect images that Teams referenced in the HTML but did NOT ship as a
+    // binary clipboard flavour (e.g. real picture messages, which Teams keeps
+    // internal). Emoji and data URIs are already self-contained, so ignore them.
+    function countMissingImages(html) {
+      if (!html) return 0;
+      try {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        return Array.from(doc.querySelectorAll('img')).filter(img => {
+          const itemtype = img.getAttribute('itemtype') || '';
+          if (/schema\.skype\.com\/Emoji/i.test(itemtype)) return false;
+          const src = img.getAttribute('src') || '';
+          const targetSrc = img.getAttribute('target-src') || '';
+          // Usable if we have a data: or http(s) source; only blob:/empty is missing.
+          const usable = [src, targetSrc].some(u => u && !u.startsWith('blob:'));
+          return !usable;
+        }).length;
+      } catch {
+        return 0;
+      }
+    }
+
+    // Turn rich clipboard content (HTML, plain text and/or binary images copied
+    // from Teams) into Markdown and insert it at the caret. Images that ship as
+    // binary clipboard flavours are embedded as data URIs so they stay offline.
+    // `replace` truncates the document first (used by the toolbar button).
+    async function importRichClipboard({ html, plain, imageDataUrls = [] }, { replace = false } = {}) {
+      let markdown = convertHtmlToMarkdown(html || '', plain || '');
+      if (imageDataUrls.length) {
+        // Teams "Copy image" delivers the picture twice: as a binary clipboard
+        // flavour (full quality) AND inlined as a data: URI inside the HTML.
+        // Drop the HTML-derived data: image(s) to avoid duplicates and keep the
+        // higher-quality binary capture.
+        markdown = markdown
+          .replace(/!\[[^\]]*\]\(data:[^)]*\)/g, '')
+          .replace(/\n{3,}/g, '\n\n')
+          .trim();
+        const imgs = imageDataUrls.map(url => `![](${url})`).join('\n\n');
+        markdown = markdown ? `${markdown}\n\n${imgs}` : imgs;
+      }
+      if (!markdown.trim()) {
+        showToast('Clipboard is empty');
+        return;
+      }
+      // Always leave a trailing blank line so the caret lands on a fresh line
+      // after pasting. This avoids being stranded at the end of a very long line
+      // (e.g. an inline image data URI), which would force horizontal scrolling.
+      const markdownWithBreak = `${markdown.replace(/\s+$/, '')}\n\n`;
+      if (replace) {
+        replaceWholeDocument(markdownWithBreak, state.filename, 'Pasted from Teams');
+      } else {
+        insertTextAtCursor(markdownWithBreak);
+      }
+      // Warn when Teams referenced an image it did not actually copy.
+      const missing = imageDataUrls.length ? 0 : countMissingImages(html);
+      if (missing > 0) {
+        showToast('Image not copied by Teams — right-click it and choose "Copy image", then paste again');
+      } else {
+        showToast(replace ? 'Pasted from Teams' : 'Pasted from Teams at cursor');
+      }
+    }
+
+    async function pasteFromTeams() {
+      if (!navigator.clipboard || !navigator.clipboard.read) {
+        showToast('Rich clipboard read is not available here');
+        return;
+      }
+      try {
+        const items = await navigator.clipboard.read();
+        let html = '';
+        let plain = '';
+        const types = [];
+        const imageDataUrls = [];
+        for (const item of items) {
+          item.types.forEach(t => { if (!types.includes(t)) types.push(t); });
+          if (!html && item.types.includes('text/html')) html = await (await item.getType('text/html')).text();
+          if (!plain && item.types.includes('text/plain')) plain = await (await item.getType('text/plain')).text();
+          const imageType = item.types.find(type => type.startsWith('image/'));
+          if (imageType) {
+            try { imageDataUrls.push(await blobToDataUrl(await item.getType(imageType))); } catch { /* ignore */ }
+          }
+        }
+        if (PASTE_DEBUG) { capturePasteDiagnostics({ html, plain, types, imageDataUrls }); return; }
+        await importRichClipboard({ html, plain, imageDataUrls });
+      } catch (error) {
+        console.warn(error);
+        showToast('Could not read the clipboard');
+      }
+    }
+
+    // Diagnostic capture: dump the RAW clipboard flavours (text/html, text/plain,
+    // image/*) so we can inspect exactly what an app like Teams writes. Enabled
+    // with ?debugpaste in the URL or by Alt+clicking "Paste from Teams". The raw
+    // dump is written into the editor so it can be copied and shared verbatim.
+    const PASTE_DEBUG = /[?&]debugpaste\b/.test(location.search);
+
+    function buildPasteDiagnostics({ html, plain, types = [], imageDataUrls = [] }) {
+      const lines = [];
+      lines.push('# Clipboard diagnostics');
+      lines.push('');
+      lines.push(`- Flavours: ${types.length ? types.join(', ') : '(unknown)'}`);
+      lines.push(`- Images captured: ${imageDataUrls.length}`);
+      lines.push('');
+      lines.push('## text/plain');
+      lines.push('```');
+      lines.push(plain || '(empty)');
+      lines.push('```');
+      lines.push('');
+      lines.push('## text/html (raw)');
+      lines.push('```html');
+      lines.push(html || '(empty)');
+      lines.push('```');
+      imageDataUrls.forEach((url, i) => {
+        lines.push('');
+        lines.push(`## image ${i + 1} (truncated)`);
+        lines.push('```');
+        lines.push(url.slice(0, 120) + (url.length > 120 ? `… (${url.length} chars total)` : ''));
+        lines.push('```');
+      });
+      return lines.join('\n');
+    }
+
+    function capturePasteDiagnostics(payload) {
+      const dump = buildPasteDiagnostics(payload);
+      window.__lastPaste = payload;
+      console.log('[Markup Forge] RAW clipboard capture:', payload);
+      replaceWholeDocument(dump, state.filename, 'Captured raw clipboard (debug)');
+    }
+
+    // Intercept native paste so rich HTML or images become Markdown instead of
+    // the browser's default plain-text/raw paste.
+    async function handleEditorPaste(event) {
+      const data = event.clipboardData;
+      if (!data) return;
+      const html = data.getData('text/html');
+      const imageFiles = Array.from(data.files || data.items || [])
+        .filter(entry => entry && entry.type && entry.type.startsWith('image/'));
+      if (!html && !imageFiles.length && !PASTE_DEBUG) return; // let the default plain-text paste happen
+      event.preventDefault();
+      const plain = data.getData('text/plain');
+      const imageDataUrls = [];
+      for (const entry of imageFiles) {
+        const blob = typeof entry.getAsFile === 'function' ? entry.getAsFile() : entry;
+        if (blob) {
+          try { imageDataUrls.push(await blobToDataUrl(blob)); } catch { /* ignore */ }
+        }
+      }
+      if (PASTE_DEBUG) {
+        capturePasteDiagnostics({ html, plain, types: Array.from(data.types || []), imageDataUrls });
+        return;
+      }
+      await importRichClipboard({ html, plain, imageDataUrls });
+    }
+
     function showToast(message) {
       toast.textContent = message;
       toast.classList.add('show');
@@ -1256,12 +1446,17 @@
       if (action === 'codeblock') return replaceSelection('```\n', '\n```', 'code');
     }
 
-    editor.addEventListener('input', scheduleUpdate);
+    editor.addEventListener('input', () => { state.lastInput = Date.now(); scheduleUpdate(); });
     let scrollSyncRaf = 0;
     editor.addEventListener('scroll', () => {
       if (lineNumbers) lineNumbers.scrollTop = editor.scrollTop;
       if (scrollSyncRaf) return;
-      scrollSyncRaf = requestAnimationFrame(() => { scrollSyncRaf = 0; syncPreviewScroll(); });
+      scrollSyncRaf = requestAnimationFrame(() => {
+        scrollSyncRaf = 0;
+        // If the scroll was triggered by typing (editor auto-scrolls to keep the
+        // caret visible), follow the caret instead of the raw pixel ratio.
+        syncPreviewScroll(Date.now() - (state.lastInput || 0) < 200);
+      });
     });
     document.querySelectorAll('[data-md-action]').forEach(button => {
       button.addEventListener('click', () => runToolbarAction(button.dataset.mdAction));
@@ -1274,6 +1469,8 @@
     copyBtn.addEventListener('click', () => copyMarkdown());
     downloadBtn.addEventListener('click', () => downloadMarkdown(editor.value, state.filename));
     clearBtn.addEventListener('click', clearDocument);
+    if (pasteTeamsBtn) pasteTeamsBtn.addEventListener('click', () => pasteFromTeams());
+    editor.addEventListener('paste', handleEditorPaste);
     insertSampleBtn.addEventListener('click', () => {
       if (editor.value && !confirm('Replace current content with the sample document?')) return;
       replaceWholeDocument(SAMPLE, 'sample-markdown-document.md', 'Sample loaded');
