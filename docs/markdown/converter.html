@@ -584,39 +584,39 @@
     .toast.show { opacity: 1; transform: translateY(0); }
     input[type="file"] { display: none; }
 
+    .output-tabbar {
+      flex: 0 0 auto;
+      display: flex;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
     .output-tabs {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: #0d1219;
+      display: flex;
+      align-items: stretch;
+      min-height: 44px;
     }
     .output-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
       border: 0;
-      border-radius: 999px;
-      min-height: 34px;
-      padding: 7px 13px;
+      border-right: 1px solid #30363d;
+      padding: 0 18px;
       background: transparent;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 900;
-      letter-spacing: .02em;
+      color: #8b949e;
+      font-weight: 700;
+      font-size: 13px;
+      white-space: nowrap;
+      cursor: pointer;
     }
+    .output-tab:hover { color: #c9d1d9; }
+    .output-tab-icon { width: 16px; height: 16px; flex: 0 0 auto; }
     .output-tab.active {
-      color: var(--accent-ink);
-      background: linear-gradient(135deg, var(--accent), #d69a43);
-    }
-    .output-profile-select {
-      min-height: 38px;
-      max-width: 210px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: #0d1219;
-      color: var(--soft);
-      font: 800 12px/1 var(--font-ui);
-      padding: 0 34px 0 12px;
+      color: #f0f6fc;
+      background: #0d1117;
+      box-shadow: inset 0 2px 0 #2f81f7;
     }
     .preview-panel .panel-actions { flex-wrap: wrap; }
     .preview-output-code {
@@ -843,14 +843,25 @@
             </div>
           </div>
           <div class="panel-actions">
-            <div class="output-tabs" role="tablist" aria-label="Output format tabs">
-              <button class="output-tab active" type="button" role="tab" aria-selected="true" data-output-format="teams">Teams</button>
-              <button class="output-tab" type="button" role="tab" aria-selected="false" data-output-format="jira">Jira</button>
-              <button class="output-tab" type="button" role="tab" aria-selected="false" data-output-format="html">HTML</button>
-            </div>
             <button id="copyBtn" class="btn primary" type="button">
               <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 9h10v10H9zM5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
               <span id="copyBtnLabel">Copy Markdown</span>
+            </button>
+          </div>
+        </div>
+        <div class="output-tabbar">
+          <div class="output-tabs" role="tablist" aria-label="Output format tabs">
+            <button class="output-tab active" type="button" role="tab" aria-selected="true" data-output-format="teams">
+              <svg class="output-tab-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H8l-4 3z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="18.5" cy="8" r="3" stroke="currentColor" stroke-width="1.7"/></svg>
+              <span>Teams</span>
+            </button>
+            <button class="output-tab" type="button" role="tab" aria-selected="false" data-output-format="jira">
+              <svg class="output-tab-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 21 12 12 21 3 12z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M12 8 16 12 12 16 8 12z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+              <span>Jira</span>
+            </button>
+            <button class="output-tab" type="button" role="tab" aria-selected="false" data-output-format="html">
+              <svg class="output-tab-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 8-4 4 4 4M15 8l4 4-4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>HTML</span>
             </button>
           </div>
         </div>
