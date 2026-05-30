@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { JSDOM } from 'jsdom';
 import {
   htmlEscape,
   renderInline,
@@ -13,8 +14,12 @@ import {
   htmlToPlainText,
   buildTeamsClipboard,
   convertMarkdownToTeamsHtml,
-  inlineTeamsHtml
+  inlineTeamsHtml,
+  convertHtmlToMarkdown
 } from '../../converter-core.js';
+
+// jsdom's DOMParser so convertHtmlToMarkdown can run under Vitest's node env.
+const DomParser = new JSDOM('').window.DOMParser;
 
 describe('htmlEscape', () => {
   it('escapes HTML-significant characters', () => {
@@ -229,6 +234,11 @@ describe('convertMarkdownToTeamsHtml', () => {
       .toBe('<a href="https://www.microsoft.com">MS</a>');
   });
 
+  it('renders images as <img> so the preview shows the picture', () => {
+    expect(inlineTeamsHtml('![shot](data:image/png;base64,AAAB)'))
+      .toBe('<img src="data:image/png;base64,AAAB" alt="shot" />');
+  });
+
   it('wraps quotes in a paragraph inside blockquote', () => {
     expect(convertMarkdownToTeamsHtml('> hi'))
       .toBe('<blockquote spellcheck="false"><p>hi</p></blockquote>');
@@ -256,5 +266,78 @@ describe('convertMarkdownToTeamsHtml', () => {
 
   it('escapes inline code content once', () => {
     expect(inlineTeamsHtml('`<x>`')).toBe('<code>&lt;x&gt;</code>');
+  });
+});
+
+describe('convertHtmlToMarkdown (paste from Teams)', () => {
+  const toMd = html => convertHtmlToMarkdown(html, '', DomParser);
+
+  it('falls back to plain text when there is no HTML', () => {
+    expect(convertHtmlToMarkdown('', 'just text', DomParser)).toBe('just text');
+  });
+
+  it('converts bold, italic, strikethrough and inline code', () => {
+    expect(toMd('<p><b>bold</b> <i>em</i> <s>gone</s> <code>x</code></p>'))
+      .toBe('**bold** *em* ~~gone~~ `x`');
+  });
+
+  it('converts links and headings', () => {
+    expect(toMd('<h2>Title</h2>')).toBe('## Title');
+    expect(toMd('<p><a href="https://ms.com">MS</a></p>')).toBe('[MS](https://ms.com)');
+  });
+
+  it('converts unordered and ordered lists', () => {
+    expect(toMd('<ul><li>one</li><li>two</li></ul>')).toBe('- one\n- two');
+    expect(toMd('<ol><li>one</li><li>two</li></ol>')).toBe('1. one\n2. two');
+  });
+
+  it('converts tables to GitHub-flavoured Markdown', () => {
+    const html = '<table><tr><td>Area</td><td>Status</td></tr><tr><td>IDE</td><td>Ready</td></tr></table>';
+    expect(toMd(html)).toBe('| Area | Status |\n| --- | --- |\n| IDE | Ready |');
+  });
+
+  it('converts images to Markdown, keeping the source (incl. data URIs)', () => {
+    expect(toMd('<p><img src="https://ms.com/a.png" alt="logo"></p>'))
+      .toBe('![logo](https://ms.com/a.png)');
+    expect(toMd('<p><img src="data:image/png;base64,AAAB" title="shot"></p>'))
+      .toBe('![shot](data:image/png;base64,AAAB)');
+  });
+
+  it('converts fenced code blocks with language', () => {
+    expect(toMd('<pre class="language-json"><code>{"a":1}</code></pre>'))
+      .toBe('```json\n{"a":1}\n```');
+  });
+
+  it('renders Teams emoji images as their unicode alt text', () => {
+    const html = '<p>hi <span class="animated-emoticon-20-dance"><img itemtype="http://schema.skype.com/Emoji" itemid="dance" alt="🕺" src="https://cdn/x.png"></span></p>';
+    expect(toMd(html)).toBe('hi 🕺');
+  });
+
+  it('embeds a Teams picture message (AMSImage) inlined as a data URI', () => {
+    const html = '<p>note</p><span itemtype="http://schema.skype.com/AMSImage">'
+      + '<img alt="imagen" itemtype="http://schema.skype.com/AMSImage" '
+      + 'target-src="blob:https://teams.microsoft.com/abc" src="data:image/jpeg;base64,AAAB"></span>';
+    expect(toMd(html)).toBe('note\n\n![imagen](data:image/jpeg;base64,AAAB)');
+  });
+
+  it('does not emit a broken link when a Teams image is only a blob reference', () => {
+    const html = '<p>note</p><img alt="imagen" itemtype="http://schema.skype.com/AMSImage" src="blob:https://teams.microsoft.com/abc">';
+    expect(toMd(html)).toBe('note\n\n*imagen*');
+  });
+
+  it('converts Teams reply quotes to author + preview blockquotes', () => {
+    const html = '<blockquote itemtype="http://schema.skype.com/Reply" itemid="1">'
+      + '<strong itemprop="mri" itemid="8:orgid:abc">Jorge Vicente</strong>'
+      + '<span itemprop="time" itemid="1"></span>'
+      + '<p itemprop="preview">Buenas, al final…</p></blockquote>';
+    expect(toMd(html)).toBe('> **Jorge Vicente**\n> Buenas, al final…');
+  });
+
+  it('keeps stacked Teams messages separated and mentions as text', () => {
+    const html = '<span data-teams="true">'
+      + '<span><span style="font-size:14px"><p><span itemtype="http://schema.skype.com/Mention" itemid="0">Jorge</span>&nbsp;hello</p><p>&nbsp;</p></span></span>'
+      + '<span><span style="font-size:14px"><p>second message</p></span></span>'
+      + '</span>';
+    expect(toMd(html)).toBe('Jorge hello\n\nsecond message');
   });
 });

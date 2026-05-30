@@ -332,7 +332,7 @@ function stripHtml(md) {
 export function inlineTeamsHtml(text) {
   const { replaced, stash } = protectCodeSpans(String(text || ''));
   let s = htmlEscape(replaced);
-  s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => `${htmlEscape(alt || url)} (<a href="${htmlEscape(url)}">${htmlEscape(url)}</a>)`);
+  s = s.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, alt, url) => `<img src="${htmlEscape(url)}" alt="${htmlEscape(alt)}" />`);
   s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => `<a href="${htmlEscape(url)}">${htmlEscape(label)}</a>`);
   s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/__([^_\n]+)__/g, '<strong>$1</strong>');
@@ -467,4 +467,118 @@ export function compactMarkdown(markdown) {
 export function markdownForOutput(markdown, profile) {
   if (profile === 'teams-compact') return compactMarkdown(markdown);
   return String(markdown || '');
+}
+
+// ---------------------------------------------------------------------------
+// Rich clipboard -> Markdown (the reverse direction: paste from Teams).
+// Converts the HTML flavour copied from Teams/email/web pages into clean
+// Markdown so it can be dropped straight into the editor. Image elements are
+// preserved as Markdown images (data URIs are kept as-is for offline use).
+// ---------------------------------------------------------------------------
+
+const NODE_TYPE_TEXT = 3;
+const NODE_TYPE_ELEMENT = 1;
+
+function htmlNodeToMarkdown(node) {
+  if (node.nodeType === NODE_TYPE_TEXT) return node.textContent.replace(/\s+/g, ' ');
+  if (node.nodeType !== NODE_TYPE_ELEMENT) return '';
+  const tag = node.tagName.toLowerCase();
+  const child = () => Array.from(node.childNodes).map(htmlNodeToMarkdown).join('').trim();
+  if (tag === 'br') return '\n';
+  if (tag === 'strong' || tag === 'b') return `**${child()}**`;
+  if (tag === 'em' || tag === 'i') return `*${child()}*`;
+  if (tag === 's' || tag === 'strike' || tag === 'del') return `~~${child()}~~`;
+  if (tag === 'code') return '`' + child().replace(/`/g, '\\`') + '`';
+  if (tag === 'pre') {
+    const codeEl = node.querySelector('code');
+    const classes = [...Array.from(node.classList || []), ...Array.from((codeEl && codeEl.classList) || [])];
+    const langClass = classes.find(c => c.startsWith('language-')) || '';
+    const lang = langClass.replace('language-', '') || 'text';
+    return '\n```' + lang + '\n' + node.textContent.replace(/^\n+|\n+$/g, '') + '\n```\n\n';
+  }
+  if (tag === 'img') {
+    const itemtype = node.getAttribute('itemtype') || '';
+    const alt = (node.getAttribute('alt') || node.getAttribute('title') || '').trim();
+    // Teams emoji are <img itemtype=".../Emoji" alt="🕺"> from a public CDN.
+    // Represent them by their unicode alt text, not as a Markdown image.
+    if (/schema\.skype\.com\/Emoji/i.test(itemtype)) return alt;
+    // Picture messages (AMSImage) are inlined as a data: URI in `src` when the
+    // copy happens from within the message. Prefer whichever attribute carries
+    // the usable data URI; ignore `blob:` references (only valid inside Teams).
+    const src = node.getAttribute('src') || '';
+    const targetSrc = node.getAttribute('target-src') || '';
+    const usable = [src, targetSrc].find(u => u && !u.startsWith('blob:'));
+    if (!usable) return alt ? `*${alt}*` : '';
+    return `![${alt}](${usable})`;
+  }
+  if (tag === 'a') {
+    const href = node.getAttribute('href') || '';
+    const text = child() || href;
+    return href ? `[${text}](${href})` : text;
+  }
+  if (/^h[1-6]$/.test(tag)) return '\n' + '#'.repeat(Number(tag[1])) + ' ' + child() + '\n\n';
+  if (tag === 'p' || tag === 'div') {
+    const inner = child();
+    return inner ? inner + '\n\n' : '';
+  }
+  if (tag === 'blockquote') {
+    const itemtype = node.getAttribute('itemtype') || '';
+    // Teams "reply" quotes embed the original author (itemprop="mri") and a
+    // preview of the quoted message (itemprop="preview").
+    if (/schema\.skype\.com\/Reply/i.test(itemtype)) {
+      const author = node.querySelector('[itemprop="mri"]');
+      const preview = node.querySelector('[itemprop="preview"]');
+      const quoteLines = [];
+      if (author && author.textContent.trim()) quoteLines.push('**' + author.textContent.trim() + '**');
+      if (preview && preview.textContent.trim()) quoteLines.push(preview.textContent.trim());
+      if (!quoteLines.length) return '';
+      return quoteLines.map(l => '> ' + l).join('\n') + '\n\n';
+    }
+    return child().split('\n').map(l => (l.trim() ? '> ' + l.trim() : '>')).join('\n') + '\n\n';
+  }
+  if (tag === 'li') return '- ' + child() + '\n';
+  if (tag === 'ul' || tag === 'ol') {
+    return '\n' + Array.from(node.children).map((li, idx) => (
+      tag === 'ol'
+        ? `${idx + 1}. ${Array.from(li.childNodes).map(htmlNodeToMarkdown).join('').trim()}\n`
+        : htmlNodeToMarkdown(li)
+    )).join('') + '\n';
+  }
+  if (tag === 'table') {
+    const rows = Array.from(node.querySelectorAll('tr')).map(tr => Array.from(tr.children).map(td => td.textContent.trim()));
+    if (!rows.length) return '';
+    const header = rows[0];
+    const separator = header.map(() => '---');
+    const body = rows.slice(1);
+    return '\n' + [header, separator, ...body].map(row => `| ${row.join(' | ')} |`).join('\n') + '\n\n';
+  }
+  // <span> is Teams' structural wrapper (one per message) as well as an inline
+  // element. Concatenate children WITHOUT trimming so paragraph breaks between
+  // stacked messages survive; the final cleanup collapses excess blank lines.
+  if (tag === 'span') return Array.from(node.childNodes).map(htmlNodeToMarkdown).join('');
+  return child();
+}
+
+// Parse an HTML string into a DOM body using whichever DOMParser is available
+// (the browser global, or a jsdom-provided one passed in for tests).
+function parseHtmlBody(html, domParser) {
+  const Parser = domParser || (typeof DOMParser !== 'undefined' ? DOMParser : null);
+  if (!Parser) throw new Error('No DOMParser available to convert HTML to Markdown');
+  const doc = new Parser().parseFromString(html, 'text/html');
+  return doc.body;
+}
+
+// Convert rich clipboard HTML into Markdown. Falls back to the plain-text
+// flavour when no HTML is present. `domParser` lets tests inject jsdom's parser.
+export function convertHtmlToMarkdown(html, plainFallback = '', domParser) {
+  if (!html) return plainFallback || '';
+  const body = parseHtmlBody(html, domParser);
+  return Array.from(body.childNodes)
+    .map(htmlNodeToMarkdown)
+    .join('')
+    .replace(/\u00a0/g, ' ')          // normalise non-breaking spaces from Teams
+    .replace(/[ \t]+\n/g, '\n')       // strip trailing whitespace
+    .replace(/(^|\n)[ \t]+>/g, '$1>') // de-indent quote markers
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }

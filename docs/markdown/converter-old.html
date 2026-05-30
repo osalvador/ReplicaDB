@@ -3,35 +3,38 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Markdown Copy Lab</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400..700,0..1,-50..200" rel="stylesheet">
-  <script type="module" src="https://esm.run/@material/web/all.js"></script>
+  <meta name="theme-color" content="#0F1115" />
+  <meta name="description" content="A private, browser-only markup conversion dashboard for Teams, Jira, email HTML and rich clipboard cleanup." />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./markdown-copy-lab-icon.svg" type="image/svg+xml" />
+  <link rel="icon" href="./favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <title>Markup Forge</title>
   <style>
     :root {
-      color-scheme: light;
-      --md-sys-color-primary: #6750a4;
-      --md-sys-color-on-primary: #ffffff;
-      --md-sys-color-primary-container: #eaddff;
-      --md-sys-color-on-primary-container: #21005d;
-      --md-sys-color-secondary: #625b71;
-      --md-sys-color-secondary-container: #e8def8;
-      --md-sys-color-tertiary: #7d5260;
-      --md-sys-color-surface: #fffbff;
-      --md-sys-color-surface-container-low: #f7f2fa;
-      --md-sys-color-surface-container: #f3edf7;
-      --md-sys-color-surface-container-high: #ece6f0;
-      --md-sys-color-surface-container-highest: #e6e0e9;
-      --md-sys-color-on-surface: #1d1b20;
-      --md-sys-color-on-surface-variant: #49454f;
-      --md-sys-color-outline: #79747e;
-      --md-sys-color-outline-variant: #cac4d0;
-      --md-sys-color-inverse-surface: #322f35;
-      --md-sys-color-inverse-on-surface: #f5eff7;
-      --md-sys-color-scrim: #000000;
-      --app-max-width: 1920px;
-      --app-radius: 28px;
+      color-scheme: dark;
+      --bg: #0f1115;
+      --bg-2: #12151b;
+      --surface: #171a21;
+      --surface-2: #20242d;
+      --surface-3: #262b35;
+      --line: rgba(244, 246, 250, .10);
+      --line-strong: rgba(244, 246, 250, .18);
+      --text: #f4f6fa;
+      --muted: #9ca3af;
+      --muted-2: #737b89;
+      --accent: #e8b86d;
+      --accent-2: #f5d39a;
+      --accent-soft: rgba(232, 184, 109, .14);
+      --success: #4ade80;
+      --danger: #fb7185;
+      --info: #67e8f9;
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --sidebar-w: 76px;
+      --panel-h: clamp(680px, calc(100vh - 212px), 1120px);
+      --shadow: 0 24px 90px rgba(0, 0, 0, .35), 0 8px 26px rgba(0, 0, 0, .22);
     }
 
     * { box-sizing: border-box; }
@@ -39,1030 +42,822 @@
     html, body { min-height: 100%; }
     body {
       margin: 0;
-      font-family: Inter, Roboto, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      color: var(--md-sys-color-on-surface);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
       background:
-        radial-gradient(1100px 620px at 0% -10%, rgba(103, 80, 164, .20), transparent 58%),
-        radial-gradient(900px 520px at 94% 5%, rgba(125, 82, 96, .16), transparent 48%),
-        linear-gradient(180deg, #fffbff 0%, #f7f2fa 48%, #f3edf7 100%);
+        radial-gradient(900px 520px at 12% 0%, rgba(232, 184, 109, .10), transparent 60%),
+        radial-gradient(720px 420px at 92% 8%, rgba(103, 232, 249, .08), transparent 56%),
+        linear-gradient(180deg, #0c0e12 0%, var(--bg) 48%, #0b0d11 100%);
+      overflow-x: hidden;
     }
 
-    .material-symbols-outlined {
-      font-family: 'Material Symbols Outlined';
-      font-weight: normal;
-      font-style: normal;
-      font-size: 22px;
-      line-height: 1;
-      letter-spacing: normal;
-      text-transform: none;
-      display: inline-block;
-      white-space: nowrap;
-      word-wrap: normal;
-      direction: ltr;
-      -webkit-font-feature-settings: 'liga';
-      -webkit-font-smoothing: antialiased;
-    }
+    button, input, textarea, select { font: inherit; }
+    button { color: inherit; }
 
-    .app-shell {
-      max-width: var(--app-max-width);
-      margin: 0 auto;
-      padding: 24px 32px 36px;
-    }
-
-    .hero-card {
-      position: relative;
-      overflow: hidden;
+    .app {
+      min-height: 100vh;
       display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: 24px;
-      align-items: center;
-      padding: 28px;
-      border-radius: 32px;
-      background:
-        linear-gradient(135deg, rgba(103,80,164,.98), rgba(125,82,96,.92)),
-        var(--md-sys-color-primary);
-      color: var(--md-sys-color-on-primary);
-      box-shadow: 0 28px 80px rgba(56, 38, 91, .24), 0 8px 22px rgba(56, 38, 91, .18);
-      isolation: isolate;
+      grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
     }
-    .hero-card::before {
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 16px 10px;
+      background: rgba(15, 17, 21, .86);
+      border-right: 1px solid var(--line);
+      backdrop-filter: blur(20px);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      z-index: 20;
+    }
+    .brand-mark {
+      width: 52px;
+      height: 52px;
+      border-radius: 19px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #2b2f3a, #101218 50%, rgba(232,184,109,.20));
+      border: 1px solid var(--line-strong);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 18px 34px rgba(0,0,0,.32);
+      color: var(--accent-2);
+      font-weight: 900;
+      letter-spacing: -.04em;
+    }
+    .brand-mark img {
+      width: 42px;
+      height: 42px;
+      display: block;
+      border-radius: 14px;
+      filter: drop-shadow(0 8px 14px rgba(0,0,0,.34));
+    }
+    .side-group { display: grid; gap: 8px; }
+    .side-divider { height: 1px; background: var(--line); margin: 4px 8px; }
+    .side-button {
+      appearance: none;
+      border: 1px solid transparent;
+      width: 52px;
+      height: 52px;
+      border-radius: 18px;
+      background: transparent;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      color: var(--muted);
+      position: relative;
+      transition: transform .16s ease, background .16s ease, border-color .16s ease, color .16s ease;
+    }
+    .side-button:hover { transform: translateY(-1px); background: rgba(255,255,255,.05); color: var(--text); border-color: var(--line); }
+    .side-button.active { background: var(--accent-soft); color: var(--accent-2); border-color: rgba(232,184,109,.34); }
+    .side-button .ico { font-size: 22px; }
+    .side-button .ico.app-ico {
+      width: 32px;
+      height: 32px;
+      border-radius: 12px;
+      display: inline-grid;
+      place-items: center;
+      position: relative;
+      border: 1px solid var(--line-strong);
+      background: rgba(255,255,255,.045);
+      overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .side-button .app-ico img,
+    .side-button .app-ico svg,
+    .helper-button img.app-mini-icon,
+    .helper-button svg.app-mini-icon,
+    .app-mini-icon {
+      width: 19px;
+      height: 19px;
+      display: block;
+      object-fit: contain;
+      filter: saturate(.92) brightness(1.16) drop-shadow(0 2px 5px rgba(0,0,0,.22));
+    }
+    .side-button.active .ico.app-ico { border-color: rgba(232,184,109,.45); background: rgba(232,184,109,.10); }
+    .side-button .ico.tool-ico {
+      width: 28px;
+      height: 28px;
+      display: inline-grid;
+      place-items: center;
+      color: var(--muted);
+    }
+    .side-button .ico.tool-ico svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.9; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .side-button.active .ico.tool-ico, .side-button:hover .ico.tool-ico { color: var(--accent-2); }
+    .source-ico-stack { position: relative; }
+    .source-ico-stack::after {
+      content: '↓';
+      position: absolute;
+      right: -5px;
+      bottom: -5px;
+      width: 16px;
+      height: 16px;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      color: #071014;
+      background: var(--accent);
+      border: 1px solid rgba(0,0,0,.32);
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .side-button .tip {
+      position: absolute;
+      left: 64px;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: #0b0d11;
+      border: 1px solid var(--line-strong);
+      color: var(--text);
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .12s ease;
+      box-shadow: 0 12px 30px rgba(0,0,0,.35);
+    }
+    .side-button:hover .tip { opacity: 1; }
+    .side-bottom { margin-top: auto; }
+
+    .main-shell {
+      min-width: 0;
+      padding: 22px 26px 34px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      padding: 20px 22px;
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      background: linear-gradient(135deg, rgba(23,26,33,.94), rgba(32,36,45,.82));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+    .topbar::after {
       content: '';
       position: absolute;
-      inset: -45% -10% auto auto;
-      width: 520px;
-      height: 520px;
+      right: -110px;
+      top: -170px;
+      width: 360px;
+      height: 360px;
       border-radius: 50%;
-      background: rgba(255,255,255,.18);
-      filter: blur(2px);
-      z-index: -1;
+      background: radial-gradient(circle, rgba(232,184,109,.18), transparent 58%);
+      pointer-events: none;
     }
-    .hero-title { display: grid; gap: 8px; }
+    .title-stack { min-width: 0; position: relative; z-index: 1; }
     .eyebrow {
-      display: inline-flex;
-      width: fit-content;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 12px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.16);
-      color: rgba(255,255,255,.90);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: .08em;
+      margin: 0 0 8px;
+      color: var(--accent-2);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .16em;
       text-transform: uppercase;
     }
     h1 {
       margin: 0;
-      font-size: clamp(32px, 4vw, 58px);
+      font-size: clamp(28px, 4vw, 48px);
       line-height: .95;
-      letter-spacing: -.055em;
-      max-width: 12ch;
+      letter-spacing: -.06em;
     }
-    .hero-copy {
-      max-width: 72ch;
-      margin: 0;
-      color: rgba(255,255,255,.82);
-      font-size: 15px;
-      line-height: 1.65;
+    .top-copy {
+      margin: 10px 0 0;
+      color: var(--muted);
+      max-width: none;
+      line-height: 1.55;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-      justify-content: flex-end;
-    }
-    .hero-actions md-filled-button,
-    .hero-actions md-outlined-button {
-      --md-filled-button-container-shape: 18px;
-      --md-outlined-button-container-shape: 18px;
-      --md-outlined-button-outline-color: rgba(255,255,255,.38);
-      --md-outlined-button-label-text-color: #ffffff;
-      --md-outlined-button-hover-label-text-color: #ffffff;
-      --md-outlined-button-pressed-label-text-color: #ffffff;
-      --md-filled-button-container-color: #ffffff;
-      --md-filled-button-label-text-color: #4f378b;
-      --md-filled-button-icon-color: #4f378b;
-    }
+    .top-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; position: relative; z-index: 1; }
 
-
-    .utility-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
-      margin: 18px 0;
-    }
-    .utility-card {
+    .button, .icon-button, .segment-button, .toolbar-button, .link-button {
       appearance: none;
-      border: 1px solid rgba(121,116,126,.20);
-      min-height: 132px;
-      padding: 18px;
-      border-radius: 28px;
-      background: rgba(255,255,255,.68);
-      color: var(--md-sys-color-on-surface);
-      text-align: left;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      min-height: 42px;
+      padding: 9px 13px;
       cursor: pointer;
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      gap: 10px;
-      box-shadow: 0 14px 44px rgba(29, 27, 32, .07);
-      backdrop-filter: blur(16px);
-      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
-    }
-    .utility-card:hover {
-      transform: translateY(-3px);
-      border-color: rgba(103,80,164,.34);
-      box-shadow: 0 24px 70px rgba(103,80,164,.16);
-    }
-    .utility-card.active {
-      background:
-        linear-gradient(135deg, rgba(234,221,255,.98), rgba(255,255,255,.88));
-      border-color: rgba(103,80,164,.50);
-      box-shadow: 0 28px 76px rgba(103,80,164,.20), inset 0 0 0 1px rgba(255,255,255,.72);
-    }
-    .utility-top {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 10px;
+      justify-content: center;
+      gap: 8px;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease, color .16s ease, box-shadow .16s ease;
+      text-decoration: none;
     }
-    .utility-icon {
+    .button:hover, .icon-button:hover, .segment-button:hover, .toolbar-button:hover, .link-button:hover { transform: translateY(-1px); border-color: rgba(232,184,109,.40); background: rgba(255,255,255,.07); }
+    .button.primary { background: linear-gradient(135deg, var(--accent), #d19949); color: #121212; font-weight: 900; border-color: transparent; box-shadow: 0 14px 34px rgba(232,184,109,.18); }
+    .button.primary:hover { box-shadow: 0 18px 45px rgba(232,184,109,.24); }
+    .button.ghost { color: var(--muted); }
+    .button .subcap { font-size: 11px; opacity: .72; font-weight: 700; }
+    .icon-button { width: 42px; padding: 0; border-radius: 15px; }
+    .segmented { display: flex; gap: 4px; padding: 4px; border-radius: 18px; background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+    .segment-button { min-height: 34px; border: 0; border-radius: 13px; padding: 7px 10px; color: var(--muted); background: transparent; }
+    .segment-button.active { background: var(--accent-soft); color: var(--accent-2); }
+
+    .quick-strip {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      min-height: 92px;
+      padding: 16px 20px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(23,26,33,.78), rgba(15,17,21,.74));
+      backdrop-filter: blur(16px);
+    }
+    .quick-copy { min-width: 0; }
+    .quick-controls { display: flex; justify-content: flex-end; align-items: center; }
+    .quick-title { color: var(--accent-2); font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+    .quick-strip .small-text { max-width: none; width: 100%; font-size: 13px; line-height: 1.55; color: var(--muted); }
+    .helper-row { display: none; }
+    .helper-button { min-height: 34px; padding: 6px 10px; border-radius: 999px; font-size: 12px; color: var(--muted); }
+    .helper-button .quick-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 8px;
+      display: inline-grid;
+      place-items: center;
+      background: rgba(255,255,255,.055);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      color: var(--accent-2);
+    }
+    .helper-button .quick-icon img { width: 15px; height: 15px; display:block; object-fit: contain; }
+
+
+    .panel-title { min-width: 0; }
+    .panel-title > div { min-width: 0; }
+    .panel-title p { max-width: min(72ch, calc(100vw - 360px)); overflow-wrap: normal; }
+    .panel-actions { flex: 0 0 auto; }
+    #pasteRichBtn { white-space: nowrap; min-width: 166px; font-weight: 900; background: linear-gradient(135deg, var(--accent), #d19949); color: #121212; border-color: transparent; box-shadow: 0 14px 34px rgba(232,184,109,.18); }
+    #pasteRichBtn:hover { box-shadow: 0 18px 45px rgba(232,184,109,.24); }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(380px, .92fr) minmax(520px, 1.18fr) 320px;
+      gap: 16px;
+      align-items: start;
+    }
+    .workspace.editor-only { grid-template-columns: minmax(0, 1fr) 320px; }
+    .workspace.preview-only { grid-template-columns: minmax(0, 1fr) 320px; }
+    .workspace.editor-only .preview-panel { display: none; }
+    .workspace.preview-only .editor-panel { display: none; }
+    .workspace.inspector-collapsed { grid-template-columns: minmax(380px, .94fr) minmax(520px, 1.24fr); }
+    .workspace.inspector-collapsed .inspector-panel { display: none; }
+    .workspace.editor-only.inspector-collapsed { grid-template-columns: minmax(0, 1fr); }
+    .workspace.preview-only.inspector-collapsed { grid-template-columns: minmax(0, 1fr); }
+
+    .panel {
+      min-width: 0;
+      height: var(--panel-h);
+      display: flex;
+      flex-direction: column;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(23,26,33,.94), rgba(17,19,24,.94));
+      box-shadow: 0 20px 70px rgba(0,0,0,.32);
+      overflow: hidden;
+    }
+    .panel-header {
+      min-height: 76px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 14px;
+      flex: 0 0 auto;
+    }
+    .panel-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .panel-icon {
       width: 42px;
       height: 42px;
       border-radius: 16px;
-      display: inline-grid;
+      display: grid;
       place-items: center;
-      color: var(--md-sys-color-on-primary-container);
-      background: var(--md-sys-color-primary-container);
+      background: rgba(232,184,109,.12);
+      border: 1px solid rgba(232,184,109,.20);
+      color: var(--accent-2);
+      flex: 0 0 auto;
     }
-    .utility-card.active .utility-icon {
-      color: #fff;
-      background: linear-gradient(135deg, #6750a4, #8f5cf7);
-      box-shadow: 0 12px 28px rgba(103,80,164,.24);
+    .panel-title h2 { margin: 0; font-size: 16px; letter-spacing: -.02em; line-height: 1.12; }
+    .panel-title p { margin: 3px 0 0; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .panel-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; min-width: 0; }
+    .editor-panel .panel-header, .preview-panel .panel-header { grid-template-columns: minmax(0, 1fr) max-content; }
+    .editor-panel .panel-actions, .preview-panel .panel-actions { max-width: 100%; }
+    .editor-panel .panel-title p { max-width: 100%; }
+    @media (max-width: 1220px) {
+      .editor-panel .panel-header, .preview-panel .panel-header { grid-template-columns: 1fr; align-items: start; }
+      .editor-panel .panel-actions, .preview-panel .panel-actions { justify-content: flex-start; }
     }
-    .utility-badge {
-      padding: 5px 9px;
-      border-radius: 999px;
-      background: rgba(103,80,164,.09);
-      color: var(--md-sys-color-primary);
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
-    .utility-title {
-      margin: 0;
-      font-size: 16px;
-      line-height: 1.15;
-      letter-spacing: -.03em;
-    }
-    .utility-copy {
-      margin: 0;
-      color: var(--md-sys-color-on-surface-variant);
-      font-size: 12px;
-      line-height: 1.45;
-    }
-    .utility-hint {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--md-sys-color-primary);
-      font-size: 11px;
-      font-weight: 800;
-    }
-    .clipboard-action-row {
-      display: none;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 14px;
-      border-radius: 22px;
-      border: 1px solid rgba(121,116,126,.18);
-      background: var(--md-sys-color-surface-container-low);
-    }
-    .clipboard-action-row.active { display: flex; }
-    .clipboard-action-row p {
-      margin: 0;
-      color: var(--md-sys-color-on-surface-variant);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-    .secondary-action-button {
-      appearance: none;
-      border: 0;
-      min-height: 44px;
-      padding: 8px 14px;
-      border-radius: 16px;
+    .preview-profile {
+      min-height: 42px;
       display: inline-flex;
       align-items: center;
-      gap: 9px;
-      cursor: pointer;
-      font: inherit;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.035);
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    .preview-profile span {
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      color: var(--muted-2);
+    }
+    .preview-profile select {
+      min-width: 150px;
+      max-width: 230px;
+      border: 0;
+      outline: 0;
+      color: var(--text);
+      background: transparent;
+      font-size: 12px;
       font-weight: 800;
-      color: var(--md-sys-color-on-primary-container);
-      background: linear-gradient(135deg, rgba(234,221,255,.96), rgba(255,255,255,.88));
-      box-shadow: inset 0 0 0 1px rgba(103,80,164,.20), 0 10px 22px rgba(103,80,164,.12);
+      cursor: pointer;
+    }
+    .preview-profile select option { color: #111; background: #f7f2ea; }
+    .panel-body { min-height: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+
+    .editor-toolbar { display: flex; gap: 8px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; flex: 0 0 auto; }
+    .toolbar-button { min-height: 36px; padding: 7px 10px; border-radius: 13px; color: var(--muted); background: rgba(255,255,255,.035); white-space: nowrap; }
+    .toolbar-button strong { color: var(--text); }
+    .toolbar-sep { width: 1px; min-width: 1px; margin: 6px 2px; background: var(--line); }
+    .toolbar-markdown-only.hidden { display: none; }
+
+    .editor-frame {
+      min-height: 0;
+      flex: 1 1 auto;
+      display: grid;
+      grid-template-columns: 56px minmax(0, 1fr);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      overflow: hidden;
+      background: #0d0f14;
+    }
+    .line-numbers {
+      padding: 14px 10px;
+      color: #a7b0c0;
+      text-align: right;
+      font: 13px/1.62 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+      border-right: 1px solid var(--line);
+      overflow: hidden;
+      user-select: none;
+      white-space: pre;
+      background: #10131a;
+    }
+    textarea.editor-input {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      border: 0;
+      outline: none;
+      resize: none;
+      overflow: auto;
+      padding: 14px 16px;
+      background: #0d0f14;
+      color: var(--text);
+      font: 13px/1.62 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+      white-space: pre;
+      tab-size: 2;
+      scrollbar-color: #3b4250 transparent;
+    }
+    textarea.editor-input::placeholder { color: #535b68; }
+
+    .preview-stage {
+      min-height: 0;
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+    }
+    #previewFrame {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      border: 0;
+      border-radius: 22px;
+      background: #1f1f1f;
     }
     .format-preview {
-      height: var(--workspace-panel-height);
+      flex: 1 1 auto;
+      min-height: 0;
       overflow: auto;
-      border-radius: 26px;
-      border: 1px solid rgba(121,116,126,.22);
-      background: #ffffff;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.60), 0 22px 50px rgba(29,27,32,.10);
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: #0d0f14;
     }
     .format-preview pre {
       margin: 0;
       min-height: 100%;
-      padding: 22px;
-      font: 13px/1.65 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+      padding: 18px;
+      color: #d7dce5;
+      font: 13px/1.62 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
       white-space: pre;
       overflow: auto;
-      color: #1d1b20;
     }
     .email-preview-doc {
-      width: min(760px, calc(100% - 40px));
-      margin: 20px auto;
+      width: min(760px, calc(100% - 34px));
+      margin: 18px auto;
       background: #ffffff;
       border-radius: 18px;
-      border: 1px solid #e7e2ea;
-      box-shadow: 0 20px 56px rgba(29,27,32,.12);
+      border: 1px solid #252a34;
+      box-shadow: 0 22px 56px rgba(0,0,0,.28);
       overflow: hidden;
       font-family: Arial, Helvetica, sans-serif;
+      color: #20242d;
     }
-    .email-preview-head {
-      padding: 22px 26px;
-      background: linear-gradient(135deg, #6750a4, #8f5cf7);
-      color: #fff;
-      font-weight: 700;
-      letter-spacing: .02em;
-    }
-    .email-preview-body { padding: 26px; color: #222; font-size: 15px; line-height: 1.55; }
+    .email-preview-head { padding: 22px 26px; background: #171a21; color: #e8b86d; font-weight: 700; letter-spacing: .02em; }
+    .email-preview-body { padding: 26px; color: #20242d; font-size: 15px; line-height: 1.55; }
+    .email-preview-doc pre { background: #0f172a !important; color: #e5e7eb !important; border-color: #334155 !important; }
+    .email-preview-doc pre code { background: transparent !important; color: inherit !important; padding: 0 !important; border-radius: 0 !important; }
+    .email-preview-doc code { background: #1e293b !important; color: #e5e7eb !important; }
 
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
-      margin: 18px 0;
+    .raw-output {
+      display: none !important;
+      flex: 0 0 118px;
+      min-height: 0;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
     }
-    .stat-card {
-      border-radius: 24px;
-      padding: 18px;
-      background: rgba(255,255,255,.72);
-      border: 1px solid rgba(121,116,126,.22);
-      box-shadow: 0 14px 44px rgba(29, 27, 32, .08);
-      backdrop-filter: blur(16px);
-    }
-    .stat-label {
-      margin: 0 0 8px;
-      color: var(--md-sys-color-on-surface-variant);
+    .raw-output summary {
+      cursor: pointer;
+      color: var(--muted);
       font-size: 12px;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
-    .stat-value {
-      font-size: clamp(24px, 2.2vw, 36px);
       font-weight: 800;
-      letter-spacing: -.04em;
-      color: var(--md-sys-color-on-surface);
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    #output {
+      width: 100%;
+      height: 78px;
+      resize: none;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 10px;
+      background: #0d0f14;
+      color: #8791a2;
+      font: 11px/1.5 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+      white-space: pre;
+      overflow: auto;
     }
 
-    .workspace-grid {
+    .inspector-panel { gap: 0; }
+    .inspector-scroll { padding: 14px; overflow: auto; display: grid; gap: 12px; }
+    .inspector-card {
+      padding: 14px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.035);
       display: grid;
-      grid-template-columns: minmax(420px, .72fr) minmax(780px, 1.28fr);
-      gap: 18px;
-      align-items: start;
+      gap: 10px;
     }
-    .md-card {
-      min-width: 0;
-      min-height: 690px;
+    .inspector-card h3 { margin: 0; font-size: 13px; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
+    .inspector-card p, .small-text { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+    .mini-stat { padding: 10px; border-radius: 15px; background: rgba(0,0,0,.18); border: 1px solid var(--line); }
+    .mini-stat span { display: block; color: var(--muted-2); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+    .mini-stat strong { display: block; margin-top: 3px; font-size: 18px; letter-spacing: -.04em; }
+    .select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+      color: var(--text);
+      background: #0d0f14;
+    }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .pill { padding: 5px 8px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+    .pill.good { color: var(--success); border-color: rgba(74,222,128,.24); background: rgba(74,222,128,.08); }
+    .pill.warn { color: var(--accent-2); border-color: rgba(232,184,109,.24); background: rgba(232,184,109,.08); }
+    .list { display: grid; gap: 8px; }
+    .list-item { padding: 10px; border-radius: 14px; background: rgba(0,0,0,.16); border: 1px solid var(--line); display: grid; gap: 6px; }
+    .list-item strong { font-size: 12px; }
+    .list-item span { color: var(--muted); font-size: 11px; }
+    .list-item button { justify-self: start; }
+
+    .drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.42);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease;
+      z-index: 79;
+    }
+    .drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+    .drawer {
+      position: fixed;
+      right: 22px;
+      top: 22px;
+      bottom: 22px;
+      width: min(440px, calc(100vw - 44px));
+      background: rgba(23,26,33,.96);
+      border: 1px solid var(--line-strong);
+      border-radius: 30px;
+      box-shadow: var(--shadow);
+      z-index: 90;
+      transform: translateX(calc(100% + 34px));
+      transition: transform .22s ease;
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      padding: 18px;
-      border-radius: var(--app-radius);
-      background: rgba(255,255,255,.80);
-      border: 1px solid rgba(121,116,126,.24);
-      box-shadow: 0 18px 60px rgba(29, 27, 32, .10);
+      overflow: hidden;
       backdrop-filter: blur(18px);
     }
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-    .card-header-actions {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 12px;
-      flex: 0 0 auto;
-    }
-    .section-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 0;
-    }
-    .section-icon {
-      width: 44px;
-      height: 44px;
-      display: inline-grid;
-      place-items: center;
-      border-radius: 16px;
-      color: var(--md-sys-color-on-primary-container);
-      background: var(--md-sys-color-primary-container);
-    }
-    .section-title h2 {
-      margin: 0;
-      font-size: 18px;
-      letter-spacing: -.02em;
-    }
-    .section-title p {
-      margin: 2px 0 0;
-      color: var(--md-sys-color-on-surface-variant);
-      font-size: 13px;
-    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-header { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:18px; border-bottom:1px solid var(--line); }
+    .drawer-header h2 { margin:0; font-size:18px; letter-spacing:-.03em; }
+    .drawer-body { padding: 14px; overflow:auto; display:grid; gap:12px; }
 
-    .editor-toolbar {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-      padding: 8px;
-      border-radius: 22px;
-      background: var(--md-sys-color-surface-container-low);
-      border: 1px solid rgba(121,116,126,.18);
-      overflow-x: auto;
-      white-space: nowrap;
+    .palette-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.52);
+      z-index: 80;
+      display: none;
+      place-items: start center;
+      padding-top: 10vh;
+      backdrop-filter: blur(8px);
     }
-    .editor-toolbar md-icon-button {
-      --md-icon-button-icon-color: var(--md-sys-color-on-surface-variant);
-      --md-icon-button-hover-icon-color: var(--md-sys-color-primary);
-      --md-icon-button-pressed-icon-color: var(--md-sys-color-primary);
-    }
-    .toolbar-divider {
-      width: 1px;
-      height: 28px;
-      margin: 0 4px;
-      flex: 0 0 auto;
-      background: var(--md-sys-color-outline-variant);
-    }
-    .editor-shell {
-      display: flex;
-      min-height: 0;
-      flex: 1 1 auto;
-    }
-    textarea {
-      width: 100%;
-      min-height: 0;
-      border: 1px solid var(--md-sys-color-outline-variant);
-      border-radius: 24px;
-      background: rgba(255,255,255,.82);
-      color: var(--md-sys-color-on-surface);
-      padding: 18px;
-      outline: none;
-      resize: none;
-      overflow: auto;
-      white-space: pre;
-      overflow-wrap: normal;
-      font: 13px/1.65 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
-      transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
-    }
-    textarea:focus {
-      border-color: var(--md-sys-color-primary);
-      box-shadow: 0 0 0 4px rgba(103,80,164,.14);
-      background: #ffffff;
-    }
-    #input { flex: 1 1 auto; min-height: 492px; }
-    .preview-stage {
-      border-radius: 26px;
-      overflow: hidden;
-      background: #1f1f1f;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 22px 50px rgba(0,0,0,.16);
-    }
-    #previewFrame {
-      display: block;
-      width: 100%;
-      height: var(--workspace-panel-height);
-      border: 0;
-      background: #1f1f1f;
-    }
-
-    .inspector-panel {
-      margin-top: auto;
-      border-radius: 24px;
-      background: var(--md-sys-color-surface-container-low);
-      border: 1px solid rgba(121,116,126,.18);
+    .palette-backdrop.open { display: grid; }
+    .palette {
+      width: min(720px, calc(100vw - 32px));
+      border-radius: 28px;
+      border: 1px solid var(--line-strong);
+      background: rgba(17,19,24,.98);
+      box-shadow: var(--shadow);
       overflow: hidden;
     }
-    .inspector-panel summary {
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 14px 16px;
-      list-style: none;
-      color: var(--md-sys-color-on-surface-variant);
-      font-weight: 700;
-      letter-spacing: .02em;
-    }
-    .inspector-panel summary::-webkit-details-marker { display: none; }
-    .inspector-body { padding: 0 14px 14px; }
-    #output {
-      height: 84px;
-      min-height: 84px;
-      max-height: 84px;
-      white-space: nowrap;
-      overflow-x: auto;
-      overflow-y: hidden;
-      font-size: 12px;
-      color: #4f5868;
-      background: rgba(255,255,255,.72);
-    }
-    .status-line {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      color: var(--md-sys-color-on-surface-variant);
-      font-size: 13px;
-    }
-    #statusChip {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: #146c2e;
-      font-weight: 700;
-    }
-    #statusChip::before {
-      content: '';
-      width: 8px;
-      height: 8px;
+    .palette input { width:100%; border:0; outline:0; padding:18px 20px; background:#0d0f14; color:var(--text); font-size:16px; border-bottom:1px solid var(--line); }
+    .palette-results { max-height: 420px; overflow:auto; padding:10px; display:grid; gap:6px; }
+    .palette-item { display:grid; grid-template-columns:34px minmax(0,1fr) auto; gap:10px; align-items:center; padding:10px; border-radius:16px; cursor:pointer; border:1px solid transparent; }
+    .palette-item:hover, .palette-item.active { background:rgba(232,184,109,.10); border-color:rgba(232,184,109,.24); }
+    .palette-item strong { display:block; font-size:13px; }
+    .palette-item span { display:block; color:var(--muted); font-size:11px; margin-top:2px; }
+    .kbd { padding: 2px 6px; border-radius: 7px; background: rgba(255,255,255,.08); border: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%) translateY(20px);
+      padding: 12px 16px;
       border-radius: 999px;
-      background: #18a34a;
-      box-shadow: 0 0 0 4px rgba(24,163,74,.12);
-    }
-    .footer-note {
-      margin: 18px 4px 0;
-      color: var(--md-sys-color-on-surface-variant);
+      border: 1px solid var(--line-strong);
+      background: rgba(17,19,24,.98);
+      color: var(--text);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+      z-index: 90;
       font-size: 13px;
-      text-align: center;
     }
-    .hidden-input { display: none; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-
-    .hero-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-      justify-content: flex-end;
-      padding: 8px;
-      border: 1px solid rgba(255,255,255,.22);
-      border-radius: 26px;
-      background: rgba(255,255,255,.14);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.20), 0 18px 42px rgba(33, 0, 93, .20);
-      backdrop-filter: blur(18px);
+    @media (max-width: 1380px) {
+      .workspace { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .inspector-panel { grid-column: 1 / -1; height: auto; max-height: 420px; }
+      .inspector-scroll { grid-template-columns: repeat(3, minmax(0,1fr)); }
+      .inspector-card { min-width: 0; }
+      .workspace.inspector-collapsed { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
     }
-    .hero-button {
-      appearance: none;
-      border: 0;
-      position: relative;
-      isolation: isolate;
-      min-height: 58px;
-      padding: 10px 18px 10px 12px;
-      border-radius: 22px;
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      cursor: pointer;
-      font: inherit;
-      text-align: left;
-      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
-      overflow: hidden;
-    }
-    .hero-button::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      z-index: -1;
-      opacity: 0;
-      background: radial-gradient(220px 90px at 10% 0%, rgba(255,255,255,.42), transparent 60%);
-      transition: opacity .18s ease;
-    }
-    .hero-button:hover { transform: translateY(-2px); filter: saturate(1.06); }
-    .hero-button:hover::before { opacity: 1; }
-    .hero-button:active { transform: translateY(0) scale(.99); }
-    .hero-button:focus-visible {
-      outline: 3px solid rgba(255,255,255,.62);
-      outline-offset: 3px;
-    }
-    .hero-button-icon {
-      width: 40px;
-      height: 40px;
-      display: inline-grid;
-      place-items: center;
-      border-radius: 16px;
-      font-size: 23px;
-      flex: 0 0 auto;
-    }
-    .hero-button-copy {
-      display: grid;
-      gap: 1px;
-      min-width: 0;
-    }
-    .button-label {
-      font-size: 14px;
-      font-weight: 800;
-      letter-spacing: -.01em;
-      line-height: 1.15;
-      white-space: nowrap;
-    }
-    .button-caption {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .04em;
-      opacity: .72;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-    .hero-button-upload {
-      color: #fff;
-      background: rgba(255,255,255,.13);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.30), 0 10px 26px rgba(0,0,0,.12);
-    }
-    .hero-button-upload .hero-button-icon {
-      color: #fff;
-      background: rgba(255,255,255,.16);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.24);
-    }
-    .hero-button-primary {
-      color: #35145f;
-      background: linear-gradient(135deg, #ffffff 0%, #f0e9ff 58%, #ffeaf2 100%);
-      box-shadow: 0 18px 40px rgba(33, 0, 93, .22), inset 0 1px 0 rgba(255,255,255,.75);
-    }
-    .hero-button-primary .hero-button-icon {
-      color: #fff;
-      background: linear-gradient(135deg, #6750a4, #9c27b0);
-      box-shadow: 0 10px 24px rgba(103, 80, 164, .28);
-    }
-
-    .editor-with-lines {
-      flex: 1 1 auto;
-      min-height: 492px;
-      display: grid;
-      grid-template-columns: 58px minmax(0, 1fr);
-      border: 1px solid var(--md-sys-color-outline-variant);
-      border-radius: 24px;
-      background: rgba(255,255,255,.82);
-      overflow: hidden;
-      transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
-    }
-    .editor-with-lines:focus-within {
-      border-color: var(--md-sys-color-primary);
-      box-shadow: 0 0 0 4px rgba(103,80,164,.14);
-      background: #ffffff;
-    }
-    .line-numbers {
-      padding: 18px 12px 18px 8px;
-      overflow: hidden;
-      user-select: none;
-      text-align: right;
-      white-space: pre;
-      color: rgba(73,69,79,.58);
-      background: linear-gradient(180deg, rgba(103,80,164,.065), rgba(255,255,255,.25));
-      border-right: 1px solid rgba(121,116,126,.18);
-      font: 13px/1.65 "Cascadia Mono", "SFMono-Regular", Menlo, Consolas, monospace;
-      letter-spacing: -.02em;
-    }
-    .editor-with-lines #input {
-      min-height: 492px;
-      border: 0;
-      border-radius: 0;
-      background: transparent;
-      box-shadow: none;
-      padding: 18px;
-    }
-    .editor-with-lines #input:focus {
-      border-color: transparent;
-      box-shadow: none;
-      background: transparent;
-    }
-
-
-    /* Card-local action controls */
-    .action-button {
-      appearance: none;
-      border: 0;
-      position: relative;
-      isolation: isolate;
-      min-height: 50px;
-      padding: 8px 16px 8px 10px;
-      border-radius: 20px;
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-      cursor: pointer;
-      font: inherit;
-      text-align: left;
-      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
-      overflow: hidden;
-      flex: 0 0 auto;
-    }
-    .action-button::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      z-index: -1;
-      opacity: 0;
-      background: radial-gradient(220px 90px at 10% 0%, rgba(255,255,255,.50), transparent 62%);
-      transition: opacity .18s ease;
-    }
-    .action-button:hover { transform: translateY(-2px); filter: saturate(1.08); }
-    .action-button:hover::before { opacity: 1; }
-    .action-button:active { transform: translateY(0) scale(.99); }
-    .action-button:focus-visible {
-      outline: 3px solid rgba(103,80,164,.32);
-      outline-offset: 3px;
-    }
-    .action-button-icon {
-      width: 36px;
-      height: 36px;
-      display: inline-grid;
-      place-items: center;
-      border-radius: 14px;
-      font-size: 22px;
-      flex: 0 0 auto;
-    }
-    .action-button-copy {
-      display: grid;
-      gap: 1px;
-      min-width: 0;
-    }
-    .action-button-upload {
-      color: var(--md-sys-color-on-primary-container);
-      background: linear-gradient(135deg, rgba(234,221,255,.96), rgba(255,255,255,.88));
-      box-shadow: 0 12px 30px rgba(103,80,164,.16), inset 0 0 0 1px rgba(103,80,164,.20), inset 0 1px 0 rgba(255,255,255,.80);
-    }
-    .action-button-upload .action-button-icon {
-      color: #ffffff;
-      background: linear-gradient(135deg, #6750a4, #7d5260);
-      box-shadow: 0 10px 24px rgba(103,80,164,.24);
-    }
-    .action-button-primary {
-      color: #ffffff;
-      background: linear-gradient(135deg, #6750a4, #8f5cf7 56%, #b45edb);
-      box-shadow: 0 18px 44px rgba(103,80,164,.28), inset 0 1px 0 rgba(255,255,255,.22);
-    }
-    .action-button-primary .action-button-icon {
-      color: #4f378b;
-      background: rgba(255,255,255,.92);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.55);
-    }
-    .toolbar-upload {
-      min-height: 46px;
-      padding-right: 14px;
-      border-radius: 18px;
-    }
-    .toolbar-upload .button-label { font-size: 13px; }
-    .toolbar-upload .button-caption { font-size: 10px; }
-    .toolbar-upload .action-button-icon { width: 34px; height: 34px; font-size: 20px; }
-    .preview-copy {
-      min-height: 48px;
-      padding: 8px 16px 8px 10px;
-      border-radius: 20px;
-    }
-    .preview-copy .action-button-icon {
-      width: 34px;
-      height: 34px;
-      font-size: 20px;
-    }
-    .preview-copy .button-label { font-size: 13px; }
-    .preview-copy .button-caption { font-size: 10px; }
-
-    .visually-hidden {
-      position: absolute !important;
-      width: 1px !important;
-      height: 1px !important;
-      padding: 0 !important;
-      margin: -1px !important;
-      overflow: hidden !important;
-      clip: rect(0, 0, 0, 0) !important;
-      white-space: nowrap !important;
-      border: 0 !important;
-    }
-
-    /* Keep the Markdown editor aligned with the Teams preview.
-       The editing surface has the same responsive height as the preview iframe,
-       and long Markdown documents scroll inside the textarea instead of resizing the card. */
-    .editor-card,
-    .preview-card {
-      min-height: 0;
-      height: auto;
-      max-height: none;
-      align-self: start;
-    }
-    .editor-card .editor-shell {
-      flex: 0 0 auto;
-      min-height: 0;
-      width: 100%;
-      align-self: stretch;
-      display: flex;
-      overflow: hidden;
-    }
-    .editor-card .editor-with-lines {
-      width: 100%;
-      flex: 0 0 auto;
-      height: var(--workspace-panel-height);
-      min-height: var(--workspace-panel-height);
-      max-height: var(--workspace-panel-height);
-      align-self: stretch;
-      overflow: hidden;
-    }
-    .editor-card .line-numbers {
-      height: 100%;
-      min-height: 0;
-      overflow: hidden;
-    }
-    .editor-card .editor-with-lines #input {
-      display: block;
-      height: 100%;
-      min-height: 0;
-      max-height: 100%;
-      overflow: auto;
-    }
-
-    @media (max-width: 1200px) {
-      .workspace-grid { grid-template-columns: 1fr; }
-      .hero-card { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 820px) {
-      .app-shell { padding: 16px; }
-      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .utility-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .workspace-grid { gap: 14px; }
-      .md-card { min-height: auto; border-radius: 24px; }
-      :root { --workspace-panel-height: clamp(420px, 58vh, 620px); }
-      .editor-card { min-height: 0; height: auto; max-height: none; }
-      .editor-card .editor-with-lines { min-height: var(--workspace-panel-height); }
-      .card-header-actions { width: 100%; justify-content: flex-start; }
-    }
-    @media (max-width: 560px) {
-      .stats-grid { grid-template-columns: 1fr; }
-      .utility-grid { grid-template-columns: 1fr; }
-      h1 { font-size: 34px; }
-      .hero-card { padding: 22px; border-radius: 26px; }
-    }
-
-
-    /* v14: workspace sizing hardening
-       Tasks 1 and 2:
-       - The editor surface is a fixed responsive panel, never content-sized.
-       - All destination previews use the same useful responsive height. */
-    :root {
-      --workspace-panel-height: clamp(560px, 46vw, 760px);
-    }
-    .workspace-grid {
-      align-items: start;
-    }
-    .md-card,
-    .editor-card,
-    .preview-card {
-      min-height: 0;
-      height: auto;
-      max-height: none;
-      align-self: start;
-    }
-    .editor-card {
-      overflow: hidden;
-    }
-    .editor-card .editor-shell {
-      flex: 0 0 var(--workspace-panel-height);
-      width: 100%;
-      height: var(--workspace-panel-height);
-      min-height: 0;
-      max-height: var(--workspace-panel-height);
-      align-self: stretch;
-      overflow: hidden;
-    }
-    .editor-card .editor-with-lines {
-      width: 100%;
-      height: 100%;
-      min-height: 0;
-      max-height: 100%;
-      flex: 1 1 auto;
-      align-self: stretch;
-      overflow: hidden;
-      contain: layout paint;
-    }
-    .editor-card .line-numbers {
-      height: 100%;
-      min-height: 0;
-      max-height: 100%;
-      overflow: hidden;
-    }
-    .editor-card .editor-with-lines #input {
-      display: block;
-      width: 100%;
-      height: 100%;
-      min-height: 0;
-      max-height: 100%;
-      overflow: auto;
-    }
-    .preview-stage,
-    #previewFrame,
-    .format-preview {
-      height: var(--workspace-panel-height);
-      min-height: var(--workspace-panel-height);
-      max-height: var(--workspace-panel-height);
-    }
-    .format-preview {
-      overflow: auto;
-    }
-    .format-preview pre {
-      min-height: 0;
-    }
-    @media (max-width: 1200px) {
-      :root { --workspace-panel-height: clamp(520px, 62vh, 720px); }
-    }
-    @media (max-width: 820px) {
-      :root { --workspace-panel-height: clamp(460px, 62vh, 660px); }
-      .editor-card .editor-shell,
-      .preview-stage,
-      #previewFrame,
-      .format-preview {
-        height: var(--workspace-panel-height);
-        min-height: var(--workspace-panel-height);
-        max-height: var(--workspace-panel-height);
+    @media (max-width: 940px) {
+      :root { --sidebar-w: 0px; --panel-h: 620px; }
+      .app { grid-template-columns: 1fr; }
+      .sidebar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        top: auto;
+        height: 68px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 8px;
+        border-top: 1px solid var(--line);
+        border-right: 0;
+        border-radius: 0;
+        padding: 8px max(10px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+        overflow-x: auto;
+        overflow-y: hidden;
+        z-index: 70;
       }
+      .brand-mark, .side-divider, .side-bottom { display: none; }
+      .side-group { display: flex; flex: 0 0 auto; gap: 8px; }
+      .side-button { width: 48px; height: 48px; border-radius: 16px; flex: 0 0 auto; }
+      .side-button .tip { display:none; }
+      .main-shell { padding: 14px 14px calc(92px + env(safe-area-inset-bottom)); }
+      .topbar { grid-template-columns: 1fr; }
+      .top-copy { white-space: normal; overflow: visible; text-overflow: clip; }
+      .workspace, .workspace.inspector-collapsed, .workspace.editor-only, .workspace.preview-only { grid-template-columns: 1fr; }
+      .quick-strip { grid-template-columns: 1fr; }
+      .quick-controls { justify-content: flex-start; }
+      .helper-row { justify-content:flex-start; }
+      .inspector-scroll { grid-template-columns: 1fr; }
     }
-
-    /* v15: dynamic utility controls */
-    #pasteRichBtn .action-button-icon {
-      background: linear-gradient(135deg, #006c4f, #00a982);
-    }
-
   </style>
 </head>
 <body>
-  <div class="app-shell">
-    <header class="hero-card">
-      <div class="hero-title">
-        <span class="eyebrow"><span class="material-symbols-outlined">auto_awesome</span>Material 3 Conversion Studio</span>
-        <h1>Markdown Copy Lab</h1>
-        <p class="hero-copy">A paste-ready conversion dashboard for Teams, Jira, HTML email, and rich clipboard content. Write once in Markdown, then copy the format your destination actually understands.</p>
+  <div class="app">
+    <aside class="sidebar" aria-label="Main navigation">
+      <div class="brand-mark" title="Markup Forge"><img src="./markdown-copy-lab-icon.svg" alt="Markup Forge" /></div>
+      <nav class="side-group" aria-label="Utilities">
+        <button class="side-button utility-nav active" data-utility="teams" aria-label="Markdown to Teams" title="Markdown to Teams"><span class="ico app-ico teams-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4" width="11" height="13" rx="3" fill="#6264A7"/><rect x="3" y="7" width="10" height="11" rx="2" fill="#464775"/><circle cx="18" cy="8" r="2" fill="#8B8CC7"/><circle cx="17" cy="15" r="3" fill="#6264A7"/><path d="M6 10h6v2H10v5H8v-5H6z" fill="#fff"/></svg></span><span class="tip">Markdown to Teams</span></button>
+        <button class="side-button utility-nav" data-utility="jira" aria-label="Markdown to Jira" title="Markdown to Jira"><span class="ico app-ico jira-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 12 12 21 3 12z" fill="#2684FF"/><path d="M12 7.2 16.8 12 12 16.8 7.2 12z" fill="#DEEBFF"/><path d="M12 3v4.2L7.2 12H3z" fill="#0052CC" opacity=".72"/></svg></span><span class="tip">Markdown to Jira</span></button>
+        <button class="side-button utility-nav" data-utility="email" aria-label="Markdown to Email" title="Markdown to Email"><span class="ico app-ico email-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2.5" fill="#EA4335"/><path d="M5 8 12 13 19 8v8H5z" fill="#fff"/><path d="M5 8 12 13 19 8" fill="none" stroke="#EA4335" stroke-width="1.6" stroke-linejoin="round"/></svg></span><span class="tip">Markdown to Email</span></button>
+        <button class="side-button utility-nav" data-utility="clipboard" aria-label="Teams to Markdown" title="Teams to Markdown"><span class="ico app-ico rich-ico source-ico-stack"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="12" height="12" rx="3" fill="#6264A7"/><rect x="3" y="7" width="10" height="10" rx="2" fill="#464775"/><path d="M6 10h5v2H9v4H7v-4H6z" fill="#fff"/><path d="M16 11v7m0 0-3-3m3 3 3-3" stroke="#E8B86D" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="tip">Teams to Markdown</span></button>
+      </nav>
+      <div class="side-divider"></div>
+      <div class="side-group" role="group" aria-label="Workspace tools">
+        <button class="side-button drawer-nav" data-drawer="templates" aria-label="Templates" title="Templates"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5"/><path d="M4 7v14h3"/><path d="M10 13h6M10 17h6"/></svg></span><span class="tip">Templates</span></button>
+        <button class="side-button drawer-nav" data-drawer="snippets" aria-label="Saved snippets" title="Saved snippets"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l2 2v16H5z"/><path d="M8 3v6h8V3"/><path d="M8 15h8v6H8z"/><path d="M10 6h4"/></svg></span><span class="tip">Saved snippets</span></button>
+        <button class="side-button drawer-nav" data-drawer="history" aria-label="Local history" title="Local history"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.35-5.65"/><path d="M4 5v5h5"/><path d="M12 8v5l3 2"/></svg></span><span class="tip">Local history</span></button>
+        <button class="side-button drawer-nav" data-drawer="profiles" aria-label="Conversion profiles" title="Conversion profiles"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></span><span class="tip">Conversion profiles</span></button>
       </div>
-    </header>
+      <div class="side-bottom side-group" role="group" aria-label="Workspace status">
+        <button class="side-button drawer-nav" data-drawer="dashboard" aria-label="Usage dashboard" title="Usage dashboard"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1.2-4 4-6 7-6s5.8 2 7 6"/><path d="M4 4h3M17 4h3M4 20h3M17 20h3"/></svg></span><span class="tip">Usage dashboard</span></button>
+        <button class="side-button" id="privacyButton" aria-label="Privacy mode" title="Privacy mode"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 19 6v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="m9.5 12 1.8 1.8L15 10"/></svg></span><span class="tip">Privacy mode</span></button>
+        <button class="side-button" id="pwaButton" aria-label="PWA offline" title="PWA offline"><span class="ico tool-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg></span><span class="tip">PWA offline</span></button>
+      </div>
+    </aside>
 
-    <section class="utility-grid" aria-label="Conversion utilities">
-      <button class="utility-card active" type="button" data-utility="teams" aria-pressed="true">
-        <span class="utility-top"><span class="utility-icon"><span class="material-symbols-outlined">forum</span></span><span class="utility-badge">Live</span></span>
-        <span><h2 class="utility-title">Markdown to Teams</h2><p class="utility-copy">Paste-ready rich HTML for Microsoft Teams chats.</p></span>
-        <span class="utility-hint"><span class="material-symbols-outlined">bolt</span>Composer preview</span>
-      </button>
-      <button class="utility-card" type="button" data-utility="jira" aria-pressed="false">
-        <span class="utility-top"><span class="utility-icon"><span class="material-symbols-outlined">confirmation_number</span></span><span class="utility-badge">Jira</span></span>
-        <span><h2 class="utility-title">Markdown to Jira</h2><p class="utility-copy">Convert Markdown into Jira wiki markup for issues and comments.</p></span>
-        <span class="utility-hint"><span class="material-symbols-outlined">data_object</span>Wiki markup</span>
-      </button>
-      <button class="utility-card" type="button" data-utility="email" aria-pressed="false">
-        <span class="utility-top"><span class="utility-icon"><span class="material-symbols-outlined">alternate_email</span></span><span class="utility-badge">Email</span></span>
-        <span><h2 class="utility-title">Markdown to HTML Email</h2><p class="utility-copy">Generate conservative HTML for Gmail, Outlook, and newsletters.</p></span>
-        <span class="utility-hint"><span class="material-symbols-outlined">mark_email_read</span>Inline styles</span>
-      </button>
-      <button class="utility-card" type="button" data-utility="clipboard" aria-pressed="false">
-        <span class="utility-top"><span class="utility-icon"><span class="material-symbols-outlined">content_paste_go</span></span><span class="utility-badge">Reverse</span></span>
-        <span><h2 class="utility-title">Rich Clipboard to Markdown</h2><p class="utility-copy">Paste rich text from Teams, email, or web pages into clean Markdown.</p></span>
-        <span class="utility-hint"><span class="material-symbols-outlined">keyboard_command_key</span>Clipboard import</span>
-      </button>
-    </section>
+    <div class="main-shell">
+      <header class="topbar">
+        <div class="title-stack">
+          <p class="eyebrow">Browser-only conversion workspace</p>
+          <h1>Markup Forge</h1>
+          <p class="top-copy" id="activeUtilityCopy">Convert Markdown into paste-ready Teams chat, Jira wiki markup, styled email HTML, or clean Markdown from Teams and other rich clipboard content.</p>
+        </div>
+        <div class="top-actions" aria-hidden="true"></div>
+      </header>
 
-    <section class="stats-grid" aria-label="Document statistics">
-      <article class="stat-card">
-        <p class="stat-label">Source chars</p>
-        <div id="sourceChars" class="stat-value">0</div>
-      </article>
-      <article class="stat-card">
-        <p class="stat-label">Output chars</p>
-        <div id="outputChars" class="stat-value">0</div>
-      </article>
-      <article class="stat-card">
-        <p class="stat-label">Code blocks</p>
-        <div id="codeBlocks" class="stat-value">0</div>
-      </article>
-      <article class="stat-card">
-        <p class="stat-label">Lines</p>
-        <div id="lineCount" class="stat-value">0</div>
-      </article>
-    </section>
-
-    <main class="workspace-grid">
-      <section class="md-card editor-card" aria-labelledby="editorTitle">
-        <div class="card-header">
-          <div class="section-title">
-            <span class="section-icon"><span class="material-symbols-outlined">edit_note</span></span>
-            <div>
-              <h2 id="editorTitle">Markdown Editor</h2>
-              <p id="editorSubtitle">Write, paste, format, or upload Markdown.</p>
-            </div>
+      <section class="quick-strip" id="quickStrip">
+        <div class="quick-copy">
+          <div class="quick-title" id="quickTitle">Teams output helpers</div>
+          <p class="small-text" id="quickText">Tune Markdown for a Teams chat composer, then copy rich HTML locally.</p>
+        </div>
+        <div class="quick-controls">
+          <div class="segmented" aria-label="Split mode">
+            <button class="segment-button active" data-split="both">Both</button>
+            <button class="segment-button" data-split="editor">Editor</button>
+            <button class="segment-button" data-split="preview">Preview</button>
           </div>
         </div>
-
-        <nav class="editor-toolbar" aria-label="Markdown formatting toolbar">
-          <input id="fileInput" class="hidden-input" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" />
-          <button id="loadFileBtn" class="action-button action-button-upload toolbar-upload" type="button">
-            <span class="action-button-icon material-symbols-outlined" aria-hidden="true">upload_file</span>
-            <span class="action-button-copy">
-              <span class="button-label">Upload Markdown</span>
-              <span class="button-caption">.md, .txt</span>
-            </span>
-          </button>
-          <button id="pasteRichBtn" class="action-button action-button-upload toolbar-upload" type="button" hidden>
-            <span class="action-button-icon material-symbols-outlined" aria-hidden="true">content_paste_go</span>
-            <span class="action-button-copy">
-              <span class="button-label">Paste Rich Text</span>
-              <span class="button-caption">from clipboard</span>
-            </span>
-          </button>
-          <span class="toolbar-divider" aria-hidden="true"></span>
-          <md-icon-button id="btnHeading" title="Heading" aria-label="Heading"><md-icon>title</md-icon></md-icon-button>
-          <md-icon-button id="btnBold" title="Bold" aria-label="Bold"><md-icon>format_bold</md-icon></md-icon-button>
-          <md-icon-button id="btnItalic" title="Italic" aria-label="Italic"><md-icon>format_italic</md-icon></md-icon-button>
-          <md-icon-button id="btnQuote" title="Quote" aria-label="Quote"><md-icon>format_quote</md-icon></md-icon-button>
-          <md-icon-button id="btnCodeInline" title="Inline code" aria-label="Inline code"><md-icon>code</md-icon></md-icon-button>
-          <md-icon-button id="btnLink" title="Link" aria-label="Link"><md-icon>link</md-icon></md-icon-button>
-          <span class="toolbar-divider" aria-hidden="true"></span>
-          <md-icon-button id="btnOl" title="Numbered list" aria-label="Numbered list"><md-icon>format_list_numbered</md-icon></md-icon-button>
-          <md-icon-button id="btnUl" title="Bulleted list" aria-label="Bulleted list"><md-icon>format_list_bulleted</md-icon></md-icon-button>
-          <md-icon-button id="btnCheck" title="Task list" aria-label="Task list"><md-icon>checklist</md-icon></md-icon-button>
-          <span class="toolbar-divider" aria-hidden="true"></span>
-          <md-icon-button id="btnHr" title="Divider" aria-label="Divider"><md-icon>horizontal_rule</md-icon></md-icon-button>
-          <span class="toolbar-divider" aria-hidden="true"></span>
-          <md-icon-button id="undoBtn" title="Undo toolbar action" aria-label="Undo toolbar action"><md-icon>undo</md-icon></md-icon-button>
-        </nav>
-
-        <div id="clipboardActionRow" class="clipboard-action-row" aria-live="polite" hidden></div>
-
-        <div class="editor-shell">
-          <div class="editor-with-lines">
-            <div id="lineNumbers" class="line-numbers" aria-hidden="true">1</div>
-            <textarea id="input" spellcheck="false" wrap="off" placeholder="# Paste your Markdown here..."></textarea>
-          </div>
-        </div>
+        <div class="helper-row" id="quickActions" aria-label="Context actions"></div>
       </section>
 
-      <section class="md-card preview-card" aria-labelledby="previewTitle">
-        <div class="card-header">
-          <div class="section-title">
-            <span class="section-icon"><span class="material-symbols-outlined">forum</span></span>
-            <div>
-              <h2 id="previewTitle">Teams Preview</h2>
-              <p id="previewSubtitle">Composer-style rendering, including code cards.</p>
+      <main class="workspace" id="workspace">
+        <section class="panel editor-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <div class="panel-icon">✎</div>
+              <div>
+                <h2 id="editorTitle">Markdown Editor</h2>
+                <p id="editorSubtitle">Write, paste, format, or upload Markdown.</p>
+              </div>
+            </div>
+            <div class="panel-actions">
+              <input id="fileInput" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden />
+              <button class="button" id="loadFileBtn">↑ Upload</button>
+              <button class="button primary" id="pasteRichBtn" hidden>Paste Rich Text</button>
             </div>
           </div>
-          <div class="card-header-actions">
-            <button id="copyBtn" class="action-button action-button-primary preview-copy" type="button">
-              <span class="action-button-icon material-symbols-outlined" aria-hidden="true">content_copy</span>
-              <span class="action-button-copy">
-                <span class="button-label">Copy for Teams</span>
-                <span class="button-caption">Rich HTML</span>
-              </span>
-            </button>
-            <span id="statusChip" class="visually-hidden" aria-live="polite">Ready</span>
+          <div class="panel-body">
+            <div class="editor-toolbar" aria-label="Markdown editing toolbar">
+              <button class="toolbar-button toolbar-markdown-only" id="btnHeading">H</button>
+              <button class="toolbar-button toolbar-markdown-only" id="btnBold"><strong>B</strong></button>
+              <button class="toolbar-button toolbar-markdown-only" id="btnItalic"><em>I</em></button>
+              <button class="toolbar-button toolbar-markdown-only" id="btnQuote">❝</button>
+              <button class="toolbar-button toolbar-markdown-only" id="btnCodeInline">&lt;/&gt;</button>
+              <button class="toolbar-button toolbar-markdown-only" id="btnLink">🔗</button>
+              <span class="toolbar-sep toolbar-markdown-only"></span>
+              <button class="toolbar-button toolbar-markdown-only" id="btnOl">1.</button>
+              <button class="toolbar-button toolbar-markdown-only" id="btnUl">•</button>
+              <button class="toolbar-button toolbar-markdown-only" id="btnCheck">☑</button>
+              <button class="toolbar-button toolbar-markdown-only" id="btnHr">―</button>
+              <span class="toolbar-sep toolbar-markdown-only"></span>
+              <button class="toolbar-button toolbar-markdown-only" id="undoBtn">↶ Undo</button>
+              <button class="toolbar-button" id="openTemplatesBtn">Templates</button>
+              <button class="toolbar-button" id="openSnippetsBtn">Snippets</button>
+            </div>
+            <div class="editor-frame">
+              <pre class="line-numbers" id="lineNumbers">1</pre>
+              <textarea id="input" class="editor-input" spellcheck="false" wrap="off" placeholder="# Paste your Markdown here..."></textarea>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div id="previewStage" class="preview-stage">
-          <iframe id="previewFrame" title="Teams HTML preview" srcdoc=""></iframe>
-        </div>
-        <div id="formatPreview" class="format-preview" hidden><pre id="formatPreviewText"></pre></div>
-
-        <details class="inspector-panel">
-          <summary><span class="material-symbols-outlined">data_object</span> <span id="inspectorTitle">Clipboard HTML payload</span></summary>
-          <div class="inspector-body">
-            <textarea id="output" readonly spellcheck="false" placeholder="Generated HTML appears here..."></textarea>
+        <section class="panel preview-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <div class="panel-icon">◉</div>
+              <div>
+                <h2 id="previewTitle">Teams Preview</h2>
+                <p id="previewSubtitle">Composer-style rendering, including code cards.</p>
+              </div>
+            </div>
+            <div class="panel-actions">
+              <label class="preview-profile" title="Conversion profile used by this output"><span>Profile</span><select id="previewProfileSelect" aria-label="Conversion profile"></select></label>
+              <button class="button primary" id="copyBtn"><span id="copyBtnLabel">Copy for Teams</span><span class="subcap" id="copyBtnCaption">Rich HTML</span></button>
+            </div>
           </div>
-        </details>
+          <div class="panel-body">
+            <div class="preview-stage" id="previewStage">
+              <iframe id="previewFrame" title="Conversion preview" srcdoc=""></iframe>
+              <div class="format-preview" id="formatPreview" hidden><pre id="formatPreviewText"></pre></div>
+            </div>
+            <textarea id="output" hidden readonly spellcheck="false" aria-hidden="true"></textarea>
+          </div>
+        </section>
 
-        <div class="status-line">
-          <span>Selected utility renders live while you type.</span>
-          <span>Copy output is tailored to the selected destination.</span>
-        </div>
-      </section>
-    </main>
-
-    <p class="footer-note">Choose a utility, write or import content, then copy a paste-ready payload for the destination tool.</p>
+        <aside class="panel inspector-panel" id="inspectorPanel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <div class="panel-icon">⌁</div>
+              <div>
+                <h2>Inspector</h2>
+                <p>Stats, profile, privacy and local history.</p>
+              </div>
+            </div>
+          </div>
+          <div class="inspector-scroll">
+            <div class="inspector-card">
+              <h3>Live stats</h3>
+              <div class="stat-grid">
+                <div class="mini-stat"><span>Source</span><strong id="sourceChars">0</strong></div>
+                <div class="mini-stat"><span>Output</span><strong id="outputChars">0</strong></div>
+                <div class="mini-stat"><span>Code</span><strong id="codeBlocks">0</strong></div>
+                <div class="mini-stat"><span>Lines</span><strong id="lineCount">0</strong></div>
+              </div>
+            </div>
+            <div class="inspector-card">
+              <h3>Conversion profile</h3>
+              <select class="select" id="profileSelect"></select>
+              <p id="profileDescription">Choose how strict or compact the conversion should be.</p>
+            </div>
+            <div class="inspector-card">
+              <h3>Compatibility</h3>
+              <div class="pill-row" id="warningPills"></div>
+              <p id="compatibilityText">Teams paste behavior may differ by client version.</p>
+            </div>
+            <div class="inspector-card">
+              <h3>Privacy mode</h3>
+              <span class="pill good">Always on</span>
+              <p>Conversions are executed locally in this browser. Your Markdown and rich clipboard content are not sent to any API or server.</p>
+            </div>
+            <div class="inspector-card">
+              <h3>PWA offline</h3>
+              <div class="pill-row"><span class="pill" id="pwaStatus">Checking…</span></div>
+              <p>Deploy <code>manifest.webmanifest</code>, <code>sw.js</code> and the generated icon files next to this HTML to enable install/offline support.</p>
+            </div>
+            <div class="inspector-card">
+              <h3>Recent local history</h3>
+              <div class="list" id="recentHistoryList"><p class="small-text">No local history yet.</p></div>
+            </div>
+          </div>
+        </aside>
+      </main>
+    </div>
   </div>
+
+  <div class="drawer-backdrop" id="drawerBackdrop" hidden></div>
+  <aside class="drawer" id="drawer" aria-label="Workspace drawer">
+    <div class="drawer-header">
+      <h2 id="drawerTitle">Templates</h2>
+      <button class="icon-button" id="closeDrawerBtn">×</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </aside>
+
+  <div class="toast" id="toast">Ready</div>
 
   <script>
     const inputEl = document.getElementById('input');
     const lineNumbersEl = document.getElementById('lineNumbers');
     const outputEl = document.getElementById('output');
     const previewFrame = document.getElementById('previewFrame');
-    const statusChip = document.getElementById('statusChip');
     const fileInput = document.getElementById('fileInput');
+    const loadFileBtn = document.getElementById('loadFileBtn');
+    const pasteRichBtn = document.getElementById('pasteRichBtn');
     const btnHeading = document.getElementById('btnHeading');
     const btnBold = document.getElementById('btnBold');
     const btnItalic = document.getElementById('btnItalic');
@@ -1075,97 +870,149 @@
     const btnHr = document.getElementById('btnHr');
     const undoBtn = document.getElementById('undoBtn');
     const copyBtn = document.getElementById('copyBtn');
-    const copyBtnCaption = copyBtn ? copyBtn.querySelector('.button-caption') : null;
-    const loadFileBtn = document.getElementById('loadFileBtn');
+    const copyBtnLabel = document.getElementById('copyBtnLabel');
+    const copyBtnCaption = document.getElementById('copyBtnCaption');
     const sourceCharsEl = document.getElementById('sourceChars');
     const outputCharsEl = document.getElementById('outputChars');
     const codeBlocksEl = document.getElementById('codeBlocks');
     const lineCountEl = document.getElementById('lineCount');
-    const utilityButtons = Array.from(document.querySelectorAll('.utility-card'));
     const editorTitleEl = document.getElementById('editorTitle');
     const editorSubtitleEl = document.getElementById('editorSubtitle');
     const previewTitleEl = document.getElementById('previewTitle');
     const previewSubtitleEl = document.getElementById('previewSubtitle');
+    const activeUtilityCopyEl = document.getElementById('activeUtilityCopy');
     const previewStageEl = document.getElementById('previewStage');
     const formatPreviewEl = document.getElementById('formatPreview');
     const formatPreviewTextEl = document.getElementById('formatPreviewText');
-    const clipboardActionRow = document.getElementById('clipboardActionRow');
-    const pasteRichBtn = document.getElementById('pasteRichBtn');
     const inspectorTitleEl = document.getElementById('inspectorTitle');
+    const profileSelect = document.getElementById('profileSelect');
+    const previewProfileSelect = document.getElementById('previewProfileSelect');
+    const profileDescriptionEl = document.getElementById('profileDescription');
+    const warningPillsEl = document.getElementById('warningPills');
+    const compatibilityTextEl = document.getElementById('compatibilityText');
+    const recentHistoryListEl = document.getElementById('recentHistoryList');
+    const pwaStatusEl = document.getElementById('pwaStatus');
+    const workspaceEl = document.getElementById('workspace');
+    const drawerEl = document.getElementById('drawer');
+    const drawerBackdropEl = document.getElementById('drawerBackdrop');
+    const drawerTitleEl = document.getElementById('drawerTitle');
+    const drawerBodyEl = document.getElementById('drawerBody');
+    const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+    const quickTitleEl = document.getElementById('quickTitle');
+    const quickTextEl = document.getElementById('quickText');
+    const quickActionsEl = document.getElementById('quickActions');
+    const paletteBackdrop = document.getElementById('paletteBackdrop');
+    const paletteInput = document.getElementById('paletteInput');
+    const paletteResults = document.getElementById('paletteResults');
+    const toastEl = document.getElementById('toast');
+
+    const undoStack = [];
+    let activeUtility = localStorage.getItem('mcl.activeUtility') || 'teams';
+    let splitMode = localStorage.getItem('mcl.splitMode') || 'both';
+    let inspectorVisible = false;
+    let activeProfile = JSON.parse(localStorage.getItem('mcl.activeProfiles') || '{}');
+    let currentOutput = '';
+    let lastEmailHtml = '';
+    let savedSnippets = [];
+    let localHistory = [];
+    let installPromptEvent = null;
+    let dbPromise = null;
 
     const sample = [
-      '# Weekly update',
-      '',
-      '**Summary**',
-      '',
-      '- Item one',
-      '- Item two with *emphasis*',
-      '- A link to [Microsoft](https://www.microsoft.com)',
-      '',
-      '> This is a quote',
-      '',
-      '```json',
-      '{',
-      '  "eventId": "0",',
-      '  "eventType": "SecurityNotification"',
-      '}',
-      '```',
-      '',
-      '## Next steps',
-      '',
-      '1. First task',
-      '2. Second task'
+      '# Weekly update', '', '**Summary**', '',
+      '- Item one', '- Item two with *emphasis*', '- A link to [Microsoft](https://www.microsoft.com)', '',
+      '> This is a quote', '', '```json', '{', '  "eventId": "0",', '  "eventType": "SecurityNotification"', '}', '```', '',
+      '## Next steps', '', '1. First task', '2. Second task'
     ].join('\n');
-    const undoStack = [];
 
-    let activeUtility = 'teams';
     const utilityConfig = {
       teams: {
-        editorTitle: 'Markdown Editor',
-        editorSubtitle: 'Write, paste, format, or upload Markdown.',
-        previewTitle: 'Teams Preview',
-        previewSubtitle: 'Composer-style rendering, including code cards.',
-        copyLabel: 'Copy for Teams',
-        copyCaption: 'Rich HTML',
-        outputLabel: 'Clipboard HTML payload',
-        outputPlaceholder: 'Generated Teams HTML appears here...',
-        inputPlaceholder: '# Paste your Markdown here...'
+        icon: 'T',
+        editorTitle: 'Markdown Editor', editorSubtitle: 'Write, paste, format, or upload Markdown.',
+        previewTitle: 'Teams Preview', previewSubtitle: 'Composer-style rendering, including code cards.',
+        copyLabel: 'Copy for Teams', copyCaption: 'Rich HTML', outputLabel: 'Clipboard HTML payload',
+        inputPlaceholder: '# Paste your Markdown here...',
+        copy: 'Convert Markdown into paste-ready rich HTML for Microsoft Teams chat.',
+        warnings: ['Teams-safe HTML', 'Code cards', 'Tables experimental'],
+        compatibility: 'Best for Teams chat compose boxes. Nested lists and complex tables may still be flattened by Teams.'
       },
       jira: {
-        editorTitle: 'Markdown Editor',
-        editorSubtitle: 'Write Markdown and convert it into Jira wiki markup.',
-        previewTitle: 'Jira Markup Preview',
-        previewSubtitle: 'Jira-specific wiki markup for issue descriptions and comments.',
-        copyLabel: 'Copy for Jira',
-        copyCaption: 'Wiki markup',
-        outputLabel: 'Jira wiki markup payload',
-        outputPlaceholder: 'Generated Jira wiki markup appears here...',
-        inputPlaceholder: '# Paste your Markdown here...'
+        icon: 'J',
+        editorTitle: 'Markdown Editor', editorSubtitle: 'Write Markdown and convert it into Jira wiki markup.',
+        previewTitle: 'Jira Markup Preview', previewSubtitle: 'Jira-specific wiki markup for issue descriptions and comments.',
+        copyLabel: 'Copy for Jira', copyCaption: 'Wiki markup', outputLabel: 'Jira wiki markup payload',
+        inputPlaceholder: '# Paste your Markdown here...',
+        copy: 'Convert Markdown into Jira wiki markup for descriptions, comments and tickets.',
+        warnings: ['Wiki markup', 'Tables supported', 'No rich HTML'],
+        compatibility: 'Optimized for Jira wiki markup fields. Jira Cloud Markdown fields may behave differently.'
       },
       email: {
-        editorTitle: 'Markdown Editor',
-        editorSubtitle: 'Write Markdown and generate email-safe HTML.',
-        previewTitle: 'HTML Email Preview',
-        previewSubtitle: 'A conservative email layout for Gmail, Outlook, and newsletters.',
-        copyLabel: 'Copy Email HTML',
-        copyCaption: 'Rich email',
-        outputLabel: 'Email HTML payload',
-        outputPlaceholder: 'Generated email HTML appears here...',
-        inputPlaceholder: '# Paste your Markdown here...'
+        icon: '✉',
+        editorTitle: 'Markdown Editor', editorSubtitle: 'Write Markdown and generate email-safe HTML.',
+        previewTitle: 'Markdown to Email', previewSubtitle: 'Choose a styled email template and copy it as rich HTML for Gmail or Outlook.',
+        copyLabel: 'Copy Email', copyCaption: 'Rich HTML', outputLabel: 'Email HTML debug payload',
+        inputPlaceholder: '# Paste your Markdown here...',
+        copy: 'Convert Markdown into styled, email-safe rich HTML for Gmail or Outlook.',
+        warnings: ['Inline styles', 'Rich clipboard', 'Client-safe'],
+        compatibility: 'Email clients vary. This output uses conservative inline styles and a text/plain fallback.'
       },
       clipboard: {
-        editorTitle: 'Rich Text Input',
-        editorSubtitle: 'Paste rich clipboard content from Teams, email, or web pages and clean it into Markdown.',
-        previewTitle: 'Markdown Preview',
-        previewSubtitle: 'Clean Markdown generated from rich clipboard content.',
-        copyLabel: 'Copy Markdown',
-        copyCaption: 'Plain Markdown',
-        outputLabel: 'Markdown payload',
-        outputPlaceholder: 'Generated Markdown appears here...',
-        inputPlaceholder: 'Click Paste Rich Text to import formatted clipboard content...'
+        icon: '↧',
+        editorTitle: 'Teams / Rich Text Input', editorSubtitle: 'Paste rich clipboard content from Teams, email, Confluence, Word, Jira, or any web page and clean it into Markdown.',
+        previewTitle: 'Markdown Preview', previewSubtitle: 'Clean Markdown generated from Teams or any rich text copied to the clipboard.',
+        copyLabel: 'Copy Markdown', copyCaption: 'Plain text', outputLabel: 'Markdown debug payload',
+        inputPlaceholder: 'Click Paste Rich Text to import Teams or any rich formatted clipboard content...',
+        copy: 'Turn Teams messages or any rich clipboard HTML from Confluence, Word, Gmail, Jira, or web pages into clean Markdown.',
+        warnings: ['Clipboard API', 'HTML cleanup', 'Local only'],
+        compatibility: 'The browser may ask for clipboard permission. Some apps expose richer HTML than others.'
       }
     };
 
+    const profiles = {
+      teams: [
+        { id: 'rich', name: 'Teams Rich', description: 'Preserve spacing, links, lists, quotes, code blocks and basic tables.' },
+        { id: 'compact', name: 'Teams Compact', description: 'Merge wrapped paragraph lines while preserving blank paragraphs, lists and code fences.' },
+        { id: 'plain-safe', name: 'Teams Plain-safe', description: 'Keep Teams-compatible HTML while avoiding decorative separators.' }
+      ],
+      jira: [
+        { id: 'wiki', name: 'Jira Wiki Markup', description: 'Standard Jira wiki syntax for comments and issue descriptions.' },
+        { id: 'compact', name: 'Jira Compact', description: 'Reduce repeated blank lines and trim output aggressively.' },
+        { id: 'code-heavy', name: 'Jira Code-heavy', description: 'Preserve fenced code blocks and language hints.' }
+      ],
+      email: [
+        { id: 'executive', name: 'Executive Email', description: 'Premium email card with branded header and generous spacing.' },
+        { id: 'minimal', name: 'Minimal Email', description: 'White layout, fewer visual accents, very conservative HTML.' },
+        { id: 'technical', name: 'Technical Email', description: 'Better spacing for code, lists and technical updates.' },
+        { id: 'newsletter', name: 'Newsletter Email', description: 'Wider editorial layout with a stronger header and callout feel.' },
+        { id: 'status', name: 'Status Update Email', description: 'Compact professional update for weekly reports and operational status.' },
+        { id: 'memo', name: 'Plain Memo Email', description: 'Lightweight memo style with almost no decoration.' },
+        { id: 'alert', name: 'Alert Email', description: 'High-contrast notification layout for incidents, blockers or urgent changes.' }
+      ],
+      clipboard: [
+        { id: 'clean', name: 'Clean Markdown', description: 'Balanced cleanup that preserves headings, links, lists and code.' },
+        { id: 'compact', name: 'Compact Markdown', description: 'Collapse excessive blank lines for chat-ready Markdown.' },
+        { id: 'docs', name: 'Docs Markdown', description: 'Preserve more spacing for documentation pages.' }
+      ]
+    };
+
+    const templates = [
+      { id: 'weekly', title: 'Weekly report', tags: ['status','teams','email'], body: '# Weekly report\n\n**Summary**\n\n- What shipped\n- What is blocked\n- What changed\n\n## Risks\n\n- Risk one\n\n## Next steps\n\n1. Action one\n2. Action two' },
+      { id: 'incident', title: 'Incident report', tags: ['ops','jira'], body: '# Incident report\n\n**Impact**\n\nDescribe customer or system impact.\n\n## Timeline\n\n- 10:00 Detection\n- 10:10 Mitigation started\n- 10:30 Service restored\n\n## Root cause\n\nTBD\n\n## Follow-ups\n\n- [ ] Action item' },
+      { id: 'adr', title: 'Architecture decision record', tags: ['architecture','docs'], body: '# ADR: Decision title\n\n## Context\n\nWhat problem are we solving?\n\n## Decision\n\nWhat did we choose?\n\n## Consequences\n\n- Positive consequence\n- Trade-off\n\n## Alternatives considered\n\n1. Option A\n2. Option B' },
+      { id: 'release', title: 'Release notes', tags: ['release','email'], body: '# Release notes\n\n## Highlights\n\n- New capability\n- Improved behavior\n\n## Fixes\n\n- Fixed issue one\n\n## Upgrade notes\n\n```bash\ncommand --example\n```' },
+      { id: 'customer-email', title: 'Customer update email', tags: ['email'], body: '# Project update\n\nHi team,\n\nHere is the latest status update.\n\n**Progress**\n\n- Milestone one completed\n- Milestone two in progress\n\n**Next steps**\n\n1. Confirm scope\n2. Schedule rollout\n\nThanks,' },
+      { id: 'email-newsletter', title: 'Newsletter email', tags: ['email','newsletter'], body: '# Product newsletter\n\n**This week at a glance**\n\n- Highlight one\n- Highlight two\n- Customer impact\n\n## Featured update\n\nDescribe the most important change in one short paragraph.\n\n## What is next\n\n1. Next milestone\n2. Upcoming release' },
+      { id: 'email-alert', title: 'Incident alert email', tags: ['email','ops'], body: '# Important notice\n\n**Impact**\n\nDescribe who is affected and what is happening.\n\n**Current status**\n\n- Detection time: TBD\n- Mitigation: In progress\n- Next update: TBD\n\n## Action required\n\nPlease review the mitigation steps.' },
+      { id: 'email-memo', title: 'Executive memo email', tags: ['email','memo'], body: '# Executive memo\n\n**Decision needed**\n\nSummarize the decision in one sentence.\n\n## Context\n\nWhy this matters now.\n\n## Recommendation\n\n- Option recommended\n- Main trade-off\n- Expected outcome' }
+    ];
+
+    const builtInSnippets = [
+      { id: 'acceptance', title: 'Acceptance criteria', body: '## Acceptance criteria\n\n- [ ] Given ... when ... then ...\n- [ ] Edge cases covered\n- [ ] Observability added' },
+      { id: 'dod', title: 'Definition of done', body: '**Definition of done**\n\n- Tests added\n- Documentation updated\n- Monitoring checked\n- Rollback plan reviewed' },
+      { id: 'risk', title: 'Risk block', body: '> **Risk:** Describe the risk, impact, probability and mitigation.' },
+      { id: 'code-java', title: 'Java code block', body: '```java\npublic Result execute(Request request) {\n    return service.call(request);\n}\n```' },
+      { id: 'code-yaml', title: 'YAML config block', body: '```yaml\nresilience4j:\n  circuitbreaker:\n    instances:\n      serviceA:\n        failureRateThreshold: 50\n```' }
+    ];
 
     const htmlEscape = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     function htmlToPlainText(html) { return html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n\n').replace(/<\/div>/gi, '\n').replace(/<li>/gi, '\n- ').replace(/<\/li>/gi, '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\u2060/g, '').replace(/\u200b/g, '').replace(/\n{3,}/g, '\n\n').trim(); }
@@ -1407,19 +1254,43 @@
       return out.join('\n').replace(/\n{4,}/g, '\n\n\n').trim();
     }
 
-    function convertMarkdownToEmailHtml(md) {
-      const bodyHtml = convertMarkdownToHtml(md)
+    function inlineEmailBodyHtml(md, profile = 'executive') {
+      const accent = profile === 'alert' ? '#fb7185' : profile === 'newsletter' ? '#14b8a6' : profile === 'status' ? '#38bdf8' : '#e8b86d';
+      const soft = profile === 'minimal' || profile === 'memo' ? '#f8fafc' : '#f7f3ea';
+      return convertMarkdownToHtml(md)
         .replace(/<p>/g, '<p style="margin:0 0 14px;line-height:1.58;">')
         .replace(/<ul>/g, '<ul style="margin:0 0 14px 22px;padding:0;line-height:1.58;">')
         .replace(/<ol>/g, '<ol style="margin:0 0 14px 22px;padding:0;line-height:1.58;">')
         .replace(/<li>/g, '<li style="margin:0 0 6px;">')
-        .replace(/<blockquote[^>]*>/g, '<blockquote style="margin:0 0 16px;padding:10px 14px;border-left:4px solid #6750a4;background:#f7f2fa;color:#49454f;border-radius:8px;">')
-        .replace(/<pre([^>]*)>/g, '<pre$1 style="margin:0 0 16px;padding:14px;border:1px solid #ded8e1;border-radius:10px;background:#f8f7fb;overflow:auto;white-space:pre-wrap;font-family:Consolas,Menlo,monospace;font-size:13px;line-height:1.5;">')
-        .replace(/<code>/g, '<code style="font-family:Consolas,Menlo,monospace;background:#f1eef5;border-radius:4px;padding:1px 4px;">')
+        .replace(/<blockquote[^>]*>/g, `<blockquote style="margin:0 0 16px;padding:10px 14px;border-left:4px solid ${accent};background:${soft};color:#49454f;border-radius:8px;">`)
+        .replace(/<pre([^>]*)>/g, '<pre$1 style="margin:0 0 16px;padding:14px;border:1px solid #d7dde8;border-radius:10px;background:#0f172a;color:#e5e7eb;overflow:auto;white-space:pre-wrap;font-family:Consolas,Menlo,monospace;font-size:13px;line-height:1.5;">')
+        .replace(/<code>/g, '<code style="font-family:Consolas,Menlo,monospace;background:#1e293b;color:#e5e7eb;border-radius:4px;padding:1px 4px;">')
+        .replace(/<pre([^>]*)><code style="[^"]*">/g, '<pre$1><code style="font-family:Consolas,Menlo,monospace;background:transparent;color:inherit;padding:0;border-radius:0;">')
         .replace(/<table>/g, '<table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 16px;">')
-        .replace(/<td>/g, '<td style="border:1px solid #ded8e1;padding:8px 10px;vertical-align:top;">')
-        .replace(/<a /g, '<a style="color:#6750a4;text-decoration:underline;" ');
-      return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Markdown email</title></head><body style="margin:0;background:#f7f2fa;font-family:Arial,Helvetica,sans-serif;color:#1d1b20;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f7f2fa;padding:24px 0;"><tr><td align="center"><table role="presentation" width="640" cellspacing="0" cellpadding="0" style="width:640px;max-width:calc(100% - 32px);background:#ffffff;border-radius:18px;border:1px solid #e7e2ea;overflow:hidden;"><tr><td style="padding:24px 28px;background:#6750a4;color:#ffffff;font-size:18px;font-weight:700;">Markdown Email</td></tr><tr><td style="padding:28px;font-size:15px;line-height:1.58;">${bodyHtml}</td></tr></table></td></tr></table></body></html>`;
+        .replace(/<td>/g, '<td style="border:1px solid #d7dde8;padding:8px 10px;vertical-align:top;">')
+        .replace(/<a /g, `<a style="color:${accent};text-decoration:underline;" `);
+    }
+
+    function buildEmailTemplate(bodyHtml, profile = 'executive') {
+      const templates = {
+        executive: { title: 'Executive update', bg: '#f4f1ea', card: '#ffffff', headerBg: '#171a21', headerColor: '#e8b86d', width: 680, border: '#e7dfd2', radius: 20, preheader: 'A concise Markdown-generated update.' },
+        minimal: { title: 'Markdown email', bg: '#ffffff', card: '#ffffff', headerBg: '#ffffff', headerColor: '#111827', width: 640, border: '#e5e7eb', radius: 0, preheader: 'Plain, conservative email layout.' },
+        technical: { title: 'Technical update', bg: '#eef2f7', card: '#ffffff', headerBg: '#0f172a', headerColor: '#67e8f9', width: 720, border: '#cbd5e1', radius: 16, preheader: 'Technical notes, code blocks and implementation details.' },
+        newsletter: { title: 'Team newsletter', bg: '#ecfeff', card: '#ffffff', headerBg: '#0f766e', headerColor: '#ffffff', width: 720, border: '#99f6e4', radius: 22, preheader: 'Editorial update generated from Markdown.' },
+        status: { title: 'Status update', bg: '#f8fafc', card: '#ffffff', headerBg: '#1e3a8a', headerColor: '#dbeafe', width: 660, border: '#bfdbfe', radius: 16, preheader: 'Compact status email.' },
+        memo: { title: 'Memo', bg: '#ffffff', card: '#ffffff', headerBg: '#ffffff', headerColor: '#111827', width: 620, border: '#ffffff', radius: 0, preheader: 'Simple memo generated from Markdown.' },
+        alert: { title: 'Important notice', bg: '#fff1f2', card: '#ffffff', headerBg: '#991b1b', headerColor: '#ffffff', width: 660, border: '#fecdd3', radius: 16, preheader: 'Important Markdown-generated notification.' }
+      };
+      const t = templates[profile] || templates.executive;
+      const headerBorder = profile === 'minimal' || profile === 'memo' ? `border-bottom:1px solid ${t.border};` : '';
+      const header = profile === 'memo' ? '' : `<tr><td style="padding:22px 28px;background:${t.headerBg};color:${t.headerColor};font-size:18px;font-weight:700;letter-spacing:.01em;${headerBorder}">${t.title}</td></tr>`;
+      const outerPadding = profile === 'memo' ? '16px 0' : '24px 0';
+      return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${t.title}</title></head><body style="margin:0;background:${t.bg};font-family:Arial,Helvetica,sans-serif;color:#1d1b20;"><div style="display:none;max-height:0;overflow:hidden;color:transparent;opacity:0;">${t.preheader}</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:${t.bg};padding:${outerPadding};"><tr><td align="center"><table role="presentation" width="${t.width}" cellspacing="0" cellpadding="0" style="width:${t.width}px;max-width:calc(100% - 32px);background:${t.card};border-radius:${t.radius}px;border:1px solid ${t.border};overflow:hidden;">${header}<tr><td style="padding:${profile === 'memo' ? '8px 16px' : '28px'};font-size:${profile === 'technical' ? '14px' : '15px'};line-height:${profile === 'technical' ? '1.62' : '1.58'};">${bodyHtml}</td></tr></table></td></tr></table></body></html>`;
+    }
+
+    function convertMarkdownToEmailHtml(md, profile = getActiveProfile()) {
+      const bodyHtml = inlineEmailBodyHtml(md, profile);
+      return buildEmailTemplate(bodyHtml, profile);
     }
 
     function htmlNodeToMarkdown(node) {
@@ -1493,10 +1364,28 @@
     function buildTeamsPreviewHtml(html) {
       const body = buildTeamsPreviewBody(html);
       return `<!doctype html><html><head><meta charset="utf-8"><style>
-        :root{color-scheme:dark;--teams-bg:#1f1f1f;--composer:#2b2b2b;--composer-2:#242424;--line:#666;--line-soft:#505050;--text:#f3f3f3;--muted:#c8c8c8;--dim:#9b9b9b;--accent:#8b80ff;--code-bg:#282828;--code-border:#686868;--green:#13c213;--pink:#ff8ca0;--blue:#8ab4ff;--orange:#ffb86c;}
-        *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:var(--teams-bg);font-family:'Segoe UI',system-ui,-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text);font-size:16px;line-height:1.45;overflow:hidden}.teams-preview-wrap{height:100%;padding:18px 22px 18px;background:var(--teams-bg);display:flex;flex-direction:column;gap:6px}.teams-composer{position:relative;flex:1 1 auto;min-height:0;background:var(--composer);border:1px solid var(--line);border-bottom:3px solid var(--accent);border-radius:8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03);display:flex;flex-direction:column;overflow:hidden}.teams-composer::after{content:'';position:absolute;right:6px;top:8px;width:8px;height:50px;border-radius:999px;background:#8d8d8d}.teams-message{flex:1 1 auto;min-height:0;overflow:auto;padding:18px 21px 0 21px;scrollbar-color:#8d8d8d transparent;scrollbar-width:thin}.teams-message::-webkit-scrollbar{width:10px}.teams-message::-webkit-scrollbar-track{background:transparent}.teams-message::-webkit-scrollbar-thumb{background:#8d8d8d;border:2px solid var(--composer);border-radius:999px}.msg{max-width:100%;padding-right:19px}p{margin:0;min-height:1.45em;line-height:1.45;color:var(--text)}p:last-child{margin-bottom:0}strong{font-weight:700;color:#fff}i,em{font-style:italic;color:#f5f5f5}s{text-decoration-thickness:2px;text-decoration-color:#d7d7d7}a{color:#b9cdfd;text-decoration:underline}blockquote{margin:0 0 1.45em;padding:3px 0 3px 13px;border-left:2px solid #777;color:#dedede;background:transparent}ul,ol{margin:0 0 1.45em 24px;padding:0}li{margin:4px 0}p code,li code{font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:.92em;color:#f3f3f3;background:#363636;border:1px solid #505050;border-radius:4px;padding:1px 4px}.teams-code-card{margin:1.45em 0 0;border:1px solid var(--code-border);border-radius:9px;background:var(--code-bg);overflow:hidden;color:#e6e6e6;font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:14px;line-height:1.55}.teams-code-title{height:40px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:10px;padding:0 14px;color:#d7d7d7;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:14px}.code-icon{width:18px;height:18px;border:1.5px solid #d6d6d6;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;line-height:1}.code-chevron{font-size:14px;color:#d6d6d6;margin-left:2px}.code-more{margin-left:auto;letter-spacing:2px;color:#d7d7d7}.teams-code-body{overflow:auto;max-height:288px;padding:13px 0 14px}.teams-code-body ol{margin:0;padding:0;list-style:none;counter-reset:code-line}.teams-code-body li{counter-increment:code-line;display:grid;grid-template-columns:43px minmax(0,1fr);gap:14px;margin:0;padding:0 18px 0 0;white-space:pre}.teams-code-body li::before{content:counter(code-line);color:#9d9d9d;text-align:right;user-select:none}.code-line-content{min-width:0;overflow-wrap:normal}.hljs-function{color:var(--pink)}.hljs-string{color:var(--green)}.hljs-number{color:var(--green)}.hljs-literal{color:var(--blue)}.hljs-keyword{color:#c792ea}.hljs-comment{color:#8f9f8f}.hljs-attr{color:#e6e6e6;font-weight:600}.hljs-bullet{color:#d7d7d7}figure.table{margin:1.45em 0;border:1px solid var(--line-soft);border-radius:8px;overflow:auto;background:#252525}table{border-collapse:collapse;width:100%;font-size:14px}td{border:1px solid var(--line-soft);padding:6px 8px;vertical-align:top}td p{margin:0}.teams-compose-toolbar{min-height:54px;border-top:0 solid transparent;display:flex;align-items:center;justify-content:flex-end;gap:18px;padding:0 16px 11px;color:#e5e5e5;font-size:22px}.toolbar-icon{display:inline-flex;align-items:center;justify-content:center;min-width:18px;opacity:.95}.toolbar-icon.text{font-size:20px;font-weight:600}.toolbar-divider{width:1px;height:27px;background:#777}.send-icon{font-size:30px;line-height:1;transform:translateY(-1px)}.teams-hint{align-self:flex-end;color:#f2f2f2;font-size:16px;line-height:1}.teams-hint span{color:var(--accent)}@media (max-width:700px){body{font-size:14px}.teams-preview-wrap{padding:10px}.teams-message{padding:12px 12px 0}.teams-code-card{font-size:12px}.teams-code-title{font-size:12px;height:34px}.teams-compose-toolbar{font-size:18px;gap:12px}.teams-hint{font-size:12px}}
-      </style></head><body><div class="teams-preview-wrap"><div class="teams-composer"><div class="teams-message"><div class="msg">${body}</div></div><div class="teams-compose-toolbar" aria-hidden="true"><span class="toolbar-icon text">A✎</span><span class="toolbar-icon">☺</span><span class="toolbar-icon">◔</span><span class="toolbar-icon">＋</span><span class="toolbar-divider"></span><span class="toolbar-icon send-icon">▷</span></div></div><div class="teams-hint"><span>Shift+Enter</span> starts a new line.</div></div></body></html>`;
+        :root{--teams-bg:#1f1f1f;--composer:#242424;--line:#5b5b5b;--line-soft:#494949;--text:#f1f1f1;--accent:#7b6ff6;--code-bg:#242424;--code-border:#626262;--pink:#ff8797;--green:#16c60c;--blue:#86b6ff;}
+        *{box-sizing:border-box}html,body{height:100%}
+        body{margin:0;background:var(--teams-bg);font-family:'Segoe UI',system-ui,-apple-system,BlinkMacSystemFont,sans-serif;color:var(--text);font-size:16px;line-height:1.45;overflow:hidden}
+        .teams-preview-wrap{height:100%;padding:18px 22px;background:var(--teams-bg);display:flex;flex-direction:column;gap:8px}
+        .teams-composer{position:relative;flex:1 1 auto;min-height:0;background:var(--composer);border:1px solid var(--line);border-bottom:3px solid var(--accent);border-radius:8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03);display:flex;flex-direction:column;overflow:hidden}
+        .teams-format-toolbar{min-height:62px;display:flex;align-items:center;gap:24px;padding:0 22px;color:#e6e6e6;background:var(--composer);flex:0 0 auto}
+        .teams-format-toolbar .group{display:inline-flex;align-items:center;gap:22px}.teams-format-toolbar .sep{width:1px;height:30px;background:#777;opacity:.55}
+        .fmt{display:inline-flex;align-items:center;justify-content:center;min-width:18px;min-height:24px;color:#e9e9e9;font-size:22px;line-height:1;font-weight:500;opacity:.96}
+        .fmt.bold{font-weight:800}.fmt.italic{font-style:italic}.fmt.under{text-decoration:underline}.fmt.strike{text-decoration:line-through}.fmt.active{color:#8c83ff}.fmt.code{font-size:20px}.fmt.more{letter-spacing:4px;transform:translateY(-2px)}.fmt.trash{margin-left:auto;font-size:26px;color:#f0f0f0}
+        .teams-message{flex:1 1 auto;min-height:0;overflow:auto;padding:24px 26px 24px;scrollbar-color:#8d8d8d transparent;scrollbar-width:thin}.teams-message::-webkit-scrollbar{width:10px}.teams-message::-webkit-scrollbar-track{background:transparent}.teams-message::-webkit-scrollbar-thumb{background:#8d8d8d;border:2px solid var(--composer);border-radius:999px}
+        .msg{max-width:100%;padding-right:12px}p{margin:0;min-height:1.35em;line-height:1.35;color:var(--text)}p:last-child{margin-bottom:0}p:has(+ .teams-code-card),p:has(+ blockquote){min-height:.65em}strong{font-weight:700;color:#fff}i,em{font-style:italic;color:#f5f5f5}s{text-decoration-thickness:2px;text-decoration-color:#d7d7d7}a{color:#9fb0ff;text-decoration:underline;text-underline-offset:2px}
+        blockquote{position:relative;margin:14px 0 18px;padding:0 0 0 28px;min-height:56px;display:flex;align-items:center;border:1px solid #686868;border-radius:7px;background:#252525;color:#f2f2f2;font-size:17px;line-height:1.42;box-shadow:inset 0 1px 0 rgba(255,255,255,.025)}blockquote::before{content:'';position:absolute;left:7px;top:8px;bottom:8px;width:4px;border-radius:999px;background:#8a8a8a}blockquote p{margin:0!important;padding:12px 14px 12px 0;min-height:0;color:#f2f2f2}
+        ul,ol{margin:0 0 16px 24px;padding:0}li{margin:4px 0}p code,li code{font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:.92em;color:#f3f3f3;background:#363636;border:1px solid #505050;border-radius:4px;padding:1px 4px}
+        .teams-code-card{margin:14px 0 18px;border:1px solid var(--code-border);border-radius:9px;background:var(--code-bg);overflow:hidden;color:#e6e6e6;font-family:Consolas,'Cascadia Mono','SFMono-Regular',Menlo,monospace;font-size:15px;line-height:1.5}
+        .teams-code-title{height:43px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:12px;padding:0 16px;color:#d7d7d7;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:16px}.code-icon{width:20px;height:20px;border:1.5px solid #d6d6d6;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:1}.code-chevron{font-size:14px;color:#d6d6d6;margin-left:3px}.code-more{margin-left:auto;letter-spacing:3px;color:#d7d7d7}
+        .teams-code-body{overflow:auto;max-height:320px;padding:13px 0 14px}.teams-code-body ol{margin:0;padding:0;list-style:none;counter-reset:code-line}.teams-code-body li{counter-increment:code-line;display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;margin:0;padding:0 18px 0 0;white-space:pre}.teams-code-body li::before{content:counter(code-line);color:#b2b2b2;text-align:right;user-select:none}.code-line-content{min-width:0;overflow-wrap:normal}
+        .teams-code-card .hljs-function,.teams-code-card .hljs-title{color:#dcdcaa!important}.teams-code-card .hljs-attr{color:#ff8797!important;font-weight:600}.teams-code-card .hljs-string{color:#16c60c!important}.teams-code-card .hljs-number{color:#16c60c!important}.teams-code-card .hljs-literal{color:#86b6ff!important}.teams-code-card .hljs-keyword{color:#c792ea!important}.teams-code-card .hljs-comment{color:#8f9f8f!important;font-style:italic}.teams-code-card .hljs-bullet{color:#d7d7d7!important}.teams-code-card code span,.teams-code-card .code-line-content span{font-family:inherit}
+        figure.table{margin:1.45em 0;border:1px solid var(--line-soft);border-radius:8px;overflow:auto;background:#252525}table{border-collapse:collapse;width:100%;font-size:14px}td{border:1px solid var(--line-soft);padding:6px 8px;vertical-align:top}td p{margin:0}.teams-hint{align-self:flex-end;color:#f2f2f2;font-size:16px;line-height:1}.teams-hint span{color:var(--accent)}
+        @media (max-width:700px){body{font-size:14px}.teams-preview-wrap{padding:10px}.teams-format-toolbar{gap:14px;min-height:50px;padding:0 14px}.teams-format-toolbar .group{gap:13px}.fmt{font-size:18px}.teams-message{padding:18px 16px}.teams-code-card{font-size:12px}.teams-code-title{font-size:13px;height:38px}.teams-hint{font-size:12px}}
+      </style></head><body><div class="teams-preview-wrap"><div class="teams-composer"><div class="teams-format-toolbar" aria-hidden="true"><span class="group"><span class="fmt bold">B</span><span class="fmt italic">I</span><span class="fmt under">U</span><span class="fmt strike">S</span></span><span class="sep"></span><span class="group"><span class="fmt">≡</span><span class="fmt active">1 2</span></span><span class="sep"></span><span class="group"><span class="fmt">▱</span><span class="fmt">A̲</span><span class="fmt">Aᴀ</span></span><span class="sep"></span><span class="group"><span class="fmt">”</span><span class="fmt">🔗</span><span class="fmt code">⌘</span><span class="fmt more">…</span></span><span class="fmt trash">🗑</span></div><div class="teams-message"><div class="msg">${body}</div></div></div><div class="teams-hint"><span>Enter</span> starts a new line.</div></div></body></html>`;
     }
+
 
     function updateLineNumbers() {
       if (!lineNumbersEl) return;
@@ -1508,19 +1397,58 @@
     function syncLineNumbersScroll() {
       if (lineNumbersEl) lineNumbersEl.scrollTop = inputEl.scrollTop;
     }
-    function getEditorCursorRatio() {
+    function getEditorCursorLine() {
       const value = inputEl.value || '';
       const cursor = inputEl.selectionStart ?? value.length;
-      const currentLine = value.slice(0, cursor).split('\n').length;
-      const totalLines = Math.max(1, value.split('\n').length);
-      return totalLines <= 1 ? 0 : (currentLine - 1) / (totalLines - 1);
+      return value.slice(0, cursor).split('\n').length;
     }
-    function syncPreviewScrollToEditor(scrollEl) {
+    function getEditorCursorRatio() {
+      const totalLines = Math.max(1, (inputEl.value || '').split('\n').length);
+      if (totalLines <= 1) return 0;
+      return Math.max(0, Math.min(1, (getEditorCursorLine() - 1) / (totalLines - 1)));
+    }
+    function getEditorScrollRatio() {
+      const maxScroll = Math.max(0, inputEl.scrollHeight - inputEl.clientHeight);
+      if (!maxScroll) return getEditorCursorRatio();
+      return Math.max(0, Math.min(1, inputEl.scrollTop / maxScroll));
+    }
+    function isEditorNearBottom() {
+      const maxScroll = Math.max(0, inputEl.scrollHeight - inputEl.clientHeight);
+      if (!maxScroll) return true;
+      const cursorLine = getEditorCursorLine();
+      const totalLines = Math.max(1, (inputEl.value || '').split('\n').length);
+      return (maxScroll - inputEl.scrollTop) < 36 || cursorLine >= totalLines - 1;
+    }
+    function syncScrollElementToEditor(scrollEl, options = {}) {
       if (!scrollEl) return;
       const maxScroll = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight);
-      const ratio = getEditorCursorRatio();
-      const contextOffset = Math.min(90, scrollEl.clientHeight * 0.18);
-      scrollEl.scrollTop = Math.max(0, Math.min(maxScroll, Math.round(maxScroll * ratio - contextOffset)));
+      if (!maxScroll) { scrollEl.scrollTop = 0; return; }
+      if (options.forceBottom || isEditorNearBottom()) {
+        scrollEl.scrollTop = maxScroll;
+        return;
+      }
+      const scrollRatio = getEditorScrollRatio();
+      const cursorRatio = getEditorCursorRatio();
+      const ratio = Math.max(scrollRatio, Math.min(1, cursorRatio + 0.03));
+      scrollEl.scrollTop = Math.max(0, Math.min(maxScroll, Math.round(maxScroll * ratio)));
+    }
+    function syncTeamsPreviewScrollToEditor(options = {}) {
+      const doc = previewFrame.contentDocument;
+      const scrollEl = doc && doc.querySelector('.teams-message');
+      syncScrollElementToEditor(scrollEl, options);
+    }
+    function syncFormatPreviewScrollToEditor(options = {}) {
+      if (formatPreviewEl && !formatPreviewEl.hidden) syncScrollElementToEditor(formatPreviewEl, options);
+    }
+    function syncActivePreviewScrollToEditor(options = {}) {
+      requestAnimationFrame(() => {
+        if (activeUtility === 'teams') syncTeamsPreviewScrollToEditor(options);
+        else syncFormatPreviewScrollToEditor(options);
+        window.setTimeout(() => {
+          if (activeUtility === 'teams') syncTeamsPreviewScrollToEditor(options);
+          else syncFormatPreviewScrollToEditor(options);
+        }, 0);
+      });
     }
     function updatePreviewDocument(html, shouldFollowCursor = false) {
       const body = buildTeamsPreviewBody(html);
@@ -1528,6 +1456,9 @@
       const msg = doc && doc.querySelector('.msg');
       const scrollEl = doc && doc.querySelector('.teams-message');
       if (!msg || !scrollEl) {
+        previewFrame.onload = () => {
+          if (shouldFollowCursor) syncTeamsPreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
+        };
         previewFrame.srcdoc = buildTeamsPreviewHtml(html);
         return;
       }
@@ -1535,7 +1466,7 @@
       msg.innerHTML = body;
       requestAnimationFrame(() => {
         if (shouldFollowCursor) {
-          syncPreviewScrollToEditor(scrollEl);
+          syncTeamsPreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
           if (document.activeElement !== inputEl) return;
           try { inputEl.focus({ preventScroll: true }); } catch { inputEl.focus(); }
         } else {
@@ -1591,86 +1522,527 @@
       ta.remove();
       return ok;
     }
-    function setStatus(text) { statusChip.textContent = text; }
-    function updateStats(src, result) {
-      sourceCharsEl.textContent = String(src.length);
-      outputCharsEl.textContent = String(result.length);
-      codeBlocksEl.textContent = String(Math.floor((src.match(/```/g) || []).length / 2));
-      lineCountEl.textContent = String(src ? src.split('\n').length : 0);
+
+    function showToast(message) {
+      toastEl.textContent = message;
+      toastEl.classList.add('show');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toastEl.classList.remove('show'), 2100);
     }
-    function renderEmailPreview(emailHtml) {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(emailHtml, 'text/html');
-      const bodyCell = doc.querySelector('td[style*="padding:28px"]');
-      return `<div class="email-preview-doc"><div class="email-preview-head">Markdown Email</div><div class="email-preview-body">${bodyCell ? bodyCell.innerHTML : emailHtml}</div></div>`;
+    function setStatus(message) { showToast(message); }
+    function getActiveProfile() { return activeProfile[activeUtility] || profiles[activeUtility][0].id; }
+    function setActiveProfile(profileId) {
+      activeProfile[activeUtility] = profileId;
+      localStorage.setItem('mcl.activeProfiles', JSON.stringify(activeProfile));
+      renderProfiles();
+      convert(false);
     }
 
-    function renderFormatPreview(text) {
-      formatPreviewTextEl.textContent = text || '';
-    }
-
-    function setActiveUtility(next) {
-      activeUtility = next;
-      const cfg = utilityConfig[activeUtility];
-      utilityButtons.forEach(button => {
-        const selected = button.dataset.utility === activeUtility;
-        button.classList.toggle('active', selected);
-        button.setAttribute('aria-pressed', String(selected));
+    function openDb() {
+      if (dbPromise) return dbPromise;
+      dbPromise = new Promise((resolve, reject) => {
+        if (!('indexedDB' in window)) { reject(new Error('IndexedDB is not available.')); return; }
+        const req = indexedDB.open('markdown-copy-lab', 1);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains('history')) db.createObjectStore('history', { keyPath: 'id' });
+          if (!db.objectStoreNames.contains('snippets')) db.createObjectStore('snippets', { keyPath: 'id' });
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
       });
+      return dbPromise;
+    }
+    async function idbPut(store, value) {
+      const db = await openDb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(store, 'readwrite');
+        tx.objectStore(store).put(value);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+    async function idbDelete(store, key) {
+      const db = await openDb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(store, 'readwrite');
+        tx.objectStore(store).delete(key);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+    async function idbAll(store) {
+      const db = await openDb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(store, 'readonly');
+        const req = tx.objectStore(store).getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    function makeId(prefix) { return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`; }
+    function firstMeaningfulLine(text) { return (text || '').split('\n').map(v => v.replace(/^#+\s*/, '').trim()).find(Boolean) || 'Untitled conversion'; }
+
+    function readLocalHistoryMirror() {
+      try { return JSON.parse(localStorage.getItem('mcl.localHistory') || '[]'); }
+      catch { return []; }
+    }
+    function writeLocalHistoryMirror(items) {
+      try { localStorage.setItem('mcl.localHistory', JSON.stringify((items || []).slice(0, 50))); }
+      catch (error) { console.warn(error); }
+    }
+    function addLocalHistoryMirror(record) {
+      const next = [record, ...readLocalHistoryMirror().filter(item => item.id !== record.id)].slice(0, 50);
+      writeLocalHistoryMirror(next);
+      localHistory = next;
+    }
+
+    async function loadLocalData() {
+      try {
+        savedSnippets = (await idbAll('snippets')).sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        localHistory = (await idbAll('history')).sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 50);
+        writeLocalHistoryMirror(localHistory);
+      } catch (error) {
+        console.warn(error);
+        localHistory = readLocalHistoryMirror().sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 50);
+      }
+      renderRecentHistory();
+    }
+    async function saveHistorySnapshot(reason = 'copy', options = {}) {
+      const record = {
+        id: makeId('hist'),
+        title: firstMeaningfulLine(inputEl.value),
+        utility: activeUtility,
+        profile: getActiveProfile(),
+        reason,
+        input: inputEl.value || '',
+        output: currentOutput || outputEl.value || '',
+        createdAt: Date.now()
+      };
+      addLocalHistoryMirror(record);
+      try {
+        await idbPut('history', record);
+        await loadLocalData();
+        if (!options.silent) showToast('Saved to local history');
+        return true;
+      } catch (error) {
+        console.warn(error);
+        renderRecentHistory();
+        if (!options.silent) showToast('Saved to local history in this browser');
+        return true;
+      }
+    }
+    async function saveSnippetFromSelection() {
+      const selected = inputEl.value.slice(inputEl.selectionStart || 0, inputEl.selectionEnd || 0) || inputEl.value;
+      if (!selected.trim()) { showToast('Nothing to save as snippet'); return; }
+      const title = prompt('Snippet name', firstMeaningfulLine(selected));
+      if (!title) return;
+      const snippet = { id: makeId('snip'), title, body: selected, updatedAt: Date.now() };
+      await idbPut('snippets', snippet);
+      await loadLocalData();
+      renderDrawer('snippets');
+      showToast('Snippet saved locally');
+    }
+
+    function compactMarkdownForTeams(md) {
+      const lines = String(md || '').replace(/\r\n?/g, '\n').split('\n');
+      const out = [];
+      let paragraph = [];
+      let inFence = false;
+      function flushParagraph() {
+        if (!paragraph.length) return;
+        out.push(paragraph.map(line => line.trim()).filter(Boolean).join(' '));
+        paragraph = [];
+      }
+      for (const raw of lines) {
+        const line = raw.replace(/\s+$/g, '');
+        const trimmed = line.trim();
+        if (/^```/.test(trimmed)) {
+          flushParagraph();
+          out.push(line);
+          inFence = !inFence;
+          continue;
+        }
+        if (inFence) { out.push(line); continue; }
+        if (!trimmed) {
+          flushParagraph();
+          if (out[out.length - 1] !== '') out.push('');
+          continue;
+        }
+        if (/^(#{1,6}\s+|>\s?|[-*+]\s+|\d+\.\s+|\|.*\||-{3,}$|\*{3,}$|_{3,}$)/.test(trimmed)) {
+          flushParagraph();
+          out.push(line);
+          continue;
+        }
+        paragraph.push(line);
+      }
+      flushParagraph();
+      return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+    }
+
+    function applyProfileToTeams(html) {
+      const profile = getActiveProfile();
+      if (profile === 'compact') return html.replace(/(<p>&nbsp;<\/p>){2,}/g, '<p>&nbsp;</p>');
+      if (profile === 'plain-safe') return html.replace(/<p>──────────<\/p>/g, '<p>---</p>');
+      return html;
+    }
+    function applyProfileToJira(text) {
+      const profile = getActiveProfile();
+      if (profile === 'compact') return text.replace(/\n{3,}/g, '\n\n').trim();
+      return text;
+    }
+    function applyProfileToMarkdown(text) {
+      const profile = getActiveProfile();
+      if (profile === 'compact') return text.replace(/\n{3,}/g, '\n\n').trim();
+      if (profile === 'docs') return text.replace(/\n{4,}/g, '\n\n\n').trim();
+      return text;
+    }
+    function convertMarkdownToEmailHtmlProfiled(md) {
+      return convertMarkdownToEmailHtml(md, getActiveProfile());
+    }
+
+    function renderEmailPreview(emailHtml) {
+      const doc = new DOMParser().parseFromString(emailHtml || '', 'text/html');
+      const body = doc.body ? doc.body.innerHTML : emailHtml;
+      formatPreviewEl.innerHTML = `<div class="email-preview-doc">${body}</div>`;
+    }
+
+    function updateStats(src, out) {
+      sourceCharsEl.textContent = String(src.length);
+      outputCharsEl.textContent = String((out || '').length);
+      codeBlocksEl.textContent = String((src.match(/```/g) || []).length / 2 | 0);
+      lineCountEl.textContent = String(Math.max(1, src.split('\n').length));
+    }
+    const appIconSvgs = {
+      teams: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4" width="11" height="13" rx="3" fill="#6264A7"/><rect x="3" y="7" width="10" height="11" rx="2" fill="#464775"/><circle cx="18" cy="8" r="2" fill="#8B8CC7"/><path d="M6 10h6v2h-2v5H8v-5H6z" fill="#fff"/></svg>',
+      jira: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 12 12 21 3 12z" fill="#2684FF"/><path d="M12 7.2 16.8 12 12 16.8 7.2 12z" fill="#DEEBFF"/></svg>',
+      gmail: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2.5" fill="#EA4335"/><path d="M5 8 12 13 19 8v8H5z" fill="#fff"/><path d="M5 8 12 13 19 8" fill="none" stroke="#EA4335" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+      confluence: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14c2.2-3.5 5.3-5.2 9.4-5.2 2.1 0 3.2.6 3.5 1.9.2.8-.1 1.7-.8 2.7-2.2 3.4-5.5 5-9.8 4.8-2-.1-3.1-.8-3.4-2.1-.1-.6.2-1.3 1.1-2.1z" fill="#172B4D"/><path d="M5 10.2C7.2 6.8 10.4 5 14.5 5c2.2 0 3.4.7 3.6 2.1.1.7-.2 1.5-.9 2.5-1.5-.9-3.4-1.2-5.4-.8-2 .4-3.7 1.3-5 2.9z" fill="#2684FF"/></svg>',
+      word: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="4" width="13" height="16" rx="2" fill="#2B579A"/><rect x="3" y="7" width="10" height="10" rx="2" fill="#185ABD"/><path d="M5 10h1.5l.8 3 .9-3h1.3l.9 3 .8-3H12l-1.2 5H9.4l-.8-2.8L7.8 15H6.4z" fill="#fff"/></svg>',
+      markdown: '<svg class="app-mini-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2" fill="#1f2937" stroke="#fff" stroke-opacity=".72"/><path d="M6 15V9h2l2 2 2-2h2v6h-2v-3.4l-2 2-2-2V15zM17 9h2v4h2l-3 3-3-3h2z" fill="#fff"/></svg>'
+    };
+
+    function iconImg(key, extraClass = '') {
+      const svg = appIconSvgs[key];
+      if (!svg) return `<span class="quick-icon ${extraClass}">${key || '•'}</span>`;
+      return `<span class="quick-icon ${extraClass}">${svg}</span>`;
+    }
+
+    const quickContexts = {
+      teams: {
+        title: 'Markdown to Teams',
+        text: 'Convert Markdown into paste-ready rich HTML for Microsoft Teams. Write or upload Markdown on the left, choose the Teams profile in the preview header, then use Copy for Teams. Everything runs locally in your browser.',
+        actions: []
+      },
+      jira: {
+        title: 'Markdown to Jira',
+        text: 'Convert Markdown into Jira wiki markup for issue descriptions, comments and acceptance criteria. Use the preview profile selector to choose the Jira flavor before copying the generated text.',
+        actions: []
+      },
+      email: {
+        title: 'Markdown to Email',
+        text: 'Turn Markdown into rich email HTML for Gmail or Outlook. Choose an email template/profile in the preview header, review the rendered message, then copy the formatted email body.',
+        actions: []
+      },
+      clipboard: {
+        title: 'Teams to Markdown',
+        text: 'Paste rich text copied from Teams, Confluence, Gmail, Word, Jira or any web page and clean it into Markdown. The clipboard cleanup stays inside your browser and no content is sent to a server.',
+        actions: []
+      }
+    };
+
+    const contextualSamples = {
+      teams: sample,
+      jira: ['# Jira issue summary', '', '**Acceptance criteria**', '', '- [ ] Given a valid request, when it is processed, then the result is persisted.', '- [ ] Edge cases are covered.', '', '```java', 'public Result handle(Request request) {', '    return service.execute(request);', '}', '```'].join('\n'),
+      email: ['# Weekly delivery update', '', '**Status:** On track', '', 'Hello team,', '', 'Here is a concise summary of this week\'s delivery progress.', '', '- Completed the planned rollout.', '- Verified monitoring and fallback paths.', '- Next milestone remains unchanged.', '', 'Thanks,'].join('\n')
+    };
+
+    function renderQuickStrip() {
+      const context = quickContexts[activeUtility] || quickContexts.teams;
+      quickTitleEl.textContent = context.title;
+      quickTextEl.textContent = context.text;
+      quickActionsEl.innerHTML = '';
+    }
+
+    function loadContextSample(kind = activeUtility) {
+      const value = contextualSamples[kind] || sample;
+      loadText(value);
+    }
+
+    function renderProfiles() {
+      const options = profiles[activeUtility] || [];
+      const selected = getActiveProfile();
+      const markup = options.map(p => `<option value="${p.id}" ${p.id === selected ? 'selected' : ''}>${p.name}</option>`).join('');
+      if (profileSelect) profileSelect.innerHTML = markup;
+      if (previewProfileSelect) previewProfileSelect.innerHTML = markup;
+      profileDescriptionEl.textContent = (options.find(p => p.id === selected) || options[0] || {}).description || '';
+    }
+    function renderWarnings() {
+      const cfg = utilityConfig[activeUtility];
+      warningPillsEl.innerHTML = cfg.warnings.map((warning, i) => `<span class="pill ${i === 0 ? 'good' : 'warn'}">${warning}</span>`).join('');
+      compatibilityTextEl.textContent = cfg.compatibility;
+    }
+    function renderRecentHistory() {
+      if (!recentHistoryListEl) return;
+      if (!localHistory.length) {
+        recentHistoryListEl.innerHTML = '<p class="small-text">No local history yet. Copy any conversion to store a local snapshot in this browser.</p>';
+        return;
+      }
+      recentHistoryListEl.innerHTML = localHistory.slice(0, 4).map(item => `
+        <div class="list-item">
+          <strong>${htmlEscape(item.title || 'Untitled')}</strong>
+          <span>${new Date(item.createdAt).toLocaleString()} · ${item.utility} · ${item.profile}</span>
+          <button class="toolbar-button restore-history" data-id="${item.id}">Restore</button>
+        </div>`).join('');
+    }
+    function updateUtilityChrome() {
+      const cfg = utilityConfig[activeUtility];
+      document.querySelectorAll('.utility-nav').forEach(btn => btn.classList.toggle('active', btn.dataset.utility === activeUtility));
       editorTitleEl.textContent = cfg.editorTitle;
       editorSubtitleEl.textContent = cfg.editorSubtitle;
       previewTitleEl.textContent = cfg.previewTitle;
       previewSubtitleEl.textContent = cfg.previewSubtitle;
-      const label = copyBtn ? copyBtn.querySelector('.button-label') : null;
-      if (label) label.textContent = cfg.copyLabel;
-      if (copyBtnCaption) copyBtnCaption.textContent = cfg.copyCaption;
+      activeUtilityCopyEl.textContent = cfg.copy;
+      copyBtnLabel.textContent = cfg.copyLabel;
+      copyBtnCaption.textContent = cfg.copyCaption;
       if (inspectorTitleEl) inspectorTitleEl.textContent = cfg.outputLabel;
-      outputEl.placeholder = cfg.outputPlaceholder || '';
-      inputEl.placeholder = cfg.inputPlaceholder || '';
-      const clipboardMode = activeUtility === 'clipboard';
-      loadFileBtn.hidden = clipboardMode;
-      pasteRichBtn.hidden = !clipboardMode;
-      if (clipboardActionRow) clipboardActionRow.classList.remove('active');
+      inputEl.placeholder = cfg.inputPlaceholder;
+      loadFileBtn.hidden = activeUtility === 'clipboard';
+      pasteRichBtn.hidden = activeUtility !== 'clipboard';
+      document.querySelectorAll('.toolbar-markdown-only').forEach(el => el.classList.toggle('hidden', activeUtility === 'clipboard'));
+      renderQuickStrip();
+      renderProfiles();
+      renderWarnings();
+      localStorage.setItem('mcl.activeUtility', activeUtility);
+    }
+    function setUtility(next) {
+      if (!utilityConfig[next]) return;
+      activeUtility = next;
+      updateUtilityChrome();
       convert(false);
+    }
+    function setSplitMode(next) {
+      splitMode = next;
+      localStorage.setItem('mcl.splitMode', splitMode);
+      workspaceEl.classList.toggle('editor-only', next === 'editor');
+      workspaceEl.classList.toggle('preview-only', next === 'preview');
+      document.querySelectorAll('[data-split]').forEach(btn => btn.classList.toggle('active', btn.dataset.split === next));
+    }
+    function setInspectorVisible(visible) {
+      inspectorVisible = visible;
+      workspaceEl.classList.toggle('inspector-collapsed', !visible);
+      localStorage.setItem('mcl.inspector', visible ? 'open' : 'collapsed');
     }
 
     function convert(shouldFollowCursor = document.activeElement === inputEl) {
       const src = inputEl.value || '';
-      let result = '';
       updateLineNumbers();
+      formatPreviewEl.hidden = activeUtility === 'teams';
+      previewFrame.hidden = activeUtility !== 'teams';
+
       if (activeUtility === 'teams') {
-        result = convertMarkdownToHtml(src).replace(/\n+/g, '');
-        outputEl.value = result;
-        previewStageEl.hidden = false;
-        formatPreviewEl.hidden = true;
-        updatePreviewDocument(result, shouldFollowCursor);
+        const sourceForTeams = getActiveProfile() === 'compact' ? compactMarkdownForTeams(src) : src;
+        const html = applyProfileToTeams(convertMarkdownToHtml(sourceForTeams)).replace(/\n+/g, '');
+        currentOutput = html;
+        outputEl.value = html;
+        updatePreviewDocument(html, shouldFollowCursor);
       } else if (activeUtility === 'jira') {
-        result = convertMarkdownToJira(src);
-        outputEl.value = result;
-        previewStageEl.hidden = true;
-        formatPreviewEl.hidden = false;
-        renderFormatPreview(result);
+        const jira = applyProfileToJira(convertMarkdownToJira(src));
+        currentOutput = jira;
+        outputEl.value = jira;
+        formatPreviewEl.innerHTML = '<pre id="formatPreviewText"></pre>';
+        formatPreviewEl.querySelector('pre').textContent = jira || 'Jira markup will appear here.';
+        if (shouldFollowCursor) syncActivePreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
       } else if (activeUtility === 'email') {
-        result = convertMarkdownToEmailHtml(src);
-        outputEl.value = result;
-        previewStageEl.hidden = true;
-        formatPreviewEl.hidden = false;
-        formatPreviewTextEl.innerHTML = renderEmailPreview(result);
+        lastEmailHtml = convertMarkdownToEmailHtmlProfiled(src);
+        currentOutput = lastEmailHtml;
+        outputEl.value = lastEmailHtml;
+        renderEmailPreview(lastEmailHtml);
+        if (shouldFollowCursor) syncActivePreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
       } else if (activeUtility === 'clipboard') {
-        result = src;
-        outputEl.value = result;
-        previewStageEl.hidden = true;
-        formatPreviewEl.hidden = false;
-        renderFormatPreview(result);
+        const md = applyProfileToMarkdown(src);
+        currentOutput = md;
+        outputEl.value = md;
+        formatPreviewEl.innerHTML = '<pre id="formatPreviewText"></pre>';
+        formatPreviewEl.querySelector('pre').textContent = md || 'Markdown output will appear here.';
+        if (shouldFollowCursor) syncActivePreviewScrollToEditor({ forceBottom: isEditorNearBottom() });
       }
-      updateStats(src, result);
-      setStatus('Ready');
+      updateStats(src, currentOutput);
     }
+
     function pushUndoSnapshot() { undoStack.push({ value: inputEl.value, start: inputEl.selectionStart ?? 0, end: inputEl.selectionEnd ?? 0 }); if (undoStack.length > 100) undoStack.shift(); }
     function restoreUndoSnapshot(snapshot) { if (!snapshot) return; inputEl.value = snapshot.value; inputEl.focus(); inputEl.setSelectionRange(snapshot.start, snapshot.end); convert(); }
-    function insertAtCursor(text, selectStartOffset = 0, selectEndOffset = 0) { pushUndoSnapshot(); const start = inputEl.selectionStart ?? inputEl.value.length; const end = inputEl.selectionEnd ?? inputEl.value.length; const before = inputEl.value.slice(0, start); const after = inputEl.value.slice(end); inputEl.value = before + text + after; const cursor = start + text.length; inputEl.focus(); inputEl.setSelectionRange(cursor + selectStartOffset, cursor + selectEndOffset); convert(); }
-    function wrapSelection(prefix, suffix = prefix) { pushUndoSnapshot(); const start = inputEl.selectionStart ?? 0; const end = inputEl.selectionEnd ?? 0; const selected = inputEl.value.slice(start, end) || 'text'; const text = `${prefix}${selected}${suffix}`; const before = inputEl.value.slice(0, start); const after = inputEl.value.slice(end); inputEl.value = before + text + after; inputEl.focus(); inputEl.setSelectionRange(start + prefix.length, start + prefix.length + selected.length); convert(); }
-    function prefixLines(marker) { pushUndoSnapshot(); const start = inputEl.selectionStart ?? 0; const end = inputEl.selectionEnd ?? 0; const value = inputEl.value; const left = value.slice(0, start); const selected = value.slice(start, end) || 'item'; const right = value.slice(end); const lines = selected.split('\n').map(line => line ? `${marker} ${line}` : marker).join('\n'); inputEl.value = left + lines + right; inputEl.focus(); inputEl.setSelectionRange(start + marker.length + 1, start + lines.length); convert(); }
+    function insertAtCursor(text) { pushUndoSnapshot(); const start = inputEl.selectionStart ?? inputEl.value.length; const end = inputEl.selectionEnd ?? inputEl.value.length; inputEl.value = inputEl.value.slice(0, start) + text + inputEl.value.slice(end); const cursor = start + text.length; inputEl.focus(); inputEl.setSelectionRange(cursor, cursor); convert(); }
+    function wrapSelection(prefix, suffix = prefix) { pushUndoSnapshot(); const start = inputEl.selectionStart ?? 0; const end = inputEl.selectionEnd ?? 0; const selected = inputEl.value.slice(start, end) || 'text'; inputEl.value = inputEl.value.slice(0, start) + `${prefix}${selected}${suffix}` + inputEl.value.slice(end); inputEl.focus(); inputEl.setSelectionRange(start + prefix.length, start + prefix.length + selected.length); convert(); }
+    function prefixLines(marker) { pushUndoSnapshot(); const start = inputEl.selectionStart ?? 0; const end = inputEl.selectionEnd ?? 0; const selected = inputEl.value.slice(start, end) || 'item'; const lines = selected.split('\n').map(line => line ? `${marker} ${line}` : marker).join('\n'); inputEl.value = inputEl.value.slice(0, start) + lines + inputEl.value.slice(end); inputEl.focus(); inputEl.setSelectionRange(start + marker.length + 1, start + lines.length); convert(); }
+
+    function openDrawer(kind) {
+      renderDrawer(kind);
+      drawerBackdropEl.hidden = false;
+      requestAnimationFrame(() => drawerBackdropEl.classList.add('open'));
+      drawerEl.classList.add('open');
+    }
+    function closeDrawer() {
+      drawerEl.classList.remove('open');
+      drawerBackdropEl.classList.remove('open');
+      window.setTimeout(() => { if (!drawerEl.classList.contains('open')) drawerBackdropEl.hidden = true; }, 180);
+    }
+    function itemButton(label, className, dataId) { return `<button class="toolbar-button ${className}" data-id="${dataId}">${label}</button>`; }
+    function renderDrawer(kind) {
+      const allSnippets = [...builtInSnippets, ...savedSnippets];
+      if (kind === 'dashboard') {
+        drawerTitleEl.textContent = 'Usage dashboard';
+        const byUtility = localHistory.reduce((acc, item) => { acc[item.utility] = (acc[item.utility] || 0) + 1; return acc; }, {});
+        const profileSummary = Object.entries(activeProfile).map(([utility, profile]) => `<span class="pill">${htmlEscape(utilityConfig[utility]?.previewTitle || utility)} · ${htmlEscape(profile)}</span>`).join('');
+        drawerBodyEl.innerHTML = `<div class="inspector-card"><h3>Local activity</h3><div class="stat-grid mini"><div><span>Conversions</span><strong>${localHistory.length}</strong></div><div><span>Snippets</span><strong>${savedSnippets.length}</strong></div><div><span>Profiles</span><strong>${Object.keys(activeProfile).length}</strong></div></div><p class="small-text">This dashboard is computed from local IndexedDB history stored only in this browser.</p></div><div class="inspector-card"><h3>Conversions by utility</h3><div class="pill-row">${Object.entries(utilityConfig).map(([key, cfg]) => `<span class="pill">${htmlEscape(cfg.previewTitle)} · ${byUtility[key] || 0}</span>`).join('')}</div></div><div class="inspector-card"><h3>Active profiles</h3><div class="pill-row">${profileSummary}</div></div><div class="inspector-card"><h3>Recent history</h3>${localHistory.slice(0,5).map(h => `<div class="list-item"><strong>${htmlEscape(h.title)}</strong><span>${new Date(h.createdAt).toLocaleString()} · ${h.utility} · ${h.profile}</span></div>`).join('') || '<p class="small-text">No conversions copied yet.</p>'}</div>`;
+      } else if (kind === 'templates') {
+        drawerTitleEl.textContent = 'Templates';
+        drawerBodyEl.innerHTML = templates.map(t => `<div class="list-item"><strong>${htmlEscape(t.title)}</strong><span>${t.tags.join(' · ')}</span><p class="small-text">${htmlEscape(t.body.slice(0, 110))}…</p><div class="pill-row">${itemButton('Load', 'load-template', t.id)}${itemButton('Insert', 'insert-template', t.id)}</div></div>`).join('');
+      } else if (kind === 'snippets') {
+        drawerTitleEl.textContent = 'Saved snippets';
+        drawerBodyEl.innerHTML = `<button class="button primary" id="saveSnippetNow">Save selection as snippet</button>` + allSnippets.map(s => `<div class="list-item"><strong>${htmlEscape(s.title)}</strong><p class="small-text">${htmlEscape(s.body.slice(0, 130))}…</p><div class="pill-row">${itemButton('Insert', 'insert-snippet', s.id)}${s.updatedAt ? itemButton('Delete', 'delete-snippet', s.id) : ''}</div></div>`).join('');
+      } else if (kind === 'history') {
+        drawerTitleEl.textContent = 'Local history';
+        drawerBodyEl.innerHTML = localHistory.length ? localHistory.map(h => `<div class="list-item"><strong>${htmlEscape(h.title)}</strong><span>${new Date(h.createdAt).toLocaleString()} · ${h.utility} · ${h.profile}</span><p class="small-text">${htmlEscape((h.input || '').slice(0, 130))}…</p><div class="pill-row">${itemButton('Restore', 'restore-history', h.id)}${itemButton('Delete', 'delete-history', h.id)}</div></div>`).join('') : '<p class="small-text">No local history yet. Snapshots are stored in IndexedDB on this browser only.</p>';
+      } else if (kind === 'profiles') {
+        drawerTitleEl.textContent = 'Conversion profiles';
+        drawerBodyEl.innerHTML = Object.entries(profiles).map(([utility, list]) => `<div class="inspector-card"><h3>${utilityConfig[utility].icon} ${utilityConfig[utility].previewTitle}</h3>${list.map(p => `<div class="list-item"><strong>${htmlEscape(p.name)}</strong><p class="small-text">${htmlEscape(p.description)}</p><button class="toolbar-button choose-profile" data-utility="${utility}" data-id="${p.id}">Use profile</button></div>`).join('')}</div>`).join('');
+      } else if (kind === 'privacy') {
+        drawerTitleEl.textContent = 'Privacy mode';
+        drawerBodyEl.innerHTML = '<div class="inspector-card"><h3>Privacy mode is always on</h3><p>No conversion content is sent to a backend. Markdown, rich clipboard HTML, templates, snippets and history stay in this browser. Optional storage uses IndexedDB under this site origin.</p><div class="pill-row"><span class="pill good">Local conversion</span><span class="pill good">IndexedDB history</span><span class="pill good">No API upload</span></div></div>';
+      } else if (kind === 'pwa') {
+        drawerTitleEl.textContent = 'PWA offline';
+        drawerBodyEl.innerHTML = '<div class="inspector-card"><h3>Installable offline app</h3><p>Markup Forge can run as a PWA when deployed together with <code>manifest.webmanifest</code>, <code>sw.js</code>, <code>markdown-copy-lab-icon.svg</code>, and the PNG icon files in the same folder.</p><button class="button primary" id="installPwaBtn">Install app</button></div>';
+      }
+    }
+    function getTemplate(id) { return templates.find(t => t.id === id); }
+    function getSnippet(id) { return [...builtInSnippets, ...savedSnippets].find(s => s.id === id); }
+    function loadText(text) { pushUndoSnapshot(); inputEl.value = text; inputEl.focus(); inputEl.setSelectionRange(0, 0); convert(false); }
+
+    function commandActions() {
+      const allSnippets = [...builtInSnippets, ...savedSnippets];
+      return [
+        ...Object.keys(utilityConfig).map(key => ({ icon: utilityConfig[key].icon, title: utilityConfig[key].previewTitle, subtitle: 'Switch utility', run: () => setUtility(key) })),
+        { icon: '⧉', title: 'Copy current output', subtitle: `${utilityConfig[activeUtility].copyLabel} + save local history`, run: () => copyCurrentOutput() },
+        { icon: '◫', title: 'Split: Both', subtitle: 'Show editor and preview', run: () => setSplitMode('both') },
+        { icon: '✎', title: 'Split: Editor only', subtitle: 'Focus on writing', run: () => setSplitMode('editor') },
+        { icon: '◉', title: 'Split: Preview only', subtitle: 'Focus on output', run: () => setSplitMode('preview') },
+        { icon: '⌁', title: 'Toggle inspector', subtitle: 'Show or hide side inspector', run: () => setInspectorVisible(!inspectorVisible) },
+        { icon: '↧', title: 'Paste rich text from clipboard', subtitle: 'Convert Teams or rich clipboard content to Markdown', run: () => pasteRichText('Clipboard') },
+        ...templates.map(t => ({ icon: '▤', title: `Load template: ${t.title}`, subtitle: t.tags.join(' · '), run: () => loadText(t.body) })),
+        ...allSnippets.map(s => ({ icon: '✂', title: `Insert snippet: ${s.title}`, subtitle: (s.body || '').slice(0, 70), run: () => insertAtCursor(s.body) }))
+      ];
+    }
+    function openPalette() { paletteBackdrop.classList.add('open'); paletteInput.value = ''; renderPalette(); setTimeout(() => paletteInput.focus(), 0); }
+    function closePalette() { paletteBackdrop.classList.remove('open'); }
+    function renderPalette() {
+      const query = paletteInput.value.trim().toLowerCase();
+      const actions = commandActions().filter(a => !query || `${a.title} ${a.subtitle}`.toLowerCase().includes(query));
+      paletteResults.innerHTML = actions.slice(0, 24).map((a, index) => `<div class="palette-item ${index === 0 ? 'active' : ''}" data-index="${index}"><div>${a.icon}</div><div><strong>${htmlEscape(a.title)}</strong><span>${htmlEscape(a.subtitle || '')}</span></div><kbd class="kbd">Enter</kbd></div>`).join('');
+      renderPalette.actions = actions;
+    }
+    function runPaletteIndex(index = 0) {
+      const action = (renderPalette.actions || [])[index];
+      if (!action) return;
+      closePalette();
+      action.run();
+    }
+
+    async function pasteRichText(source = 'Clipboard') {
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.read) {
+          showToast('Rich clipboard read is not available in this browser');
+          return;
+        }
+        const items = await navigator.clipboard.read();
+        let html = '';
+        let plain = '';
+        for (const item of items) {
+          if (item.types.includes('text/html')) html = await (await item.getType('text/html')).text();
+          if (item.types.includes('text/plain')) plain = await (await item.getType('text/plain')).text();
+          if (html || plain) break;
+        }
+        const md = convertHtmlToMarkdown(html, plain);
+        setUtility('clipboard');
+        inputEl.value = md;
+        inputEl.focus();
+        inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
+        convert(false);
+        showToast(`Pasted rich text from ${source}`);
+      } catch (error) {
+        console.warn(error);
+        showToast('Could not read rich clipboard');
+      }
+    }
+
+    async function copyCurrentOutput() {
+      try {
+        if (activeUtility === 'teams') await copyRichHtml(currentOutput);
+        else if (activeUtility === 'email') await copyEmailHtml(lastEmailHtml || currentOutput);
+        else await copyPlainText(currentOutput);
+        console.debug('[Markup Forge] copied output', { utility: activeUtility, profile: getActiveProfile(), output: currentOutput });
+        await saveHistorySnapshot('copy', { silent: true });
+        showToast(`${utilityConfig[activeUtility].copyLabel} · copied + saved locally`);
+      } catch (error) {
+        console.warn(error);
+        showToast('Copy failed');
+      }
+    }
+
+    async function registerPwa() {
+      window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); installPromptEvent = event; pwaStatusEl.textContent = 'Install ready'; });
+      if (!('serviceWorker' in navigator)) { pwaStatusEl.textContent = 'No SW support'; return; }
+      if (location.protocol === 'file:') { pwaStatusEl.textContent = 'Needs HTTPS'; return; }
+      try {
+        const registration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+        pwaStatusEl.textContent = registration.active || registration.waiting || registration.installing ? 'Offline ready' : 'Registered';
+      } catch (error) {
+        console.warn(error);
+        pwaStatusEl.textContent = 'Deploy sw.js';
+      }
+    }
+    async function installPwa() {
+      if (!installPromptEvent) { showToast('Install prompt is not available yet'); return; }
+      installPromptEvent.prompt();
+      await installPromptEvent.userChoice;
+      installPromptEvent = null;
+    }
+
+    // Event wiring
+    document.querySelectorAll('.utility-nav').forEach(btn => btn.addEventListener('click', () => setUtility(btn.dataset.utility)));
+    document.querySelectorAll('.drawer-nav').forEach(btn => btn.addEventListener('click', () => openDrawer(btn.dataset.drawer)));
+    document.getElementById('privacyButton').addEventListener('click', () => openDrawer('privacy'));
+    document.getElementById('pwaButton').addEventListener('click', () => openDrawer('pwa'));
+    document.getElementById('openTemplatesBtn').addEventListener('click', () => openDrawer('templates'));
+    document.getElementById('openSnippetsBtn').addEventListener('click', () => openDrawer('snippets'));
+    closeDrawerBtn.addEventListener('click', closeDrawer);
+    drawerBackdropEl.addEventListener('click', closeDrawer);
+    document.addEventListener('pointerdown', (event) => {
+      if (!drawerEl.classList.contains('open')) return;
+      if (drawerEl.contains(event.target)) return;
+      if (event.target.closest('.drawer-nav, #privacyButton, #pwaButton, #openTemplatesBtn, #openSnippetsBtn')) return;
+      closeDrawer();
+    }, true);
+    document.querySelectorAll('[data-split]').forEach(btn => btn.addEventListener('click', () => setSplitMode(btn.dataset.split)));
+    quickActionsEl.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-quick-action]');
+      if (!btn) return;
+      const action = btn.dataset.quickAction;
+      if (action === 'paste') pasteRichText(btn.dataset.source || 'Clipboard');
+      if (action === 'copy') copyCurrentOutput();
+      if (action === 'drawer') openDrawer(btn.dataset.drawer);
+      if (action === 'sample') loadContextSample(btn.dataset.sample || activeUtility);
+      if (action === 'template') { const t = getTemplate(btn.dataset.template); if (t) loadText(t.body); }
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && drawerEl.classList.contains('open')) closeDrawer();
+    });
+    profileSelect.addEventListener('change', () => setActiveProfile(profileSelect.value));
+    previewProfileSelect.addEventListener('change', () => setActiveProfile(previewProfileSelect.value));
+    loadFileBtn.addEventListener('click', () => fileInput.click());
+    pasteRichBtn.addEventListener('click', () => pasteRichText('Clipboard'));
+    copyBtn.addEventListener('click', copyCurrentOutput);
+
     btnHeading.addEventListener('click', () => wrapSelection('# ', ''));
     btnBold.addEventListener('click', () => wrapSelection('**', '**'));
     btnItalic.addEventListener('click', () => wrapSelection('*', '*'));
@@ -1682,76 +2054,51 @@
     btnCheck.addEventListener('click', () => prefixLines('- [ ]'));
     btnHr.addEventListener('click', () => insertAtCursor('\n---\n'));
     undoBtn.addEventListener('click', () => restoreUndoSnapshot(undoStack.pop()));
-    inputEl.addEventListener('input', convert);
-    inputEl.addEventListener('scroll', syncLineNumbersScroll);
-    previewFrame.addEventListener('load', () => {
-      if (document.activeElement !== inputEl) return;
-      const scrollEl = previewFrame.contentDocument && previewFrame.contentDocument.querySelector('.teams-message');
-      syncPreviewScrollToEditor(scrollEl);
-    });
-    loadFileBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', async () => { const file = fileInput.files && fileInput.files[0]; if (!file) return; const text = await file.text(); inputEl.value = text; convert(); setStatus(`File loaded · ${file.name}`); });
-    copyBtn.addEventListener('click', async () => {
-      const originalCaption = copyBtnCaption ? copyBtnCaption.textContent : '';
-      try {
-        if (activeUtility === 'teams') {
-          const ok = await copyRichHtml(outputEl.value);
-          if (!ok) throw new Error('rich copy failed');
-        } else if (activeUtility === 'email') {
-          const ok = await copyEmailHtml(outputEl.value);
-          if (!ok) throw new Error('email rich copy failed');
-        } else {
-          const ok = await copyPlainText(outputEl.value);
-          if (!ok) throw new Error('plain text copy failed');
-        }
-        setStatus('Copied');
-        if (copyBtnCaption) copyBtnCaption.textContent = 'Copied';
-        setTimeout(() => { if (copyBtnCaption) copyBtnCaption.textContent = originalCaption || utilityConfig[activeUtility].copyCaption; }, 1400);
-        return;
-      } catch {
-        try {
-          if (activeUtility === 'email') {
-            await copyEmailHtml(outputEl.value);
-          } else {
-            outputEl.focus();
-            outputEl.select();
-            document.execCommand('copy');
-          }
-          setStatus('Copied');
-          if (copyBtnCaption) copyBtnCaption.textContent = 'Copied';
-        } catch {
-          setStatus('Copy failed');
-          if (copyBtnCaption) copyBtnCaption.textContent = 'Copy failed';
-        }
-        setTimeout(() => { if (copyBtnCaption) copyBtnCaption.textContent = originalCaption || utilityConfig[activeUtility].copyCaption; }, 1400);
+    inputEl.addEventListener('input', () => convert(true));
+    inputEl.addEventListener('scroll', () => { syncLineNumbersScroll(); syncActivePreviewScrollToEditor({ forceBottom: isEditorNearBottom() }); });
+    inputEl.addEventListener('keyup', syncActivePreviewScrollToEditor);
+    inputEl.addEventListener('click', syncActivePreviewScrollToEditor);
+    inputEl.addEventListener('select', syncActivePreviewScrollToEditor);
+    fileInput.addEventListener('change', async () => { const file = fileInput.files && fileInput.files[0]; if (!file) return; inputEl.value = await file.text(); convert(true); showToast(`Loaded ${file.name}`); });
+
+    drawerBodyEl.addEventListener('click', async (event) => {
+      const btn = event.target.closest('button');
+      if (!btn) return;
+      if (btn.id === 'saveSnippetNow') { await saveSnippetFromSelection(); return; }
+      if (btn.id === 'installPwaBtn') { await installPwa(); return; }
+      const id = btn.dataset.id;
+      if (btn.classList.contains('load-template')) { const t = getTemplate(id); if (t) loadText(t.body); }
+      if (btn.classList.contains('insert-template')) { const t = getTemplate(id); if (t) insertAtCursor(`\n${t.body}\n`); }
+      if (btn.classList.contains('insert-snippet')) { const s = getSnippet(id); if (s) insertAtCursor(s.body); }
+      if (btn.classList.contains('delete-snippet')) { await idbDelete('snippets', id); await loadLocalData(); renderDrawer('snippets'); }
+      if (btn.classList.contains('restore-history')) { const h = localHistory.find(item => item.id === id); if (h) { setUtility(h.utility); activeProfile[h.utility] = h.profile; loadText(h.input); } }
+      if (btn.classList.contains('delete-history')) {
+        try { await idbDelete('history', id); } catch (error) { console.warn(error); }
+        writeLocalHistoryMirror(readLocalHistoryMirror().filter(item => item.id !== id));
+        await loadLocalData();
+        renderDrawer('history');
       }
+      if (btn.classList.contains('choose-profile')) { setUtility(btn.dataset.utility); setActiveProfile(id); }
     });
-    utilityButtons.forEach(button => button.addEventListener('click', () => setActiveUtility(button.dataset.utility)));
-    pasteRichBtn.addEventListener('click', async () => {
-      try {
-        let html = '';
-        let plain = '';
-        if (navigator.clipboard && navigator.clipboard.read) {
-          const items = await navigator.clipboard.read();
-          for (const item of items) {
-            if (item.types.includes('text/html')) html = await (await item.getType('text/html')).text();
-            if (item.types.includes('text/plain')) plain = await (await item.getType('text/plain')).text();
-          }
-        } else if (navigator.clipboard && navigator.clipboard.readText) {
-          plain = await navigator.clipboard.readText();
-        }
-        inputEl.value = convertHtmlToMarkdown(html, plain);
-        inputEl.focus();
-        inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
-        convert(false);
-        setStatus('Clipboard imported');
-      } catch (error) {
-        setStatus('Clipboard permission needed');
-        alert('Clipboard access was blocked. Try using HTTPS or localhost, then click Paste rich text again.');
-      }
+    recentHistoryListEl.addEventListener('click', (event) => {
+      const btn = event.target.closest('.restore-history');
+      if (!btn) return;
+      const h = localHistory.find(item => item.id === btn.dataset.id);
+      if (h) { setUtility(h.utility); activeProfile[h.utility] = h.profile; loadText(h.input); }
     });
-    inputEl.value = sample;
-    setActiveUtility(activeUtility);
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeDrawer();
+    });
+
+    setSplitMode(splitMode);
+    setInspectorVisible(inspectorVisible);
+    updateUtilityChrome();
+    inputEl.value = localStorage.getItem('mcl.lastInput') || sample;
+    inputEl.addEventListener('input', () => localStorage.setItem('mcl.lastInput', inputEl.value));
+    convert(false);
+    loadLocalData();
+    registerPwa();
   </script>
 </body>
 </html>
