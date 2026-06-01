@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0b0f14" />
   <title>Markup Forge · Markdown IDE</title>
-  <link rel="icon" type="image/svg+xml" href="./markdown-copy-lab-icon.svg" />
-  <link rel="icon" type="image/png" href="./favicon-32.png" />
-  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="./assets/markdown-copy-lab-icon-CXxye_M_.svg" />
+  <link rel="icon" type="image/png" href="./assets/favicon-32-eRxrQ3P-.png" />
+  <link rel="apple-touch-icon" href="./assets/apple-touch-icon-BnfokMOu.png" />
+  <link rel="manifest" href="./assets/manifest-DieRc_dC.webmanifest" />
   <style>
     :root {
       color-scheme: dark;
@@ -474,33 +474,8 @@
     .gh-editor-stack {
       position: relative;
       flex: 1 1 auto;
-      min-height: 0;
       min-width: 0;
       display: grid;
-    }
-    .cm-editor-host {
-      position: relative;
-      flex: 1 1 auto;
-      min-width: 0;
-      min-height: 0;
-      display: flex;
-      overflow: hidden;
-    }
-    .cm-editor-host > .cm-editor {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      min-width: 0;
-      min-height: 0;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .cm-editor-host .cm-scroller {
-      flex: 1 1 auto;
-      min-height: 0;
-      overflow: auto;
     }
     .gh-editor-highlight {
       grid-area: 1 / 1;
@@ -1012,12 +987,13 @@
       .statusbar { grid-template-columns: 1fr; }
     }
   </style>
+  <script type="module" crossorigin src="./assets/app-pDMDZ8jj.js"></script>
 </head>
 <body>
   <div class="app">
     <header class="topbar">
       <div class="brand">
-        <div class="brand-logo" aria-hidden="true"><img src="./markdown-copy-lab-icon.svg" alt="" /></div>
+        <div class="brand-logo" aria-hidden="true"><img src="data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20512%20512'%20role='img'%20aria-label='Markdown%20Copy%20Lab%20icon'%3e%3cdefs%3e%3clinearGradient%20id='bg'%20x1='72'%20y1='32'%20x2='430'%20y2='492'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20offset='0'%20stop-color='%2320242d'/%3e%3cstop%20offset='0.46'%20stop-color='%2311141a'/%3e%3cstop%20offset='1'%20stop-color='%230f1115'/%3e%3c/linearGradient%3e%3clinearGradient%20id='card'%20x1='116'%20y1='86'%20x2='414'%20y2='432'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20offset='0'%20stop-color='%232f3542'/%3e%3cstop%20offset='1'%20stop-color='%23171a21'/%3e%3c/linearGradient%3e%3clinearGradient%20id='gold'%20x1='128'%20y1='108'%20x2='400'%20y2='412'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20offset='0'%20stop-color='%23f7d99d'/%3e%3cstop%20offset='0.52'%20stop-color='%23e8b86d'/%3e%3cstop%20offset='1'%20stop-color='%23a9752e'/%3e%3c/linearGradient%3e%3clinearGradient%20id='gold2'%20x1='92'%20y1='80'%20x2='342'%20y2='390'%20gradientUnits='userSpaceOnUse'%3e%3cstop%20offset='0'%20stop-color='%23fff1c9'/%3e%3cstop%20offset='1'%20stop-color='%23d99d4c'/%3e%3c/linearGradient%3e%3cfilter%20id='shadow'%20x='-20%25'%20y='-20%25'%20width='140%25'%20height='140%25'%3e%3cfeDropShadow%20dx='0'%20dy='22'%20stdDeviation='24'%20flood-color='%23000000'%20flood-opacity='0.38'/%3e%3cfeDropShadow%20dx='0'%20dy='2'%20stdDeviation='4'%20flood-color='%23000000'%20flood-opacity='0.35'/%3e%3c/filter%3e%3cfilter%20id='soft'%20x='-20%25'%20y='-20%25'%20width='140%25'%20height='140%25'%3e%3cfeGaussianBlur%20stdDeviation='16'/%3e%3c/filter%3e%3c/defs%3e%3crect%20width='512'%20height='512'%20rx='116'%20fill='url(%23bg)'/%3e%3ccircle%20cx='398'%20cy='116'%20r='92'%20fill='%23e8b86d'%20opacity='0.12'%20filter='url(%23soft)'/%3e%3ccircle%20cx='110'%20cy='410'%20r='86'%20fill='%2338bdf8'%20opacity='0.06'%20filter='url(%23soft)'/%3e%3c!--%20Back%20sheet%20/%20copy%20context%20--%3e%3crect%20x='130'%20y='114'%20width='262'%20height='322'%20rx='42'%20fill='%230b0d11'%20opacity='0.58'%20transform='rotate(5%20261%20275)'/%3e%3crect%20x='110'%20y='92'%20width='292'%20height='342'%20rx='48'%20fill='url(%23card)'%20stroke='%233a4050'%20stroke-width='3'%20filter='url(%23shadow)'/%3e%3cpath%20d='M336%2092h18c26.51%200%2048%2021.49%2048%2048v16l-66-64Z'%20fill='%233a4050'%20opacity='0.78'/%3e%3cpath%20d='M337%2093v49c0%2015.46%2012.54%2028%2028%2028h37'%20fill='none'%20stroke='%23525a6d'%20stroke-width='3'%20opacity='0.70'/%3e%3c!--%20Markdown%20glyph:%20compact,%20readable%20at%20favicon%20sizes%20--%3e%3cpath%20d='M154%20230h42l37%2054%2037-54h42v116h-38v-62l-30%2043h-22l-30-43v62h-38V230Z'%20fill='url(%23gold)'/%3e%3cpath%20d='M330%20244l36%2040-36%2040'%20fill='none'%20stroke='url(%23gold2)'%20stroke-width='28'%20stroke-linecap='round'%20stroke-linejoin='round'/%3e%3cpath%20d='M150%20244l-36%2040%2036%2040'%20fill='none'%20stroke='url(%23gold2)'%20stroke-width='28'%20stroke-linecap='round'%20stroke-linejoin='round'/%3e%3c!--%20Paste-ready%20output%20lines%20--%3e%3crect%20x='154'%20y='142'%20width='132'%20height='14'%20rx='7'%20fill='%23f4f6fa'%20opacity='0.22'/%3e%3crect%20x='154'%20y='172'%20width='176'%20height='14'%20rx='7'%20fill='%23f4f6fa'%20opacity='0.12'/%3e%3crect%20x='154'%20y='378'%20width='204'%20height='14'%20rx='7'%20fill='%23f4f6fa'%20opacity='0.16'/%3e%3c!--%20Copy/output%20chip%20--%3e%3crect%20x='306'%20y='338'%20width='82'%20height='82'%20rx='25'%20fill='%230f1115'%20stroke='%234b5262'%20stroke-width='3'/%3e%3cpath%20d='M333%20367h37M333%20389h24'%20stroke='%23e8b86d'%20stroke-width='12'%20stroke-linecap='round'/%3e%3cpath%20d='M326%20352h48c8.84%200%2016%207.16%2016%2016v38'%20fill='none'%20stroke='%23f7d99d'%20stroke-width='4'%20opacity='0.9'/%3e%3crect%20x='112'%20y='92'%20width='288'%20height='340'%20rx='48'%20fill='none'%20stroke='%23ffffff'%20stroke-opacity='0.08'%20stroke-width='2'/%3e%3c/svg%3e" alt="" /></div>
         <div class="brand-title">
           <p class="eyebrow">Browser-only Markdown IDE</p>
           <h1>Markup Forge</h1>
@@ -1168,6 +1144,5 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script type="module" src="./assets/app.js"></script>
 </body>
 </html>

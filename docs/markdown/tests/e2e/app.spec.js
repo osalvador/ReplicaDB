@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+const editorValue = page => page.evaluate(() => window.__markupForgeEditor?.getValue?.() || '');
+
 // Fail the test if the app logs any console error or throws a page error.
 function trackErrors(page) {
   const errors = [];
@@ -19,7 +21,7 @@ test('loads without console errors and renders the Teams preview', async ({ page
   await page.goto('/converter.html');
 
   // The default sample is loaded into the editor.
-  await expect(page.locator('#editor')).not.toHaveValue('');
+  await expect.poll(() => editorValue(page)).not.toBe('');
 
   // The Teams preview renders the sent-message view (bubble), not a composer.
   await expect(page.locator('.teams-sent-message')).toBeVisible();
@@ -97,15 +99,21 @@ test('switching output tabs changes preview and copy label', async ({ page }) =>
   // Teams is the default tab.
   await expect(page.locator('#copyBtnLabel')).toHaveText('Copy for Teams');
 
-  // Jira tab -> dark code output, Jira copy label.
+  // Jira tab -> defaults to Visual (iframe). Switch to Text to see raw markup.
   await page.getByRole('tab', { name: 'Jira' }).click();
   await expect(page.locator('#copyBtnLabel')).toHaveText('Copy Jira');
+  await expect(page.locator('.jira-visual-frame')).toBeVisible();
+  await page.getByRole('button', { name: 'Text', exact: true }).click();
   await expect(page.locator('.preview-output-code')).toContainText('h1. Title');
   await expect(page.locator('.preview-output-code')).toContainText('{code:language=js}');
 
-  // HTML tab -> dark HTML output, HTML copy label.
+  // HTML tab -> rendered navigable artifact in a sandboxed iframe by default,
+  // with a Preview/Source toggle. HTML copy label.
   await page.getByRole('tab', { name: 'HTML' }).click();
   await expect(page.locator('#copyBtnLabel')).toHaveText('Copy HTML');
+  await expect(page.locator('.html-preview-frame')).toBeVisible();
+  // Switching to Source shows the raw HTML document.
+  await page.getByRole('button', { name: 'Source', exact: true }).click();
   await expect(page.locator('.preview-output-code')).toContainText('<!doctype html>');
 
   // Back to Teams.
@@ -136,6 +144,40 @@ test('view modes toggle the editor and preview panels', async ({ page }) => {
   await expect(workspace).toHaveClass(/split/);
   await expect(page.locator('.editor-panel')).toBeVisible();
   await expect(page.locator('.preview-panel')).toBeVisible();
+});
+
+test('split handle resizes the source and preview panels horizontally', async ({ page }) => {
+  await page.goto('/converter.html');
+  const handle = page.locator('#splitHandle');
+  await expect(handle).toBeVisible();
+
+  const before = await page.evaluate(() => {
+    const editorPanel = document.querySelector('.editor-panel');
+    const previewPanel = document.querySelector('.preview-panel');
+    return {
+      editorWidth: editorPanel.getBoundingClientRect().width,
+      previewWidth: previewPanel.getBoundingClientRect().width
+    };
+  });
+
+  const box = await handle.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2, { steps: 8 });
+  await page.mouse.up();
+
+  const after = await page.evaluate(() => {
+    const editorPanel = document.querySelector('.editor-panel');
+    const previewPanel = document.querySelector('.preview-panel');
+    return {
+      editorWidth: editorPanel.getBoundingClientRect().width,
+      previewWidth: previewPanel.getBoundingClientRect().width
+    };
+  });
+
+  expect(after.editorWidth).toBeGreaterThan(before.editorWidth + 40);
+  expect(after.previewWidth).toBeLessThan(before.previewWidth - 40);
 });
 
 test('header does not overlap the workspace', async ({ page }) => {
@@ -232,6 +274,154 @@ test('preview follows the caret when typing at the bottom after scrolling previe
   expect(await previewScrollTop()).toBeGreaterThan(0);
 });
 
+test('typing stays centered in Teams preview even with tall tables above', async ({ page }) => {
+  await page.goto('/converter.html');
+
+  const tallDoc = [
+    '# Report',
+    '',
+    '| Area | Status | Notes |',
+    '| --- | --- | --- |',
+    ...Array.from({ length: 60 }, (_, i) => `| Row ${i + 1} | Ready | Cell ${i + 1} with extra content to make the preview much taller than the source line |`),
+    '',
+    ...Array.from({ length: 80 }, (_, i) => `Editable line ${i + 1}`)
+  ].join('\n');
+
+  await page.locator('#editor').fill(tallDoc);
+  await page.locator('#editor').focus();
+  await page.locator('#editor').press('Control+End');
+  await page.locator('#editor').type(' still-editing');
+  await page.waitForTimeout(250);
+
+  const result = await page.evaluate(() => {
+    const scroller = document.querySelector('.teams-sent-scroll') || document.getElementById('preview');
+    const target = document.querySelector('.preview-map-block[data-src-start="63"][data-src-end="63"], .preview-map-block[data-src-start="64"][data-src-end="64"]')
+      || Array.from(document.querySelectorAll('.preview-map-block')).at(-1);
+    const scrollerRect = scroller.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    return {
+      targetTopOffset: targetRect.top - scrollerRect.top,
+      targetBottomOffset: targetRect.bottom - scrollerRect.top,
+      scrollerHeight: scroller.clientHeight,
+      scrollTop: scroller.scrollTop
+    };
+  });
+
+  // The edited line block must stay well inside the viewport, not lost above or below.
+  expect(result.targetTopOffset).toBeGreaterThan(result.scrollerHeight * 0.15);
+  expect(result.targetBottomOffset).toBeLessThan(result.scrollerHeight * 0.85);
+});
+
+test('typing keeps the active block visible across Teams, Jira Text, and HTML Source', async ({ page }) => {
+  await page.goto('/converter.html');
+  const doc = [
+    ...Array.from({ length: 80 }, (_, i) => `| Row ${i + 1} | Value ${i + 1} |`),
+    '',
+    ...Array.from({ length: 80 }, (_, i) => `Tail line ${i + 1}`)
+  ].join('\n');
+  await page.locator('#editor').fill(doc);
+
+  const assertPreviewMoved = async () => {
+    const value = await page.evaluate(() => {
+      const preview = document.getElementById('preview');
+      return preview.scrollTop;
+    });
+    expect(value).toBeGreaterThan(0);
+  };
+
+  await page.locator('#editor').focus();
+  await page.locator('#editor').press('Control+End');
+  await page.locator('#editor').type(' end');
+  await page.waitForTimeout(250);
+  await assertPreviewMoved();
+
+  await page.getByRole('tab', { name: 'Jira' }).click();
+  await page.getByRole('button', { name: 'Text', exact: true }).click();
+  await page.locator('#editor').focus();
+  await page.locator('#editor').press('Control+End');
+  await page.locator('#editor').type(' more');
+  await page.waitForTimeout(250);
+  await assertPreviewMoved();
+
+  await page.getByRole('tab', { name: 'HTML' }).click();
+  await page.getByRole('button', { name: 'Source', exact: true }).click();
+  await page.locator('#editor').focus();
+  await page.locator('#editor').press('Control+End');
+  await page.locator('#editor').type(' again');
+  await page.waitForTimeout(250);
+  await assertPreviewMoved();
+});
+
+test('HTML and Jira preview shells stretch to fill the preview panel height', async ({ page }) => {
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('# Title\n\nBody');
+
+  await page.getByRole('tab', { name: 'HTML' }).click();
+  const htmlHeights = await page.evaluate(() => {
+    const preview = document.getElementById('preview');
+    const shell = document.querySelector('.html-preview-shell');
+    return {
+      preview: preview.getBoundingClientRect().height,
+      shell: shell.getBoundingClientRect().height
+    };
+  });
+  expect(htmlHeights.shell).toBeGreaterThan(htmlHeights.preview - 40);
+
+  await page.getByRole('tab', { name: 'Jira' }).click();
+  const jiraHeights = await page.evaluate(() => {
+    const preview = document.getElementById('preview');
+    const shell = document.querySelector('.jira-preview-shell');
+    return {
+      preview: preview.getBoundingClientRect().height,
+      shell: shell.getBoundingClientRect().height
+    };
+  });
+  expect(jiraHeights.shell).toBeGreaterThan(jiraHeights.preview - 40);
+});
+
+test('editor mode skips preview rendering updates for large documents', async ({ page }) => {
+  await page.goto('/converter.html');
+  await page.getByRole('button', { name: 'Editor', exact: true }).click();
+  const big = Array.from({ length: 800 }, (_, i) => `Line ${i + 1}`).join('\n');
+  await page.locator('#editor').fill(big);
+  await page.waitForTimeout(150);
+  const classes = await page.locator('#githubEditor').getAttribute('class');
+  expect(classes).toContain('performance-lite');
+});
+
+test('large documents keep preview active in Split view and keep editor scrolling', async ({ page }) => {
+  await page.goto('/converter.html');
+  const big = Array.from({ length: 1600 }, (_, i) => `Line ${i + 1}`).join('\n');
+
+  await page.evaluate(text => {
+    globalThis.__markupForgeEditor.setValue(text);
+  }, big);
+  await page.waitForTimeout(250);
+
+  await expect(page.locator('.preview-output-code')).toHaveCount(0);
+  await expect(page.locator('.teams-content')).toBeVisible();
+
+  const before = await page.evaluate(() => {
+    const ed = globalThis.__markupForgeEditor;
+    return {
+      scrollTop: ed.scrollDOM.scrollTop,
+      clientHeight: ed.scrollDOM.clientHeight,
+      scrollHeight: ed.scrollDOM.scrollHeight
+    };
+  });
+  expect(before.scrollHeight).toBeGreaterThan(before.clientHeight);
+
+  await page.evaluate(() => {
+    const ed = globalThis.__markupForgeEditor;
+    ed.scrollDOM.scrollTop = ed.scrollDOM.scrollHeight;
+    ed.scrollDOM.dispatchEvent(new Event('scroll', { bubbles: true }));
+  });
+  await page.waitForTimeout(100);
+
+  const after = await page.evaluate(() => globalThis.__markupForgeEditor.scrollDOM.scrollTop);
+  expect(after).toBeGreaterThan(0);
+});
+
 test('pasting rich Teams HTML converts it to Markdown in the editor', async ({ page }) => {
   await page.goto('/converter.html');
 
@@ -250,8 +440,8 @@ test('pasting rich Teams HTML converts it to Markdown in the editor', async ({ p
     el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
   });
 
-  await expect.poll(() => page.locator('#editor').inputValue()).toContain('## Weekly');
-  const value = await page.locator('#editor').inputValue();
+  await expect.poll(() => editorValue(page)).toContain('## Weekly');
+  const value = await editorValue(page);
   expect(value).toContain('Existing line.'); // existing content not erased
   expect(value).toContain('**Bold**');
   expect(value).toContain('[MS](https://ms.com)');
@@ -285,8 +475,308 @@ test('Teams "Copy image" does not produce a duplicate image (binary + HTML data 
     el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
   }, dataUri);
 
-  await expect.poll(() => page.locator('#editor').inputValue()).toContain('![](data:image/png');
-  const value = await page.locator('#editor').inputValue();
+  await expect.poll(() => editorValue(page)).toContain('![](data:image/png');
+  const value = await editorValue(page);
   const imageCount = (value.match(/!\[\]\(data:image/g) || []).length;
   expect(imageCount).toBe(1); // exactly one image, no duplicate
+});
+
+test('Paste as Markdown detects TSV table from clipboard', async ({ page }) => {
+  await page.goto('/converter.html');
+
+  // Mock the async clipboard with a TSV table (e.g. copied from a spreadsheet).
+  await page.evaluate(() => {
+    const tsv = 'Area\tStatus\nIDE\tReady\nPaste\tDone';
+    navigator.clipboard.read = async () => [{
+      types: ['text/plain'],
+      getType: async () => new Blob([tsv], { type: 'text/plain' }),
+    }];
+    navigator.clipboard.readText = async () => tsv;
+  });
+
+  await page.locator('#editor').fill('');
+  await page.locator('#editor').focus();
+  await page.locator('#pasteMarkdownBtn').click();
+
+  await expect.poll(() => editorValue(page)).toContain('| Area | Status |');
+  const value = await editorValue(page);
+  expect(value).toContain('| IDE | Ready |');
+  expect(value).toContain('| --- | --- |');
+});
+
+test('Paste as Markdown detects CSV table from clipboard', async ({ page }) => {
+  await page.goto('/converter.html');
+
+  // Mock the async clipboard with a CSV table (comma-separated, no HTML).
+  await page.evaluate(() => {
+    const csv = 'Name,Role\nAlice,Engineer\nBob,Designer';
+    navigator.clipboard.read = async () => [{
+      types: ['text/plain'],
+      getType: async () => new Blob([csv], { type: 'text/plain' }),
+    }];
+    navigator.clipboard.readText = async () => csv;
+  });
+
+  await page.locator('#editor').fill('');
+  await page.locator('#editor').focus();
+  await page.locator('#pasteMarkdownBtn').click();
+
+  await expect.poll(() => editorValue(page)).toContain('| Name | Role |');
+  const value = await editorValue(page);
+  expect(value).toContain('| Alice | Engineer |');
+  expect(value).toContain('| --- | --- |');
+});
+
+test('Paste as Markdown converts rich HTML clipboard without errors', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/converter.html');
+
+  // Mock the async clipboard with a rich text/html flavour.
+  await page.evaluate(() => {
+    const html = '<h2>Weekly</h2><p>Hello <strong>world</strong></p>';
+    navigator.clipboard.read = async () => [{
+      types: ['text/html'],
+      getType: async () => new Blob([html], { type: 'text/html' }),
+    }];
+    navigator.clipboard.readText = async () => 'Weekly\nHello world';
+  });
+
+  await page.locator('#editor').fill('');
+  await page.locator('#editor').focus();
+  await page.locator('#pasteMarkdownBtn').click();
+
+  await expect.poll(() => editorValue(page)).toContain('## Weekly');
+  expect(await editorValue(page)).toContain('**world**');
+  expect(errors).toEqual([]);
+});
+
+test('Export Source + Artifact downloads a ZIP bundle', async ({ page }) => {
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('# Release\n\nNotes body.');
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.locator('#exportBundleBtn').click(),
+  ]);
+
+  expect(download.suggestedFilename()).toMatch(/source-artifact\.zip$/);
+
+  const path = await download.path();
+  const fs = await import('node:fs/promises');
+  const bytes = await fs.readFile(path);
+  // ZIP local file header magic "PK\x03\x04".
+  expect(bytes[0]).toBe(0x50);
+  expect(bytes[1]).toBe(0x4b);
+  expect(bytes[2]).toBe(0x03);
+  expect(bytes[3]).toBe(0x04);
+  // Entry names are stored uncompressed, so they appear verbatim.
+  const text = bytes.toString('latin1');
+  expect(text).toContain('source.md');
+  expect(text).toContain('index.html');
+  expect(text).toContain('README.md');
+});
+
+test('editor shows CodeMirror line numbers and Markdown syntax highlighting', async ({ page }) => {
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('# Heading\n\nA **bold** word.\n- item');
+
+  const gutter = page.locator('.cm-gutters');
+  await expect(gutter).toBeVisible();
+  await expect(gutter).toContainText('4');
+
+  // CodeMirror renders syntax-highlighted spans directly in the editor content.
+  await expect(page.locator('.cm-content')).toContainText('# Heading');
+  const highlightedSpanCount = await page.locator('.cm-content span').count();
+  expect(highlightedSpanCount).toBeGreaterThan(0);
+});
+
+test('keyboard shortcuts wrap the selection (Cmd/Ctrl+B, I, K)', async ({ page }) => {
+  await page.goto('/converter.html');
+  const editor = page.locator('#editor');
+  const mod = process.platform === 'darwin' ? 'Meta' : 'Control';
+
+  // Bold.
+  await editor.fill('word');
+  await page.keyboard.press(`${mod}+a`);
+  await page.keyboard.press(`${mod}+b`);
+  await expect.poll(() => editorValue(page)).toBe('**word**');
+
+  // Italic.
+  await editor.fill('word');
+  await page.keyboard.press(`${mod}+a`);
+  await page.keyboard.press(`${mod}+i`);
+  await expect.poll(() => editorValue(page)).toBe('*word*');
+
+  // Link.
+  await editor.fill('word');
+  await page.keyboard.press(`${mod}+a`);
+  await page.keyboard.press(`${mod}+k`);
+  await expect.poll(() => editorValue(page)).toContain('[word](');
+});
+
+test('slash command menu inserts a snippet', async ({ page }) => {
+  await page.goto('/converter.html');
+  const editor = page.locator('#editor');
+  await editor.fill('');
+  await editor.focus();
+
+  // Typing "/" opens the menu listing the commands.
+  await page.keyboard.type('/');
+  const menu = page.locator('#slashMenu');
+  await expect(menu).toBeVisible();
+  await expect(menu.locator('.slash-item')).toHaveCount(5);
+
+  // Narrow to the table command and accept with Enter.
+  await page.keyboard.type('table');
+  await expect(menu.locator('.slash-item')).toHaveCount(1);
+  await page.keyboard.press('Enter');
+
+  await expect(menu).toBeHidden();
+  const value = await editorValue(page);
+  expect(value).toContain('| Column A | Column B |');
+  expect(value).toContain('| --- | --- |');
+  expect(value).not.toContain('/table');
+});
+
+test('slash command menu can be dismissed with Escape', async ({ page }) => {
+  await page.goto('/converter.html');
+  const editor = page.locator('#editor');
+  await editor.fill('');
+  await editor.focus();
+  await page.keyboard.type('/cal');
+  await expect(page.locator('#slashMenu')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#slashMenu')).toBeHidden();
+  // The typed text remains; nothing was inserted.
+  expect(await editorValue(page)).toBe('/cal');
+});
+
+test('importing a .csv file converts it to a Markdown table', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('');
+  await page.locator('#fileInput').setInputFiles({
+    name: 'data.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from('name,role\nAda,Engineer\nGrace,Admiral')
+  });
+  await expect.poll(() => editorValue(page)).toContain('| name | role |');
+  const value = await editorValue(page);
+  expect(value).toContain('| --- | --- |');
+  expect(value).toContain('| Ada | Engineer |');
+  expect(errors).toEqual([]);
+});
+
+test('importing an .html file converts it to Markdown', async ({ page }) => {
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('');
+  await page.locator('#fileInput').setInputFiles({
+    name: 'page.html',
+    mimeType: 'text/html',
+    buffer: Buffer.from('<h1>Imported</h1><p>Hello <strong>world</strong></p>')
+  });
+  await expect.poll(() => editorValue(page)).toContain('# Imported');
+  expect(await editorValue(page)).toContain('**world**');
+});
+
+test('dragging a file over the workspace shows the drop cue', async ({ page }) => {
+  await page.goto('/converter.html');
+  const workspace = page.locator('#workspace');
+  await expect(workspace).not.toHaveClass(/drag-over/);
+  // Dispatch synthetic drag events carrying a "Files" dataTransfer in-page,
+  // since Playwright cannot serialise a fake DataTransfer across the boundary.
+  const fire = type => page.evaluate(eventType => {
+    const ev = new Event(eventType, { bubbles: true, cancelable: true });
+    Object.defineProperty(ev, 'dataTransfer', { value: { types: ['Files'], files: [] } });
+    document.getElementById('workspace').dispatchEvent(ev);
+  }, type);
+  await fire('dragenter');
+  await expect(workspace).toHaveClass(/drag-over/);
+  await fire('dragleave');
+  await expect(workspace).not.toHaveClass(/drag-over/);
+});
+
+test('frontmatter is excluded from the preview and surfaces the title', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('---\ntitle: Release Notes\ntags: [ide, markdown]\n---\n# Heading\n\nBody text.');
+  const preview = page.locator('#previewInner');
+  // The Markdown body renders, but the YAML metadata does not leak in.
+  await expect(preview).toContainText('Heading');
+  await expect(preview).toContainText('Body text.');
+  await expect(preview).not.toContainText('title: Release Notes');
+  await expect(preview).not.toContainText('tags:');
+  // The frontmatter title is surfaced in the document info line.
+  await expect(page.locator('#docInfo')).toContainText('Release Notes');
+  expect(errors).toEqual([]);
+});
+
+test('filename can be edited and is reflected in document info', async ({ page }) => {
+  await page.goto('/converter.html');
+  await page.locator('#filenameInput').fill('quarterly-report.md');
+  await page.locator('#filenameInput').blur();
+  await expect(page.locator('#filenameInput')).toHaveValue('quarterly-report.md');
+  await expect(page.locator('#docInfo')).toContainText('quarterly-report.md');
+});
+
+test('status bar shows estimated tokens', async ({ page }) => {
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('Hello world '.repeat(20));
+  const tokens = Number(await page.locator('#tokenCount').textContent());
+  expect(tokens).toBeGreaterThan(0);
+});
+
+test('source panel shows a visible drag and drop hint', async ({ page }) => {
+  await page.goto('/converter.html');
+  await expect(page.locator('.drop-hint')).toContainText('Drag & drop files here');
+});
+
+test('HTML output uses the frontmatter title for the document', async ({ page }) => {
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('---\ntitle: My Artifact\n---\n# Hi');
+  await page.getByRole('tab', { name: 'HTML' }).click();
+  await page.getByRole('button', { name: 'Source', exact: true }).click();
+  await expect(page.locator('#previewInner .preview-output-code')).toContainText('<title>My Artifact</title>');
+});
+
+test('Jira tab shows Visual/Text toggle defaulting to Visual', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('# Hello\n\nSome **bold** text.');
+  await page.getByRole('tab', { name: 'Jira' }).click();
+  // Toggle buttons exist
+  await expect(page.getByRole('button', { name: 'Visual', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Text', exact: true })).toBeVisible();
+  // Default is Visual: iframe is visible, code block shell stays hidden.
+  await expect(page.locator('#previewInner .jira-visual-frame')).toBeVisible();
+  await expect(page.locator('#previewInner .preview-output-code')).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test('Jira tab Text view shows raw Jira wiki markup', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('# Hello\n\nSome **bold** text.');
+  await page.getByRole('tab', { name: 'Jira' }).click();
+  await page.getByRole('button', { name: 'Text', exact: true }).click();
+  // iframe shell remains mounted but hidden; code block is visible with Jira markup
+  await expect(page.locator('#previewInner .jira-visual-frame')).toBeHidden();
+  await expect(page.locator('#previewInner .preview-output-code')).toBeVisible();
+  const code = await page.locator('#previewInner .preview-output-code').textContent();
+  expect(code).toContain('h1.');
+  expect(code).toContain('*bold*');
+  expect(errors).toEqual([]);
+});
+
+test('Jira tab Visual view renders HTML in the iframe', async ({ page }) => {
+  const errors = trackErrors(page);
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('# Hello\n\nSome **bold** text.');
+  await page.getByRole('tab', { name: 'Jira' }).click();
+  // Switch to Text then back to Visual
+  await page.getByRole('button', { name: 'Text', exact: true }).click();
+  await page.getByRole('button', { name: 'Visual', exact: true }).click();
+  await expect(page.locator('#previewInner .jira-visual-frame')).toBeVisible();
+  await expect(page.locator('#previewInner .preview-output-code')).toBeHidden();
+  expect(errors).toEqual([]);
 });
