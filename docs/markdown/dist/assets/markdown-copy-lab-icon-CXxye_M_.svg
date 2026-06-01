@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Markdown Copy Lab icon">
+  <defs>
+    <linearGradient id="bg" x1="72" y1="32" x2="430" y2="492" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#20242d"/>
+      <stop offset="0.46" stop-color="#11141a"/>
+      <stop offset="1" stop-color="#0f1115"/>
+    </linearGradient>
+    <linearGradient id="card" x1="116" y1="86" x2="414" y2="432" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f3542"/>
+      <stop offset="1" stop-color="#171a21"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="128" y1="108" x2="400" y2="412" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f7d99d"/>
+      <stop offset="0.52" stop-color="#e8b86d"/>
+      <stop offset="1" stop-color="#a9752e"/>
+    </linearGradient>
+    <linearGradient id="gold2" x1="92" y1="80" x2="342" y2="390" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff1c9"/>
+      <stop offset="1" stop-color="#d99d4c"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="22" stdDeviation="24" flood-color="#000000" flood-opacity="0.38"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <circle cx="398" cy="116" r="92" fill="#e8b86d" opacity="0.12" filter="url(#soft)"/>
+  <circle cx="110" cy="410" r="86" fill="#38bdf8" opacity="0.06" filter="url(#soft)"/>
+
+  <!-- Back sheet / copy context -->
+  <rect x="130" y="114" width="262" height="322" rx="42" fill="#0b0d11" opacity="0.58" transform="rotate(5 261 275)"/>
+  <rect x="110" y="92" width="292" height="342" rx="48" fill="url(#card)" stroke="#3a4050" stroke-width="3" filter="url(#shadow)"/>
+  <path d="M336 92h18c26.51 0 48 21.49 48 48v16l-66-64Z" fill="#3a4050" opacity="0.78"/>
+  <path d="M337 93v49c0 15.46 12.54 28 28 28h37" fill="none" stroke="#525a6d" stroke-width="3" opacity="0.70"/>
+
+  <!-- Markdown glyph: compact, readable at favicon sizes -->
+  <path d="M154 230h42l37 54 37-54h42v116h-38v-62l-30 43h-22l-30-43v62h-38V230Z" fill="url(#gold)"/>
+  <path d="M330 244l36 40-36 40" fill="none" stroke="url(#gold2)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M150 244l-36 40 36 40" fill="none" stroke="url(#gold2)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Paste-ready output lines -->
+  <rect x="154" y="142" width="132" height="14" rx="7" fill="#f4f6fa" opacity="0.22"/>
+  <rect x="154" y="172" width="176" height="14" rx="7" fill="#f4f6fa" opacity="0.12"/>
+  <rect x="154" y="378" width="204" height="14" rx="7" fill="#f4f6fa" opacity="0.16"/>
+
+  <!-- Copy/output chip -->
+  <rect x="306" y="338" width="82" height="82" rx="25" fill="#0f1115" stroke="#4b5262" stroke-width="3"/>
+  <path d="M333 367h37M333 389h24" stroke="#e8b86d" stroke-width="12" stroke-linecap="round"/>
+  <path d="M326 352h48c8.84 0 16 7.16 16 16v38" fill="none" stroke="#f7d99d" stroke-width="4" opacity="0.9"/>
+
+  <rect x="112" y="92" width="288" height="340" rx="48" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
+</svg>
