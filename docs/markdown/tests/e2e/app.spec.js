@@ -323,8 +323,30 @@ test('typing keeps the active block visible across Teams, Jira Text, and HTML So
 
   const assertPreviewMoved = async () => {
     const value = await page.evaluate(() => {
+      if (document.querySelector('.html-preview-frame:not([hidden])')) {
+        const frame = document.querySelector('.html-preview-frame');
+        const doc = frame && frame.contentDocument;
+        const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+        return scroller ? scroller.scrollTop : 0;
+      }
+      if (document.querySelector('.jira-visual-frame:not([hidden])')) {
+        const frame = document.querySelector('.jira-visual-frame');
+        const doc = frame && frame.contentDocument;
+        const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+        return scroller ? scroller.scrollTop : 0;
+      }
+      const code = document.querySelector('.preview-output-code:not([hidden])');
+      if (code) {
+        const preview = document.getElementById('preview');
+        if (preview && preview.scrollHeight > preview.clientHeight) return preview.scrollTop;
+        return code.scrollTop;
+      }
+      const teams = document.querySelector('.teams-sent-scroll');
+      if (teams && teams.scrollHeight > teams.clientHeight) return teams.scrollTop;
+      const teamsContent = document.querySelector('.teams-content');
+      if (teamsContent && teamsContent.scrollHeight > teamsContent.clientHeight) return teamsContent.scrollTop;
       const preview = document.getElementById('preview');
-      return preview.scrollTop;
+      return preview ? preview.scrollTop : 0;
     });
     expect(value).toBeGreaterThan(0);
   };
@@ -335,7 +357,34 @@ test('typing keeps the active block visible across Teams, Jira Text, and HTML So
   await page.waitForTimeout(250);
   await assertPreviewMoved();
 
+  await page.getByRole('tab', { name: 'HTML' }).click();
+  await page.waitForTimeout(250);
+  await page.locator('#editor').focus();
+  await page.locator('#editor').press('Control+End');
+  await page.locator('#editor').type(' visual');
+  await page.waitForTimeout(350);
+  const htmlVisualScroll = await page.evaluate(() => {
+    const frame = document.querySelector('.html-preview-frame');
+    const doc = frame && frame.contentDocument;
+    const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+    return scroller ? scroller.scrollTop : 0;
+  });
+  expect(htmlVisualScroll).toBeGreaterThan(0);
+
   await page.getByRole('tab', { name: 'Jira' }).click();
+  await page.waitForTimeout(250);
+  await page.locator('#editor').focus();
+  await page.locator('#editor').press('Control+End');
+  await page.locator('#editor').type(' visual');
+  await page.waitForTimeout(350);
+  const jiraVisualScroll = await page.evaluate(() => {
+    const frame = document.querySelector('.jira-visual-frame');
+    const doc = frame && frame.contentDocument;
+    const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+    return scroller ? scroller.scrollTop : 0;
+  });
+  expect(jiraVisualScroll).toBeGreaterThan(0);
+
   await page.getByRole('button', { name: 'Text', exact: true }).click();
   await page.locator('#editor').focus();
   await page.locator('#editor').press('Control+End');
@@ -350,6 +399,373 @@ test('typing keeps the active block visible across Teams, Jira Text, and HTML So
   await page.locator('#editor').type(' again');
   await page.waitForTimeout(250);
   await assertPreviewMoved();
+});
+
+test('HTML and Jira visual previews do not drift to the bottom during repeated edits away from the end', async ({ page }) => {
+  await page.goto('/converter.html');
+  const doc = Array.from({ length: 180 }, (_, i) => `Paragraph line ${i + 1}`).join('\n\n');
+  await page.evaluate(text => {
+    globalThis.__markupForgeEditor.setValue(text);
+  }, doc);
+
+  const typeNearTopRepeatedly = async () => {
+    for (let i = 0; i < 4; i++) {
+      await page.locator('#editor').focus();
+      await page.locator('#editor').press('Home');
+      await page.locator('#editor').type('X');
+      await page.waitForTimeout(200);
+    }
+  };
+
+  await page.getByRole('tab', { name: 'HTML' }).click();
+  await page.waitForTimeout(300);
+  await typeNearTopRepeatedly();
+  const htmlVisual = await page.evaluate(() => {
+    const frame = document.querySelector('.html-preview-frame');
+    const doc = frame && frame.contentDocument;
+    const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+    if (!scroller) return null;
+    const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    return { top: scroller.scrollTop, max };
+  });
+  expect(htmlVisual).not.toBeNull();
+  expect(htmlVisual.top).toBeLessThan(htmlVisual.max * 0.35);
+
+  await page.getByRole('tab', { name: 'Jira' }).click();
+  await page.waitForTimeout(300);
+  await typeNearTopRepeatedly();
+  const jiraVisual = await page.evaluate(() => {
+    const frame = document.querySelector('.jira-visual-frame');
+    const doc = frame && frame.contentDocument;
+    const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+    if (!scroller) return null;
+    const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    return { top: scroller.scrollTop, max };
+  });
+  expect(jiraVisual).not.toBeNull();
+  expect(jiraVisual.top).toBeLessThan(jiraVisual.max * 0.35);
+});
+
+test('rapid typing keeps HTML and Jira visual previews stable near the edited region', async ({ page }) => {
+  await page.goto('/converter.html');
+  const doc = Array.from({ length: 180 }, (_, i) => `Paragraph line ${i + 1}`).join('\n\n');
+  await page.evaluate(text => {
+    globalThis.__markupForgeEditor.setValue(text);
+  }, doc);
+
+  const burstTypeNearTop = async () => {
+    await page.locator('#editor').focus();
+    await page.locator('#editor').press('Home');
+    await page.locator('#editor').type('XXXX');
+    await page.waitForTimeout(160);
+  };
+
+  await page.getByRole('tab', { name: 'HTML' }).click();
+  await page.waitForTimeout(250);
+  await burstTypeNearTop();
+  const htmlVisual = await page.evaluate(() => {
+    const frame = document.querySelector('.html-preview-frame');
+    const doc = frame && frame.contentDocument;
+    const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+    if (!scroller) return null;
+    return { top: scroller.scrollTop, max: Math.max(0, scroller.scrollHeight - scroller.clientHeight) };
+  });
+  expect(htmlVisual).not.toBeNull();
+  expect(htmlVisual.top).toBeLessThan(htmlVisual.max * 0.3);
+
+  await page.getByRole('tab', { name: 'Jira' }).click();
+  await page.waitForTimeout(250);
+  await burstTypeNearTop();
+  const jiraVisual = await page.evaluate(() => {
+    const frame = document.querySelector('.jira-visual-frame');
+    const doc = frame && frame.contentDocument;
+    const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+    if (!scroller) return null;
+    return { top: scroller.scrollTop, max: Math.max(0, scroller.scrollHeight - scroller.clientHeight) };
+  });
+  expect(jiraVisual).not.toBeNull();
+  expect(jiraVisual.top).toBeLessThan(jiraVisual.max * 0.3);
+});
+
+test('manual editor scroll does not push HTML and Jira visual previews to the bottom', async ({ page }) => {
+  await page.goto('/converter.html');
+  const doc = [
+    ...Array.from({ length: 40 }, (_, i) => `## Objective ${i + 1}`),
+    '',
+    ...Array.from({ length: 140 }, (_, i) => `Paragraph ${i + 1} with enough content to make the preview tall and easy to drift.`)
+  ].join('\n\n');
+  await page.evaluate(text => {
+    globalThis.__markupForgeEditor.setValue(text);
+  }, doc);
+
+  const stepScroll = async () => {
+    await page.evaluate(() => {
+      const ed = globalThis.__markupForgeEditor;
+      ed.scrollDOM.scrollTop += 450;
+      ed.scrollDOM.dispatchEvent(new Event('scroll', { bubbles: true }));
+    });
+    await page.waitForTimeout(180);
+  };
+
+  await page.getByRole('tab', { name: 'HTML' }).click();
+  await page.waitForTimeout(300);
+  for (let i = 0; i < 5; i++) await stepScroll();
+  const htmlState = await page.evaluate(() => {
+    const ed = globalThis.__markupForgeEditor;
+    const frame = document.querySelector('.html-preview-frame');
+    const doc = frame && frame.contentDocument;
+    const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+    const editorMax = ed.scrollDOM.scrollHeight - ed.scrollDOM.clientHeight;
+    const previewMax = scroller ? scroller.scrollHeight - scroller.clientHeight : 0;
+    return scroller ? {
+      editorRatio: editorMax > 0 ? ed.scrollDOM.scrollTop / editorMax : 0,
+      previewRatio: previewMax > 0 ? scroller.scrollTop / previewMax : 0
+    } : null;
+  });
+  expect(htmlState).not.toBeNull();
+  expect(htmlState.previewRatio).toBeLessThan(htmlState.editorRatio + 0.18);
+
+  await page.getByRole('tab', { name: 'Jira' }).click();
+  await page.waitForTimeout(300);
+  for (let i = 0; i < 5; i++) await stepScroll();
+  const jiraState = await page.evaluate(() => {
+    const ed = globalThis.__markupForgeEditor;
+    const frame = document.querySelector('.jira-visual-frame');
+    const doc = frame && frame.contentDocument;
+    const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+    const editorMax = ed.scrollDOM.scrollHeight - ed.scrollDOM.clientHeight;
+    const previewMax = scroller ? scroller.scrollHeight - scroller.clientHeight : 0;
+    return scroller ? {
+      editorRatio: editorMax > 0 ? ed.scrollDOM.scrollTop / editorMax : 0,
+      previewRatio: previewMax > 0 ? scroller.scrollTop / previewMax : 0
+    } : null;
+  });
+  expect(jiraState).not.toBeNull();
+  expect(jiraState.previewRatio).toBeLessThan(jiraState.editorRatio + 0.18);
+});
+
+test('HTML and Jira visual previews track editor scrolling without drifting too far ahead', async ({ page }) => {
+  await page.goto('/converter.html');
+  const doc = [
+    ...Array.from({ length: 50 }, (_, i) => `## Heading ${i + 1}`),
+    '',
+    ...Array.from({ length: 180 }, (_, i) => `Paragraph ${i + 1} with enough content to make the preview tall.`)
+  ].join('\n\n');
+  await page.evaluate(text => {
+    globalThis.__markupForgeEditor.setValue(text);
+  }, doc);
+  await page.waitForTimeout(250);
+
+  const stepEditorScroll = async () => {
+    await page.evaluate(() => {
+      const ed = globalThis.__markupForgeEditor;
+      ed.scrollDOM.scrollTop += 360;
+      ed.scrollDOM.dispatchEvent(new Event('scroll', { bubbles: true }));
+    });
+    await page.waitForTimeout(180);
+  };
+
+  await page.getByRole('tab', { name: 'HTML' }).click();
+  await page.waitForTimeout(250);
+  for (let i = 0; i < 4; i++) await stepEditorScroll();
+  const html = await page.evaluate(() => {
+    const ed = globalThis.__markupForgeEditor;
+    const frame = document.querySelector('.html-preview-frame');
+    const doc = frame && frame.contentDocument;
+    const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+    if (!scroller) return null;
+    const editorMax = ed.scrollDOM.scrollHeight - ed.scrollDOM.clientHeight;
+    const previewMax = scroller.scrollHeight - scroller.clientHeight;
+    return {
+      editorRatio: editorMax > 0 ? ed.scrollDOM.scrollTop / editorMax : 0,
+      previewRatio: previewMax > 0 ? scroller.scrollTop / previewMax : 0
+    };
+  });
+  expect(html).not.toBeNull();
+  expect(html.previewRatio).toBeLessThan(html.editorRatio + 0.22);
+
+  await page.getByRole('tab', { name: 'Jira' }).click();
+  await page.waitForTimeout(250);
+  for (let i = 0; i < 4; i++) await stepEditorScroll();
+  const jira = await page.evaluate(() => {
+    const ed = globalThis.__markupForgeEditor;
+    const frame = document.querySelector('.jira-visual-frame');
+    const doc = frame && frame.contentDocument;
+    const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+    if (!scroller) return null;
+    const editorMax = ed.scrollDOM.scrollHeight - ed.scrollDOM.clientHeight;
+    const previewMax = scroller.scrollHeight - scroller.clientHeight;
+    return {
+      editorRatio: editorMax > 0 ? ed.scrollDOM.scrollTop / editorMax : 0,
+      previewRatio: previewMax > 0 ? scroller.scrollTop / previewMax : 0
+    };
+  });
+  expect(jira).not.toBeNull();
+  expect(jira.previewRatio).toBeLessThan(jira.editorRatio + 0.22);
+});
+
+test('manual preview scroll moves the editor without creating a bounce loop', async ({ page }) => {
+  await page.goto('/converter.html');
+  const doc = [
+    ...Array.from({ length: 30 }, (_, i) => `## Section ${i + 1}`),
+    '',
+    ...Array.from({ length: 160 }, (_, i) => `Paragraph ${i + 1} with enough content to make both editor and preview scroll.`)
+  ].join('\n\n');
+  await page.evaluate(text => {
+    globalThis.__markupForgeEditor.setValue(text);
+  }, doc);
+  await page.waitForTimeout(300);
+
+  const editorScrollTop = () => page.evaluate(() => globalThis.__markupForgeEditor.scrollDOM.scrollTop);
+
+  await page.evaluate(() => {
+    globalThis.__markupForgeEditor.scrollDOM.scrollTop = 0;
+  });
+
+  await page.evaluate(() => {
+    const teams = document.querySelector('.teams-sent-scroll');
+    const scroller = teams && teams.scrollHeight > teams.clientHeight + 2 ? teams : document.getElementById('preview');
+    scroller.scrollTop = 800;
+    scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
+  });
+  await page.waitForTimeout(250);
+  const teamsEditorTop = await editorScrollTop();
+  expect(teamsEditorTop).toBeGreaterThan(0);
+  await page.waitForTimeout(200);
+  expect(await editorScrollTop()).toBe(teamsEditorTop);
+
+  await page.getByRole('tab', { name: 'HTML' }).click();
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    const frame = document.querySelector('.html-preview-frame');
+    const doc = frame && frame.contentDocument;
+    const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+    if (!scroller) return;
+    scroller.scrollTop = 1200;
+    scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
+  });
+  await page.waitForTimeout(300);
+  const htmlEditorTop = await editorScrollTop();
+  expect(htmlEditorTop).toBeGreaterThan(0);
+  await page.waitForTimeout(200);
+  expect(await editorScrollTop()).toBe(htmlEditorTop);
+
+  await page.getByRole('tab', { name: 'Jira' }).click();
+  await page.waitForTimeout(400);
+  await page.evaluate(() => {
+    const frame = document.querySelector('.jira-visual-frame');
+    const doc = frame && frame.contentDocument;
+    const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+    if (!scroller) return;
+    scroller.scrollTop = 1200;
+    scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
+  });
+  await page.waitForTimeout(300);
+  const jiraEditorTop = await editorScrollTop();
+  expect(jiraEditorTop).toBeGreaterThan(0);
+  await page.waitForTimeout(200);
+  expect(await editorScrollTop()).toBe(jiraEditorTop);
+});
+
+test('switching HTML Source and Jira Text does not change scroll position', async ({ page }) => {
+  await page.goto('/converter.html');
+  const doc = [
+    ...Array.from({ length: 70 }, (_, i) => `## Heading ${i + 1}`),
+    '',
+    ...Array.from({ length: 180 }, (_, i) => `Paragraph ${i + 1} with enough content to make the preview tall.`)
+  ].join('\n\n');
+  await page.evaluate(text => {
+    globalThis.__markupForgeEditor.setValue(text);
+  }, doc);
+  await page.waitForTimeout(350);
+
+  const getScrollState = () => page.evaluate(() => ({
+    editor: globalThis.__markupForgeEditor.scrollDOM.scrollTop,
+    preview: document.getElementById('preview').scrollTop
+  }));
+
+  await page.getByRole('tab', { name: 'HTML' }).click();
+  await page.waitForTimeout(250);
+  await page.evaluate(() => {
+    const frame = document.querySelector('.html-preview-frame');
+    const doc = frame && frame.contentDocument;
+    const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+    if (!scroller) return;
+    scroller.scrollTop = 900;
+    scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
+  });
+  await page.waitForTimeout(250);
+  const beforeHtml = await getScrollState();
+  await page.getByRole('button', { name: 'Source', exact: true }).click();
+  await page.waitForTimeout(250);
+  const afterHtml = await getScrollState();
+  expect(afterHtml.preview).toBe(beforeHtml.preview);
+
+  await page.getByRole('tab', { name: 'Jira' }).click();
+  await page.waitForTimeout(250);
+  await page.evaluate(() => {
+    const frame = document.querySelector('.jira-visual-frame');
+    const doc = frame && frame.contentDocument;
+    const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
+    if (!scroller) return;
+    scroller.scrollTop = 900;
+    scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
+  });
+  await page.waitForTimeout(250);
+  const beforeJira = await getScrollState();
+  await page.getByRole('button', { name: 'Text', exact: true }).click();
+  await page.waitForTimeout(250);
+  const afterJira = await getScrollState();
+  expect(afterJira.preview).toBe(beforeJira.preview);
+});
+
+test('HTML Source and Jira Text toggles stay pinned while content scrolls', async ({ page }) => {
+  await page.goto('/converter.html');
+  const doc = [
+    ...Array.from({ length: 80 }, (_, i) => `## Heading ${i + 1}`),
+    '',
+    ...Array.from({ length: 220 }, (_, i) => `Paragraph ${i + 1} with enough content to make the source text tall.`)
+  ].join('\n\n');
+  await page.evaluate(text => {
+    globalThis.__markupForgeEditor.setValue(text);
+  }, doc);
+  await page.waitForTimeout(400);
+
+  const assertPinned = async (tabName, buttonName) => {
+    await page.getByRole('tab', { name: tabName }).click();
+    await page.waitForTimeout(250);
+    await page.getByRole('button', { name: buttonName, exact: true }).click();
+    await page.waitForTimeout(250);
+    const before = await page.evaluate(() => {
+      const button = document.querySelector('.html-view-btn.active, .jira-view-btn.active');
+      const preview = document.getElementById('preview');
+      return {
+        buttonTop: button ? button.getBoundingClientRect().top : 0,
+        buttonBottom: button ? button.getBoundingClientRect().bottom : 0,
+        previewTop: preview.getBoundingClientRect().top,
+        previewScrollTop: preview.scrollTop
+      };
+    });
+    await page.locator('#preview').evaluate(el => { el.scrollTop = el.scrollHeight; el.dispatchEvent(new Event('scroll', { bubbles: true })); });
+    await page.waitForTimeout(250);
+    const after = await page.evaluate(() => {
+      const button = document.querySelector('.html-view-btn.active, .jira-view-btn.active');
+      const preview = document.getElementById('preview');
+      return {
+        buttonTop: button ? button.getBoundingClientRect().top : 0,
+        buttonBottom: button ? button.getBoundingClientRect().bottom : 0,
+        previewTop: preview.getBoundingClientRect().top,
+        previewScrollTop: preview.scrollTop
+      };
+    });
+    expect(after.buttonTop).toBeCloseTo(before.buttonTop, 0);
+    expect(after.buttonBottom).toBeCloseTo(before.buttonBottom, 0);
+    expect(after.previewTop).toBeCloseTo(before.previewTop, 0);
+    expect(after.previewScrollTop).toBeGreaterThan(before.previewScrollTop);
+  };
+
+  await assertPinned('HTML', 'Source');
+  await assertPinned('Jira', 'Text');
 });
 
 test('HTML and Jira preview shells stretch to fill the preview panel height', async ({ page }) => {
@@ -481,6 +897,34 @@ test('Teams "Copy image" does not produce a duplicate image (binary + HTML data 
   expect(imageCount).toBe(1); // exactly one image, no duplicate
 });
 
+test('Paste as Markdown preserves Word data URIs and replaces file:// images with clipboard binaries', async ({ page }) => {
+  await page.goto('/converter.html');
+  const dataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const html = `<html><body><p><img alt="inline" src="${dataUri}"></p><p><img alt="local" src="file:///Users/me/AppData/Local/Temp/msohtmlclip/clip_image001.png"></p></body></html>`;
+
+  await page.evaluate(([uri, htmlText]) => {
+    const bin = atob(uri.split(',')[1]);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    navigator.clipboard.read = async () => [{
+      types: ['text/html', 'image/png'],
+      getType: async type => new Blob([type === 'text/html' ? htmlText : bytes], { type: type === 'text/html' ? 'text/html' : 'image/png' }),
+    }];
+    navigator.clipboard.readText = async () => 'inline local';
+  }, [dataUri, html]);
+
+  await page.locator('#editor').fill('');
+  await page.locator('#editor').focus();
+  await page.locator('#pasteMarkdownBtn').click();
+
+  // pasteFromTeams is async; poll until the content is available.
+  await expect.poll(() => editorValue(page)).toContain('![inline](data:image/png');
+  const value = await editorValue(page);
+  expect(value).toContain('![local](data:image/png');
+  expect(value).not.toContain('file:///Users/me/AppData/Local/Temp/msohtmlclip/clip_image001.png');
+  expect((value.match(/!\[[^\]]*\]\(data:image/g) || []).length).toBe(2);
+});
+
 test('Paste as Markdown detects TSV table from clipboard', async ({ page }) => {
   await page.goto('/converter.html');
 
@@ -548,6 +992,77 @@ test('Paste as Markdown converts rich HTML clipboard without errors', async ({ p
   await expect.poll(() => editorValue(page)).toContain('## Weekly');
   expect(await editorValue(page)).toContain('**world**');
   expect(errors).toEqual([]);
+});
+
+test('Paste as Markdown converts Microsoft Word HTML clipboard', async ({ page }) => {
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('');
+  await page.locator('#editor').focus();
+
+  await page.evaluate(() => {
+    const html = '<html><body><p class="MsoHeading1" style="mso-outline-level:1">Word Title</p><p class="MsoListParagraph" style="mso-list:l0 level1 lfo1"><span style="font-weight:bold">•</span> Item one</p><p class="MsoListParagraph" style="mso-list:l0 level1 lfo1"><span style="font-weight:bold">•</span> Item two</p><p><span style="font-weight:bold">Bold</span> and <span style="font-style:italic">Italic</span></p></body></html>';
+    navigator.clipboard.read = async () => [{
+      types: ['text/html', 'text/plain'],
+      getType: async type => new Blob([type === 'text/html' ? html : 'Word Title'], { type })
+    }];
+    navigator.clipboard.readText = async () => 'Word Title';
+  });
+
+  await page.locator('#pasteMarkdownBtn').click();
+
+  const editor = page.locator('.cm-content');
+  await expect(editor).toContainText('# Word Title');
+  await expect(editor).toContainText('- Item one');
+  await expect(editor).toContainText('- Item two');
+  await expect(editor).toContainText('**Bold**');
+  await expect(editor).toContainText('*Italic*');
+});
+
+test('Paste as Markdown converts Jira wiki clipboard text', async ({ page }) => {
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('');
+  await page.locator('#editor').focus();
+
+  await page.evaluate(() => {
+    const jira = 'h2. Jira Title\n\n* Bullet\n# Number\n\n{code:language=js}\nconst x = 1;\n{code}';
+    navigator.clipboard.read = async () => [{
+      types: ['text/plain'],
+      getType: async () => new Blob([jira], { type: 'text/plain' })
+    }];
+    navigator.clipboard.readText = async () => jira;
+  });
+
+  await page.locator('#pasteMarkdownBtn').click();
+
+  const editor = page.locator('.cm-content');
+  await expect(editor).toContainText('## Jira Title');
+  await expect(editor).toContainText('- Bullet');
+  await expect(editor).toContainText('1. Number');
+  await expect(editor).toContainText('```js');
+  await expect(editor).toContainText('const x = 1;');
+});
+
+test('Paste as Markdown converts Jira HTML clipboard', async ({ page }) => {
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('');
+  await page.locator('#editor').focus();
+
+  await page.evaluate(() => {
+    const html = '<div data-node-type="paragraph"><h2>Jira HTML</h2><p><strong>Bold</strong> and <em>Italic</em></p><table><tr><td>A</td><td>B</td></tr><tr><td>1</td><td>2</td></tr></table></div>';
+    navigator.clipboard.read = async () => [{
+      types: ['text/html', 'text/plain'],
+      getType: async type => new Blob([type === 'text/html' ? html : 'Jira HTML'], { type })
+    }];
+    navigator.clipboard.readText = async () => 'Jira HTML';
+  });
+
+  await page.locator('#pasteMarkdownBtn').click();
+
+  const editor = page.locator('.cm-content');
+  await expect(editor).toContainText('## Jira HTML');
+  await expect(editor).toContainText('**Bold**');
+  await expect(editor).toContainText('*Italic*');
+  await expect(editor).toContainText('| A | B |');
 });
 
 test('Export Source + Artifact downloads a ZIP bundle', async ({ page }) => {
@@ -694,6 +1209,67 @@ test('dragging a file over the workspace shows the drop cue', async ({ page }) =
   await expect(workspace).toHaveClass(/drag-over/);
   await fire('dragleave');
   await expect(workspace).not.toHaveClass(/drag-over/);
+});
+
+test('dropping a .md file on the editor surface loads it exactly once (no duplicate content)', async ({ page }) => {
+  // Regression: CodeMirror's built-in drop handler was inserting the raw file
+  // text inline AND the workspace drop listener was also calling loadFile() →
+  // the document ended up with the content duplicated and format broken.
+  // The fix intercepts the drop in capture phase on the editor contentDOM,
+  // suppressing CM's native handler and calling loadFile() once.
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('');
+
+  const content = '# Hello\n\nThis is the file content.';
+
+  // Simulate a file drop directly on the editor's contentDOM (the CM editable
+  // div), which is the element that triggers the CM native file-drop handler.
+  // We use a Blob URL so the File object has real readable content.
+  await page.evaluate(src => {
+    const file = new File([src], 'test.md', { type: 'text/markdown' });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    const editor = document.querySelector('.cm-content') || document.getElementById('editor');
+    if (!editor) throw new Error('Editor contentDOM not found');
+    editor.dispatchEvent(new DragEvent('drop', {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer: dt,
+    }));
+  }, content);
+
+  // Content appears exactly once — no duplicate
+  await expect.poll(() => editorValue(page)).toContain('# Hello');
+  const value = await editorValue(page);
+  const headingCount = (value.match(/# Hello/g) || []).length;
+  expect(headingCount).toBe(1);
+  expect(value).toContain('This is the file content.');
+  // Should not contain raw content duplicated
+  const bodyCount = (value.match(/This is the file content\./g) || []).length;
+  expect(bodyCount).toBe(1);
+});
+
+test('dropping a .md file on the workspace (outside editor) also loads exactly once', async ({ page }) => {
+  await page.goto('/converter.html');
+  await page.locator('#editor').fill('');
+
+  const content = '# Workspace Drop\n\nDropped on workspace.';
+
+  await page.evaluate(src => {
+    const file = new File([src], 'ws.md', { type: 'text/markdown' });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('workspace').dispatchEvent(new DragEvent('drop', {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer: dt,
+    }));
+  }, content);
+
+  await expect.poll(() => editorValue(page)).toContain('# Workspace Drop');
+  const value = await editorValue(page);
+  const count = (value.match(/# Workspace Drop/g) || []).length;
+  expect(count).toBe(1);
 });
 
 test('frontmatter is excluded from the preview and surfaces the title', async ({ page }) => {

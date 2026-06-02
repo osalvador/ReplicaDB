@@ -38,7 +38,7 @@ function replaceRange(view, from, to, insert, selection) {
   });
 }
 
-export function createMarkdownEditor(root, { initialValue = '', onChange, onScroll, onFocus, onBlur, onKeydown } = {}) {
+export function createMarkdownEditor(root, { initialValue = '', onChange, onScroll, onFocus, onBlur, onKeydown, onPaste, onDrop, onBeforeInput } = {}) {
   const parent = root.parentElement;
   const host = document.createElement('div');
   host.className = 'cm-editor-host';
@@ -181,6 +181,31 @@ export function createMarkdownEditor(root, { initialValue = '', onChange, onScro
   view.scrollDOM.classList.add('gh-editor-scroll');
   view.contentDOM.id = 'editor';
   view.contentDOM.setAttribute('aria-label', 'Markdown source editor');
+  if (onBeforeInput) {
+    view.contentDOM.addEventListener('beforeinput', event => {
+      if (!onBeforeInput(event, view)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+  }
+  if (onPaste) {
+    view.contentDOM.addEventListener('paste', event => {
+      if (!onPaste(event, view)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+  }
+  // Intercept file drops on the editor surface so they are handled by the app's
+  // import pipeline (loadFile → importFileToMarkdown) rather than CodeMirror's
+  // built-in file-drop handler, which reads the raw text and inserts it inline.
+  // The capture phase ensures we run before CM's own domEventHandlers.drop.
+  if (onDrop) {
+    view.contentDOM.addEventListener('drop', event => {
+      if (!onDrop(event, view)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+  }
 
   Object.defineProperties(view.contentDOM, {
     value: {
@@ -271,8 +296,15 @@ export function createMarkdownEditor(root, { initialValue = '', onChange, onScro
       const main = view.state.selection.main;
       replaceRange(view, from ?? main.from, to ?? main.to, insert, selection ?? { anchor: (from ?? main.from) + insert.length });
     },
+    replaceRange(from, to, insert, selection) {
+      replaceRange(view, from, to, insert, selection);
+    },
     replaceDocument(value) {
-      replaceRange(view, 0, view.state.doc.length, value, { anchor: value.length });
+      // Full-document replacements must keep the selection inside the *old*
+      // document range; otherwise CodeMirror can throw when the replacement is
+      // larger than the current content (for example, debugpaste dumps).
+      const anchor = Math.min(view.state.selection.main.head, value.length);
+      replaceRange(view, 0, view.state.doc.length, value, { anchor });
     },
     replaceLines(prefixFactory) {
       const { startLine, endLine } = lineRangeForSelection(view);

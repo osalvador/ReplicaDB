@@ -203,6 +203,19 @@ describe('jiraToHtml', () => {
     expect(html).toContain('console.log');
   });
 
+  it('renders {code:xml} shorthand (no language= prefix) with language class', () => {
+    const html = jiraToHtml('{code:xml}\n<root/>\n{code}');
+    expect(html).toContain('class="language-xml"');
+    expect(html).toContain('&lt;root/&gt;');
+  });
+
+  it('renders {noformat} block as <pre><code> without language', () => {
+    const html = jiraToHtml('{noformat}\nplain preformatted text\n{noformat}');
+    expect(html).toContain('<pre>');
+    expect(html).toContain('plain preformatted text');
+    expect(html).not.toContain('class="language-');
+  });
+
   it('renders bq. as a blockquote', () => {
     const html = jiraToHtml('bq. Important note here');
     expect(html).toContain('<blockquote>');
@@ -620,14 +633,14 @@ describe('convertHtmlToMarkdown (paste from Teams)', () => {
     expect(toMd(html)).toBe('| Area | Status |\n| --- | --- |\n| IDE | Ready |');
   });
 
-  it('collapses <br>-separated values inside table cells to comma-separated text', () => {
+  it('converts <br>-separated values inside table cells to HTML line-breaks', () => {
     // Regression: td.textContent was used, which concatenated values without any
-    // separator — "value1value2". The fix recurses into the cell and maps <br>→'\n',
-    // then collapses newlines to ", ".
+    // separator — "value1value2". The fix recurses into the cell and maps <br>→<br>
+    // (literal HTML in the GFM cell), preserving intentional line breaks.
     const html = '<table><tr><td>Environment</td><td>Values</td></tr>'
       + '<tr><td>PRE<br>PRO</td><td>alpha<br>beta<br>gamma</td></tr></table>';
     expect(toMd(html)).toBe(
-      '| Environment | Values |\n| --- | --- |\n| PRE, PRO | alpha, beta, gamma |'
+      '| Environment | Values |\n| --- | --- |\n| PRE<br>PRO | alpha<br>beta<br>gamma |'
     );
   });
 
@@ -644,7 +657,7 @@ describe('convertHtmlToMarkdown (paste from Teams)', () => {
       + '</tbody></table>';
     const result = toMd(html);
     expect(result).toBe(
-      '| Env | Slots |\n| --- | --- |\n| Development, Integration | slot1, slot2 |'
+      '| Env | Slots |\n| --- | --- |\n| Development<br>Integration | slot1<br>slot2 |'
     );
   });
 
@@ -672,14 +685,21 @@ describe('convertHtmlToMarkdown (paste from Teams)', () => {
     expect(toMd(html)).toBe('note\n\n![imagen](data:image/jpeg;base64,AAAB)');
   });
 
-  it('does not emit a broken link when a Teams image is only a blob reference', () => {
-    const html = '<p>note</p><img alt="imagen" itemtype="http://schema.skype.com/AMSImage" src="blob:https://teams.microsoft.com/abc">';
-    expect(toMd(html)).toBe('note\n\n*imagen*');
-  });
+    it('does not emit a broken link when a Teams image is only a blob reference', () => {
+      const html = '<p>note</p><img alt="imagen" itemtype="http://schema.skype.com/AMSImage" src="blob:https://teams.microsoft.com/abc">';
+      expect(toMd(html)).toBe('note\n\n*imagen*');
+    });
 
-  it('adds a blank line after an AMSImage so following text is not concatenated', () => {
-    // Regression: without the trailing \n\n on the img handler, the paragraph
-    // immediately after the span was glued onto the image line.
+    it('keeps Word file:// image references so the app layer can reconcile them with clipboard binaries', () => {
+      const html = '<p><img alt="inline" src="data:image/png;base64,AAAB"></p><p><img alt="local" src="file:///Users/me/AppData/Local/Temp/msohtmlclip/clip_image001.png"></p>';
+      const out = smartPasteToMarkdown({ html, plain: '' }, DomParser);
+      expect(out).toContain('![inline](data:image/png;base64,AAAB)');
+      expect(out).toContain('![local](file:///Users/me/AppData/Local/Temp/msohtmlclip/clip_image001.png)');
+    });
+
+    it('adds a blank line after an AMSImage so following text is not concatenated', () => {
+      // Regression: without the trailing \n\n on the img handler, the paragraph
+      // immediately after the span was glued onto the image line.
     const html = '<span itemtype="http://schema.skype.com/AMSImage">'
       + '<img alt="photo" src="data:image/png;base64,AAAB"></span>'
       + '<p>Caption text</p>';
@@ -719,6 +739,132 @@ describe('convertHtmlToMarkdown (paste from Teams)', () => {
       expect(line).not.toMatch(/^ /);
     });
     expect(md).toContain('03074119080-V2026');
+  });
+
+  it('strips aria-hidden anchor links from headings (generic HTML from the web)', () => {
+    // GitHub, Markup Forge and many static site generators inject
+    // <a class="anchor" href="#section" aria-hidden="true">#</a> into headings.
+    // These must be silently dropped so headings stay clean.
+    const html = '<h2><a href="#intro" aria-hidden="true">#</a>Introduction</h2><p>Body text.</p>';
+    const md = toMd(html);
+    expect(md).toContain('## Introduction');
+    expect(md).not.toContain('[#]');
+    expect(md).not.toContain('localhost');
+  });
+
+  it('converts <details>/<summary> sections from generic HTML', () => {
+    // Markup Forge's own HTML preview uses <details class="section"> with
+    // <summary> holding the heading and <div class="section-body"> for content.
+    const html = '<details>'
+      + '<summary><h2><a href="#s1" aria-hidden="true">#</a>Section One</h2></summary>'
+      + '<div class="section-body"><p>Content of section one.</p></div>'
+      + '</details>'
+      + '<details>'
+      + '<summary><h2><a href="#s2" aria-hidden="true">#</a>Section Two</h2></summary>'
+      + '<div class="section-body"><p>Content of section two.</p></div>'
+      + '</details>';
+    const md = toMd(html);
+    expect(md).toContain('## Section One');
+    expect(md).toContain('## Section Two');
+    expect(md).toContain('Content of section one.');
+    expect(md).toContain('Content of section two.');
+    expect(md).not.toContain('[#]');
+  });
+
+  it('strips GitHub permalink anchors (class=anchor, aria-label=Permalink)', () => {
+    // GitHub renders headings with an adjacent <a class="anchor" aria-label="Permalink: …">
+    // containing an SVG icon. Without stripping these produce noise:
+    // "# Title[https://github.com/…#title](https://github.com/…#title)"
+    const html = '<div class="markdown-heading">'
+      + '<h1 class="heading-element">Sender RFC</h1>'
+      + '<a id="user-content-sender-rfc" class="anchor" aria-label="Permalink: Sender RFC"'
+      + ' href="https://github.com/org/repo/blob/main/README.md#sender-rfc">'
+      + '<svg aria-hidden="true"><path d="m7.775 3.275..."></path></svg>'
+      + '</a>'
+      + '</div>'
+      + '<p>Introduction text.</p>';
+    const md = toMd(html);
+    expect(md).toContain('# Sender RFC');
+    expect(md).toContain('Introduction text.');
+    expect(md).not.toContain('https://github.com');
+    expect(md).not.toContain('[https://');
+  });
+
+  it('handles <markdown-accessiblity-table> GitHub custom element as a block container', () => {
+    // GitHub wraps tables in a custom element for accessibility. The table inside
+    // must keep its trailing blank line so the next heading does not merge into it.
+    const html = '<h2>Meta</h2>'
+      + '<markdown-accessiblity-table>'
+      + '<table><tr><th>Key</th><th>Value</th></tr><tr><td>Author</td><td>Alice</td></tr></table>'
+      + '</markdown-accessiblity-table>'
+      + '<h2>Details</h2>'
+      + '<p>Body text.</p>';
+    const md = toMd(html);
+    expect(md).toContain('## Meta');
+    expect(md).toContain('| Key | Value |');
+    expect(md).toContain('| Author | Alice |');
+    expect(md).toContain('## Details');
+    expect(md).toContain('Body text.');
+    // heading must not be glued onto the last table row (no | on the same line as ##)
+    expect(md).not.toMatch(/\|[^\n]*## Details/);
+  });
+
+  it('respects align= attributes on <th> cells for table column alignment', () => {
+    const html = '<table>'
+      + '<tr><th align="left">Name</th><th align="right">Score</th><th align="center">Grade</th><th>Notes</th></tr>'
+      + '<tr><td>Alice</td><td>95</td><td>A</td><td>top</td></tr>'
+      + '</table>';
+    const md = toMd(html);
+    expect(md).toContain(':---');   // left-aligned
+    expect(md).toContain('---:');   // right-aligned
+    expect(md).toContain(':---:');  // center-aligned
+    // neutral column (no align attr) gets plain ---
+    expect(md).toMatch(/\| --- \|/);
+  });
+
+  it('converts a GitHub RFC page HTML fragment (integration test)', () => {
+    // Realistic paste from a GitHub-rendered markdown RFC with heading + table + paragraph.
+    const html = '<div class="markdown-heading">'
+      + '<h1 class="heading-element">Sender Web Push Integration</h1>'
+      + '<a class="anchor" aria-label="Permalink: Sender Web Push Integration"'
+      + ' href="https://github.com/org/repo#sender-web-push-integration">'
+      + '<svg aria-hidden="true"><path d="m1 1 1 1"></path></svg></a>'
+      + '</div>'
+      + '<markdown-accessiblity-table>'
+      + '<table>'
+      + '<thead><tr><th align="left">Status</th><th align="left">Draft</th></tr></thead>'
+      + '<tbody>'
+      + '<tr><td><strong>Author(s)</strong></td><td>'
+      + 'Alice (<a href="mailto:alice@example.com">alice@example.com</a>)<br>'
+      + 'Bob (<a href="mailto:bob@example.com">bob@example.com</a>)'
+      + '</td></tr>'
+      + '</tbody>'
+      + '</table>'
+      + '</markdown-accessiblity-table>'
+      + '<div class="markdown-heading">'
+      + '<h2 class="heading-element">Objective</h2>'
+      + '<a class="anchor" aria-label="Permalink: Objective"'
+      + ' href="https://github.com/org/repo#objective">'
+      + '<svg aria-hidden="true"><path d="m1 1 1 1"></path></svg></a>'
+      + '</div>'
+      + '<p>This RFC describes <strong>Web Push</strong> notifications.</p>';
+    const md = toMd(html);
+    // heading structure
+    expect(md).toContain('# Sender Web Push Integration');
+    expect(md).toContain('## Objective');
+    // no permalink noise
+    expect(md).not.toContain('https://github.com');
+    // table with left-aligned separators
+    expect(md).toContain('| Status | Draft |');
+    expect(md).toContain(':---');
+    // multi-author cell uses <br> and email links are rendered as Markdown links
+    expect(md).toContain('Alice ([alice@example.com](mailto:alice@example.com))<br>Bob ([bob@example.com](mailto:bob@example.com))');
+    // paragraph content with bold
+    expect(md).toContain('**Web Push**');
+    // heading must follow the table with proper separation (not glued)
+    const headingIdx = md.indexOf('## Objective');
+    const tableEnd = md.lastIndexOf('|', headingIdx);
+    expect(md.slice(tableEnd, headingIdx)).toMatch(/\n\n/);
   });
 });
 
@@ -784,6 +930,67 @@ describe('smart paste helpers', () => {
     it('prefers rich HTML when present', () => {
       const out = smartPasteToMarkdown({ html: '<h2>Hi</h2>', plain: 'Hi' }, DomParser);
       expect(out).toBe('## Hi');
+    });
+
+    it('cleans Microsoft Word HTML into Markdown', () => {
+      const html = '<html><body><p class="MsoHeading1" style="mso-outline-level:1">Word Title</p><p class="MsoListParagraph" style="mso-list:l0 level1 lfo1"><span style="font-weight:bold">•</span> Item</p><p><span style="font-weight:bold">Bold</span> and <span style="font-style:italic">Italic</span></p></body></html>';
+      const out = smartPasteToMarkdown({ html, plain: '' }, DomParser);
+      expect(out).toContain('# Word Title');
+      expect(out).toContain('- Item');
+      expect(out).toContain('**Bold**');
+      expect(out).toContain('*Italic*');
+    });
+
+    it('converts Jira wiki markup from the clipboard into Markdown', () => {
+      const out = smartPasteToMarkdown({ plain: 'h2. Jira Title\n\n* Bullet\n# Number\n\n|| A || B ||\n| 1 | 2 |' }, DomParser);
+      expect(out).toContain('## Jira Title');
+      expect(out).toContain('- Bullet');
+      expect(out).toContain('1. Number');
+      expect(out).toContain('| A | B |');
+    });
+
+    it('converts Jira {code:language=xml} to a fenced code block', () => {
+      const plain = 'Ejemplo de dependencia Maven:\n\n{code:language=xml}\n<dependency>\n    <groupId>org.apache.tika</groupId>\n</dependency>\n{code}\n\nNOTA: Elegir el scope adecuado.';
+      const out = smartPasteToMarkdown({ plain }, DomParser);
+      expect(out).toContain('```xml');
+      expect(out).toContain('<dependency>');
+      expect(out).toContain('org.apache.tika');
+      expect(out).toContain('NOTA:');
+    });
+
+    it('converts Jira {code:xml} shorthand to a fenced code block', () => {
+      const plain = '{code:xml}\n<root/>\n{code}';
+      const out = smartPasteToMarkdown({ plain }, DomParser);
+      expect(out).toContain('```xml');
+      expect(out).toContain('<root/>');
+    });
+
+    it('converts Jira {noformat} block to a fenced code block', () => {
+      const plain = 'Some text:\n\n{noformat}\nplain preformatted\n{noformat}';
+      const out = smartPasteToMarkdown({ plain }, DomParser);
+      expect(out).toContain('```');
+      expect(out).toContain('plain preformatted');
+    });
+
+    it('normalises Jira HTML into Markdown', () => {
+      const html = '<div data-node-type="paragraph"><h2>Jira Title</h2><p><strong>Bold</strong> and <em>Italic</em></p><table><tr><td>A</td><td>B</td></tr><tr><td>1</td><td>2</td></tr></table></div>';
+      const out = smartPasteToMarkdown({ html, plain: '' }, DomParser);
+      expect(out).toContain('## Jira Title');
+      expect(out).toContain('**Bold**');
+      expect(out).toContain('*Italic*');
+      expect(out).toContain('| A | B |');
+    });
+
+    it('preserves indentation inside Jira code panels', () => {
+      const html = String.raw`<div class="code panel"><div class="codeContent panelContent"><pre class="code-bash" style="white-space: pre-wrap; overflow-wrap: normal;">curl --request GET \
+  <span class="code-quote-red">'https://example.com'</span> \
+  --header <span class="code-quote-red">'Authorization: Bearer [TOKEN]'</span>
+</pre></div></div>`;
+      const out = smartPasteToMarkdown({ html, plain: '' }, DomParser);
+      expect(out).toContain('```bash');
+      expect(out).toContain('curl --request GET \\');
+      expect(out).toContain("  'https://example.com'");
+      expect(out).toContain("  --header 'Authorization: Bearer [TOKEN]'");
     });
 
     it('converts tabular plain text to a table', () => {

@@ -59,8 +59,12 @@ const state = {
   jiraView: 'visual',
   splitPercent: 50,
   renderTimer: 0,
-  lastInput: 0
+  lastInput: 0,
+  syncSource: '',
+  skipNextPasteEvent: false
 };
+
+const CARET_SYNC_WINDOW_MS = 140;
 
 let editor = document.getElementById('editor');
 const lineNumbers = document.getElementById('lineNumbers');
@@ -263,10 +267,29 @@ function syncFilenameInput() {
   if (filenameInput.value !== state.filename) filenameInput.value = state.filename;
 }
 
+const previewSyncTargets = new WeakSet();
+let previewScrollSyncRaf = 0;
+
 function previewScroller() {
   const inner = previewInner.querySelector('.teams-sent-scroll');
   if (inner && inner.scrollHeight - inner.clientHeight > 2) return inner;
   return preview;
+}
+
+function withSyncSource(source, fn) {
+  const prev = state.syncSource;
+  state.syncSource = source;
+  try {
+    return fn();
+  } finally {
+    requestAnimationFrame(() => {
+      if (state.syncSource === source) state.syncSource = prev;
+    });
+  }
+}
+
+function shouldFollowCaret() {
+  return Date.now() - (state.lastInput || 0) < CARET_SYNC_WINDOW_MS;
 }
 
 function previewSourceContext() {
@@ -278,7 +301,7 @@ function previewSourceContext() {
   return { body, caretLine };
 }
 
-function mappedPreviewContext() {
+function activePreviewContext() {
   if (outputFormat.value === 'teams') {
     return { root: previewInner, scroller: previewScroller() };
   }
@@ -288,13 +311,26 @@ function mappedPreviewContext() {
     const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
     if (doc && scroller) return { root: doc, scroller };
   }
+  if (outputFormat.value === 'html' && state.htmlView === 'source') {
+    const code = previewInner.querySelector('.html-source-scroll');
+    if (code) return { root: previewInner, scroller: code };
+  }
   if (outputFormat.value === 'jira' && state.jiraView === 'visual') {
     const frame = previewInner.querySelector('.jira-visual-frame');
     const doc = frame && frame.contentDocument;
     const scroller = doc && (doc.scrollingElement || doc.documentElement || doc.body);
     if (doc && scroller) return { root: doc, scroller };
   }
+  if (outputFormat.value === 'jira' && state.jiraView === 'text') {
+    const code = previewInner.querySelector('.jira-text-scroll');
+    if (code) return { root: previewInner, scroller: code };
+  }
   return null;
+}
+
+function supportsMappedViewportSync() {
+  return (outputFormat.value === 'html' && state.htmlView === 'preview')
+    || (outputFormat.value === 'jira' && state.jiraView === 'visual');
 }
 
 function findMappedPreviewTarget(root, caretLine) {
@@ -336,6 +372,125 @@ function previewRatioFromScroll() {
   return editorMax > 0 ? editor.scrollTop / editorMax : 0;
 }
 
+function previewAnchorLineFromViewport() {
+  if (!markdownEditor || !markdownEditor.getVisibleLineRange) return null;
+  const range = markdownEditor.getVisibleLineRange();
+  if (!range) return null;
+  const span = Math.max(0, range.to - range.from);
+  return Math.max(range.from, Math.min(range.to, Math.round(range.from + span * 0.2)));
+}
+
+function previewCenterLineFromScrollContext() {
+  const ctx = activePreviewContext();
+  if (!ctx || !supportsMappedViewportSync()) return null;
+  const scroller = ctx.scroller;
+  const centerY = scroller.clientHeight / 2;
+  const candidates = Array.from(ctx.root.querySelectorAll('.preview-map-block[data-src-start][data-src-end]'));
+  let best = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const element of candidates) {
+    const startLine = Number(element.getAttribute('data-src-start'));
+    const endLine = Number(element.getAttribute('data-src-end'));
+    if (!Number.isFinite(startLine) || !Number.isFinite(endLine)) continue;
+    const rect = element.getBoundingClientRect();
+    const doc = scroller.ownerDocument;
+    const isRootScroller = !!doc && (scroller === doc.scrollingElement || scroller === doc.documentElement || scroller === doc.body);
+    const top = isRootScroller ? rect.top : rect.top - scroller.getBoundingClientRect().top;
+    const bottom = top + rect.height;
+    let distance = 0;
+    let localRatio = 0.5;
+
+    if (centerY < top) {
+      distance = top - centerY;
+      localRatio = 0;
+    } else if (centerY > bottom) {
+      distance = centerY - bottom;
+      localRatio = 1;
+    } else {
+      const height = Math.max(1, rect.height);
+      localRatio = (centerY - top) / height;
+      const lineCount = Math.max(1, endLine - startLine + 1);
+      return Math.max(startLine, Math.min(endLine, Math.round(startLine + localRatio * (lineCount - 1))));
+    }
+
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = { startLine, endLine, localRatio };
+    }
+  }
+
+  if (!best) return null;
+  const lineCount = Math.max(1, best.endLine - best.startLine + 1);
+  return Math.max(best.startLine, Math.min(best.endLine, Math.round(best.startLine + best.localRatio * (lineCount - 1))));
+}
+
+function handlePreviewScroll() {
+  if (!shouldRenderPreview(editor.value)) return;
+  if (state.syncSource === 'editor') return;
+  if (!markdownEditor) return;
+
+  const ctx = activePreviewContext();
+  if (!ctx) return;
+
+  withSyncSource('preview', () => {
+    if (supportsMappedViewportSync()) {
+      const centerLine = previewCenterLineFromScrollContext();
+      if (centerLine != null && markdownEditor.scrollToLine) {
+        markdownEditor.scrollToLine(centerLine);
+        return;
+      }
+    }
+
+    const scroller = ctx.scroller;
+    const max = scroller.scrollHeight - scroller.clientHeight;
+    const ratio = max > 0 ? scroller.scrollTop / max : 0;
+    if (markdownEditor.scrollToRatio) markdownEditor.scrollToRatio(ratio);
+  });
+}
+
+function schedulePreviewScrollSync() {
+  if (state.syncSource === 'editor') return;
+  if (previewScrollSyncRaf) return;
+  previewScrollSyncRaf = requestAnimationFrame(() => {
+    previewScrollSyncRaf = 0;
+    handlePreviewScroll();
+  });
+}
+
+function bindPreviewScrollTarget(target) {
+  if (!target || typeof target.addEventListener !== 'function' || previewSyncTargets.has(target)) return;
+  previewSyncTargets.add(target);
+  target.addEventListener('scroll', schedulePreviewScrollSync, { passive: true });
+  target.addEventListener('wheel', schedulePreviewScrollSync, { passive: true });
+}
+
+function bindActivePreviewScroller() {
+  bindPreviewScrollTarget(preview);
+  const teams = previewInner.querySelector('.teams-sent-scroll');
+  if (teams) bindPreviewScrollTarget(teams);
+  const htmlSource = previewInner.querySelector('.html-source-scroll');
+  if (htmlSource) bindPreviewScrollTarget(htmlSource);
+  const htmlFrame = previewInner.querySelector('.html-preview-frame');
+  if (htmlFrame) bindPreviewScrollTarget(htmlFrame);
+  if (htmlFrame && htmlFrame.contentDocument) {
+    const doc = htmlFrame.contentDocument;
+    bindPreviewScrollTarget(doc);
+    bindPreviewScrollTarget(doc.scrollingElement || doc.documentElement || doc.body);
+    if (doc.defaultView) bindPreviewScrollTarget(doc.defaultView);
+  }
+  const jiraText = previewInner.querySelector('.jira-text-scroll');
+  if (jiraText) bindPreviewScrollTarget(jiraText);
+  const jiraFrame = previewInner.querySelector('.jira-visual-frame');
+  if (jiraFrame) bindPreviewScrollTarget(jiraFrame);
+  if (jiraFrame && jiraFrame.contentDocument) {
+    const doc = jiraFrame.contentDocument;
+    bindPreviewScrollTarget(doc);
+    bindPreviewScrollTarget(doc.scrollingElement || doc.documentElement || doc.body);
+    if (doc.defaultView) bindPreviewScrollTarget(doc.defaultView);
+  }
+}
+
 function previewCenteredRatioFromCaret(scroller) {
   const { body, caretLine } = previewSourceContext();
   const totalLines = Math.max(1, body.split('\n').length - 1);
@@ -344,24 +499,52 @@ function previewCenteredRatioFromCaret(scroller) {
   return Math.max(0, Math.min(1, ratio - (viewportFraction / 2)));
 }
 
+function keepPreviewTargetVisible(scroller, element, localRatio = 0.5) {
+  const targetRect = element.getBoundingClientRect();
+  const viewportHeight = scroller.clientHeight;
+  const upperBand = viewportHeight * 0.2;
+  const lowerBand = viewportHeight * 0.8;
+  const doc = scroller.ownerDocument;
+  const isRootScroller = !!doc && (scroller === doc.scrollingElement || scroller === doc.documentElement || scroller === doc.body);
+  const anchorY = isRootScroller
+    ? targetRect.top + targetRect.height * localRatio
+    : (targetRect.top - scroller.getBoundingClientRect().top) + targetRect.height * localRatio;
+  let next = scroller.scrollTop;
+
+  if (anchorY < upperBand) {
+    next += anchorY - upperBand;
+  } else if (anchorY > lowerBand) {
+    next += anchorY - lowerBand;
+  } else {
+    return true;
+  }
+
+  const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+  scroller.scrollTop = Math.max(0, Math.min(max, next));
+  return true;
+}
+
 function syncPreviewScroll(useCaret = false) {
-  if (useCaret) {
-    const ctx = mappedPreviewContext();
-    const { caretLine } = previewSourceContext();
-    if (ctx) {
-      const target = findMappedPreviewTarget(ctx.root, caretLine);
-      if (target) {
-        const scrollerRect = ctx.scroller.getBoundingClientRect();
-        const targetRect = target.element.getBoundingClientRect();
-        const anchorY = targetRect.top + targetRect.height * target.localRatio;
-        const next = ctx.scroller.scrollTop + (anchorY - scrollerRect.top) - (ctx.scroller.clientHeight / 2);
-        const max = Math.max(0, ctx.scroller.scrollHeight - ctx.scroller.clientHeight);
-        ctx.scroller.scrollTop = Math.max(0, Math.min(max, next));
+  const ctx = activePreviewContext();
+  if (!useCaret && ctx && supportsMappedViewportSync()) {
+    const anchorLine = previewAnchorLineFromViewport();
+    if (anchorLine != null) {
+      const target = findMappedPreviewTarget(ctx.root, anchorLine);
+      if (target && keepPreviewTargetVisible(ctx.scroller, target.element, target.localRatio)) {
         return;
       }
     }
   }
-  const scroller = previewScroller();
+  if (useCaret) {
+    const { caretLine } = previewSourceContext();
+    if (ctx) {
+      const target = findMappedPreviewTarget(ctx.root, caretLine);
+      if (target && keepPreviewTargetVisible(ctx.scroller, target.element, target.localRatio)) {
+        return;
+      }
+    }
+  }
+  const scroller = ctx ? ctx.scroller : previewScroller();
   const ratio = useCaret ? previewCenteredRatioFromCaret(scroller) : previewRatioFromScroll();
   const scrollerMax = scroller.scrollHeight - scroller.clientHeight;
   scroller.scrollTop = ratio * scrollerMax;
@@ -369,11 +552,11 @@ function syncPreviewScroll(useCaret = false) {
 
 function syncPlainPreviewToCaret() {
   if (!(outputFormat.value === 'jira' && state.jiraView === 'text') && !(outputFormat.value === 'html' && state.htmlView === 'source')) return;
-  const code = previewInner.querySelector('.preview-output-code');
-  if (!code) return;
-  const ratio = previewCenteredRatioFromCaret(code);
-  const max = Math.max(0, code.scrollHeight - code.clientHeight);
-  code.scrollTop = ratio * max;
+  const ctx = activePreviewContext();
+  const scroller = ctx ? ctx.scroller : preview;
+  const ratio = previewCenteredRatioFromCaret(scroller);
+  const max = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+  scroller.scrollTop = ratio * max;
 }
 
 function updateIframeDocument(frame, html) {
@@ -395,8 +578,16 @@ function updateIframeDocument(frame, html) {
 function bindHtmlShell(shell) {
   shell.querySelectorAll('[data-html-view]').forEach(btn => {
     btn.addEventListener('click', () => {
+      const editorScrollTop = markdownEditor ? markdownEditor.getScrollTop() : 0;
       state.htmlView = btn.dataset.htmlView;
-      renderPreview(editor.value);
+      renderPreview(editor.value, { syncScroll: false });
+      requestAnimationFrame(() => {
+        if (markdownEditor && typeof markdownEditor.scrollToRatio === 'function') {
+          const max = Math.max(0, markdownEditor.scrollDOM.scrollHeight - markdownEditor.scrollDOM.clientHeight);
+          const ratio = max > 0 ? editorScrollTop / max : 0;
+          markdownEditor.scrollToRatio(ratio);
+        }
+      });
     });
   });
 }
@@ -411,9 +602,14 @@ function ensureHtmlShell() {
     + `<button type="button" class="html-view-btn" data-html-view="source">Source</button>`
     + `</div>`
     + `<iframe class="html-preview-frame" sandbox="allow-same-origin" title="Rendered HTML preview"></iframe>`
-    + `<pre class="preview-output-code" hidden><code></code></pre>`;
+    + `<div class="html-source-scroll" hidden><pre class="preview-output-code"><code></code></pre></div>`;
   previewInner.replaceChildren(shell);
   bindHtmlShell(shell);
+  shell.querySelector('.html-preview-frame').addEventListener('load', () => {
+    bindActivePreviewScroller();
+    if (outputFormat.value !== 'html' || state.htmlView !== 'preview') return;
+    requestAnimationFrame(() => syncPreviewScroll(shouldFollowCaret()));
+  });
   return shell;
 }
 
@@ -430,8 +626,16 @@ function renderJiraMappedBody(markdown, { sourceMap = false } = {}) {
 function bindJiraShell(shell) {
   shell.querySelectorAll('[data-jira-view]').forEach(btn => {
     btn.addEventListener('click', () => {
+      const editorScrollTop = markdownEditor ? markdownEditor.getScrollTop() : 0;
       state.jiraView = btn.dataset.jiraView;
-      renderPreview(editor.value);
+      renderPreview(editor.value, { syncScroll: false });
+      requestAnimationFrame(() => {
+        if (markdownEditor && typeof markdownEditor.scrollToRatio === 'function') {
+          const max = Math.max(0, markdownEditor.scrollDOM.scrollHeight - markdownEditor.scrollDOM.clientHeight);
+          const ratio = max > 0 ? editorScrollTop / max : 0;
+          markdownEditor.scrollToRatio(ratio);
+        }
+      });
     });
   });
 }
@@ -446,9 +650,14 @@ function ensureJiraShell() {
     + `<button type="button" class="jira-view-btn" data-jira-view="text">Text</button>`
     + `</div>`
     + `<iframe class="jira-visual-frame" sandbox="allow-same-origin" title="Jira visual preview"></iframe>`
-    + `<pre class="preview-output-code" hidden><code></code></pre>`;
+    + `<div class="jira-text-scroll" hidden><pre class="preview-output-code"><code></code></pre></div>`;
   previewInner.replaceChildren(shell);
   bindJiraShell(shell);
+  shell.querySelector('.jira-visual-frame').addEventListener('load', () => {
+    bindActivePreviewScroller();
+    if (outputFormat.value !== 'jira' || state.jiraView !== 'visual') return;
+    requestAnimationFrame(() => syncPreviewScroll(shouldFollowCaret()));
+  });
   return shell;
 }
 
@@ -461,6 +670,7 @@ function renderHtmlOutput(markdown) {
   const shell = ensureHtmlShell();
   const frame = shell.querySelector('.html-preview-frame');
   const source = shell.querySelector('.preview-output-code');
+  const sourceScroll = shell.querySelector('.html-source-scroll');
   const code = source.querySelector('code');
   shell.querySelectorAll('[data-html-view]').forEach(btn => {
     const active = btn.dataset.htmlView === state.htmlView;
@@ -469,6 +679,7 @@ function renderHtmlOutput(markdown) {
   });
   frame.hidden = state.htmlView !== 'preview';
   source.hidden = state.htmlView !== 'source';
+  if (sourceScroll) sourceScroll.hidden = state.htmlView !== 'source';
   if (state.htmlView === 'source') {
     code.textContent = doc;
   } else {
@@ -524,6 +735,7 @@ function renderJiraOutput(markdown) {
   const shell = ensureJiraShell();
   const frame = shell.querySelector('.jira-visual-frame');
   const source = shell.querySelector('.preview-output-code');
+  const sourceScroll = shell.querySelector('.jira-text-scroll');
   const code = source.querySelector('code');
   shell.querySelectorAll('[data-jira-view]').forEach(btn => {
     const active = btn.dataset.jiraView === state.jiraView;
@@ -532,6 +744,7 @@ function renderJiraOutput(markdown) {
   });
   frame.hidden = state.jiraView !== 'visual';
   source.hidden = state.jiraView !== 'text';
+  if (sourceScroll) sourceScroll.hidden = state.jiraView !== 'text';
   if (state.jiraView === 'text') {
     code.textContent = jiraText;
   } else {
@@ -539,7 +752,7 @@ function renderJiraOutput(markdown) {
   }
 }
 
-function renderPreview(markdown) {
+function renderPreview(markdown, { syncScroll = true } = {}) {
   if (!shouldRenderPreview(markdown)) {
     updateCopyLabel();
     return;
@@ -548,6 +761,7 @@ function renderPreview(markdown) {
   const format = outputFormat.value;
   const source = stripFrontmatter(markdown);
   previewInner.className = `preview-inner mode-${format}`;
+  preview.classList.toggle('preview-no-scroll', false);
   if (format === 'html') {
     renderHtmlOutput(source);
   } else if (format === 'jira') {
@@ -556,8 +770,11 @@ function renderPreview(markdown) {
     previewInner.innerHTML = renderMarkdownForTeams(source, { sourceMap: true });
   }
   updateCopyLabel();
-  syncPreviewScroll(document.activeElement === editor);
-  syncPlainPreviewToCaret();
+  bindActivePreviewScroller();
+  if (syncScroll) {
+    syncPreviewScroll(shouldFollowCaret());
+    syncPlainPreviewToCaret();
+  }
 }
 
 function scheduleUpdate() {
@@ -585,9 +802,18 @@ function setViewMode(mode) {
 }
 
 
+// Generation counter used by loadFile to discard results from superseded calls.
+// If loadFile is triggered twice in rapid succession (e.g. a race between the
+// workspace drop listener and the editor onDrop hook), only the latest call
+// commits its result to the editor.
+let loadFileGeneration = 0;
+
 async function loadFile(file) {
+  const myGeneration = ++loadFileGeneration;
+  if (markdownEditor.getValue() && !confirm(`Replace current content with "${file.name}"?`)) return;
   try {
     const text = await file.text();
+    if (myGeneration !== loadFileGeneration) return; // superseded by a newer call
     markdownEditor.setValue(importFileToMarkdown(text, file.name || ''));
     state.filename = normalizeFilename(file.name || DEFAULT_FILENAME);
     scheduleUpdate();
@@ -746,8 +972,9 @@ function countMissingImages(html) {
       if (/schema\.skype\.com\/Emoji/i.test(itemtype)) return false;
       const src = img.getAttribute('src') || '';
       const targetSrc = img.getAttribute('target-src') || '';
-      // Usable if we have a data: or http(s) source; only blob:/empty is missing.
-      const usable = [src, targetSrc].some(u => u && !u.startsWith('blob:'));
+      // Usable if we have a network/data URL; local file:/blob: refs still need
+      // clipboard data to become portable in the app.
+      const usable = [src, targetSrc].some(u => /^(?:https?:|data:)/i.test(u));
       return !usable;
     }).length;
   } catch {
@@ -755,45 +982,71 @@ function countMissingImages(html) {
   }
 }
 
+function reconcileClipboardImages(markdown, imageDataUrls = []) {
+  const source = String(markdown || '');
+  if (!imageDataUrls.length) return source;
+
+  const remaining = [...imageDataUrls];
+  const imagePattern = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]+)")?\)/g;
+  let rebuilt = '';
+  let lastIndex = 0;
+  let matched = false;
+
+  for (const match of source.matchAll(imagePattern)) {
+    matched = true;
+    const [full, alt, url, title] = match;
+    rebuilt += source.slice(lastIndex, match.index);
+    let nextUrl = url;
+    if (/^(?:blob:|file:)/i.test(url) && remaining.length) {
+      nextUrl = remaining.shift();
+    }
+    rebuilt += `![${alt}](${nextUrl}${title ? ` "${title}"` : ''})`;
+    lastIndex = match.index + full.length;
+  }
+
+  if (!matched) {
+    const suffix = remaining.map(url => `![](${url})`).join('\n\n');
+    if (!suffix) return source.trim();
+    const prefix = source.replace(/\s+$/, '');
+    return prefix ? `${prefix}\n\n${suffix}` : suffix;
+  }
+
+  rebuilt += source.slice(lastIndex);
+  return rebuilt.replace(/\n{3,}/g, '\n\n').trim();
+}
+
 // Turn rich clipboard content (HTML, plain text and/or binary images copied
-// from Teams) into Markdown and insert it at the caret. Images that ship as
+// from the clipboard) into Markdown and insert it at the caret. Images that ship as
 // binary clipboard flavours are embedded as data URIs so they stay offline.
 // `replace` truncates the document first (used by the toolbar button).
 async function importRichClipboard({ html, plain, imageDataUrls = [] }, { replace = false } = {}) {
   // Use smart conversion: HTML → faithful rich Markdown; plain-only →
-  // auto-detect TSV/CSV tables, code blocks, or clean prose.
+  // auto-detect TSV/CSV tables, Jira wiki markup, code blocks, or clean prose.
   let markdown = smartPasteToMarkdown({ html: html || '', plain: plain || '' });
-  if (imageDataUrls.length) {
-    // Teams "Copy image" delivers the picture twice: as a binary clipboard
-    // flavour (full quality) AND inlined as a data: URI inside the HTML.
-    // Drop the HTML-derived data: image(s) to avoid duplicates and keep the
-    // higher-quality binary capture.
-    markdown = markdown
-      .replace(/!\[[^\]]*\]\(data:[^)]*\)/g, '')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
-    const imgs = imageDataUrls.map(url => `![](${url})`).join('\n\n');
-    markdown = markdown ? `${markdown}\n\n${imgs}` : imgs;
-  }
+  markdown = reconcileClipboardImages(markdown, imageDataUrls);
   if (!markdown.trim()) {
     showToast('Clipboard is empty');
     return;
   }
-  // Always leave a trailing blank line so the caret lands on a fresh line
-  // after pasting. This avoids being stranded at the end of a very long line
-  // (e.g. an inline image data URI), which would force horizontal scrolling.
-  const markdownWithBreak = `${markdown.replace(/\s+$/, '')}\n\n`;
+  // Always end with a single newline so the caret lands on a fresh line after
+  // pasting. A double newline (\n\n) was used before but produced an unwanted
+  // blank line at the end of every paste, which the user had to manually delete.
+  const markdownWithBreak = `${markdown.replace(/\s+$/, '')}\n`;
   if (replace) {
-    replaceWholeDocument(markdownWithBreak, state.filename, 'Pasted from Teams');
+    replaceWholeDocument(markdownWithBreak, state.filename, 'Pasted as Markdown');
   } else {
-    insertTextAtCursor(markdownWithBreak);
+    const selection = markdownEditor.getSelection();
+    markdownEditor.replaceRange(selection.from, selection.to, markdownWithBreak, {
+      anchor: selection.from + markdownWithBreak.length
+    });
+    scheduleUpdate();
   }
-  // Warn when Teams referenced an image it did not actually copy.
-  const missing = imageDataUrls.length ? 0 : countMissingImages(html);
+  // Warn when the clipboard referenced an image it did not actually copy.
+  const missing = Math.max(0, countMissingImages(html) - imageDataUrls.length);
   if (missing > 0) {
-    showToast('Image not copied by Teams — right-click it and choose "Copy image", then paste again');
+    showToast('Image not copied by the source app — copy the image again and paste once more');
   } else {
-    showToast(replace ? 'Pasted from Teams' : 'Pasted from Teams at cursor');
+    showToast(replace ? 'Pasted as Markdown' : 'Pasted as Markdown at cursor');
   }
 }
 
@@ -827,7 +1080,7 @@ async function pasteFromTeams() {
 
 // Diagnostic capture: dump the RAW clipboard flavours (text/html, text/plain,
 // image/*) so we can inspect exactly what an app like Teams writes. Enabled
-// with ?debugpaste in the URL or by Alt+clicking "Paste from Teams". The raw
+// with ?debugpaste in the URL or by Alt+clicking the paste button. The raw
 // dump is written into the editor so it can be copied and shared verbatim.
 const PASTE_DEBUG = /[?&]debugpaste\b/.test(location.search);
 
@@ -866,28 +1119,61 @@ function capturePasteDiagnostics(payload) {
 
 // Intercept native paste so rich HTML or images become Markdown instead of
 // the browser's default plain-text/raw paste.
-async function handleEditorPaste(event) {
+function handleEditorPaste(event) {
   const data = event.clipboardData;
-  if (!data) return;
+  if (!data) return false;
+  if (state.skipNextPasteEvent) {
+    state.skipNextPasteEvent = false;
+    // Return true so the paste event is suppressed (preventDefault + stopImmediatePropagation
+    // via the editor-cm.js listener). pasteFromTeams() called from onKeydown handles the
+    // actual insertion via navigator.clipboard.read().
+    return true;
+  }
   const html = data.getData('text/html');
   const imageFiles = Array.from(data.files || data.items || [])
     .filter(entry => entry && entry.type && entry.type.startsWith('image/'));
-  if (!html && !imageFiles.length && !PASTE_DEBUG) return; // let the default plain-text paste happen
+  if (!html && !imageFiles.length && !PASTE_DEBUG) return false;
   event.preventDefault();
+  event.stopImmediatePropagation();
   const plain = data.getData('text/plain');
-  const imageDataUrls = [];
-  for (const entry of imageFiles) {
-    const blob = typeof entry.getAsFile === 'function' ? entry.getAsFile() : entry;
-    if (blob) {
-      try { imageDataUrls.push(await blobToDataUrl(blob)); } catch { /* ignore */ }
+  void (async () => {
+    const imageDataUrls = [];
+    for (const entry of imageFiles) {
+      const blob = typeof entry.getAsFile === 'function' ? entry.getAsFile() : entry;
+      if (blob) {
+        try { imageDataUrls.push(await blobToDataUrl(blob)); } catch { /* ignore */ }
+      }
     }
-  }
-  if (PASTE_DEBUG) {
-    capturePasteDiagnostics({ html, plain, types: Array.from(data.types || []), imageDataUrls });
-    return;
-  }
-  await importRichClipboard({ html, plain, imageDataUrls });
+    if (PASTE_DEBUG) {
+      capturePasteDiagnostics({ html, plain, types: Array.from(data.types || []), imageDataUrls });
+      return;
+    }
+    await importRichClipboard({ html, plain, imageDataUrls });
+  })();
+  return true;
 }
+
+// Intercept file drops on the editor surface (capture phase, runs before
+// CodeMirror's own drop handler). Without this, CM reads the raw file text and
+// inserts it inline; the workspace drop listener also fires → double load.
+// Returning true causes editor-cm.js to call preventDefault + stopImmediatePropagation,
+// which blocks CM's built-in file-drop path AND stops the event from bubbling to
+// the workspace drop listener. We therefore replicate the workspace side-effects
+// (drag visual state reset) and call loadFile ourselves.
+function handleEditorDrop(event) {
+  const dt = event.dataTransfer;
+  if (!dt) return false;
+  const types = dt.types;
+  if (!types || Array.prototype.indexOf.call(types, 'Files') === -1) return false;
+  // Reset workspace drag-over visual state — the workspace 'drop' listener won't
+  // fire because stopImmediatePropagation prevents the event from bubbling to it.
+  dragDepth = 0;
+  workspace.classList.remove('drag-over');
+  const file = dt.files && dt.files[0];
+  if (file) void loadFile(file);
+  return true; // tell editor-cm.js: preventDefault + stopImmediatePropagation
+}
+
 
 function showToast(message) {
   toast.textContent = message;
@@ -999,6 +1285,7 @@ if (slashMenu) {
 }
 let scrollSyncRaf = 0;
 function handleEditorScroll() {
+  if (state.syncSource === 'preview') return;
   syncEditorScroll();
   if (!shouldRenderPreview(editor.value)) return;
   if (scrollSyncRaf) return;
@@ -1006,8 +1293,10 @@ function handleEditorScroll() {
     scrollSyncRaf = 0;
     // If the scroll was triggered by typing (editor auto-scrolls to keep the
     // caret visible), follow the caret instead of the raw pixel ratio.
-    syncPreviewScroll(Date.now() - (state.lastInput || 0) < 200);
-    syncPlainPreviewToCaret();
+    withSyncSource('editor', () => {
+      syncPreviewScroll(shouldFollowCaret());
+      syncPlainPreviewToCaret();
+    });
   });
 }
 document.querySelectorAll('[data-md-action]').forEach(button => {
@@ -1075,7 +1364,7 @@ if (filenameInput) {
 modeButtons.split.addEventListener('click', () => setViewMode('split'));
 modeButtons.editor.addEventListener('click', () => setViewMode('editor'));
 modeButtons.preview.addEventListener('click', () => setViewMode('preview'));
-outputTabs.forEach(tab => tab.addEventListener('click', () => { outputFormat.value = tab.dataset.outputFormat; renderPreview(markdownEditor.getValue()); }));
+outputTabs.forEach(tab => tab.addEventListener('click', () => { outputFormat.value = tab.dataset.outputFormat; renderPreview(markdownEditor.getValue(), { syncScroll: false, preserveEditorScroll: true }); }));
 if (splitHandle) {
   splitHandle.addEventListener('pointerdown', startSplitResize);
   splitHandle.addEventListener('keydown', event => {
@@ -1127,6 +1416,25 @@ markdownEditor = createMarkdownEditor(editorHost, {
   onBlur() {
     setTimeout(closeSlashMenu, 120);
   },
+  onBeforeInput(event) {
+    // Block native paste insertion — pasteFromTeams handles it via clipboard API.
+    if (event.inputType === 'insertFromPaste') return true;
+    // Block browser rich-text formatting events (formatBold, formatItalic, etc.).
+    // Our capture-phase keydown handler already applied the equivalent Markdown
+    // wrapping via wrapSelection(), so the browser's own formatting must not run.
+    if (event.inputType.startsWith('format')) return true;
+    // Block Enter (insertParagraph) when the slash command menu is open — the
+    // capture-phase keydown handler closes the menu and applies the snippet, so
+    // CM's default newline insertion must not run concurrently.
+    if (event.inputType === 'insertParagraph' && slashState.open) return true;
+    return false;
+  },
+  onPaste(event) {
+    return handleEditorPaste(event);
+  },
+  onDrop(event) {
+    return handleEditorDrop(event);
+  },
   onKeydown(event) {
     if (slashState.open) {
       if (event.key === 'ArrowDown') {
@@ -1154,6 +1462,13 @@ markdownEditor = createMarkdownEditor(editorHost, {
     }
     if ((event.metaKey || event.ctrlKey) && !event.altKey) {
       const key = event.key.toLowerCase();
+      if (key === 'v') {
+        event.preventDefault();
+        event.stopPropagation();
+        state.skipNextPasteEvent = true;
+        void pasteFromTeams();
+        return true;
+      }
       const action = key === 'b' ? 'bold' : key === 'i' ? 'italic' : key === 'k' ? 'link' : null;
       if (action) {
         event.preventDefault();
@@ -1164,10 +1479,23 @@ markdownEditor = createMarkdownEditor(editorHost, {
     return false;
   }
 });
-markdownEditor.inputDom.addEventListener('paste', handleEditorPaste);
+editor = markdownEditor.inputDom;
+// Capture-phase keydown listener on the editor's contentDOM.
+// Must use capture (true) + stopPropagation so this fires before CodeMirror's
+// own keymap handlers (which run in the bubbling phase on view.dom). Without
+// this, CM's defaultKeymap processes Enter and inserts a newline before our
+// slash-command handler can intercept it, and onChange fires closing the slash
+// menu so our domEventHandlers.keydown handler never sees it open.
 markdownEditor.inputDom.addEventListener('keydown', event => {
   if ((event.metaKey || event.ctrlKey) && !event.altKey) {
     const key = event.key.toLowerCase();
+    if (key === 'v') {
+      event.preventDefault();
+      event.stopPropagation();
+      state.skipNextPasteEvent = true;
+      void pasteFromTeams();
+      return;
+    }
     const action = key === 'b' ? 'bold' : key === 'i' ? 'italic' : key === 'k' ? 'link' : null;
     if (action) {
       event.preventDefault();
@@ -1197,7 +1525,6 @@ markdownEditor.inputDom.addEventListener('keydown', event => {
     closeSlashMenu();
   }
 }, true);
-editor = markdownEditor.inputDom;
 Object.assign(globalThis, { __markupForgeEditor: markdownEditor });
 state.filename = normalizeFilename(localStorage.getItem(FILE_KEY) || state.filename);
 syncFilenameInput();

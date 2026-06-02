@@ -407,9 +407,12 @@ export function jiraToHtml(jiraText) {
     // Blank line: just advance (paragraph boundaries are handled below)
     if (!trimmed) { i += 1; continue; }
 
-    // {code} … {code}
+    // {code} … {code}  — supports:
+    //   {code}                   → no language
+    //   {code:language=xml}      → explicit language= prefix
+    //   {code:xml}               → shorthand without language= prefix
     if (/^\{code/.test(trimmed)) {
-      const langMatch = trimmed.match(/\{code(?::language=(\w+))?\}/);
+      const langMatch = trimmed.match(/\{code(?::(?:language=)?(\w+))?\}/);
       const lang = langMatch ? (langMatch[1] || '') : '';
       const code = [];
       i += 1;
@@ -419,6 +422,19 @@ export function jiraToHtml(jiraText) {
       }
       if (i < lines.length) i += 1; // consume closing {code}
       out.push(`<pre><code${lang ? ` class="language-${lang}"` : ''}>${code.join('\n')}</code></pre>`);
+      continue;
+    }
+
+    // {noformat} … {noformat}  — preformatted plain text, no syntax highlight
+    if (trimmed === '{noformat}') {
+      const code = [];
+      i += 1;
+      while (i < lines.length && lines[i].trim() !== '{noformat}') {
+        code.push(esc(lines[i]));
+        i += 1;
+      }
+      if (i < lines.length) i += 1; // consume closing {noformat}
+      out.push(`<pre><code>${code.join('\n')}</code></pre>`);
       continue;
     }
 
@@ -1043,21 +1059,135 @@ export function convertMarkdownToTeamsHtml(markdown) {
 const NODE_TYPE_TEXT = 3;
 const NODE_TYPE_ELEMENT = 1;
 
-function htmlNodeToMarkdown(node) {
+function parseInlineStyle(style) {
+  const out = {};
+  String(style || '').split(';').forEach(part => {
+    const idx = part.indexOf(':');
+    if (idx < 0) return;
+    const key = part.slice(0, idx).trim().toLowerCase();
+    const value = part.slice(idx + 1).trim().toLowerCase();
+    if (key) out[key] = value;
+  });
+  return out;
+}
+
+function sanitizeClipboardHtml(html) {
+  return String(html || '')
+    .replace(/<\?xml[\s\S]*?\?>/gi, '')
+    .replace(/<script\b[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, '')
+    .replace(/<!--([\s\S]*?)-->/g, '')
+    .replace(/<!\[if[\s\S]*?<!\[endif\]>/gi, '')
+    .replace(/<\/?o:p\b[^>]*>/gi, '');
+}
+
+function isWordHtml(html) {
+  const text = String(html || '');
+  return /\bMso[a-zA-Z0-9_-]*\b/.test(text)
+    || /\bmso-[a-z-]+:/i.test(text)
+    || /\bxmlns:(?:o|w|m)=/i.test(text)
+    || /Microsoft Word/i.test(text)
+    || /<\/?o:p\b/i.test(text);
+}
+
+function isJiraHtml(html) {
+  const text = String(html || '');
+  return /\bdata-node-type\b/i.test(text)
+    || /\bdata-layout\b/i.test(text)
+    || /\bak-renderer\b/i.test(text)
+    || /\bAtlassian\b/i.test(text)
+    || /\bac:[a-z-]+\b/i.test(text)
+    || /\bri:[a-z-]+\b/i.test(text);
+}
+
+function looksLikeJiraWiki(text) {
+  const value = String(text || '').replace(/\r\n?/g, '\n');
+  if (!value.trim()) return false;
+  return /^\s*h[1-6]\.\s+\S+/m.test(value)
+    || /^\s*bq\.\s+\S+/m.test(value)
+    || /^\s*\|\|.*\|\|\s*$/m.test(value)
+    // {code}, {code:language=xml}, {code:xml} (shorthand without language= prefix)
+    || /\{code(?::[^}]*)?\}/.test(value)
+    // {noformat} preformatted blocks
+    || /\{noformat\}/.test(value)
+    || /\[[^\]\n]+\|[^\]\n]+\]/.test(value)
+    || /!https?:\/\/[^!\s]+!/.test(value)
+    || /!data:[^!\s]+!/.test(value)
+    || /\{\{[^}\n]+\}\}/.test(value)
+    || /\\\\/.test(value);
+}
+
+function detectWordHeadingLevel(node, innerText) {
+  const className = String(node.getAttribute('class') || '');
+  const classMatch = className.match(/\bMsoHeading([1-6])\b/i) || className.match(/\bHeading([1-6])\b/i);
+  if (classMatch) return Number(classMatch[1]);
+  if (/\bMsoTitle\b/i.test(className)) return 1;
+  if (/\bMsoSubtitle\b/i.test(className)) return 2;
+
+  const style = parseInlineStyle(node.getAttribute('style') || '');
+  const outline = style['mso-outline-level'] || '';
+  const outlineMatch = outline.match(/(\d+)/);
+  if (outlineMatch) return Math.min(6, Math.max(1, Number(outlineMatch[1]) + 1));
+
+  const text = String(innerText || '').replace(/\s+/g, ' ').trim();
+  if (!text || text.length > 180) return 0;
+
+  const candidates = [node, ...Array.from(node.querySelectorAll('span, font'))];
+  for (const el of candidates) {
+    const styles = parseInlineStyle(el.getAttribute('style') || '');
+    const fontSize = parseFloat(String(styles['font-size'] || '').replace(/[^\d.]/g, ''));
+    const weight = styles['font-weight'] || styles['mso-bidi-font-weight'] || '';
+    if (!Number.isFinite(fontSize)) continue;
+    if (!/(bold|[7-9]00)/.test(weight)) continue;
+    if (fontSize >= 28) return 1;
+    if (fontSize >= 24) return 2;
+    if (fontSize >= 20) return 3;
+    if (fontSize >= 18) return 4;
+    if (fontSize >= 16) return 5;
+  }
+  return 0;
+}
+
+function detectWordListInfo(node, innerText) {
+  const className = String(node.getAttribute('class') || '');
+  const style = parseInlineStyle(node.getAttribute('style') || '');
+  if (!/MsoListParagraph/i.test(className) && !String(node.getAttribute('style') || '').match(/mso-list:/i)) return null;
+  const levelMatch = String(node.getAttribute('style') || '').match(/level(\d+)/i);
+  const level = Math.max(1, Number(levelMatch ? levelMatch[1] : 1) || 1);
+  const clean = String(innerText || '').replace(/\u00a0/g, ' ').trim();
+  const ordered = clean.match(/^((?:\(?\d+[\.)])|(?:[a-zA-Z][\.)])|(?:[ivxlcdm]+[\.)]))\s+(.*)$/i);
+  if (ordered) return { level, marker: '1.', text: ordered[2].trim() };
+  const bullet = clean.match(/^([•◦▪·‣–—*+]+)\s+(.*)$/);
+  if (bullet) return { level, marker: '-', text: bullet[2].trim() };
+  const styleWeight = style['font-weight'] || style['mso-bidi-font-weight'] || '';
+  if (/mso-list/i.test(String(node.getAttribute('style') || '')) || /bold|[7-9]00/.test(styleWeight)) {
+    return { level, marker: '-', text: clean.replace(/^([•◦▪·‣–—*+]+)\s*/, '').trim() };
+  }
+  return { level, marker: '-', text: clean };
+}
+
+function htmlNodeToMarkdown(node, source = 'generic') {
   if (node.nodeType === NODE_TYPE_TEXT) return node.textContent.replace(/\s+/g, ' ');
   if (node.nodeType !== NODE_TYPE_ELEMENT) return '';
   const tag = node.tagName.toLowerCase();
-  const child = () => Array.from(node.childNodes).map(htmlNodeToMarkdown).join('').trim();
+  const child = () => Array.from(node.childNodes).map(childNode => htmlNodeToMarkdown(childNode, source)).join('').trim();
   if (tag === 'br') return '\n';
   if (tag === 'strong' || tag === 'b') return `**${child()}**`;
   if (tag === 'em' || tag === 'i') return `*${child()}*`;
   if (tag === 's' || tag === 'strike' || tag === 'del') return `~~${child()}~~`;
   if (tag === 'code') return '`' + child().replace(/`/g, '\\`') + '`';
+  if (source === 'jira') {
+    if (tag === 'ri:url') return node.getAttribute('ri:value') || node.getAttribute('value') || child();
+    if (tag === 'ri:page') return node.getAttribute('ri:content-title') || node.getAttribute('content-title') || child();
+    if (tag === 'ri:issue') return node.getAttribute('ri:key') || node.getAttribute('key') || child();
+    if (tag === 'ri:user') return node.getAttribute('ri:account-id') || node.getAttribute('account-id') || child();
+    if (tag.startsWith('ac:') || tag.startsWith('ri:')) return child();
+  }
   if (tag === 'pre') {
     const codeEl = node.querySelector('code');
     const classes = [...Array.from(node.classList || []), ...Array.from((codeEl && codeEl.classList) || [])];
-    const langClass = classes.find(c => c.startsWith('language-')) || '';
-    const lang = langClass.replace('language-', '') || 'text';
+    const langClass = classes.find(c => c.startsWith('language-')) || classes.find(c => /^code-[a-z0-9_-]+$/i.test(c)) || '';
+    const lang = langClass.replace(/^(language-|code-)/i, '') || 'text';
     return '\n```' + lang + '\n' + node.textContent.replace(/^\n+|\n+$/g, '') + '\n```\n\n';
   }
   if (tag === 'img') {
@@ -1080,17 +1210,44 @@ function htmlNodeToMarkdown(node) {
     return `![${alt}](${usable})\n\n`;
   }
   if (tag === 'a') {
+    // Skip decorative anchor links — two common patterns:
+    // 1. aria-hidden="true": Markup Forge / generic sites inject `<a aria-hidden="true">#</a>`
+    //    next to headings as a copy-link affordance visible only on hover.
+    // 2. class="anchor" with aria-label="Permalink: …": GitHub's heading anchors contain
+    //    an invisible SVG icon; converting them produces noise like
+    //    "## [https://github.com/…#section](https://github.com/…#section)Title".
+    if (node.getAttribute('aria-hidden') === 'true') return '';
+    if (node.classList.contains('anchor') &&
+        (node.getAttribute('aria-label') || '').startsWith('Permalink')) return '';
     const href = node.getAttribute('href') || '';
     const text = child() || href;
     return href ? `[${text}](${href})` : text;
   }
+  // <details> is a collapsible section: treat it as a block container so
+  // sibling sections are separated. <summary> is the visible heading/title
+  // row — pass its children through transparently.
+  // IMPORTANT: do NOT use child() here — its .trim() strips the structural
+  // \n\n that heading/block handlers append, causing heading+content to
+  // merge onto the same line ("## TitleParagraph" instead of "## Title\n\nParagraph").
+  if (tag === 'details') {
+    const raw = Array.from(node.childNodes).map(childNode => htmlNodeToMarkdown(childNode, source)).join('');
+    const inner = normalizeMarkdownWhitespace(raw);
+    return inner ? inner + '\n\n' : '';
+  }
+  if (tag === 'summary') {
+    return Array.from(node.childNodes).map(childNode => htmlNodeToMarkdown(childNode, source)).join('');
+  }
   if (/^h[1-6]$/.test(tag)) return '\n' + '#'.repeat(Number(tag[1])) + ' ' + child() + '\n\n';
   if (tag === 'p' || tag === 'div') {
-    // Normalise whitespace injected by "<br> text" combos: Teams HTML often
-    // produces `<br> next line` where the leading space is formatting noise, not
-    // meaningful content.  HTML flow layout never preserves leading whitespace
-    // after a line break, so stripping it here is always correct.
-    const inner = child().replace(/\n[ \t]+/g, '\n');
+    if (source === 'word') {
+      const headingLevel = detectWordHeadingLevel(node, child());
+      if (headingLevel) return `\n${'#'.repeat(headingLevel)} ${child().replace(/^\s+|\s+$/g, '')}\n\n`;
+      const listInfo = detectWordListInfo(node, child());
+      if (listInfo) return `${'  '.repeat(listInfo.level - 1)}${listInfo.marker} ${listInfo.text}\n`;
+    }
+    // Normalise whitespace injected by "<br> text" combos, but preserve fenced
+    // code indentation when Jira wraps <pre> blocks in generic div containers.
+    const inner = normalizeMarkdownWhitespace(child());
     return inner ? inner + '\n\n' : '';
   }
   if (tag === 'blockquote') {
@@ -1117,28 +1274,56 @@ function htmlNodeToMarkdown(node) {
     )).join('') + '\n';
   }
   if (tag === 'table') {
-    const rows = Array.from(node.querySelectorAll('tr')).map(tr =>
+    const allRows = Array.from(node.querySelectorAll('tr'));
+    // Capture column alignment from the first row's cell align attributes.
+    const firstRowCells = allRows.length > 0 ? Array.from(allRows[0].children) : [];
+    const rows = allRows.map(tr =>
       Array.from(tr.children).map(td => {
         // Recurse into the cell so nested elements (e.g. <br>, <strong>) are
-        // handled correctly. Then collapse newlines to ", " because Markdown
-        // table cells cannot contain real newlines.
+        // handled correctly. <br> elements become literal <br> tags (valid in GFM
+        // table cells) rather than commas, preserving intentional line breaks such
+        // as multi-author lists.
         const inner = Array.from(td.childNodes).map(htmlNodeToMarkdown).join('').trim();
         return inner
-          .replace(/\n+/g, ', ')          // newlines → comma-separated values
-          .replace(/,\s*,\s*/g, ', ')     // collapse double commas
-          .replace(/^,\s*|,\s*$/g, '')    // strip leading/trailing commas
+          .replace(/\n+/g, '<br>')         // newlines → HTML line-break (valid in GFM cells)
+          .replace(/(<br>)+/g, '<br>')      // collapse consecutive breaks
+          .replace(/^<br>|<br>$/g, '')      // strip leading/trailing breaks
           .trim();
       })
     );
     if (!rows.length) return '';
     const header = rows[0];
-    const separator = header.map(() => '---');
+    const separator = header.map((_, i) => {
+      const align = firstRowCells[i]?.getAttribute('align') || '';
+      if (align === 'center') return ':---:';
+      if (align === 'right') return '---:';
+      if (align === 'left') return ':---';
+      return '---';
+    });
     const body = rows.slice(1);
     return '\n' + [header, separator, ...body].map(row => `| ${row.join(' | ')} |`).join('\n') + '\n\n';
+  }
+  // <markdown-accessiblity-table> is a GitHub custom element that wraps <table>
+  // for accessibility. Treat it as a transparent block container so the table
+  // inside keeps its trailing \n\n and does not run into the next heading.
+  if (tag === 'markdown-accessiblity-table') {
+    const inner = child();
+    return inner ? inner + '\n\n' : '';
   }
   // <span> is Teams' structural wrapper (one per message) as well as an inline
   // element. Concatenate children WITHOUT trimming so paragraph breaks between
   // stacked messages survive; the final cleanup collapses excess blank lines.
+  if (source === 'word' && (tag === 'span' || tag === 'font')) {
+    const styles = parseInlineStyle(node.getAttribute('style') || '');
+    let inner = Array.from(node.childNodes).map(childNode => htmlNodeToMarkdown(childNode, source)).join('').trim();
+    const bold = /bold|[7-9]00/.test((styles['font-weight'] || '') + ' ' + (styles['mso-bidi-font-weight'] || ''));
+    const italic = /italic|oblique/.test((styles['font-style'] || '') + ' ' + (styles['mso-bidi-font-style'] || ''));
+    const strike = /line-through/.test((styles['text-decoration'] || '') + ' ' + (styles['text-decoration-line'] || ''));
+    if (strike) inner = `~~${inner}~~`;
+    if (italic) inner = `*${inner}*`;
+    if (bold) inner = `**${inner}**`;
+    return inner;
+  }
   if (tag === 'span') return Array.from(node.childNodes).map(htmlNodeToMarkdown).join('');
   return child();
 }
@@ -1161,19 +1346,40 @@ function parseHtmlBody(html, domParser) {
   return doc.body;
 }
 
+// Preserve whitespace inside fenced code blocks while still cleaning up soft
+// break noise around normal paragraphs and quotes.
+function normalizeMarkdownWhitespace(text) {
+  return String(text || '')
+    .split(/(```[\s\S]*?```)/g)
+    .map(part => {
+      if (part.startsWith('```')) return part;
+      return part
+        .replace(/\u00a0/g, ' ')
+        .replace(/\n[ \t]+/g, '\n')
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/(^|\n)[ \t]+>/g, '$1>')
+        .replace(/\n{3,}/g, '\n\n');
+    })
+    .join('');
+}
+
 // Convert rich clipboard HTML into Markdown. Falls back to the plain-text
 // flavour when no HTML is present. `domParser` lets tests inject jsdom's parser.
-export function convertHtmlToMarkdown(html, plainFallback = '', domParser) {
+export function convertHtmlToMarkdown(html, plainFallback = '', domParser, source = 'auto') {
   if (!html) return plainFallback || '';
-  const body = parseHtmlBody(html, domParser);
-  return Array.from(body.childNodes)
-    .map(htmlNodeToMarkdown)
-    .join('')
-    .replace(/\u00a0/g, ' ')          // normalise non-breaking spaces from Teams
-    .replace(/[ \t]+\n/g, '\n')       // strip trailing whitespace
-    .replace(/(^|\n)[ \t]+>/g, '$1>') // de-indent quote markers
-    .replace(/\n{3,}/g, '\n\n')
+  const sanitized = sanitizeClipboardHtml(html);
+  const detectedSource = source === 'auto'
+    ? (isWordHtml(sanitized) ? 'word' : isJiraHtml(sanitized) ? 'jira' : 'generic')
+    : source;
+  const body = parseHtmlBody(sanitized, domParser);
+  return normalizeMarkdownWhitespace(Array.from(body.childNodes)
+    .map(node => htmlNodeToMarkdown(node, detectedSource))
+    .join(''))
     .trim();
+}
+
+function convertJiraWikiToMarkdown(text, domParser) {
+  return convertHtmlToMarkdown(jiraToHtml(String(text || '')), '', domParser, 'jira');
 }
 
 // ---------------------------------------------------------------------------
@@ -1365,11 +1571,16 @@ function convertPlainBlock(block) {
 // into sections separated by blank lines and convert each section independently
 // so a mixed paste (CSV + TSV + already-formatted Markdown) is handled correctly.
 export function smartPasteToMarkdown({ html = '', plain = '' } = {}, domParser) {
-  if (html && html.trim()) {
-    const md = convertHtmlToMarkdown(html, plain, domParser);
+  const normalizedHtml = String(html || '').replace(/\r\n?/g, '\n');
+  const normalizedPlain = String(plain || '').replace(/\r\n?/g, '\n');
+  if (normalizedHtml.trim()) {
+    const md = convertHtmlToMarkdown(normalizedHtml, normalizedPlain, domParser, 'auto');
     if (md && md.trim()) return md;
   }
-  const text = String(plain || '').replace(/\r\n?/g, '\n');
+  const text = normalizedPlain;
+  if (looksLikeJiraWiki(text)) {
+    return convertJiraWikiToMarkdown(text, domParser);
+  }
   // Split on runs of blank lines so each section gets its own conversion.
   const blocks = text.split(/\n{2,}/).map(b => b.trim()).filter(b => b.length > 0);
   if (blocks.length === 0) return cleanPlainTextToMarkdown(text);
