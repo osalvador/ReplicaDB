@@ -1,3 +1,89 @@
+## Roadmap validado de Markup Forge
+
+Este bloque refleja el estado real del código en `docs/markdown/`. La visión original del documento sigue abajo como referencia histórica.
+
+### Ya implementado
+
+- [x] Editor Markdown principal con CodeMirror, toolbar, atajos `Cmd/Ctrl+B`, `Cmd/Ctrl+I` y `Cmd/Ctrl+K`, undo/redo nativo, line numbers y syntax highlighting.
+- [x] Layout tipo IDE local con modos `Split`, `Editor` y `Preview`.
+- [x] Live Preview con pestañas `Teams`, `Jira` y `HTML`.
+- [x] Copy adaptado al tab activo.
+- [x] Importación de `.md`, `.markdown`, `.txt`, `.html` y `.csv`.
+- [x] `Paste as Markdown` para HTML rico, TSV/CSV, texto plano e imágenes.
+- [x] Abrir archivo, descargar `.md`, `Load sample` y `Clear` con confirmación.
+- [x] Autosave en `localStorage` y restauración al recargar.
+- [x] Drag & drop de archivos al workspace.
+- [x] Markdown como fuente de verdad.
+- [x] HTML navegable seguro generado desde Markdown.
+- [x] Salidas Jira y Teams basadas en Markdown.
+- [x] Export ZIP `Source + Artifact`.
+- [x] PWA offline con `manifest.webmanifest` y `sw.js`.
+- [x] Estadísticas básicas del documento.
+- [x] Slash commands básicos como `/table` y `/callout`.
+
+### Parcial
+
+- [~] Smart paste: funciona bien para contenido rico y tablas, pero todavía falta una importación dedicada para Word y Jira.
+- [~] HTML → Markdown limpio: existe para los formatos soportados por la importación actual.
+- [~] Tabla inteligente: hay parsing/render/import de tablas, pero no reparación/export avanzado.
+
+### Pendiente priorizado
+
+#### P0
+
+1. Refinar smart ingestion para Word y Jira.
+2. Optimizar el buscador del Markdown para `Cmd/Ctrl+F`.
+3. Corregir el color de selección del editor para que el texto seleccionado siga siendo legible.
+
+#### P1
+
+4. Tabla inteligente avanzada.
+5. Templates reales por caso de uso.
+6. Snippets con variables.
+7. Linter Markdown.
+8. Formatter Markdown.
+9. Diff entre Markdown origen y salida.
+10. Preview por destino.
+11. Exportación avanzada (`.pdf`, `.docx`, `.txt`, `.json`, ZIP ampliado).
+
+#### P2
+
+12. Importación avanzada.
+13. Historial local con búsqueda.
+14. Workspace local.
+15. Accessibility quick check.
+16. Token cost estimator.
+17. Format comparator.
+18. Template + Data export.
+19. Noisy diff detector.
+20. Safe HTML policy profiles.
+21. Privacy mode visible.
+
+#### P3
+
+22. Document Recipes.
+23. AI Output Cleanup.
+24. IA opcional explícita.
+25. Prompt/Agent Profile Packs.
+26. PR Review Report.
+27. Stakeholder Report.
+28. Architecture / ADR Mode.
+29. Mermaid y diagramas.
+30. Keyboard-first UX completa.
+31. Búsqueda y reemplazo avanzada.
+32. Outline / Document Navigator.
+33. Folding de secciones.
+34. Frontmatter Manager.
+35. Assets Manager.
+36. Clipboard Output Manager.
+
+### Notas
+
+- `Command Palette` no se prioriza porque fue retirada de la visión del producto.
+- El inspector de documento no aporta valor suficiente para la versión actual y queda fuera.
+
+---
+
 Perfecto. Partiendo de tu nueva dirección, el producto debería dejar de parecer “una colección de conversores” y pasar a ser:
 
 Markup Forge: un IDE de Markdown con una única fuente editable y múltiples salidas controladas.

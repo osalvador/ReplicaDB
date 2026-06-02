@@ -1,4 +1,4 @@
-const CACHE_NAME = 'markup-forge-ide-v88';
+const CACHE_NAME = 'markup-forge-ide-v89';
 const ASSETS = [
   './converter.html',
   './converter-core.js',
