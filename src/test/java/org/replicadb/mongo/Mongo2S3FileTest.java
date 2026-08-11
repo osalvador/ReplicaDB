@@ -6,7 +6,6 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import org.apache.commons.cli.ParseException;
 import org.bson.Document;
-import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ToolOptions;
@@ -35,7 +34,6 @@ class Mongo2S3FileTest {
     private String mongoDatabaseName;
     private AmazonS3 s3Client;
 
-    @Rule
     public static ReplicadbMongodbContainer mongoContainer = ReplicadbMongodbContainer.getInstance();
 
     private static ReplicadbLocalStackContainer localstack;

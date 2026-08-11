@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9/openjdk-11-runtime
+FROM registry.access.redhat.com/ubi9/openjdk-17-runtime
 LABEL maintainer Oscar Salvador Magallanes
 LABEL maintainer Francesco Zanti <francesco@tekapp.it> 
 

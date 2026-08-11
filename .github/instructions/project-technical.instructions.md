@@ -17,7 +17,7 @@ applyTo: '**'
 - **Connection Lifecycle**: Acquire on job start, release on completion (no connection pooling in Phase 1)
 
 **Thread-Based Parallelism**
-- **Why**: Avoids external framework dependencies (Hadoop, Spark), deployable anywhere Java 11+ runs
+- **Why**: Avoids external framework dependencies (Hadoop, Spark), deployable anywhere Java 17+ runs
 - **Model**: Main thread spawns N worker threads (ExecutorService), each with dedicated JDBC connection
 - **Partition Strategy**: Database-native hash functions (`ORA_HASH`, `HASH`) ensure even distribution
 

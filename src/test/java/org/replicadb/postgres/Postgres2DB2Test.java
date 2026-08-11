@@ -3,7 +3,6 @@ package org.replicadb.postgres;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
@@ -35,9 +34,7 @@ class Postgres2DB2Test {
     private Connection db2Conn;
     private Connection postgresConn;
 
-    @Rule
     public static PostgreSQLContainer<ReplicadbPostgresqlContainer> postgres = ReplicadbPostgresqlContainer.getInstance();
-    @Rule
     public static Db2Container db2 = ReplicadbDB2Container.getInstance();
 
 

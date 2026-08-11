@@ -1,7 +1,6 @@
 package org.replicadb.mariadb;
 
 import org.apache.commons.cli.ParseException;
-import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.apache.logging.log4j.LogManager;
@@ -36,7 +35,6 @@ class MariaDB2CsvFileTest {
 
     private Connection mariadbConn;
 
-    @Rule
     public static MariaDBContainer<ReplicadbMariaDBContainer> mariadb = ReplicadbMariaDBContainer.getInstance();
 
     @BeforeAll

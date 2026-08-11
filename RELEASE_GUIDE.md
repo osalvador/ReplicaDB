@@ -313,7 +313,7 @@ git show v0.16.0
 - Git (version 2.0+)
 - Bash shell
 - Maven 3.6+
-- Java 11+
+- Java 17+
 
 ### CI/CD (GitHub Actions)
 

@@ -4,7 +4,6 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import org.apache.commons.cli.ParseException;
 import org.bson.Document;
-import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ToolOptions;
@@ -32,10 +31,8 @@ class Mongo2SqlserverTest {
     private String mongoDatabaseName;
     private Connection sqlserverConn;
 
-    @Rule
     public static ReplicadbMongodbContainer mongoContainer = ReplicadbMongodbContainer.getInstance();
 
-    @Rule
     public static MSSQLServerContainer<ReplicadbSqlserverContainer> sqlserver = ReplicadbSqlserverContainer.getInstance();
 
     @BeforeAll

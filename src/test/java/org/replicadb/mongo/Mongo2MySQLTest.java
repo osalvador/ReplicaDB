@@ -4,7 +4,6 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import org.apache.commons.cli.ParseException;
 import org.bson.Document;
-import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
@@ -33,10 +32,8 @@ class Mongo2MySQLTest {
     private String mongoDatabaseName;
     private Connection mysqlConn;
 
-    @Rule
     public static ReplicadbMongodbContainer mongoContainer = ReplicadbMongodbContainer.getInstance();
 
-    @Rule
     public static MySQLContainer<ReplicadbMysqlContainer> mysql = ReplicadbMysqlContainer.getInstance();
 
     @BeforeAll

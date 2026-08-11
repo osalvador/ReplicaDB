@@ -5,7 +5,6 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ToolOptions;
@@ -36,7 +35,6 @@ class MariaDB2S3FileTest {
     private Connection mariadbConn;
     private AmazonS3 s3Client;
 
-    @Rule
     public static MariaDBContainer<ReplicadbMariaDBContainer> mariadb = ReplicadbMariaDBContainer.getInstance();
 
     private static ReplicadbLocalStackContainer localstack;

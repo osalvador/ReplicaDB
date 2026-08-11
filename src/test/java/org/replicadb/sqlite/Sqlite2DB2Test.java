@@ -1,7 +1,6 @@
 package org.replicadb.sqlite;
 
 import org.apache.commons.cli.ParseException;
-import org.junit.Rule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -65,9 +64,7 @@ class Sqlite2DB2Test {
     private Connection sqliteConn;
     private Connection db2Conn;
 
-    @Rule
     public static ReplicadbSqliteFakeContainer sqlite = ReplicadbSqliteFakeContainer.getInstance();
-    @Rule
     public static Db2Container db2 = ReplicadbDB2Container.getInstance();
 
     @BeforeAll

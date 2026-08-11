@@ -3,7 +3,6 @@ package org.replicadb.sqlserver;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
@@ -30,7 +29,6 @@ class Sqlserver2OracleTest {
     private Connection sqlserverConn;
     private Connection oracleConn;
 
-    @Rule
     public static MSSQLServerContainer<ReplicadbSqlserverContainer> sqlserver = ReplicadbSqlserverContainer.getInstance();
     private static ReplicadbOracleContainer oracle;
 

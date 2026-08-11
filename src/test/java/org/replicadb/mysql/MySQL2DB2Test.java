@@ -3,7 +3,6 @@ package org.replicadb.mysql;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Rule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -44,10 +43,8 @@ class MySQL2DB2Test {
     private Connection mysqlConn;
     private Connection db2Conn;
 
-    @Rule
     public static MySQLContainer<ReplicadbMysqlContainer> mysql = ReplicadbMysqlContainer.getInstance();
 
-    @Rule
     public static Db2Container db2 = ReplicadbDB2Container.getInstance();
 
     @BeforeAll

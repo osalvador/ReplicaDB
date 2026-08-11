@@ -71,9 +71,9 @@ Before installing ReplicaDB, ensure you have:
 
 ### System Requirements
 
-ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Standard Edition (SE) or Java Development Kit (JDK) Standard Edition (SE) version 11 or above. The minimum system requirements are:
+ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Standard Edition (SE) or Java Development Kit (JDK) Standard Edition (SE) version 17 or above. The minimum system requirements are:
 
-*   Java SE Runtime Environment 11 or above
+*   Java SE Runtime Environment 17 or above
 *   Memory - 256 MB minimum, 1 GB recommended for large datasets
 
 ### Install

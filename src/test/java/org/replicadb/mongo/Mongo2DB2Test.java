@@ -5,7 +5,6 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import org.apache.commons.cli.ParseException;
 import org.bson.Document;
-import org.junit.Rule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -48,10 +47,8 @@ class Mongo2DB2Test {
     private String mongoDatabaseName;
     private Connection db2Conn;
 
-    @Rule
     public static ReplicadbMongodbContainer mongoContainer = ReplicadbMongodbContainer.getInstance();
 
-    @Rule
     public static Db2Container db2 = ReplicadbDB2Container.getInstance();
 
     @BeforeAll

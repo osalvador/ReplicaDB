@@ -3,7 +3,6 @@ package org.replicadb.mysql;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ToolOptions;
@@ -29,10 +28,8 @@ class MySQL2SqliteTest {
     private Connection mysqlConn;
     private Connection sqliteConn;
 
-    @Rule
     public static MySQLContainer<ReplicadbMysqlContainer> mysql = ReplicadbMysqlContainer.getInstance();
 
-    @Rule
     public static ReplicadbSqliteFakeContainer sqlite = ReplicadbSqliteFakeContainer.getInstance();
 
     @BeforeAll
