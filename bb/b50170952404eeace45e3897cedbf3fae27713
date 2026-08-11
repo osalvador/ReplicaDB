@@ -1,0 +1,45 @@
+.ai/archive/PR-242.plan.md
+  s_c792a5c6429164::t_436a1ea380fc94 1-188
+.github/copilot-instructions.md
+  s_c792a5c6429164::t_4652dfbe0fc37f 21,31
+.github/instructions/project-technical.instructions.md
+  s_c792a5c6429164::t_4d6f4db1f0b65d 20
+.github/workflows/CI_Release.yml
+  s_c792a5c6429164::t_f59d7e71f9f13b 24,27
+.github/workflows/CT_Push.yml
+  s_c792a5c6429164::t_70f10edeefb757 42,45,69,72,95,98
+.github/workflows/codeql-analysis.yml
+  s_c792a5c6429164::t_67f2388dbfecf9 44-49
+.github/workflows/oracle-lob-tests.yml
+  s_c792a5c6429164::t_8aa21088b5de70 17,20
+Containerfile
+  s_c792a5c6429164::t_efb5d43897b3b2 1
+Dockerfile
+  s_c792a5c6429164::t_ea70228ab2fb56 1,3-5,11
+README.md
+  s_c792a5c6429164::t_e0f7abd593fa71 69,71
+RELEASE_GUIDE.md
+  s_c792a5c6429164::t_9d1d352bc88014 316
+bin/configure-replicadb
+  s_c792a5c6429164::t_782389cdff21ba 117
+docs/index.md
+  s_c792a5c6429164::t_e9c4abc0c72961 74,76
+pom.xml
+  s_c792a5c6429164::t_83067aea6b45b4 16-17,19,41,47,53,415,431-440
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "bbb50170952404eeace45e3897cedbf3fae27713",
+  "prompts": {},
+  "sessions": {
+    "s_c792a5c6429164": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "f1f4cdb5-6541-497e-95f6-682d2182b34a",
+        "model": "gpt-5.3-codex"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
