@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.replicadb.utils.ScriptRunner;
 import org.testcontainers.containers.Db2Container;
 import org.testcontainers.utility.DockerImageName;
+import org.testcontainers.utility.TestcontainersConfiguration;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -89,7 +90,7 @@ public class ReplicadbDB2Container extends Db2Container {
             LOG.info("Initializing DB2 container with image: {}", IMAGE_NAME);
             container = new ReplicadbDB2Container();
             // Enable container reuse for faster subsequent test runs (experimental feature)
-            container.withReuse(true);
+            container.withReuse(TestcontainersConfiguration.getInstance().environmentSupportsReuse());
             LOG.info("Starting DB2 container (this may take 3-4 minutes on first run, 8-12 min on ARM64)...");
             container.start();
             LOG.info("DB2 container started successfully");

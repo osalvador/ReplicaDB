@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.replicadb.utils.ScriptRunner;
 import org.testcontainers.containers.MSSQLServerContainer;
 import org.testcontainers.utility.DockerImageName;
+import org.testcontainers.utility.TestcontainersConfiguration;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -72,7 +73,7 @@ public class ReplicadbSqlserverContainer extends MSSQLServerContainer<ReplicadbS
 			try {
 				LOG.info("Initializing SQL Server container with image: {}", IMAGE_NAME);
 				container = new ReplicadbSqlserverContainer();
-				container.withReuse(true);
+				container.withReuse(TestcontainersConfiguration.getInstance().environmentSupportsReuse());
 				LOG.info("Starting SQL Server container...");
 				container.start();
 				LOG.info("SQL Server container started successfully");

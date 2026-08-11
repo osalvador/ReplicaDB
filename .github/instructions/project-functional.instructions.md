@@ -1,136 +1,33 @@
 ---
-applyTo: '**'
+applyTo: '**/*.{java,properties,conf}'
 ---
 
-# Business Context and Functional Scope
+# ReplicaDB Functional Rules
 
-## Business Problem Domain
+## Replication Contract
+- Preserve the CLI and options-file contract when changing behavior. Add flags and properties compatibly; do not silently rename or remove existing options.
+- Keep ReplicaDB focused on point-to-point bulk transfer. Scheduling, complex transformations, CDC, and data quality belong to external tools unless the request explicitly changes scope.
+- Preserve source-to-sink data meaning, precision, nullability, and supported type behavior. Fail explicitly when a conversion or capability is not supported.
 
-**Enterprise Data Mobility Challenge**: Organizations struggle to move data between heterogeneous databases for analytics, migrations, and synchronization. Traditional approaches have critical limitations:
-- **ETL platforms** (Talend, Pentaho) require custom development per job, increasing maintenance burden
-- **Database-specific tools** (Oracle GoldenGate, SQL Server Replication) lock you into vendor ecosystems
-- **Hadoop-dependent tools** (Sqoop) require massive infrastructure even for simple transfers
-- **CDC solutions** (SymmetricDS) install triggers in source databases, creating intrusive overhead
+## Mode Semantics
+- Treat `complete`, `incremental`, and `complete-atomic` as distinct user-visible contracts.
+- Complete loads the sink table; incremental and complete-atomic may use staging and manager-specific merge/cleanup behavior.
+- Require primary-key and staging assumptions only where the concrete sink manager needs them, and document unsupported combinations in the capability matrix.
 
-**What Businesses Need**: Simple, fast, non-intrusive bulk data transfer between ANY two databases without custom code, database agents, or heavyweight infrastructure.
+## Capability Boundaries
+- Do not generalize one manager's behavior to every source or sink. Check `SupportedManagers`, `ManagerFactory`, the concrete manager, and the README matrix before changing a capability.
+- Keep file, MongoDB, S3, and Kafka semantics explicit because they do not share SQL table or staging behavior.
+- Treat `ARCHITECTURE_DECISIONS.md` as future evolution guidance. Do not describe Spring Boot, REST, WebSocket, Quartz, Redis, or Kubernetes as implemented unless source code and tests support it.
 
-## Functional Scope and Boundaries
+## Configuration and Security
+- Keep credentials in environment-expanded configuration and avoid exposing them in command history, logs, telemetry, tests, or generated documentation.
+- Preserve `ToolOptions` defaults and the options-file-to-command-line precedence when adding configuration.
+- Treat user-supplied table names, column expressions, filters, queries, and connection parameters as untrusted input at the manager boundary.
 
-**What ReplicaDB Does**:
-- **Bulk data replication** between 15+ heterogeneous database types (RDBMS, NoSQL, object storage, streaming)
-- **Schema-aware transfers** preserving data types, nullability, and precision across different database dialects
-- **Parallel data transfer** splitting large tables into partitions for concurrent processing
-- **Incremental synchronization** using timestamp or sequence columns to transfer only new/changed data
-- **Network-constrained transfers** with bandwidth throttling for production environments
-- **Table-to-table transfers** with optional column mapping and WHERE clause filtering
+## Anti-Patterns
+- Do not claim universal support from a single database test or manager implementation.
+- Do not make a Java-version change in only one of Maven, CI, launchers, container images, or written requirements.
+- Do not add application code while regenerating AI context or project instructions.
 
-**What ReplicaDB Does NOT Do** (by design):
-- Complex data transformations (use dbt, Apache Spark, or ETL platforms)
-- Job scheduling and orchestration (use cron, Jenkins, Airflow, or Kubernetes CronJobs)
-- Real-time change data capture (use Debezium, SymmetricDS, or database-native CDC)
-- Data quality validation (use Great Expectations, dbt tests, or custom validation scripts)
-- Data lineage tracking (use Apache Atlas, OpenLineage, or data catalog tools)
-
-**Boundary Rationale**: ReplicaDB excels at ONE thing—moving data efficiently. External tools handle scheduling, transformation, and validation **because** separation of concerns enables best-of-breed integration.
-
-## Primary Business Workflows
-
-### 1. Initial Database Migration (Complete Mode)
-**Business Context**: Moving entire database to new platform (Oracle → PostgreSQL, SQL Server → MySQL)
-**Flow**: 
-1. DBA identifies source tables and target database
-2. ReplicaDB truncates sink tables (or creates if missing)
-3. Parallel threads extract partitioned source data via hash functions
-4. Each thread inserts directly into sink database
-5. Optional: Disable sink indexes during transfer, rebuild after completion
-
-**Why This Matters**: Organizations avoid months of custom migration scripts. Example: 10TB Oracle database migrated to PostgreSQL in 6 hours with 8 parallel jobs.
-
-### 2. Incremental Data Synchronization (Incremental Mode)
-**Business Context**: Daily/hourly sync of new records (e.g., transaction logs, event streams)
-**Flow**:
-1. Previous sync recorded `MAX(updated_at)` timestamp
-2. ReplicaDB queries `WHERE updated_at > last_sync_timestamp`
-3. New records inserted, existing records updated/merged based on primary keys
-4. New sync timestamp persisted for next run
-
-**Why This Matters**: Businesses keep analytics databases current without complex CDC infrastructure. Example: Hourly sync of customer orders from production MySQL to data warehouse.
-
-### 3. Cross-Database Analytics Export (Complete-Atomic Mode)
-**Business Context**: Export production data to analytics platform without downtime risk
-**Flow**:
-1. ReplicaDB creates staging table with temporary name
-2. Data transferred to staging table (production untouched)
-3. Transaction commits: staging table atomically renamed to target table
-4. Rollback on failure: staging table dropped, target unchanged
-
-**Why This Matters**: Analytics teams get fresh data snapshots without impacting production queries or risking partial data states.
-
-## Business Rules and Constraints
-
-**Parallelism Rules**:
-- **Jobs parameter** (`--jobs=4`) controls concurrency **because** database connection limits and CPU cores constrain scalability
-- **Partition strategy** uses database-native hash functions **because** cross-database portability requires standard SQL compatibility
-- **Row-based partitioning** (not byte-based) **because** database cursors operate on rows, not bytes
-
-**Data Type Mapping Rules**:
-- **Preserve precision** when possible (Oracle NUMBER(10,2) → PostgreSQL NUMERIC(10,2))
-- **Fail explicitly** on incompatible types (Oracle SDO_GEOMETRY → PostgreSQL without PostGIS)
-- **Lossy conversions forbidden** without explicit user configuration **because** silent data corruption violates trust
-
-**Connection Management Rules**:
-- **Source connections**: Read-only, auto-commit disabled, configurable fetch size **because** large result sets require cursor streaming
-- **Sink connections**: Auto-commit disabled, batch inserts enabled **because** transaction overhead dominates small insert performance
-
-## Domain Concepts and Entities
-
-**Replication Job**: Configuration defining source, sink, mode, and parallelism for a single table transfer
-**Manager**: Database-specific adapter handling JDBC dialects, type mappings, and performance optimizations
-**Mode**: Execution strategy (complete, incremental, complete-atomic) determining how data is written to sink
-**Partition**: Subset of source table rows assigned to a single thread based on hash function output
-**Staging Table**: Temporary sink table used in atomic mode to avoid partial data visibility
-
-## Information and Event Flows
-
-**Configuration Flow**:
-- CLI arguments → `ToolOptions` parser → Property validation → Manager instantiation
-- Configuration files support environment variable substitution (`${DB_PASSWORD}`) for credential management
-
-**Data Flow (Parallel Execution)**:
-1. **Main thread**: Analyzes source table, calculates partition boundaries
-2. **Partition creation**: Generates N WHERE clauses based on hash function ranges (e.g., `WHERE ORA_HASH(rowid, 3) = 0`)
-3. **Worker threads**: Each opens source connection, executes partitioned SELECT, streams ResultSet to sink
-4. **Sink insertion**: Batched INSERTs or database-native bulk APIs (PostgreSQL COPY, SQL Server Bulk Insert)
-5. **Completion**: All threads join, final row counts validated, connections closed
-
-**Error Propagation**: First thread exception cancels remaining threads, rolls back sink transaction, exits with non-zero status **because** partial data states are unacceptable.
-
-## Business Quality Requirements
-
-**Performance Targets** (driving technical choices):
-- **Million+ row tables**: Sub-10 minute transfers with 4-8 parallel jobs
-- **Billion+ row tables**: Hours, not days (network bandwidth typically bottleneck, not CPU)
-- **Cross-datacenter**: Bandwidth throttling prevents saturation of shared links
-
-**Data Consistency Requirements**:
-- **Complete mode**: Snapshot consistency (source data at job start time)
-- **Incremental mode**: No lost records between syncs (idempotent based on timestamps/sequences)
-- **Atomic mode**: All-or-nothing visibility in sink database
-
-**Operational Requirements** (why CLI-first design):
-- **Zero-dependency deployment**: Single JAR file, no application server
-- **Embeddable**: Docker containers, Kubernetes Jobs, Lambda functions
-- **Exit codes**: Standard Unix conventions (0=success, non-zero=failure) for scripting integration
-- **Logging**: Structured output for log aggregation (ELK, Splunk)
-
-## Compliance and Integration Context
-
-**Security Constraints**:
-- Credentials via environment variables (not command-line arguments visible in `ps`)
-- No credential logging or persistence outside configuration files
-- Database permissions: Source requires SELECT only, sink requires INSERT/UPDATE/CREATE
-
-**Corporate Integration** (upcoming evolution):
-- REST API for centralized job scheduling
-- Metrics export (Prometheus) for observability
-- Event emission for data lineage tracking
+## Contradiction Check
+WARNING: `inditex.instructions.md` and `amiga-java.instructions.md` were not present in `.github/instructions/`, so no comparison against the organization or AMIGA baseline was possible. Copy those baseline files before using this project-specific file as a complete policy set.

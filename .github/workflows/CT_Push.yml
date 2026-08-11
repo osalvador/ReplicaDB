@@ -15,6 +15,9 @@ on:
       - 'README.md'
       - 'docs/**'
 
+env:
+  TESTCONTAINERS_REUSE_ENABLE: 'false'
+
 jobs:
   integration:
     runs-on: ubuntu-latest
@@ -43,7 +46,7 @@ jobs:
       uses: actions/setup-java@v5
       with:
         java-version: '17'
-        distribution: 'adopt'
+        distribution: 'temurin'
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
@@ -70,7 +73,7 @@ jobs:
       uses: actions/setup-java@v5
       with:
         java-version: '17'
-        distribution: 'adopt'
+        distribution: 'temurin'
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
@@ -96,7 +99,7 @@ jobs:
       uses: actions/setup-java@v5
       with:
         java-version: '17'
-        distribution: 'adopt'
+        distribution: 'temurin'
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
