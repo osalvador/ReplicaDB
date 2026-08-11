@@ -1,0 +1,27 @@
+.github/workflows/CI_Release.yml
+  s_175123f8c5c96d::t_73c8113c3ecdcf 28
+.github/workflows/CT_Push.yml
+  s_175123f8c5c96d::t_e1e9002e7f2491 18-20,49,76,102
+src/test/java/org/replicadb/config/ReplicadbDB2Container.java
+  s_175123f8c5c96d::t_b0d944ef1022ec 8,93
+src/test/java/org/replicadb/config/ReplicadbSqlserverContainer.java
+  s_175123f8c5c96d::t_2535d1eb0972e8 8,76
+src/test/resources/testcontainers-ci.properties
+  s_175123f8c5c96d::t_8f640ec06d2398 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "6a5a468b45f91cc8420dca784bfe984e51a0920d",
+  "prompts": {},
+  "sessions": {
+    "s_175123f8c5c96d": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "0affa1f4-4660-424d-b461-0e07660b253e",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
