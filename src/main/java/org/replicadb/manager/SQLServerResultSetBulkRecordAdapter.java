@@ -598,19 +598,11 @@ public class SQLServerResultSetBulkRecordAdapter implements ISQLServerBulkRecord
                 } else if (sourceType == Types.SQLXML) {
                     // SQL Server Bulk Copy API does not support SQLXML type directly.
                     // Always convert SQLXML to string, even for XML→XML replication.
+                    // Do NOT add an XML declaration: SQL Server's XML type rejects the
+                    // encoding attribute in <?xml version="1.0" encoding="UTF-8"?> and
+                    // well-formed XML is valid without a declaration.
                     final java.sql.SQLXML xml = resultSet.getSQLXML(i);
                     value = resultSet.wasNull() ? null : (xml != null ? xml.getString() : null);
-                    if (value != null) {
-                        String xmlStr = value.toString().trim();
-                        
-                        // Add XML declaration if missing (SQL Server expects well-formed XML)
-                        // This improves compatibility with SQL Server's XML parser
-                        if (!xmlStr.startsWith("<?xml")) {
-                            xmlStr = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + xmlStr;
-                        }
-                        
-                        value = xmlStr;
-                    }
                 } else if (sourceType == Types.OTHER) {
                     // Handle OTHER type (PostgreSQL specific types, etc.)
                     Object otherObj = resultSet.getObject(i);
