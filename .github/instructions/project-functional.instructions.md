@@ -28,6 +28,3 @@ applyTo: '**/*.{java,properties,conf}'
 - Do not claim universal support from a single database test or manager implementation.
 - Do not make a Java-version change in only one of Maven, CI, launchers, container images, or written requirements.
 - Do not add application code while regenerating AI context or project instructions.
-
-## Contradiction Check
-WARNING: `inditex.instructions.md` and `amiga-java.instructions.md` were not present in `.github/instructions/`, so no comparison against the organization or AMIGA baseline was possible. Copy those baseline files before using this project-specific file as a complete policy set.

@@ -37,6 +37,3 @@ applyTo: '**/*.java'
 - Do not put vendor branches in `ReplicaDB` or `SqlManager` when a manager override is the correct extension point.
 - Do not share mutable JDBC connections across tasks or introduce connection pooling as an incidental refactor.
 - Do not copy the legacy JUnit 4 style from `ReplicaDBTest.java` into new Java tests.
-
-## Contradiction Check
-WARNING: `inditex.instructions.md` and `amiga-java.instructions.md` were not present in `.github/instructions/`, so no comparison against the organization or AMIGA baseline was possible. Copy those baseline files before using this project-specific file as a complete policy set.

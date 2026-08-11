@@ -606,13 +606,6 @@ describe('convertHtmlToMarkdown (paste from Teams)', () => {
     expect(toMd('<p><a href="https://ms.com">MS</a></p>')).toBe('[MS](https://ms.com)');
   });
 
-  it('keeps image-extension links (e.g. SharePoint uploads) as regular links — not images', () => {
-    // Teams shares screenshots as SharePoint links. These require auth so they
-    // cannot be embedded; keep them as [text](url) hyperlinks, not ![text](url).
-    const sharepoint = 'https://grupoinditex-my.sharepoint.com/personal/user/Documents/Microsoft%20Teams%20Chat%20Files/Screenshot%202026-05-29%20at%2013.27.35.png';
-    expect(toMd(`<a href="${sharepoint}">Screenshot 2026-05-29 at 13.27.35.png</a>`))
-      .toBe(`[Screenshot 2026-05-29 at 13.27.35.png](${sharepoint})`);
-  });
 
   it('keeps all remote links as regular Markdown links regardless of extension', () => {
     expect(toMd('<a href="https://cdn.example.com/photo.jpg">photo</a>'))

@@ -24,6 +24,3 @@ applyTo: '**/*Test.java,**/*IT.java'
 - Do not use a mocked database to claim JDBC dialect compatibility.
 - Do not copy `ReplicaDBTest.java`'s legacy JUnit 4 imports into new tests.
 - Do not leave shared container state, credentials, or real endpoints in test output or committed fixtures.
-
-## Contradiction Check
-WARNING: `inditex.instructions.md` and `amiga-java.instructions.md` were not present in `.github/instructions/`, so no comparison against the organization or AMIGA baseline was possible. Copy those baseline files before using this project-specific file as a complete policy set.
