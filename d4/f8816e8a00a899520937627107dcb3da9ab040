@@ -1,0 +1,19 @@
+pom.xml
+  s_175123f8c5c96d::t_cbe03e0ae9d607 215,227,320
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "d4f8816e8a00a899520937627107dcb3da9ab040",
+  "prompts": {},
+  "sessions": {
+    "s_175123f8c5c96d": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "0affa1f4-4660-424d-b461-0e07660b253e",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
