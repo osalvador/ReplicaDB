@@ -3,7 +3,6 @@ package org.replicadb.sqlserver;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ToolOptions;
@@ -29,9 +28,7 @@ class Sqlserver2SqliteTest {
     private Connection sqlserverConn;
     private Connection sqliteConn;
 
-    @Rule
     public static MSSQLServerContainer<ReplicadbSqlserverContainer> sqlserver = ReplicadbSqlserverContainer.getInstance();
-    @Rule
     public static ReplicadbSqliteFakeContainer sqlite = ReplicadbSqliteFakeContainer.getInstance();
 
     @BeforeAll

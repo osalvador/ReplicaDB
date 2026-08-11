@@ -1,7 +1,6 @@
 package org.replicadb.mariadb;
 
 import org.apache.commons.cli.ParseException;
-import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
@@ -28,10 +27,8 @@ class MariaDB2MySQLTest {
     private Connection mariadbConn;
     private Connection mysqlConn;
 
-    @Rule
     public static MariaDBContainer<ReplicadbMariaDBContainer> mariadb = ReplicadbMariaDBContainer.getInstance();
 
-    @Rule
     public static MySQLContainer<ReplicadbMysqlContainer> mysql = ReplicadbMysqlContainer.getInstance();
 
     @BeforeAll

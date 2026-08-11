@@ -3,7 +3,6 @@ package org.replicadb.mysql;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
@@ -29,7 +28,6 @@ class MySQL2MySQLTest {
     private Connection mysqlConn;
     private String mysqlJdbcUrl = "";
 
-    @Rule
     public static MySQLContainer<ReplicadbMysqlContainer> mysql = ReplicadbMysqlContainer.getInstance();
 
     @BeforeAll

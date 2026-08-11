@@ -18,7 +18,7 @@ ReplicaDB solves the **enterprise data mobility problem**: organizations need to
 **2. Native Parallelism with JDBC**
 - **Why**: Enterprises move millions/billions of rows, requiring parallel execution without external frameworks
 - **Approach**: Built-in thread pool with configurable `--jobs` parameter, data partitioning via database-native functions (`ORA_HASH`, `HASH`, `ROW_NUMBER`)
-- **Constraint**: Avoids Hadoop dependency (unlike Sqoop), making ReplicaDB deployable anywhere Java 11+ runs
+- **Constraint**: Avoids Hadoop dependency (unlike Sqoop), making ReplicaDB deployable anywhere Java 17+ runs
 
 **3. CLI-First, Evolving to API**
 - **Why**: Started as CLI tool for batch/cron jobs (primary use case), now evolving to REST API for scheduling and monitoring
@@ -28,7 +28,7 @@ ReplicaDB solves the **enterprise data mobility problem**: organizations need to
 ## Technology Context
 
 **Core Stack**:
-- **Java 11+**: Cross-platform compatibility, mature ecosystem, enterprise adoption
+- **Java 17+**: Cross-platform compatibility, mature ecosystem, enterprise adoption
 - **Pure JDBC**: Direct database connectivity without ORM overhead or framework lock-in
 - **Maven**: Standard Java build tool with clear dependency management
 - **TestContainers**: Real database integration tests, not mocks

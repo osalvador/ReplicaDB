@@ -1,7 +1,6 @@
 package org.replicadb.sqlite;
 
 import org.apache.commons.cli.ParseException;
-import org.junit.Rule;
 import org.junit.jupiter.api.*;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
@@ -26,9 +25,7 @@ class Sqlite2PostgresTest {
     private Connection sqliteConn;
     private Connection postgresConn;
 
-    @Rule
     public static PostgreSQLContainer<ReplicadbPostgresqlContainer> postgres = ReplicadbPostgresqlContainer.getInstance();
-    @Rule
     public static ReplicadbSqliteFakeContainer sqlite = ReplicadbSqliteFakeContainer.getInstance();
 
     @BeforeAll

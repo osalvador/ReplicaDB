@@ -5,7 +5,6 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Rule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,7 +40,6 @@ class DB22S3FileTest {
     private Connection db2Conn;
     private AmazonS3 s3Client;
 
-    @Rule
     public static Db2Container db2 = ReplicadbDB2Container.getInstance();
 
     private static ReplicadbLocalStackContainer localstack;

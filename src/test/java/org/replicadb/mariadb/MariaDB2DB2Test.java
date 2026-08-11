@@ -1,7 +1,6 @@
 package org.replicadb.mariadb;
 
 import org.apache.commons.cli.ParseException;
-import org.junit.Rule;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -41,10 +40,8 @@ class MariaDB2DB2Test {
     private Connection mariadbConn;
     private Connection db2Conn;
 
-    @Rule
     public static MariaDBContainer<ReplicadbMariaDBContainer> mariadb = ReplicadbMariaDBContainer.getInstance();
 
-    @Rule
     public static Db2Container db2 = ReplicadbDB2Container.getInstance();
 
     @BeforeAll
