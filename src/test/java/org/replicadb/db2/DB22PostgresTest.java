@@ -315,6 +315,7 @@ class DB22PostgresTest {
                 "--source-user", db2.getUsername(),
                 "--source-password", db2.getPassword(),
                 "--source-query", "SELECT C_INTEGER AS REPLICADB_PARTITION_RN, C_SMALLINT FROM t_source",
+                "--sink-connect", postgres.getJdbcUrl(),
                 "--jobs", "4"
         };
         ToolOptions options = new ToolOptions(args);
@@ -339,6 +340,7 @@ class DB22PostgresTest {
                 "--source-user", db2.getUsername(),
                 "--source-password", db2.getPassword(),
                 "--source-query", "SELECT C_INTEGER AS DUPLICATE_LABEL, C_SMALLINT AS DUPLICATE_LABEL FROM t_source",
+                "--sink-connect", postgres.getJdbcUrl(),
                 "--jobs", "4"
         };
         ToolOptions options = new ToolOptions(args);
