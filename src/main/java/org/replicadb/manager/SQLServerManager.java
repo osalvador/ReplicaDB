@@ -6,6 +6,8 @@ import com.microsoft.sqlserver.jdbc.SQLServerResultSet;
 import microsoft.sql.Types;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.replicadb.cli.AzureAuthenticationMode;
+import org.replicadb.cli.AzureAuthenticationOptions;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.rowset.CsvCachedRowSetImpl;
@@ -16,6 +18,7 @@ import java.lang.reflect.Field;
 import java.sql.*;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -61,6 +64,128 @@ public class SQLServerManager extends SqlManager {
    @Override
    public String getDriverClass () {
       return JdbcDrivers.SQLSERVER.getDriverClass();
+   }
+
+   @Override
+   protected void customizeConnectionProperties(DataSourceType dataSourceType, Properties properties)
+           throws SQLException {
+      AzureAuthenticationOptions authentication = DataSourceType.SOURCE.equals(dataSourceType)
+              ? options.getSourceAuthentication()
+              : options.getSinkAuthentication();
+
+      if (authentication == null || !authentication.isConfigured()) {
+         return;
+      }
+
+      String password = DataSourceType.SOURCE.equals(dataSourceType)
+              ? options.getSourcePassword()
+              : options.getSinkPassword();
+            String username = DataSourceType.SOURCE.equals(dataSourceType)
+               ? options.getSourceUser()
+               : options.getSinkUser();
+            boolean passwordConfigured = hasValue(password) || hasValue(properties.getProperty("password"));
+                  authentication.validate(hasValue(username), passwordConfigured);
+
+            if (hasValue(username)) {
+          setPropertyWithoutConflict("user", username, properties);
+            }
+            if (hasValue(password)) {
+          properties.setProperty("password", password);
+            }
+
+      String driverAuthentication = authentication.getMode().getDriverValue();
+      String connectionString = DataSourceType.SOURCE.equals(dataSourceType)
+              ? options.getSourceConnect()
+              : options.getSinkConnect();
+      String urlAuthentication = getConnectionStringProperty(connectionString, "authentication");
+      String configuredAuthentication = properties.getProperty("authentication");
+      if (hasConflictingValue(urlAuthentication, driverAuthentication)
+              || hasConflictingValue(configuredAuthentication, driverAuthentication)) {
+         throw new SQLException("Conflicting authentication values were supplied for SQL Server.");
+      }
+      properties.setProperty("authentication", driverAuthentication);
+
+      AzureAuthenticationMode mode = authentication.getMode();
+      switch (mode) {
+         case ACTIVE_DIRECTORY_INTERACTIVE:
+            setOptionalLoginHint(authentication, properties);
+            properties.remove("password");
+            break;
+         case ACTIVE_DIRECTORY_DEFAULT:
+            setOptionalManagedIdentityClient(authentication, properties);
+            properties.remove("password");
+            break;
+         case ACTIVE_DIRECTORY_MANAGED_IDENTITY:
+            setOptionalManagedIdentityClient(authentication, properties);
+            properties.remove("password");
+            break;
+         case ACTIVE_DIRECTORY_SERVICE_PRINCIPAL:
+            setPrincipalUser(authentication, properties);
+            break;
+         case ACTIVE_DIRECTORY_SERVICE_PRINCIPAL_CERTIFICATE:
+            setPrincipalUser(authentication, properties);
+            setPropertyWithoutConflict("clientCertificate", authentication.getClientCertificate(), properties);
+            setPropertyWithoutConflict("clientKey", authentication.getClientKey(), properties);
+            break;
+         case ACTIVE_DIRECTORY_INTEGRATED:
+            if (hasValue(properties.getProperty("user"))) {
+               throw new SQLException("User is not supported for ActiveDirectoryIntegrated authentication.");
+            }
+            properties.remove("user");
+            properties.remove("password");
+            break;
+         default:
+            throw new SQLException("Unsupported SQL Server authentication mode: " + mode);
+      }
+   }
+
+   private void setOptionalLoginHint(AzureAuthenticationOptions authentication, Properties properties)
+           throws SQLException {
+      if (!hasValue(authentication.getLoginHint())) {
+         return;
+      }
+      setPropertyWithoutConflict("user", authentication.getLoginHint(), properties);
+   }
+
+   private void setOptionalManagedIdentityClient(AzureAuthenticationOptions authentication, Properties properties)
+           throws SQLException {
+      if (hasValue(authentication.getPrincipalId())) {
+         setPropertyWithoutConflict("msiClientId", authentication.getPrincipalId(), properties);
+      }
+   }
+
+   private void setPrincipalUser(AzureAuthenticationOptions authentication, Properties properties)
+           throws SQLException {
+      setPropertyWithoutConflict("user", authentication.getPrincipalId(), properties);
+   }
+
+   private void setPropertyWithoutConflict(String propertyName, String value, Properties properties)
+           throws SQLException {
+      if (!hasValue(value)) {
+         return;
+      }
+      String existingValue = properties.getProperty(propertyName);
+      if (hasValue(existingValue) && !existingValue.equals(value)) {
+         throw new SQLException("Conflicting values were supplied for SQL Server property " + propertyName + ".");
+      }
+      properties.setProperty(propertyName, value);
+   }
+
+   private boolean hasConflictingValue(String existingValue, String expectedValue) {
+      return hasValue(existingValue) && !existingValue.equalsIgnoreCase(expectedValue);
+   }
+
+   private boolean hasValue(String value) {
+      return value != null && !value.isBlank();
+   }
+
+   private String getConnectionStringProperty(String connectionString, String propertyName) {
+      if (connectionString == null) {
+         return null;
+      }
+      Pattern propertyPattern = Pattern.compile("(?i)(?:^|;)" + Pattern.quote(propertyName) + "=([^;]*)");
+      Matcher matcher = propertyPattern.matcher(connectionString);
+      return matcher.find() ? matcher.group(1).trim() : null;
    }
 
    private void setIdentityInsert (String tableName, Boolean isSetIdentityOn) throws SQLException {

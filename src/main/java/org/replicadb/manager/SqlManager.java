@@ -226,52 +226,49 @@ public abstract class SqlManager extends ConnManager {
      * Connection object.
      */
     protected Connection makeSourceConnection() throws SQLException {
-
-        Connection conn;
-        String driverClass = getDriverClass();
-
-        try {
-            Class.forName(driverClass);
-        } catch (ClassNotFoundException cnfe) {
-            throw new RuntimeException("Could not load db driver class: " + driverClass);
-        }
-
-        String username = options.getSourceUser();
-        String password = options.getSourcePassword();
-        String connectString = options.getSourceConnect();
-
-        Properties connectionParams = options.getSourceConnectionParams();
-        if (connectionParams != null && connectionParams.size() > 0) {
-            LOG.trace("User specified connection params. Using properties specific API for making connection.");
-
-            Properties props = new Properties();
-            if (username != null) {
-                props.put("user", username);
-            }
-
-            if (password != null) {
-                props.put("password", password);
-            }
-
-            props.putAll(connectionParams);
-            // Filter driver parameter - used for Class.forName() only, not JDBC connection
-            props.remove(DRIVER_PARAM_KEY);
-            conn = DriverManager.getConnection(connectString, props);
-        } else {
-            LOG.trace("No connection parameters specified. Using regular API for making connection.");
-            if (username == null) {
-                conn = DriverManager.getConnection(connectString);
-            } else {
-                conn = DriverManager.getConnection(connectString, username, password);
-            }
-        }
-
-        conn.setAutoCommit(false);
-
-        return conn;
+        return makeConnection(DataSourceType.SOURCE);
     }
 
     protected Connection makeSinkConnection() throws SQLException {
+        return makeConnection(DataSourceType.SINK);
+    }
+
+    protected Properties buildConnectionProperties(DataSourceType dataSourceType) {
+        Properties connectionParams = DataSourceType.SOURCE.equals(dataSourceType)
+                ? options.getSourceConnectionParams()
+                : options.getSinkConnectionParams();
+
+        if (connectionParams == null || connectionParams.isEmpty()) {
+            return null;
+        }
+
+        String username = DataSourceType.SOURCE.equals(dataSourceType)
+                ? options.getSourceUser()
+                : options.getSinkUser();
+        String password = DataSourceType.SOURCE.equals(dataSourceType)
+                ? options.getSourcePassword()
+                : options.getSinkPassword();
+
+        Properties props = new Properties();
+        if (username != null) {
+            props.put("user", username);
+        }
+        if (password != null) {
+            props.put("password", password);
+        }
+
+        props.putAll(connectionParams);
+        // Filter driver parameter - used for Class.forName() only, not JDBC connection
+        props.remove(DRIVER_PARAM_KEY);
+        return props;
+    }
+
+    protected void customizeConnectionProperties(DataSourceType dataSourceType, Properties properties)
+            throws SQLException {
+        // Database-specific managers may add or validate connection properties.
+    }
+
+    private Connection makeConnection(DataSourceType dataSourceType) throws SQLException {
 
         Connection conn;
         String driverClass = getDriverClass();
@@ -282,26 +279,24 @@ public abstract class SqlManager extends ConnManager {
             throw new RuntimeException("Could not load db driver class: " + driverClass);
         }
 
-        String username = options.getSinkUser();
-        String password = options.getSinkPassword();
-        String connectString = options.getSinkConnect();
+        String username = DataSourceType.SOURCE.equals(dataSourceType)
+                ? options.getSourceUser()
+                : options.getSinkUser();
+        String password = DataSourceType.SOURCE.equals(dataSourceType)
+                ? options.getSourcePassword()
+                : options.getSinkPassword();
+        String connectString = DataSourceType.SOURCE.equals(dataSourceType)
+                ? options.getSourceConnect()
+                : options.getSinkConnect();
 
-        Properties connectionParams = options.getSinkConnectionParams();
-        if (connectionParams != null && connectionParams.size() > 0) {
+        Properties props = buildConnectionProperties(dataSourceType);
+        if (props == null) {
+            props = new Properties();
+        }
+        customizeConnectionProperties(dataSourceType, props);
+
+        if (!props.isEmpty()) {
             LOG.trace("User specified connection params. Using properties specific API for making connection.");
-
-            Properties props = new Properties();
-            if (username != null) {
-                props.put("user", username);
-            }
-
-            if (password != null) {
-                props.put("password", password);
-            }
-
-            props.putAll(connectionParams);
-            // Filter driver parameter - used for Class.forName() only, not JDBC connection
-            props.remove(DRIVER_PARAM_KEY);
             conn = DriverManager.getConnection(connectString, props);
         } else {
             LOG.trace("No connection parameters specified. Using regular API for making connection.");

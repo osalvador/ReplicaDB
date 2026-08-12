@@ -25,10 +25,13 @@ if "%bin:~-1%" == "\" (
 
 call "%bin%\configure-replicadb.cmd" "%bin%"
 
+set "HEADLESS_OPTS="
+if /I "%REPLICADB_HEADLESS%" == "true" set "HEADLESS_OPTS=-Djava.awt.headless=true"
+
 :: echo _RUNJAVA "%_RUNJAVA%" 
 :: echo REPLICADB_CLASSPATH "%REPLICADB_CLASSPATH%"
 
-call %_RUNJAVA% -cp %REPLICADB_CLASSPATH% -Xmx256M -Xms256M --add-opens=java.base/java.nio=ALL-UNNAMED -Dfile.encoding=UTF-8 -server -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:+ExplicitGCInvokesConcurrent -Djava.awt.headless=true -Djavax.xml.parsers.DocumentBuilderFactory=org.apache.xerces.jaxp.DocumentBuilderFactoryImpl org.replicadb.ReplicaDB %*
+call %_RUNJAVA% -cp %REPLICADB_CLASSPATH% -Xmx256M -Xms256M --add-opens=java.base/java.nio=ALL-UNNAMED -Dfile.encoding=UTF-8 -server -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:+ExplicitGCInvokesConcurrent %HEADLESS_OPTS% -Djavax.xml.parsers.DocumentBuilderFactory=org.apache.xerces.jaxp.DocumentBuilderFactoryImpl org.replicadb.ReplicaDB %*
 
 :: create exit code from java process
 set /a exitCode=%errorlevel%

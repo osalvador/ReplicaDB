@@ -6,6 +6,7 @@ RUN apt-get update \
 
 ARG REPLICADB_RELEASE_VERSION=0.0.0
 ENV REPLICADB_VERSION=$REPLICADB_RELEASE_VERSION
+ENV REPLICADB_HEADLESS=true
 ENV USERNAME="replicadb"
 
 RUN groupadd --system ${USERNAME} && useradd --system --gid ${USERNAME} --create-home ${USERNAME}

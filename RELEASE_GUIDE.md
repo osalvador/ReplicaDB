@@ -65,6 +65,10 @@ The `release.sh` script automatically:
 
 ## CI/CD Pipeline
 
+### Azure authentication runtime
+
+The SQL Server driver declares its Microsoft Entra dependencies as optional. Release validation must confirm that Azure Identity, MSAL4J, and the persistence extension are present in the executable archive `lib/` directory and in both Docker image variants. Keep local Interactive browser authentication outside headless image smoke tests. The release process does not provision or require an Azure account.
+
 ### What CI/CD Does
 
 The GitHub Actions workflow (`CI_Release.yml`) automatically:

@@ -60,7 +60,7 @@ Common alternatives and how ReplicaDB differs:
 
 Before installing ReplicaDB, ensure you have:
 
-- **Java Runtime**: Java JDK or JRE 11 or higher installed and configured
+- **Java Runtime**: Java JDK or JRE 17 or higher installed and configured
 - **Network Connectivity**: Reliable network access to both source and sink databases
 - **Database Credentials**: Appropriate permissions on both databases:
   - **Source database**: SELECT permissions on tables to replicate
@@ -114,6 +114,29 @@ sink.password=${DB2PASS}
 sink.table=sink_table
 sink.connect.parameter.driver=com.ibm.db2.jcc.DB2Driver
 ```
+
+## Azure SQL and Microsoft Entra authentication
+
+ReplicaDB uses the Microsoft JDBC Driver for SQL Server for Microsoft Entra authentication. Release archives include the Azure Identity and MSAL runtime libraries required by the driver. Put authentication settings in an options file and reference secrets through environment variables.
+
+Use `ActiveDirectoryInteractive` for a local browser and MFA login. Interactive mode requires `jobs=1` and must not include a password:
+
+```properties
+mode=complete
+jobs=1
+source.connect=jdbc:sqlserver://${AZURE_SQL_SERVER}:1433;databaseName=${AZURE_SQL_DATABASE};encrypt=true
+source.auth.mode=ActiveDirectoryInteractive
+source.auth.login.hint=${AZURE_LOGIN_HINT}
+source.table=${AZURE_SOURCE_TABLE}
+```
+
+Use `ActiveDirectoryDefault` after `az login` on a local machine, in CI with an environment/workload credential, or in Azure with the default credential chain. For outside-Azure unattended jobs, use `ActiveDirectoryServicePrincipal` with `${AZURE_CLIENT_SECRET}` or `ActiveDirectoryServicePrincipalCertificate` with `${AZURE_CLIENT_CERTIFICATE}` and, when required, `${AZURE_CLIENT_KEY}`. For Azure-hosted jobs, use `ActiveDirectoryManagedIdentity`; omit `source.auth.principal.id` for a system-assigned identity or set it to a user-assigned identity client ID.
+
+The Azure SQL database must contain the Microsoft Entra user, group, service principal, or managed identity with the required permissions. Configure firewall or private-network access for the ReplicaDB host. Interactive authentication is unavailable in the headless Docker and Podman images. `ActiveDirectoryPassword` is deprecated and is not part of the first-class configuration.
+
+The [configuration wizard](https://osalvador.github.io/ReplicaDB/wizard/index.html) supports the same source and sink modes and generates the corresponding `source.auth.*` and `sink.auth.*` properties.
+
+The command-line equivalents are `--source-auth-mode`, `--source-auth-principal-id`, `--source-auth-login-hint`, `--source-auth-client-certificate`, `--source-auth-client-key` and the corresponding `--sink-auth-*` options.
 
 ## Docker
 
