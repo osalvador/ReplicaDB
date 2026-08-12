@@ -118,7 +118,10 @@ if [[ -z "$JAVA_OPTS" ]]; then
 fi
 
 if [[ -z "$JVM_PERFORMANCE_OPTS" ]]; then
-  JVM_PERFORMANCE_OPTS="-server -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:+ExplicitGCInvokesConcurrent -Djava.awt.headless=true -Djavax.xml.parsers.DocumentBuilderFactory=org.apache.xerces.jaxp.DocumentBuilderFactoryImpl"
+  JVM_PERFORMANCE_OPTS="-server -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:+ExplicitGCInvokesConcurrent -Djavax.xml.parsers.DocumentBuilderFactory=org.apache.xerces.jaxp.DocumentBuilderFactoryImpl"
+  if [[ "${REPLICADB_HEADLESS:-false}" == "true" ]]; then
+    JVM_PERFORMANCE_OPTS="${JVM_PERFORMANCE_OPTS} -Djava.awt.headless=true"
+  fi
 fi
 
 # Uncomment this if you want to activate the monitoring via JMX

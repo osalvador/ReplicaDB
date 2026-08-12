@@ -17,6 +17,7 @@
         <maven.compiler.target>17</maven.compiler.target>
         <version.testContainers>1.21.4</version.testContainers>
         <version.junit>6.0.3</version.junit>
+        <version.azure-identity>1.15.3</version.azure-identity>
     </properties>
 
 
@@ -262,6 +263,13 @@
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
             <version>13.2.1.jre11</version>
+        </dependency>
+
+        <!-- Microsoft Entra authentication support for the SQL Server driver -->
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-identity</artifactId>
+            <version>${version.azure-identity}</version>
         </dependency>
 
         <!-- Amazon S3 -->

@@ -2,6 +2,7 @@ package org.replicadb.cli;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.replicadb.config.CredentialRedactor;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -98,10 +99,11 @@ public class OptionsFile {
 
     public void printProperties() {
         // print out what you just read
-        Enumeration<?> propertyNames = properties.propertyNames();
+        Properties redactedProperties = CredentialRedactor.redactProperties(properties);
+        Enumeration<?> propertyNames = redactedProperties.propertyNames();
         while (propertyNames.hasMoreElements()) {
             String name = propertyNames.nextElement().toString();
-            System.out.println(name + "=" + properties.getProperty(name));
+            System.out.println(name + "=" + redactedProperties.getProperty(name));
         }
     }
 }

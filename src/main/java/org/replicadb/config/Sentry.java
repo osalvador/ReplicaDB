@@ -22,6 +22,8 @@ public class Sentry {
             sentryOptions.setTracesSampleRate(1.0);
             sentryOptions.setRelease("replicadb@" + options.getVersion());
             sentryOptions.setDsn(sentryDsn);
+            sentryOptions.setBeforeSend((event, hint) -> CredentialRedactor.redactEvent(event));
+            sentryOptions.setBeforeBreadcrumb((breadcrumb, hint) -> CredentialRedactor.redactBreadcrumb(breadcrumb));
         });
 
         if (io.sentry.Sentry.isEnabled()) LOG.info("Sentry enabled");
@@ -44,15 +46,21 @@ public class Sentry {
                 scope.setContexts("quotedIdentifiers", options.getQuotedIdentifiers());
             scope.setContexts("bandwidthThrottling", options.getBandwidthThrottling());
             if (options.getSourceConnectionParams() != null)
-                scope.setContexts("sourceConnectionParams", options.getSourceConnectionParams());
+                scope.setContexts("sourceConnectionParams",
+                        CredentialRedactor.redactProperties(options.getSourceConnectionParams()));
             if (options.getSinkConnectionParams() != null)
-                scope.setContexts("sinkConnectionParams", options.getSinkConnectionParams());
+                scope.setContexts("sinkConnectionParams",
+                        CredentialRedactor.redactProperties(options.getSinkConnectionParams()));
             // Tags
             scope.setTag("mode", options.getMode());
             scope.setTag("jobs", String.valueOf(options.getJobs()));
             scope.setTag("fetchSize", String.valueOf(options.getFetchSize()));
-            scope.setTag("source.connect", options.getSourceConnect());
-            scope.setTag("sink.connect", options.getSinkConnect());
+            scope.setTag("source.connect", CredentialRedactor.redactConnectionString(options.getSourceConnect()));
+            scope.setTag("sink.connect", CredentialRedactor.redactConnectionString(options.getSinkConnect()));
+            if (options.getSourceAuthentication().isConfigured())
+                scope.setTag("source.auth.mode", options.getSourceAuthentication().getMode().toString());
+            if (options.getSinkAuthentication().isConfigured())
+                scope.setTag("sink.auth.mode", options.getSinkAuthentication().getMode().toString());
             if (options.getVersion() != null) scope.setTag("release.version", options.getVersion());
             if (options.getSinkFileFormat() != null) scope.setTag("sink.file_format", options.getSinkFileFormat());
             if (options.getSourceFileFormat() != null)

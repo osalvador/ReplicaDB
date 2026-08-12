@@ -55,7 +55,7 @@ Common alternatives and how ReplicaDB differs:
 
 Before installing ReplicaDB, ensure you have:
 
-- **Java Runtime**: Java JDK or JRE 11 or higher installed and configured
+- **Java Runtime**: Java JDK or JRE 17 or higher installed and configured
 - **Network Connectivity**: Reliable network access to both source and sink databases
 - **Database Credentials**: Appropriate permissions on both databases:
   - **Source database**: SELECT permissions on tables to replicate
@@ -108,6 +108,51 @@ sink.password=${DB2PASS}
 sink.table=sink_table
 sink.connect.parameter.driver=com.ibm.db2.jcc.DB2Driver
 ```
+
+### Azure SQL and Microsoft Entra authentication
+
+ReplicaDB uses the Microsoft JDBC Driver for SQL Server for Microsoft Entra authentication. Release archives include the Azure Identity and MSAL runtime libraries required by the driver. Configure authentication in an options file so secrets stay outside command history.
+
+For local browser and MFA authentication, use `jobs=1` and do not set a password:
+
+```properties
+mode=complete
+jobs=1
+source.connect=jdbc:sqlserver://${AZURE_SQL_SERVER}:1433;databaseName=${AZURE_SQL_DATABASE};encrypt=true
+source.auth.mode=ActiveDirectoryInteractive
+source.auth.login.hint=${AZURE_LOGIN_HINT}
+source.table=${AZURE_SOURCE_TABLE}
+sink.connect=jdbc:postgresql://${PGHOST}/${PGDATABASE}
+sink.user=${PGUSER}
+sink.password=${PGPASSWORD}
+sink.table=${PGSINK_TABLE}
+```
+
+For a local non-interactive run, authenticate with Azure CLI (`az login`) and use `ActiveDirectoryDefault`:
+
+```properties
+source.connect=jdbc:sqlserver://${AZURE_SQL_SERVER}:1433;databaseName=${AZURE_SQL_DATABASE};encrypt=true
+source.auth.mode=ActiveDirectoryDefault
+source.table=${AZURE_SOURCE_TABLE}
+```
+
+For unattended execution outside Azure, use a service principal or, preferably, a certificate. Supply the secret through an environment-expanded property and never commit it:
+
+```properties
+source.connect=jdbc:sqlserver://${AZURE_SQL_SERVER}:1433;databaseName=${AZURE_SQL_DATABASE};encrypt=true
+source.auth.mode=ActiveDirectoryServicePrincipal
+source.auth.principal.id=${AZURE_CLIENT_ID}
+source.password=${AZURE_CLIENT_SECRET}
+source.table=${AZURE_SOURCE_TABLE}
+```
+
+For Azure-hosted execution, use `ActiveDirectoryManagedIdentity` with no password. Leave `source.auth.principal.id` empty for a system-assigned identity or set it to the client ID of a user-assigned identity. `ActiveDirectoryDefault` is also supported for Azure workload or environment credentials.
+
+The SQL Server database must contain a Microsoft Entra user or group with the required permissions, and the server firewall or private network must allow the ReplicaDB host. Interactive authentication is not supported by the headless Docker and Podman images; use `ActiveDirectoryDefault`, managed identity, service principal, or certificate authentication there. `ActiveDirectoryPassword` is deprecated and should not be used for MFA.
+
+The [configuration wizard](https://osalvador.github.io/ReplicaDB/wizard/index.html) exposes the same SQL Server authentication modes for source and sink and generates `source.auth.*`/`sink.auth.*` properties without embedding secrets.
+
+The equivalent command-line options are `--source-auth-mode`, `--source-auth-principal-id`, `--source-auth-login-hint`, `--source-auth-client-certificate`, `--source-auth-client-key` and the corresponding `--sink-auth-*` options.
 
 ## Docker
 

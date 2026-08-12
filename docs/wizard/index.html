@@ -180,6 +180,39 @@
                                     <label for="FormSourceUser">User</label>
                                     <input type="text" class="form-control" id="FormSourceUser" name="sourceUser">
                                 </div>
+                                <div class="card" id="CardSourceAzureAuthentication" style="display:none;">
+                                    <div class="card-header">Microsoft Entra Authentication</div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label for="FormSourceAuthMode">Authentication mode</label>
+                                            <select class="form-control" id="FormSourceAuthMode" name="sourceAuthMode">
+                                                <option value=""></option>
+                                                <option value="ActiveDirectoryInteractive">Interactive (browser and MFA)</option>
+                                                <option value="ActiveDirectoryDefault">Default credential / Azure CLI</option>
+                                                <option value="ActiveDirectoryManagedIdentity">Managed identity</option>
+                                                <option value="ActiveDirectoryServicePrincipal">Service principal secret</option>
+                                                <option value="ActiveDirectoryServicePrincipalCertificate">Service principal certificate</option>
+                                                <option value="ActiveDirectoryIntegrated">Integrated / Kerberos</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="FormSourceAuthPrincipalId">Principal or managed identity client ID</label>
+                                            <input type="text" class="form-control" id="FormSourceAuthPrincipalId" name="sourceAuthPrincipalId">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="FormSourceAuthLoginHint">Interactive login hint</label>
+                                            <input type="text" class="form-control" id="FormSourceAuthLoginHint" name="sourceAuthLoginHint">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="FormSourceAuthClientCertificate">Client certificate path</label>
+                                            <input type="text" class="form-control" id="FormSourceAuthClientCertificate" name="sourceAuthClientCertificate" placeholder="${AZURE_CLIENT_CERTIFICATE}">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="FormSourceAuthClientKey">Client private key path</label>
+                                            <input type="text" class="form-control" id="FormSourceAuthClientKey" name="sourceAuthClientKey" placeholder="${AZURE_CLIENT_KEY}">
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="form-group ">
                                     <label for="FormSourceDatabase">Database / SID or Service Name</label>
                                     <input type="text" class="form-control" id="FormSourceDatabase" name="sourceDatabase">
@@ -535,6 +568,39 @@
                                 <div class="form-group ">
                                     <label for="FormSinkUser">User</label>
                                     <input type="text" class="form-control" id="FormSinkUser" name="sinkUser">
+                                </div>
+                                <div class="card" id="CardSinkAzureAuthentication" style="display:none;">
+                                    <div class="card-header">Microsoft Entra Authentication</div>
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <label for="FormSinkAuthMode">Authentication mode</label>
+                                            <select class="form-control" id="FormSinkAuthMode" name="sinkAuthMode">
+                                                <option value=""></option>
+                                                <option value="ActiveDirectoryInteractive">Interactive (browser and MFA)</option>
+                                                <option value="ActiveDirectoryDefault">Default credential / Azure CLI</option>
+                                                <option value="ActiveDirectoryManagedIdentity">Managed identity</option>
+                                                <option value="ActiveDirectoryServicePrincipal">Service principal secret</option>
+                                                <option value="ActiveDirectoryServicePrincipalCertificate">Service principal certificate</option>
+                                                <option value="ActiveDirectoryIntegrated">Integrated / Kerberos</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="FormSinkAuthPrincipalId">Principal or managed identity client ID</label>
+                                            <input type="text" class="form-control" id="FormSinkAuthPrincipalId" name="sinkAuthPrincipalId">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="FormSinkAuthLoginHint">Interactive login hint</label>
+                                            <input type="text" class="form-control" id="FormSinkAuthLoginHint" name="sinkAuthLoginHint">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="FormSinkAuthClientCertificate">Client certificate path</label>
+                                            <input type="text" class="form-control" id="FormSinkAuthClientCertificate" name="sinkAuthClientCertificate" placeholder="${AZURE_CLIENT_CERTIFICATE}">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="FormSinkAuthClientKey">Client private key path</label>
+                                            <input type="text" class="form-control" id="FormSinkAuthClientKey" name="sinkAuthClientKey" placeholder="${AZURE_CLIENT_KEY}">
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="form-group ">
                                     <label for="FormSinkDatabase">Database / SID or Service Name</label>
@@ -938,11 +1004,16 @@ fetch.size={{fetchSize}}
 {{#if bandwidthThrottling}}bandwidth.throttling={{{bandwidthThrottling}}}{{/if}}
 verbose={{#if verbose}}{{verbose}}{{else}}false{{/if}}
 ## Help us to improve by activating usage analysis through the Sentry service. Or set up your own Sentry DSN
-sentry.dsn=https://400e0daa08c24a399b842048c409416f@o1002451.ingest.sentry.io/5962725
+# sentry.dsn=${SENTRY_DSN}
 ############################# Soruce Options ##############################
 source.connect={{#createConnect "source"}}{{/createConnect}}
 {{#if sourceUser}}source.user={{{sourceUser}}}{{/if}}
-{{#if sourceUser}}source.password=<user password>{{/if}}
+{{#if sourceUser}}{{#usesPasswordAuth sourceAuthMode}}source.password=<user password>{{/usesPasswordAuth}}{{/if}}
+{{#if sourceAuthMode}}source.auth.mode={{{sourceAuthMode}}}{{/if}}
+{{#if sourceAuthPrincipalId}}source.auth.principal.id={{{sourceAuthPrincipalId}}}{{/if}}
+{{#if sourceAuthLoginHint}}source.auth.login.hint={{{sourceAuthLoginHint}}}{{/if}}
+{{#if sourceAuthClientCertificate}}source.auth.client.certificate={{{sourceAuthClientCertificate}}}{{/if}}
+{{#if sourceAuthClientKey}}source.auth.client.key={{{sourceAuthClientKey}}}{{/if}}
 {{#if sourceTable}}source.table={{{sourceTable}}}{{/if}}
 {{#if sourceColumns}}source.columns={{{sourceColumns}}}{{/if}}
 {{#if sourceWhere}}source.where={{{sourceWhere}}}{{/if}}
@@ -964,7 +1035,12 @@ source.connect={{#createConnect "source"}}{{/createConnect}}
 ############################# Sink Options ################################
 sink.connect={{#createConnect "sink"}}{{/createConnect}}
 {{#if sinkUser}}sink.user={{{sinkUser}}}{{/if}}
-{{#if sinkUser}}sink.password=<user password>{{/if}}
+{{#if sinkUser}}{{#usesPasswordAuth sinkAuthMode}}sink.password=<user password>{{/usesPasswordAuth}}{{/if}}
+{{#if sinkAuthMode}}sink.auth.mode={{{sinkAuthMode}}}{{/if}}
+{{#if sinkAuthPrincipalId}}sink.auth.principal.id={{{sinkAuthPrincipalId}}}{{/if}}
+{{#if sinkAuthLoginHint}}sink.auth.login.hint={{{sinkAuthLoginHint}}}{{/if}}
+{{#if sinkAuthClientCertificate}}sink.auth.client.certificate={{{sinkAuthClientCertificate}}}{{/if}}
+{{#if sinkAuthClientKey}}sink.auth.client.key={{{sinkAuthClientKey}}}{{/if}}
 {{#if sinkTable}}sink.table={{{sinkTable}}}{{/if}}
 {{#if sinkColumns}}sink.columns={{{sinkColumns}}}{{/if}}
 
@@ -1103,6 +1179,13 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
         return new Handlebars.SafeString(vExtraJdbcParams);
     });
 
+    Handlebars.registerHelper("usesPasswordAuth", function (authMode, options) {
+        if (!authMode || authMode === "ActiveDirectoryServicePrincipal") {
+            return options.fn(this);
+        }
+        return options.inverse(this);
+    });
+
     // Create sourceQueryHelper Helper
     Handlebars.registerHelper("sourceQueryHelper", function (options) {
         var sourceQuery = this.sourceQuery;
@@ -1203,6 +1286,9 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
                 case "denodo":
                     $('#CardSourceConnectionSettings').show("slow");
                     $('#CardSourceDataFiltering').show("slow");
+                    if (this.value === "sqlserver") {
+                        $('#CardSourceAzureAuthentication').show("slow");
+                    }
                     $('#FormSourceOracleFormatGroup').hide();
                     break;
                 case "sqlite":
@@ -1242,6 +1328,7 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
                 case "sqlserver":
                     $('#CardSinkConnectionSettings').show("slow");
                     $('#CardSinkDataMapping').show("slow");
+                    $('#CardSinkAzureAuthentication').show("slow");
                     showStagingSettings();
                     $('#FormSinkOracleFormatGroup').hide();
                     break;
@@ -1359,6 +1446,7 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
 
     function hideAllSourceSettings() {
         $('#CardSourceConnectionSettings').hide();
+        $('#CardSourceAzureAuthentication').hide();
         $('#CardSourceDataFiltering').hide();
         $('#CardSourceFileSettings').hide();
         $('#CardSourceFileDataParsing').hide();
@@ -1367,6 +1455,7 @@ sink.connect={{#createConnect "sink"}}{{/createConnect}}
 
     function hideAllSinkSettings() {
         $('#CardSinkConnectionSettings').hide();
+        $('#CardSinkAzureAuthentication').hide();
         $('#CardSinkDataMapping').hide();
         $('#CardSinkStagingOptions').hide();
         $('#CardSinkDisableEscape').hide();

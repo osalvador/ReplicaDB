@@ -4,6 +4,7 @@ import org.apache.commons.cli.*;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.replicadb.config.CredentialRedactor;
 import org.replicadb.manager.util.ColumnDescriptor;
 
 import java.io.IOException;
@@ -55,6 +56,8 @@ public class ToolOptions {
 
     private Properties sourceConnectionParams;
     private Properties sinkConnectionParams;
+    private AzureAuthenticationOptions sourceAuthentication = new AzureAuthenticationOptions();
+    private AzureAuthenticationOptions sinkAuthentication = new AzureAuthenticationOptions();
     private String sentryDsn;
 
     private List<ColumnDescriptor> sourceColumnDescriptors;
@@ -98,6 +101,51 @@ public class ToolOptions {
                         .argName("password")
                         .build()
         );
+
+                options.addOption(
+                    Option.builder()
+                        .longOpt("source-auth-mode")
+                        .desc("Source Microsoft Entra authentication mode")
+                        .hasArg()
+                        .argName("auth-mode")
+                        .build()
+                );
+
+                options.addOption(
+                    Option.builder()
+                        .longOpt("source-auth-principal-id")
+                        .desc("Source Microsoft Entra principal or managed identity client ID")
+                        .hasArg()
+                        .argName("principal-id")
+                        .build()
+                );
+
+                options.addOption(
+                    Option.builder()
+                        .longOpt("source-auth-login-hint")
+                        .desc("Source Microsoft Entra interactive login hint")
+                        .hasArg()
+                        .argName("login-hint")
+                        .build()
+                );
+
+                options.addOption(
+                    Option.builder()
+                        .longOpt("source-auth-client-certificate")
+                        .desc("Source Microsoft Entra service principal certificate path")
+                        .hasArg()
+                        .argName("certificate-path")
+                        .build()
+                );
+
+                options.addOption(
+                    Option.builder()
+                        .longOpt("source-auth-client-key")
+                        .desc("Source Microsoft Entra service principal private key path")
+                        .hasArg()
+                        .argName("key-path")
+                        .build()
+                );
 
         options.addOption(
                 Option.builder()
@@ -172,6 +220,51 @@ public class ToolOptions {
                         .argName("password")
                         .build()
         );
+
+                options.addOption(
+                    Option.builder()
+                        .longOpt("sink-auth-mode")
+                        .desc("Sink Microsoft Entra authentication mode")
+                        .hasArg()
+                        .argName("auth-mode")
+                        .build()
+                );
+
+                options.addOption(
+                    Option.builder()
+                        .longOpt("sink-auth-principal-id")
+                        .desc("Sink Microsoft Entra principal or managed identity client ID")
+                        .hasArg()
+                        .argName("principal-id")
+                        .build()
+                );
+
+                options.addOption(
+                    Option.builder()
+                        .longOpt("sink-auth-login-hint")
+                        .desc("Sink Microsoft Entra interactive login hint")
+                        .hasArg()
+                        .argName("login-hint")
+                        .build()
+                );
+
+                options.addOption(
+                    Option.builder()
+                        .longOpt("sink-auth-client-certificate")
+                        .desc("Sink Microsoft Entra service principal certificate path")
+                        .hasArg()
+                        .argName("certificate-path")
+                        .build()
+                );
+
+                options.addOption(
+                    Option.builder()
+                        .longOpt("sink-auth-client-key")
+                        .desc("Sink Microsoft Entra service principal private key path")
+                        .hasArg()
+                        .argName("key-path")
+                        .build()
+                );
 
         options.addOption(
                 Option.builder()
@@ -362,11 +455,21 @@ public class ToolOptions {
             setSinkConnectNotNull(line.getOptionValue("sink-connect"));
             setHelp(line.hasOption("help"));
             setSinkPasswordNotNull(line.getOptionValue("sink-password"));
+            setSinkAuthModeNotNull(line.getOptionValue("sink-auth-mode"));
+            setSinkAuthPrincipalIdNotNull(line.getOptionValue("sink-auth-principal-id"));
+            setSinkAuthLoginHintNotNull(line.getOptionValue("sink-auth-login-hint"));
+            setSinkAuthClientCertificateNotNull(line.getOptionValue("sink-auth-client-certificate"));
+            setSinkAuthClientKeyNotNull(line.getOptionValue("sink-auth-client-key"));
             setSinkTableNotNull(line.getOptionValue("sink-table"));
             setSinkUserNotNull(line.getOptionValue("sink-user"));
             setSourceColumnsNotNull(line.getOptionValue("source-columns"));
             setSourceConnectNotNull(line.getOptionValue("source-connect"));
             setSourcePasswordNotNull(line.getOptionValue("source-password"));
+            setSourceAuthModeNotNull(line.getOptionValue("source-auth-mode"));
+            setSourceAuthPrincipalIdNotNull(line.getOptionValue("source-auth-principal-id"));
+            setSourceAuthLoginHintNotNull(line.getOptionValue("source-auth-login-hint"));
+            setSourceAuthClientCertificateNotNull(line.getOptionValue("source-auth-client-certificate"));
+            setSourceAuthClientKeyNotNull(line.getOptionValue("source-auth-client-key"));
             setSourceQueryNotNull(line.getOptionValue("source-query"));
             setSourceTableNotNull(line.getOptionValue("source-table"));
             setSourceUserNotNull(line.getOptionValue("source-user"));
@@ -475,6 +578,11 @@ public class ToolOptions {
         setSinkAutoCreate(Boolean.parseBoolean(prop.getProperty("sink.auto.create")));
         setSinkUser(prop.getProperty("sink.user"));
         setSinkPassword(prop.getProperty("sink.password"));
+        setSinkAuthMode(prop.getProperty("sink.auth.mode"));
+        setSinkAuthPrincipalId(prop.getProperty("sink.auth.principal.id"));
+        setSinkAuthLoginHint(prop.getProperty("sink.auth.login.hint"));
+        setSinkAuthClientCertificate(prop.getProperty("sink.auth.client.certificate"));
+        setSinkAuthClientKey(prop.getProperty("sink.auth.client.key"));
         setSinkTable(prop.getProperty("sink.table"));
         setSinkStagingTable(prop.getProperty("sink.staging.table"));
         setSinkStagingTableAlias(prop.getProperty("sink.staging.table.alias"));
@@ -482,6 +590,11 @@ public class ToolOptions {
         setSourceColumns(prop.getProperty("source.columns"));
         setSourceConnect(prop.getProperty("source.connect"));
         setSourcePassword(prop.getProperty("source.password"));
+        setSourceAuthMode(prop.getProperty("source.auth.mode"));
+        setSourceAuthPrincipalId(prop.getProperty("source.auth.principal.id"));
+        setSourceAuthLoginHint(prop.getProperty("source.auth.login.hint"));
+        setSourceAuthClientCertificate(prop.getProperty("source.auth.client.certificate"));
+        setSourceAuthClientKey(prop.getProperty("source.auth.client.key"));
         setSourceQuery(prop.getProperty("source.query"));
         setSourceTable(prop.getProperty("source.table"));
         setSourceUser(prop.getProperty("source.user"));
@@ -526,6 +639,51 @@ public class ToolOptions {
     public void setSourceUserNotNull(String sourceUser) {
         if (sourceUser != null && !sourceUser.isEmpty())
             this.sourceUser = sourceUser;
+    }
+
+    public void setSourceAuthMode(String mode) {
+        sourceAuthentication.setMode(mode);
+    }
+
+    public void setSourceAuthModeNotNull(String mode) {
+        if (mode != null && !mode.isEmpty())
+            setSourceAuthMode(mode);
+    }
+
+    public void setSourceAuthPrincipalId(String principalId) {
+        sourceAuthentication.setPrincipalId(principalId);
+    }
+
+    public void setSourceAuthPrincipalIdNotNull(String principalId) {
+        if (principalId != null && !principalId.isEmpty())
+            setSourceAuthPrincipalId(principalId);
+    }
+
+    public void setSourceAuthLoginHint(String loginHint) {
+        sourceAuthentication.setLoginHint(loginHint);
+    }
+
+    public void setSourceAuthLoginHintNotNull(String loginHint) {
+        if (loginHint != null && !loginHint.isEmpty())
+            setSourceAuthLoginHint(loginHint);
+    }
+
+    public void setSourceAuthClientCertificate(String clientCertificate) {
+        sourceAuthentication.setClientCertificate(clientCertificate);
+    }
+
+    public void setSourceAuthClientCertificateNotNull(String clientCertificate) {
+        if (clientCertificate != null && !clientCertificate.isEmpty())
+            setSourceAuthClientCertificate(clientCertificate);
+    }
+
+    public void setSourceAuthClientKey(String clientKey) {
+        sourceAuthentication.setClientKey(clientKey);
+    }
+
+    public void setSourceAuthClientKeyNotNull(String clientKey) {
+        if (clientKey != null && !clientKey.isEmpty())
+            setSourceAuthClientKey(clientKey);
     }
 
     public String getSourcePassword() {
@@ -617,6 +775,51 @@ public class ToolOptions {
     public void setSinkUserNotNull(String sinkUser) {
         if (sinkUser != null && !sinkUser.isEmpty())
             this.sinkUser = sinkUser;
+    }
+
+    public void setSinkAuthMode(String mode) {
+        sinkAuthentication.setMode(mode);
+    }
+
+    public void setSinkAuthModeNotNull(String mode) {
+        if (mode != null && !mode.isEmpty())
+            setSinkAuthMode(mode);
+    }
+
+    public void setSinkAuthPrincipalId(String principalId) {
+        sinkAuthentication.setPrincipalId(principalId);
+    }
+
+    public void setSinkAuthPrincipalIdNotNull(String principalId) {
+        if (principalId != null && !principalId.isEmpty())
+            setSinkAuthPrincipalId(principalId);
+    }
+
+    public void setSinkAuthLoginHint(String loginHint) {
+        sinkAuthentication.setLoginHint(loginHint);
+    }
+
+    public void setSinkAuthLoginHintNotNull(String loginHint) {
+        if (loginHint != null && !loginHint.isEmpty())
+            setSinkAuthLoginHint(loginHint);
+    }
+
+    public void setSinkAuthClientCertificate(String clientCertificate) {
+        sinkAuthentication.setClientCertificate(clientCertificate);
+    }
+
+    public void setSinkAuthClientCertificateNotNull(String clientCertificate) {
+        if (clientCertificate != null && !clientCertificate.isEmpty())
+            setSinkAuthClientCertificate(clientCertificate);
+    }
+
+    public void setSinkAuthClientKey(String clientKey) {
+        sinkAuthentication.setClientKey(clientKey);
+    }
+
+    public void setSinkAuthClientKeyNotNull(String clientKey) {
+        if (clientKey != null && !clientKey.isEmpty())
+            setSinkAuthClientKey(clientKey);
     }
 
     public String getSinkPassword() {
@@ -819,6 +1022,45 @@ public class ToolOptions {
         this.sinkConnectionParams = sinkConnectionParams;
     }
 
+    public AzureAuthenticationOptions getSourceAuthentication() {
+        return sourceAuthentication;
+    }
+
+    public void setSourceAuthentication(AzureAuthenticationOptions sourceAuthentication) {
+        this.sourceAuthentication = sourceAuthentication == null
+                ? new AzureAuthenticationOptions()
+                : sourceAuthentication;
+    }
+
+    public AzureAuthenticationOptions getSinkAuthentication() {
+        return sinkAuthentication;
+    }
+
+    public void setSinkAuthentication(AzureAuthenticationOptions sinkAuthentication) {
+        this.sinkAuthentication = sinkAuthentication == null
+                ? new AzureAuthenticationOptions()
+                : sinkAuthentication;
+    }
+
+    public void validateAzureAuthentication() {
+        sourceAuthentication.validate(hasValue(sourceUser), hasValue(sourcePassword));
+        sinkAuthentication.validate(hasValue(sinkUser), hasValue(sinkPassword));
+
+        if (jobs > 1 && (isInteractive(sourceAuthentication) || isInteractive(sinkAuthentication))) {
+            throw new IllegalArgumentException(
+                    "ActiveDirectoryInteractive authentication requires jobs=1 to avoid concurrent browser flows.");
+        }
+    }
+
+    private boolean isInteractive(AzureAuthenticationOptions authentication) {
+        return authentication != null
+                && AzureAuthenticationMode.ACTIVE_DIRECTORY_INTERACTIVE.equals(authentication.getMode());
+    }
+
+    private boolean hasValue(String value) {
+        return value != null && !value.isBlank();
+    }
+
 
     public String getSinkStagingTable() {
         return sinkStagingTable;
@@ -885,15 +1127,15 @@ public class ToolOptions {
     @Override
     public String toString() {
         return "ToolOptions{" +
-                " \n\tsourceConnect='" + sourceConnect + '\'' +
-                ",\n\tsourceUser='" + sourceUser + '\'' +
+            " \n\tsourceConnect='" + CredentialRedactor.redactConnectionString(sourceConnect) + '\'' +
+            ",\n\tsourceUser='" + CredentialRedactor.redactIdentity(sourceUser) + '\'' +
                 ",\n\tsourcePassword='" + (sourcePassword != null ? "****" : "null") + '\'' +
                 ",\n\tsourceTable='" + sourceTable + '\'' +
                 ",\n\tsourceColumns='" + sourceColumns + '\'' +
                 ",\n\tsourceWhere='" + sourceWhere + '\'' +
                 ",\n\tsourceQuery='" + sourceQuery + '\'' +
-                ",\n\tsinkConnect='" + sinkConnect + '\'' +
-                ",\n\tsinkUser='" + sinkUser + '\'' +
+                ",\n\tsinkConnect='" + CredentialRedactor.redactConnectionString(sinkConnect) + '\'' +
+                ",\n\tsinkUser='" + CredentialRedactor.redactIdentity(sinkUser) + '\'' +
                 ",\n\tsinkPassword='" + (sinkPassword != null ? "****" : "null") + '\'' +
                 ",\n\tsinkTable='" + sinkTable + '\'' +
                 ",\n\tsinkStagingTable='" + sinkStagingTable + '\'' +
@@ -914,9 +1156,11 @@ public class ToolOptions {
                 ",\n\tverbose=" + verboseLevel +
                 ",\n\toptionsFile='" + optionsFile + '\'' +
                 ",\n\tmode='" + mode + '\'' +
-                ",\n\tsentryDsn='" + sentryDsn + '\'' +
-                ",\n\tsourceConnectionParams=" + sourceConnectionParams +
-                ",\n\tsinkConnectionParams=" + sinkConnectionParams +
+                ",\n\tsentryDsn='" + CredentialRedactor.redactIdentity(sentryDsn) + '\'' +
+                ",\n\tsourceConnectionParams=" + CredentialRedactor.redactProperties(sourceConnectionParams) +
+                ",\n\tsinkConnectionParams=" + CredentialRedactor.redactProperties(sinkConnectionParams) +
+                ",\n\tsourceAuthentication=" + sourceAuthentication +
+                ",\n\tsinkAuthentication=" + sinkAuthentication +
                 ",\n\tsourceFileFormat='" + sourceFileFormat + '\'' +
                 ",\n\tsinkFileformat='" + sinkFileFormat + '\'' +
                 '}';

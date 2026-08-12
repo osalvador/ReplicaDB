@@ -344,6 +344,76 @@ sink.connect.parameter.ApplicationName=ReplicaDB
 sink.connect.parameter.reWriteBatchedInserts=true
 ```
 
+**Azure SQL and Microsoft Entra authentication**
+
+For `jdbc:sqlserver:` source or sink connections, ReplicaDB exposes the Microsoft JDBC Driver authentication modes through `source.auth.*` and `sink.auth.*` properties. The release includes the Azure Identity and MSAL libraries required by the driver. Keep credentials in environment-expanded properties or the host identity; do not put them in a JDBC URL or command-line argument.
+
+The supported modes are:
+
+| Mode | Typical environment | Required configuration |
+| --- | --- | --- |
+| `ActiveDirectoryInteractive` | Local desktop with MFA | Optional `*.auth.login.hint`; no password; `jobs=1` |
+| `ActiveDirectoryDefault` | Azure CLI, workload identity, or Azure host | No password; Azure Identity environment/default credential chain |
+| `ActiveDirectoryManagedIdentity` or `ActiveDirectoryMSI` | Azure VM, App Service, Container Apps, or another managed-identity host | Optional `*.auth.principal.id` for a user-assigned identity |
+| `ActiveDirectoryServicePrincipal` | Unattended execution outside Azure | `*.auth.principal.id` and the existing `*.password` from an environment variable |
+| `ActiveDirectoryServicePrincipalCertificate` | Unattended execution outside Azure | `*.auth.principal.id`, `*.auth.client.certificate`, and optional `*.auth.client.key` |
+| `ActiveDirectoryIntegrated` | Domain-integrated host with Kerberos/native authentication | External platform/Kerberos setup; no user or password |
+
+For a local browser and MFA login:
+
+```properties
+mode=complete
+jobs=1
+source.connect=jdbc:sqlserver://${AZURE_SQL_SERVER}:1433;databaseName=${AZURE_SQL_DATABASE};encrypt=true
+source.auth.mode=ActiveDirectoryInteractive
+source.auth.login.hint=${AZURE_LOGIN_HINT}
+source.table=${AZURE_SOURCE_TABLE}
+sink.connect=jdbc:postgresql://${PGHOST}/${PGDATABASE}
+sink.user=${PGUSER}
+sink.password=${PGPASSWORD}
+sink.table=${PGSINK_TABLE}
+```
+
+For a local default credential, authenticate with Azure CLI before starting ReplicaDB:
+
+```bash
+az login
+./bin/replicadb --options-file ./conf/azure-default.conf
+```
+
+```properties
+source.connect=jdbc:sqlserver://${AZURE_SQL_SERVER}:1433;databaseName=${AZURE_SQL_DATABASE};encrypt=true
+source.auth.mode=ActiveDirectoryDefault
+source.table=${AZURE_SOURCE_TABLE}
+```
+
+For a service principal outside Azure, keep the secret in the environment:
+
+```properties
+source.connect=jdbc:sqlserver://${AZURE_SQL_SERVER}:1433;databaseName=${AZURE_SQL_DATABASE};encrypt=true
+source.auth.mode=ActiveDirectoryServicePrincipal
+source.auth.principal.id=${AZURE_CLIENT_ID}
+source.password=${AZURE_CLIENT_SECRET}
+source.table=${AZURE_SOURCE_TABLE}
+```
+
+For a certificate-based service principal, use a certificate and optional private key path. Protect the files with the operating system permissions and rotate them before expiry:
+
+```properties
+source.connect=jdbc:sqlserver://${AZURE_SQL_SERVER}:1433;databaseName=${AZURE_SQL_DATABASE};encrypt=true
+source.auth.mode=ActiveDirectoryServicePrincipalCertificate
+source.auth.principal.id=${AZURE_CLIENT_ID}
+source.auth.client.certificate=${AZURE_CLIENT_CERTIFICATE}
+source.auth.client.key=${AZURE_CLIENT_KEY}
+source.table=${AZURE_SOURCE_TABLE}
+```
+
+For Azure-hosted execution, use `ActiveDirectoryManagedIdentity` and assign the system or user-assigned identity to a contained user or group in the target database. Omit `source.auth.principal.id` for a system-assigned identity. `ActiveDirectoryDefault` can use the Azure Identity default/workload credential chain when the host or workload is configured for it.
+
+The Azure SQL server must allow network access from the ReplicaDB host through its firewall or private endpoint. The target database must grant the selected Microsoft Entra principal the permissions required by the replication mode. Interactive authentication is not available in the headless Docker or Podman images; use a non-interactive mode there. `ActiveDirectoryPassword` is deprecated and is not recommended for MFA.
+
+The options-file properties have command-line equivalents: `--source-auth-mode`, `--source-auth-principal-id`, `--source-auth-login-hint`, `--source-auth-client-certificate`, `--source-auth-client-key`, and the corresponding `--sink-auth-*` options.
+
 
 <br>
 **Secure way of supplying a password to the database**

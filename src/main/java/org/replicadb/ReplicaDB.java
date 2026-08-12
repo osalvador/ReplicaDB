@@ -11,6 +11,7 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.config.CredentialRedactor;
 import org.replicadb.manager.ConnManager;
 import org.replicadb.manager.DataSourceType;
 import org.replicadb.manager.ManagerFactory;
@@ -84,8 +85,9 @@ public class ReplicaDB {
 		try {
 			options = new ToolOptions(args);
 			exitCode = processReplica(options);
-		} catch (final ParseException | IOException e) {
-			LOG.error("Got exception running ReplicaDB:", e);
+		} catch (final ParseException | IOException | IllegalArgumentException e) {
+			LOG.error("Got exception running ReplicaDB: {} ({})",
+					CredentialRedactor.redactMessage(e.getMessage()), e.getClass().getName());
 			exitCode = ERROR;
 		}
 
@@ -147,6 +149,13 @@ public class ReplicaDB {
 		// Reset static temp files map to avoid stale references between replication runs
 		FileManager.setTempFilesPath(new HashMap<>());
 
+		try {
+			new ManagerFactory().validateAzureAuthenticationConfiguration(options);
+		} catch (final IllegalArgumentException e) {
+			LOG.error("Invalid Azure authentication configuration: {}", e.getMessage());
+			return ERROR;
+		}
+
 		// Sentry
 		SentryInit(options);
 		final ITransaction transaction = Sentry.startTransaction("processReplica()", "task");
@@ -166,14 +175,15 @@ public class ReplicaDB {
 			shutdownExecutors(preSinkTasksExecutor, replicaTasksService);
 
 		} catch (final InterruptedException e) {
-			LOG.error("Replication was interrupted:", e);
+			LOG.error("Replication was interrupted: {}", CredentialRedactor.redactMessage(e.getMessage()));
 			Thread.currentThread().interrupt(); // Restore interrupted status
 			Sentry.captureException(e);
 			transaction.setThrowable(e);
 			transaction.setStatus(SpanStatus.INTERNAL_ERROR);
 			exitCode = ERROR;
 		} catch (final Exception e) {
-			LOG.error("Got exception running ReplicaDB:", e);
+			LOG.error("Got exception running ReplicaDB: {} ({})",
+					CredentialRedactor.redactMessage(e.getMessage()), e.getClass().getName());
 			Sentry.captureException(e);
 			transaction.setThrowable(e);
 			transaction.setStatus(SpanStatus.INTERNAL_ERROR);
@@ -339,7 +349,8 @@ public class ReplicaDB {
 			}
 
 		} catch (final Exception e) {
-			LOG.error("Error during cleanup: {}", e.getMessage(), e);
+			LOG.error("Error during cleanup: {} ({})",
+					CredentialRedactor.redactMessage(e.getMessage()), e.getClass().getName());
 		}
 	}
 
