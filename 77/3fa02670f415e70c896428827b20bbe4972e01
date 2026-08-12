@@ -1,0 +1,27 @@
+RELEASE_GUIDE.md
+  s_7a4501df734f17::t_8084307a2b1e07 38,47,59,88,90,119,125-126,128,132,138,142-143,151-153,159-162,165,167,170,176,182,200,202-203,212-213,229,237,239,257,260,266,278
+README.md
+  s_7a4501df734f17::t_6f7df7beb4ef6a 79-80
+docs/index.md
+  s_7a4501df734f17::t_c612ace64ac637 84-85
+pom.xml
+  s_7a4501df734f17::t_d7804cbba44dca 9
+release.sh
+  s_7a4501df734f17::t_2de3391532d3f6 14,204
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "773fa02670f415e70c896428827b20bbe4972e01",
+  "prompts": {},
+  "sessions": {
+    "s_7a4501df734f17": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "50d687f2-7e64-40d8-8000-749a8607ebf0",
+        "model": "gpt-5.3-codex"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
