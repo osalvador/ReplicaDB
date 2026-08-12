@@ -14,9 +14,11 @@
                 {% assign sorted_pages = site.pages | sort: "name" %}
                 {% for p in sorted_pages %}
                     {% if p.isHome != true and p.hide != true and p.title !=  %}
-                        <li {% if page.title == p.title %}class="active"{% endif %}>
-                            <a href="{{ p.url | relative_url }}">{{ p.title }}</a>
-                        </li>
+                        {% unless p.path contains "markdown/" %}
+                            <li {% if page.title == p.title %}class="active"{% endif %}>
+                                <a href="{{ p.url | relative_url }}">{{ p.title }}</a>
+                            </li>
+                        {% endunless %}
                     {% endif %}
                 {% endfor %}
             </ul>
