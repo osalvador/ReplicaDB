@@ -1,0 +1,23 @@
+.ai/archive/fix-sqlite-null-handling-test.plan.md
+  s_7a4501df734f17::t_2a4bf70ee52051 1-46
+src/main/java/org/replicadb/manager/SqliteManager.java
+  s_7a4501df734f17::t_dc059433833e45 246-254,274-282,298-300,302-304,307-313
+src/test/java/org/replicadb/manager/SqliteManagerNullHandlingTest.java
+  s_7a4501df734f17::t_e99d9bd1aa26bc 4,7,9-12,19-21,26-32,35-45,50,55-56,65,67,69,72,74,86,88,90,93,95,100,105,113,115,117,120,122,134,136,138,141,143,155,157,159,162,164,176,178,180,183,185,197,199,201,204,206,218,220,222,225,227,239,241,243,246,248
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "2dcd3fec64a3ce8f179a4e0bd46b89119e6bbcbe",
+  "prompts": {},
+  "sessions": {
+    "s_7a4501df734f17": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "50d687f2-7e64-40d8-8000-749a8607ebf0",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
