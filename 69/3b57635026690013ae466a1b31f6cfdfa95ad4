@@ -1,0 +1,21 @@
+docs/markdown/assets/app.js
+  s_753df235e0c3bb::t_de1cf233ac47d4 203,206,208-209,214,227
+docs/markdown/package.json
+  s_753df235e0c3bb::t_444a8757300f6b 26-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "693b57635026690013ae466a1b31f6cfdfa95ad4",
+  "prompts": {},
+  "sessions": {
+    "s_753df235e0c3bb": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "f96675e0-b447-4ffa-abad-c809dd2546e4",
+        "model": "gpt-5.3-codex"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
