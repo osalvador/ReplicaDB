@@ -1,56 +1,59 @@
 package org.replicadb.manager;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.io.TempDir;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ToolOptions;
-import org.replicadb.config.ReplicadbSqliteFakeContainer;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.replicadb.utils.ScriptRunner;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Test SqliteManager NULL handling for primitive types.
- * Verifies that NULL values are preserved during replication (not converted to 0, 0.0, false, etc.)
- * 
- * NOTE: These tests are disabled due to SQLite infrastructure limitations when replicating
- * within the same database file (source and sink). SQLite's single-writer model causes
- * database locking issues that are unrelated to the NULL handling code being tested.
- * The NULL handling code is thoroughly validated by OracleManagerNullHandlingTest (9/9 pass)
- * and StandardJDBCManagerNullHandlingTest (8/10 pass).
+ * Tests that NULL values are preserved during SQLite-to-SQLite replication.
+ * Uses two separate database files (source.db / sink.db) to avoid SQLite single-writer locking.
+ * Regression guard for issue #276.
  */
-@Testcontainers
-@Disabled("SQLite same-database replication causes locking issues - NULL handling validated by Oracle/MySQL tests")
 class SqliteManagerNullHandlingTest {
-    private static final Logger LOG = LogManager.getLogger(SqliteManagerNullHandlingTest.class);
     private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
-    private static final String REPLICADB_CONF_FILE = "/replicadb.conf";
 
-    private Connection sqliteConn;
-    
-    public static ReplicadbSqliteFakeContainer sqlite = ReplicadbSqliteFakeContainer.getInstance();
+    @TempDir
+    static Path tempDir;
+
+    private static String sourceUrl;
+    private static String sinkUrl;
+
+    private Connection sinkConn;
 
     @BeforeAll
-    static void setUp() {
+    static void setUp() throws SQLException, IOException {
+        sourceUrl = "jdbc:sqlite:" + tempDir.resolve("source.db");
+        sinkUrl   = "jdbc:sqlite:" + tempDir.resolve("sink.db");
+        try (Connection conn = DriverManager.getConnection(sourceUrl)) {
+            new ScriptRunner(conn, false, true)
+                .runScript(new BufferedReader(new FileReader(RESOURCE_DIR + "/sqlite/sqlite-source.sql")));
+        }
+        try (Connection conn = DriverManager.getConnection(sinkUrl)) {
+            new ScriptRunner(conn, false, true)
+                .runScript(new BufferedReader(new FileReader(RESOURCE_DIR + "/sinks/sqlite-sink.sql")));
+        }
     }
 
     @BeforeEach
     void before() throws SQLException {
-        this.sqliteConn = DriverManager.getConnection(sqlite.getJdbcUrl());
+        this.sinkConn = DriverManager.getConnection(sinkUrl);
     }
 
     @AfterEach
     void tearDown() throws SQLException {
-        // Drop and recreate sink table
-        this.sqliteConn.createStatement().execute("DROP TABLE IF EXISTS t_sink");
-        this.sqliteConn.createStatement().execute(
-            "CREATE TABLE t_sink AS SELECT * FROM t_source WHERE 1=0"
-        );
-        this.sqliteConn.close();
+        sinkConn.createStatement().execute("DELETE FROM t_sink");
+        sinkConn.close();
     }
 
     /**
@@ -59,20 +62,16 @@ class SqliteManagerNullHandlingTest {
      */
     @Test
     void testNullIntegerPreserved() throws Exception {
-        // Replicate all data (includes NULL row)
-        String[] args = {
+        assertEquals(0, ReplicaDB.processReplica(new ToolOptions(new String[]{
                 "--mode", "complete",
-                "--source-connect", sqlite.getJdbcUrl(),
+                "--source-connect", sourceUrl,
                 "--source-table", "t_source",
-                "--sink-connect", sqlite.getJdbcUrl(),
+                "--sink-connect", sinkUrl,
                 "--sink-table", "t_sink",
                 "--jobs", "1"
-        };
-        ToolOptions options = new ToolOptions(args);
-        assertEquals(0, ReplicaDB.processReplica(options));
+        })));
 
-        // Find NULL row (last row has all NULLs except auto-increment ID)
-        Statement stmt = sqliteConn.createStatement();
+        Statement stmt = sinkConn.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT C_SMALLINT FROM t_sink WHERE C_SMALLINT IS NULL");
         assertTrue(rs.next(), "Should find at least one row with NULL C_SMALLINT");
         rs.getInt(1);
@@ -84,30 +83,26 @@ class SqliteManagerNullHandlingTest {
      */
     @Test
     void testNullBigDecimalPreserved() throws Exception {
-        String[] args = {
+        assertEquals(0, ReplicaDB.processReplica(new ToolOptions(new String[]{
                 "--mode", "complete",
-                "--source-connect", sqlite.getJdbcUrl(),
+                "--source-connect", sourceUrl,
                 "--source-table", "t_source",
-                "--sink-connect", sqlite.getJdbcUrl(),
+                "--sink-connect", sinkUrl,
                 "--sink-table", "t_sink",
                 "--jobs", "1"
-        };
-        ToolOptions options = new ToolOptions(args);
-        assertEquals(0, ReplicaDB.processReplica(options));
+        })));
 
-        Statement stmt = sqliteConn.createStatement();
+        Statement stmt = sinkConn.createStatement();
         
         // Test BIGINT NULL
         ResultSet rs = stmt.executeQuery("SELECT C_BIGINT FROM t_sink WHERE C_BIGINT IS NULL");
         assertTrue(rs.next(), "Should find row with NULL C_BIGINT");
-        rs.getBigDecimal(1);
-        assertTrue(rs.wasNull(), "C_BIGINT should be NULL");
+        assertNull(rs.getBigDecimal(1), "C_BIGINT should be NULL");
 
         // Test NUMERIC NULL
         rs = stmt.executeQuery("SELECT C_NUMERIC FROM t_sink WHERE C_NUMERIC IS NULL");
         assertTrue(rs.next(), "Should find row with NULL C_NUMERIC");
-        rs.getBigDecimal(1);
-        assertTrue(rs.wasNull(), "C_NUMERIC should be NULL");
+        assertNull(rs.getBigDecimal(1), "C_NUMERIC should be NULL");
     }
 
     /**
@@ -115,18 +110,16 @@ class SqliteManagerNullHandlingTest {
      */
     @Test
     void testNullDoublePreserved() throws Exception {
-        String[] args = {
+        assertEquals(0, ReplicaDB.processReplica(new ToolOptions(new String[]{
                 "--mode", "complete",
-                "--source-connect", sqlite.getJdbcUrl(),
+                "--source-connect", sourceUrl,
                 "--source-table", "t_source",
-                "--sink-connect", sqlite.getJdbcUrl(),
+                "--sink-connect", sinkUrl,
                 "--sink-table", "t_sink",
                 "--jobs", "1"
-        };
-        ToolOptions options = new ToolOptions(args);
-        assertEquals(0, ReplicaDB.processReplica(options));
+        })));
 
-        Statement stmt = sqliteConn.createStatement();
+        Statement stmt = sinkConn.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT C_DOUBLE_PRECISION FROM t_sink WHERE C_DOUBLE_PRECISION IS NULL");
         assertTrue(rs.next(), "Should find row with NULL C_DOUBLE_PRECISION");
         rs.getDouble(1);
@@ -138,18 +131,16 @@ class SqliteManagerNullHandlingTest {
      */
     @Test
     void testNullFloatPreserved() throws Exception {
-        String[] args = {
+        assertEquals(0, ReplicaDB.processReplica(new ToolOptions(new String[]{
                 "--mode", "complete",
-                "--source-connect", sqlite.getJdbcUrl(),
+                "--source-connect", sourceUrl,
                 "--source-table", "t_source",
-                "--sink-connect", sqlite.getJdbcUrl(),
+                "--sink-connect", sinkUrl,
                 "--sink-table", "t_sink",
                 "--jobs", "1"
-        };
-        ToolOptions options = new ToolOptions(args);
-        assertEquals(0, ReplicaDB.processReplica(options));
+        })));
 
-        Statement stmt = sqliteConn.createStatement();
+        Statement stmt = sinkConn.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT C_FLOAT FROM t_sink WHERE C_FLOAT IS NULL");
         assertTrue(rs.next(), "Should find row with NULL C_FLOAT");
         rs.getFloat(1);
@@ -161,18 +152,16 @@ class SqliteManagerNullHandlingTest {
      */
     @Test
     void testNullDatePreserved() throws Exception {
-        String[] args = {
+        assertEquals(0, ReplicaDB.processReplica(new ToolOptions(new String[]{
                 "--mode", "complete",
-                "--source-connect", sqlite.getJdbcUrl(),
+                "--source-connect", sourceUrl,
                 "--source-table", "t_source",
-                "--sink-connect", sqlite.getJdbcUrl(),
+                "--sink-connect", sinkUrl,
                 "--sink-table", "t_sink",
                 "--jobs", "1"
-        };
-        ToolOptions options = new ToolOptions(args);
-        assertEquals(0, ReplicaDB.processReplica(options));
+        })));
 
-        Statement stmt = sqliteConn.createStatement();
+        Statement stmt = sinkConn.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT C_DATE FROM t_sink WHERE C_DATE IS NULL");
         assertTrue(rs.next(), "Should find row with NULL C_DATE");
         Date dateVal = rs.getDate(1);
@@ -184,18 +173,16 @@ class SqliteManagerNullHandlingTest {
      */
     @Test
     void testNullTimestampPreserved() throws Exception {
-        String[] args = {
+        assertEquals(0, ReplicaDB.processReplica(new ToolOptions(new String[]{
                 "--mode", "complete",
-                "--source-connect", sqlite.getJdbcUrl(),
+                "--source-connect", sourceUrl,
                 "--source-table", "t_source",
-                "--sink-connect", sqlite.getJdbcUrl(),
+                "--sink-connect", sinkUrl,
                 "--sink-table", "t_sink",
                 "--jobs", "1"
-        };
-        ToolOptions options = new ToolOptions(args);
-        assertEquals(0, ReplicaDB.processReplica(options));
+        })));
 
-        Statement stmt = sqliteConn.createStatement();
+        Statement stmt = sinkConn.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT C_TIMESTAMP_WITHOUT_TIMEZONE FROM t_sink WHERE C_TIMESTAMP_WITHOUT_TIMEZONE IS NULL");
         assertTrue(rs.next(), "Should find row with NULL C_TIMESTAMP_WITHOUT_TIMEZONE");
         Timestamp tsVal = rs.getTimestamp(1);
@@ -207,18 +194,16 @@ class SqliteManagerNullHandlingTest {
      */
     @Test
     void testNullStringPreserved() throws Exception {
-        String[] args = {
+        assertEquals(0, ReplicaDB.processReplica(new ToolOptions(new String[]{
                 "--mode", "complete",
-                "--source-connect", sqlite.getJdbcUrl(),
+                "--source-connect", sourceUrl,
                 "--source-table", "t_source",
-                "--sink-connect", sqlite.getJdbcUrl(),
+                "--sink-connect", sinkUrl,
                 "--sink-table", "t_sink",
                 "--jobs", "1"
-        };
-        ToolOptions options = new ToolOptions(args);
-        assertEquals(0, ReplicaDB.processReplica(options));
+        })));
 
-        Statement stmt = sqliteConn.createStatement();
+        Statement stmt = sinkConn.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT C_CHARACTER_VAR FROM t_sink WHERE C_CHARACTER_VAR IS NULL");
         assertTrue(rs.next(), "Should find row with NULL C_CHARACTER_VAR");
         String strVal = rs.getString(1);
@@ -230,18 +215,16 @@ class SqliteManagerNullHandlingTest {
      */
     @Test
     void testNullBinaryPreserved() throws Exception {
-        String[] args = {
+        assertEquals(0, ReplicaDB.processReplica(new ToolOptions(new String[]{
                 "--mode", "complete",
-                "--source-connect", sqlite.getJdbcUrl(),
+                "--source-connect", sourceUrl,
                 "--source-table", "t_source",
-                "--sink-connect", sqlite.getJdbcUrl(),
+                "--sink-connect", sinkUrl,
                 "--sink-table", "t_sink",
                 "--jobs", "1"
-        };
-        ToolOptions options = new ToolOptions(args);
-        assertEquals(0, ReplicaDB.processReplica(options));
+        })));
 
-        Statement stmt = sqliteConn.createStatement();
+        Statement stmt = sinkConn.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT C_BINARY_VAR FROM t_sink WHERE C_BINARY_VAR IS NULL");
         assertTrue(rs.next(), "Should find row with NULL C_BINARY_VAR");
         byte[] bytesVal = rs.getBytes(1);
@@ -253,18 +236,16 @@ class SqliteManagerNullHandlingTest {
      */
     @Test
     void testNullBooleanPreserved() throws Exception {
-        String[] args = {
+        assertEquals(0, ReplicaDB.processReplica(new ToolOptions(new String[]{
                 "--mode", "complete",
-                "--source-connect", sqlite.getJdbcUrl(),
+                "--source-connect", sourceUrl,
                 "--source-table", "t_source",
-                "--sink-connect", sqlite.getJdbcUrl(),
+                "--sink-connect", sinkUrl,
                 "--sink-table", "t_sink",
                 "--jobs", "1"
-        };
-        ToolOptions options = new ToolOptions(args);
-        assertEquals(0, ReplicaDB.processReplica(options));
+        })));
 
-        Statement stmt = sqliteConn.createStatement();
+        Statement stmt = sinkConn.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT C_BOOLEAN FROM t_sink WHERE C_BOOLEAN IS NULL");
         assertTrue(rs.next(), "Should find row with NULL C_BOOLEAN");
         rs.getBoolean(1);
