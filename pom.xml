@@ -126,7 +126,7 @@
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
-            <version>8.2.0</version>
+            <version>26.7.0</version>
             <scope>provided</scope>
         </dependency>
 
@@ -218,7 +218,7 @@
         <dependency>
             <groupId>com.oracle.database.xml</groupId>
             <artifactId>xmlparserv2</artifactId>
-            <version>23.26.1.0.0</version>
+            <version>23.26.3.0.0</version>
         </dependency>
         <!-- Oracle XML DB support for XMLType processing -->
         <dependency>
@@ -320,29 +320,34 @@
             <version>1.1.10.8</version>
         </dependency>
 
-
         <dependency>
             <groupId>org.apache.orc</groupId>
             <artifactId>orc-core</artifactId>
-            <version>1.6.7</version>
+            <version>2.3.1</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.orc</groupId>
             <artifactId>orc-mapreduce</artifactId>
-            <version>2.3.0</version>
+            <version>2.3.1</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.orc</groupId>
             <artifactId>orc-tools</artifactId>
-            <version>1.6.7</version>
+            <version>2.3.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-storage-api</artifactId>
+            <version>2.8.1</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
-            <version>3.4.0</version>
+            <version>3.4.3</version>
             <exclusions>
                 <!-- Exclude SLF4J bindings to avoid conflict with log4j-slf4j-impl -->
                 <exclusion>

@@ -14,7 +14,6 @@ import org.bson.codecs.BsonArrayCodec;
 import org.bson.codecs.DecoderContext;
 import org.bson.json.JsonParseException;
 import org.bson.json.JsonReader;
-import org.jetbrains.annotations.NotNull;
 import org.postgresql.util.PGobject;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
@@ -221,7 +220,6 @@ public class MongoDBManager extends SqlManager {
 		return this.mongoDbResultSet;
 	}
 
-	@NotNull
 	private static List<BsonDocument> getAggregation(String queryAggregation) {
 		// parse the aggregation query string into a List of BsonDocument
 		return new BsonArrayCodec().decode(new JsonReader(queryAggregation), DecoderContext.builder().build()).stream()
