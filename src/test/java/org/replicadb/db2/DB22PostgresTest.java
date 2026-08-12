@@ -9,6 +9,8 @@ import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbDB2Container;
 import org.replicadb.config.ReplicadbPostgresqlContainer;
+import org.replicadb.manager.DataSourceType;
+import org.replicadb.manager.db2.Db2Manager;
 import org.testcontainers.containers.Db2Container;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -76,6 +78,17 @@ class DB22PostgresTest {
         ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM " + tableName);
         rs.next();
         return rs.getInt(1);
+    }
+
+    private boolean columnExists(Connection conn, String tableName, String columnName) throws SQLException {
+        String sql = "SELECT 1 FROM information_schema.columns WHERE table_name = ? AND column_name = ?";
+        try (PreparedStatement statement = conn.prepareStatement(sql)) {
+            statement.setString(1, tableName);
+            statement.setString(2, columnName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
     }
 
     @Test
@@ -256,6 +269,144 @@ class DB22PostgresTest {
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(EXPECTED_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testDb22PostgresCompleteParallelWithoutColumnOptions() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+        Assertions.assertFalse(columnExists(postgresConn, "t_sink", "rn"), "Technical RN column must not be targeted or created");
+    }
+
+    @Test
+    void testDb22PostgresCompleteParallelSourceQueryWithoutColumnOptions() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--source-query", "SELECT * FROM t_source",
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+        Assertions.assertFalse(columnExists(postgresConn, "t_sink", "rn"), "Technical RN column must not be targeted or created");
+    }
+
+    @Test
+    void testDb2ParallelProjectionAvoidsPartitionAliasCollision() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--source-query", "SELECT C_INTEGER AS REPLICADB_PARTITION_RN, C_SMALLINT FROM t_source",
+                "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        Db2Manager sourceManager = new Db2Manager(options, DataSourceType.SOURCE);
+        try {
+            sourceManager.getConnection();
+            try (ResultSet resultSet = sourceManager.readTable(null, null, 0)) {
+                ResultSetMetaData metadata = resultSet.getMetaData();
+                assertEquals(2, metadata.getColumnCount());
+                assertEquals("REPLICADB_PARTITION_RN", metadata.getColumnLabel(1));
+                assertEquals("C_SMALLINT", metadata.getColumnLabel(2));
+            }
+        } finally {
+            sourceManager.close();
+        }
+    }
+
+    @Test
+    void testDb2ParallelProjectionRejectsDuplicateLabels() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--source-query", "SELECT C_INTEGER AS DUPLICATE_LABEL, C_SMALLINT AS DUPLICATE_LABEL FROM t_source",
+                "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        Db2Manager sourceManager = new Db2Manager(options, DataSourceType.SOURCE);
+        try {
+            sourceManager.getConnection();
+            SQLException exception = Assertions.assertThrows(SQLException.class,
+                    () -> sourceManager.readTable(null, null, 0));
+            assertTrue(exception.getMessage().contains("Unable to resolve DB2 source columns for parallel read"));
+        } finally {
+            sourceManager.close();
+        }
+    }
+
+    @Test
+    void testDb22PostgresCompleteAtomicParallelWithoutColumnOptions() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--mode", ReplicationMode.COMPLETE_ATOMIC.getModeText(),
+                "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+        Assertions.assertFalse(columnExists(postgresConn, "t_sink", "rn"), "Technical RN column must not be targeted or created");
+    }
+
+    @Test
+    void testDb22PostgresIncrementalParallelWithoutColumnOptions() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+                "--jobs", "4"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+        Assertions.assertFalse(columnExists(postgresConn, "t_sink", "rn"), "Technical RN column must not be targeted or created");
+    }
+
+    @Test
+    void testDb22PostgresCompleteWithoutColumnOptionsSingleJob() throws ParseException, IOException, SQLException {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", db2.getJdbcUrl(),
+                "--source-user", db2.getUsername(),
+                "--source-password", db2.getPassword(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--jobs", "1"
+        };
+        ToolOptions options = new ToolOptions(args);
+        assertEquals(0, ReplicaDB.processReplica(options));
+        assertEquals(EXPECTED_ROWS, countSinkRows());
+        Assertions.assertFalse(columnExists(postgresConn, "t_sink", "rn"), "Technical RN column must not be targeted or created");
     }
 
     @Test

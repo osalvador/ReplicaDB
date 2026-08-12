@@ -26,7 +26,10 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * DB2-specific connection manager supporting DB2 LUW and DB2/i platforms.
@@ -35,6 +38,17 @@ import java.util.Map;
 public class Db2Manager extends SqlManager {
 
     private static final Logger LOG = LogManager.getLogger(Db2Manager.class.getName());
+    private static final String PARTITION_ALIAS_BASE = "REPLICADB_PARTITION_RN";
+
+    private static final class PartitionProjection {
+        private final String columns;
+        private final String partitionAlias;
+
+        private PartitionProjection(String columns, String partitionAlias) {
+            this.columns = columns;
+            this.partitionAlias = partitionAlias;
+        }
+    }
 
     /**
      * Constructs the Db2Manager.
@@ -92,14 +106,77 @@ public class Db2Manager extends SqlManager {
             return super.execute(baseQuery);
         }
 
-        String innerSelectColumns = "*".equals(allColumns) ? "SRC.*" : allColumns;
-        String outerSelectColumns = "*".equals(allColumns) ? "*" : allColumns;
+        PartitionProjection partitionProjection = resolvePartitionProjection(baseQuery, allColumns);
+        String innerSelectColumns = "*".equals(allColumns.trim()) ? "SRC.*" : allColumns;
+        String outerSelectColumns = "*".equals(allColumns.trim())
+            ? partitionProjection.columns
+            : allColumns;
         String sqlCmd = "SELECT " + outerSelectColumns + " FROM (SELECT " + innerSelectColumns
             + ", MOD(ROW_NUMBER() OVER (ORDER BY 1), " + this.options.getJobs()
-            + ") AS RN FROM (" + baseQuery + ") SRC) PART WHERE RN = " + nThread;
+            + ") AS " + partitionProjection.partitionAlias + " FROM (" + baseQuery + ") SRC) PART WHERE PART."
+            + partitionProjection.partitionAlias + " = " + nThread;
 
         LOG.debug("{}: Reading table with command: {}", Thread.currentThread().getName(), sqlCmd);
         return super.execute(sqlCmd);
+    }
+
+    private PartitionProjection resolvePartitionProjection(String baseQuery, String sourceColumns) throws SQLException {
+        if (sourceColumns != null && !sourceColumns.isBlank() && !"*".equals(sourceColumns.trim())) {
+            return new PartitionProjection(sourceColumns, PARTITION_ALIAS_BASE);
+        }
+
+        String probeQuery = "SELECT * FROM (" + baseQuery + ") PROBE WHERE 1=0";
+        try (PreparedStatement statement = this.getConnection().prepareStatement(probeQuery);
+             ResultSet resultSet = statement.executeQuery()) {
+            ResultSetMetaData metadata = resultSet.getMetaData();
+            int columnCount = metadata.getColumnCount();
+            if (columnCount == 0) {
+                throw new SQLException("Unable to resolve DB2 source columns for parallel read: metadata is empty");
+            }
+
+            StringBuilder projection = new StringBuilder();
+            Set<String> sourceLabels = new HashSet<>();
+            for (int i = 1; i <= columnCount; i++) {
+                String columnName = metadata.getColumnLabel(i);
+                if (columnName == null || columnName.isBlank()) {
+                    columnName = metadata.getColumnName(i);
+                }
+                if (columnName == null || columnName.isBlank()) {
+                    throw new SQLException("Unable to resolve DB2 source columns for parallel read: column metadata is unnamed");
+                }
+                String normalizedColumnName = columnName.toUpperCase(Locale.ROOT);
+                if (!sourceLabels.add(normalizedColumnName)) {
+                    throw new SQLException("Unable to resolve DB2 source columns for parallel read: duplicate column label");
+                }
+
+                if (i > 1) {
+                    projection.append(",");
+                }
+                if (Boolean.TRUE.equals(options.getQuotedIdentifiers())) {
+                    projection.append('"')
+                        .append(columnName.replace("\"", "\"\""))
+                        .append('"');
+                } else {
+                    projection.append(columnName);
+                }
+            }
+            return new PartitionProjection(projection.toString(), resolvePartitionAlias(sourceLabels));
+        } catch (SQLException e) {
+            if (e.getMessage() != null && e.getMessage().startsWith("Unable to resolve DB2 source columns for parallel read")) {
+                throw e;
+            }
+            throw new SQLException("Unable to resolve DB2 source columns for parallel read", e);
+        }
+    }
+
+    private String resolvePartitionAlias(Set<String> sourceLabels) {
+        String alias = PARTITION_ALIAS_BASE;
+        int suffix = 0;
+        while (sourceLabels.contains(alias.toUpperCase(Locale.ROOT))) {
+            suffix++;
+            alias = PARTITION_ALIAS_BASE + "_" + suffix;
+        }
+        return alias;
     }
 
     /**
