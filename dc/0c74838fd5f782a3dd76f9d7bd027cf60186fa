@@ -1,0 +1,71 @@
+.ai/archive/azure-sql-authentication.plan.md
+  s_37e44801529776::t_63488f026078c7 1-312
+Containerfile
+  s_37e44801529776::t_0787e312b58844 16
+Dockerfile
+  s_37e44801529776::t_994aacf7ae56bf 9
+README.md
+  s_37e44801529776::t_3b51aed245eff0 58,112-156
+bin/configure-replicadb
+  s_37e44801529776::t_dbbbfd6644391a 121-124
+bin/replicadb.cmd
+  s_37e44801529776::t_984c2747956d3c 28-30,34
+conf/_replicadb.conf
+  s_37e44801529776::t_6e9ca23a54b522 14,30-36,47-53
+docs/docs/docs.md
+  s_37e44801529776::t_31c92ef86c3a8e 347-416
+docs/index.md
+  s_37e44801529776::t_b9334023cf0d8d 63,118-140
+docs/wizard/index.html
+  s_37e44801529776::t_c2b8c127543e17 183-215,572-604,1007,1011-1016,1038-1043,1182-1188,1289-1291,1331,1449,1458
+pom.xml
+  s_37e44801529776::t_3c134c36a50cd3 20,268-274
+src/main/java/org/replicadb/ReplicaDB.java
+  s_37e44801529776::t_d55fea33be109c 14,88-90,152-158,178,185-186,352-353
+src/main/java/org/replicadb/ReplicaTask.java
+  s_37e44801529776::t_ef70248a6ea789 6,22,26-29,32,43-45,47-84,86,88-99,101,103-105,109-115,117,123
+src/main/java/org/replicadb/cli/AzureAuthenticationMode.java
+  s_37e44801529776::t_104780b247eda9 1-51
+src/main/java/org/replicadb/cli/AzureAuthenticationOptions.java
+  s_37e44801529776::t_a18069dd3e0bb2 1-142
+src/main/java/org/replicadb/cli/OptionsFile.java
+  s_37e44801529776::t_79dc5f1c2cdcf5 5,102-103,106
+src/main/java/org/replicadb/cli/ToolOptions.java
+  s_37e44801529776::t_138c19521725c9 7,59-60,105-149,224-268,458-462,468-472,581-585,593-597,644-688,780-824,1025-1063,1130-1131,1137-1138,1159-1163
+src/main/java/org/replicadb/config/CredentialRedactor.java
+  s_37e44801529776::t_ef3b940ed06db2 1-250
+src/main/java/org/replicadb/config/Sentry.java
+  s_37e44801529776::t_ec03e1186f7e42 25-26,49-50,52-53,58-63
+src/main/java/org/replicadb/manager/ManagerFactory.java
+  s_37e44801529776::t_a6da0c982f469f 8-9,35-36,77-139
+src/main/java/org/replicadb/manager/SQLServerManager.java
+  s_37e44801529776::t_ac4896cf3d5ea0 9-10,21,69-190
+src/main/java/org/replicadb/manager/SqlManager.java
+  s_37e44801529776::t_bc0a5060206511 229-230,232-234,236-239,241-243,245-250,252-257,260-264,266-268,271,282-296,298
+src/test/java/org/replicadb/ReplicaTaskAuthenticationFailureTest.java
+  s_37e44801529776::t_bda5ba5483b66e 1-206
+src/test/java/org/replicadb/cli/AzureAuthenticationOptionsTest.java
+  s_37e44801529776::t_710073a56bb8e8 1-80
+src/test/java/org/replicadb/cli/ToolOptionsAzureAuthenticationTest.java
+  s_37e44801529776::t_bdbd582cd067fa 1-95
+src/test/java/org/replicadb/config/CredentialRedactorTest.java
+  s_37e44801529776::t_a3381dbf14a983 1-116
+src/test/java/org/replicadb/manager/SQLServerManagerAuthenticationTest.java
+  s_37e44801529776::t_adac44cadafa12 1-152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "dc0c74838fd5f782a3dd76f9d7bd027cf60186fa",
+  "prompts": {},
+  "sessions": {
+    "s_37e44801529776": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "fa191495-e4ba-45dd-96b8-40ade63a1c3c",
+        "model": "gpt-5.3-codex"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
