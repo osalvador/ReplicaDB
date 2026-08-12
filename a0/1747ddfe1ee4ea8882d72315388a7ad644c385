@@ -1,0 +1,21 @@
+bin/replicadb.cmd
+  s_a46ee769a9bde4::t_ca3834ff59dc82 31
+pom.xml
+  s_a46ee769a9bde4::t_d62e8dfeff3dd6 129,221,326,332,338-344,350
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "a01747ddfe1ee4ea8882d72315388a7ad644c385",
+  "prompts": {},
+  "sessions": {
+    "s_a46ee769a9bde4": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "0ba7db85-903b-48cc-a914-870063eafe17",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
