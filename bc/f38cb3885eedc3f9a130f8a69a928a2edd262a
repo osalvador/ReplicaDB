@@ -1,0 +1,23 @@
+.ai/archive/issue-271-db2-rn-partition.plan.md
+  s_753df235e0c3bb::t_92d1cefd7812f6 1-150
+src/main/java/org/replicadb/manager/db2/Db2Manager.java
+  s_753df235e0c3bb::t_7c53b4d501b742 29-30,32,41-51,109-113,116-117,123-181
+src/test/java/org/replicadb/db2/DB22PostgresTest.java
+  s_753df235e0c3bb::t_b8bee0c7d48dec 12-13,83-93,274-411
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "bcf38cb3885eedc3f9a130f8a69a928a2edd262a",
+  "prompts": {},
+  "sessions": {
+    "s_753df235e0c3bb": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "f96675e0-b447-4ffa-abad-c809dd2546e4",
+        "model": "gpt-5.3-codex"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
