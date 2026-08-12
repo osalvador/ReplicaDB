@@ -4,7 +4,6 @@ import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jetbrains.annotations.NotNull;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 
@@ -497,7 +496,6 @@ public class PostgresqlManager extends SqlManager {
 
     }
 
-    @NotNull
     private String bytesToPostgresHex (byte[] bytes) {
         if (bytes == null) return "";
 
