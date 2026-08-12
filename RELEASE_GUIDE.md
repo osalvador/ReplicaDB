@@ -35,7 +35,7 @@ This document describes the automated release process for ReplicaDB. The process
 cd /path/to/ReplicaDB
 
 # Run release script with new version
-./release.sh 0.16.0
+./release.sh 0.18.2
 ```
 
 ### Script Workflow
@@ -44,7 +44,7 @@ The `release.sh` script automatically:
 
 1. **Validates Version Format**
    - Enforces semantic versioning (X.Y.Z)
-   - Example: `0.16.0` ✓, `0.16` ✗
+   - Example: `0.18.2` ✓, `0.16` ✗
 
 2. **Pre-flight Checks**
    - Verifies git working directory is clean
@@ -56,7 +56,7 @@ The `release.sh` script automatically:
    - Creates release commit
 
 4. **Creates Release Tag**
-   - Creates annotated git tag: `v0.16.0`
+   - Creates annotated git tag: `v0.18.2`
    - Tags are pushed to origin
 
 5. **Triggers CI/CD Pipeline**
@@ -85,9 +85,9 @@ The GitHub Actions workflow (`CI_Release.yml`) automatically:
    - Auto-generates release page
 
 4. **Builds & Pushes Docker Images**
-   - DockerHub: `osalvador/replicadb:0.16.0`
+   - DockerHub: `osalvador/replicadb:0.18.2`
    - DockerHub: `osalvador/replicadb:latest`
-   - DockerHub: `osalvador/replicadb:ubi9-0.16.0`
+   - DockerHub: `osalvador/replicadb:ubi9-0.18.2`
    - DockerHub: `osalvador/replicadb:ubi9-latest`
 
 ## Release Checklist
@@ -116,31 +116,31 @@ On branch master
 nothing to commit, working tree clean
 
 # 4. Run release script
-$ ./release.sh 0.16.0
+$ ./release.sh 0.18.2
 
 ╔════════════════════════════════════════════════════════╗
 ║ ReplicaDB Release Process
 ╚════════════════════════════════════════════════════════╝
 
-Current Version:  0.15.1
-Release Version:  0.16.0
+Current Version:  0.18.1
+Release Version:  0.18.2
 
-✓ Version format valid: 0.16.0
+✓ Version format valid: 0.18.2
 ✓ Git working directory is clean
 ✓ On branch: master
 
-Ready to release v0.16.0? (y/n) y
+Ready to release v0.18.2? (y/n) y
 
 ╔════════════════════════════════════════════════════════╗
 ║ Executing Release Steps
 ╚════════════════════════════════════════════════════════╝
 
-ℹ Updating pom.xml: 0.15.1 -> 0.16.0
+ℹ Updating pom.xml: 0.18.1 -> 0.18.2
 ✓ pom.xml updated
 ℹ Creating release commit...
 ✓ Release commit created
-ℹ Creating git tag: v0.16.0
-✓ Git tag created: v0.16.0
+ℹ Creating git tag: v0.18.2
+✓ Git tag created: v0.18.2
 ℹ Pushing to origin...
 ✓ Pushed to origin
 
@@ -148,38 +148,38 @@ Ready to release v0.16.0? (y/n) y
 ║ RELEASE SUMMARY
 ╚════════════════════════════════════════════════════════╝
 
-Previous Version:     0.15.1
-Release Version:      v0.16.0
-Release Tag:          v0.16.0
+Previous Version:     0.18.1
+Release Version:      v0.18.2
+Release Tag:          v0.18.2
 Git Branch:           master
 Commit Hash:          abc1234
 
 CI/CD Pipeline:       Automatically triggered on tag push
 Release Assets:
-  - ReplicaDB-0.16.0.tar.gz
-  - ReplicaDB-0.16.0.zip
-  - ReplicaDB-0.16.0-no-oracle.tar.gz
-  - ReplicaDB-0.16.0-no-oracle.zip
+  - ReplicaDB-0.18.2.tar.gz
+  - ReplicaDB-0.18.2.zip
+  - ReplicaDB-0.18.2-no-oracle.tar.gz
+  - ReplicaDB-0.18.2-no-oracle.zip
 
 Docker Images:
-  - osalvador/replicadb:0.16.0
+  - osalvador/replicadb:0.18.2
   - osalvador/replicadb:latest
-  - osalvador/replicadb:ubi9-0.16.0
+  - osalvador/replicadb:ubi9-0.18.2
   - osalvador/replicadb:ubi9-latest
 
-Release URL:          https://github.com/osalvador/ReplicaDB/releases/tag/v0.16.0
+Release URL:          https://github.com/osalvador/ReplicaDB/releases/tag/v0.18.2
 
 ╔════════════════════════════════════════════════════════╗
 ║ RELEASE SUCCESSFUL
 ╚════════════════════════════════════════════════════════╝
 
-Release v0.16.0 has been created and pushed!
+Release v0.18.2 has been created and pushed!
 
 CI/CD Pipeline Status:
   → Visit: https://github.com/osalvador/ReplicaDB/actions
 
 To view release progress:
-  → Visit: https://github.com/osalvador/ReplicaDB/releases/tag/v0.16.0
+  → Visit: https://github.com/osalvador/ReplicaDB/releases/tag/v0.18.2
 
 # 5. Check CI/CD progress
 $ # Open GitHub Actions in browser
@@ -197,10 +197,10 @@ $ # Open GitHub Actions in browser
 
 Once CI/CD completes:
 
-1. Go to: https://github.com/osalvador/ReplicaDB/releases/tag/v0.16.0
+1. Go to: https://github.com/osalvador/ReplicaDB/releases/tag/v0.18.2
 2. Check for attached files:
-   - ReplicaDB-0.16.0.tar.gz
-   - ReplicaDB-0.16.0.zip
+   - ReplicaDB-0.18.2.tar.gz
+   - ReplicaDB-0.18.2.zip
    - etc.
 
 ### Step 3: Verify Docker Images
@@ -209,8 +209,8 @@ Check Docker Hub:
 
 ```bash
 # Pull and verify image
-docker pull osalvador/replicadb:0.16.0
-docker run --version osalvador/replicadb:0.16.0
+docker pull osalvador/replicadb:0.18.2
+docker run --version osalvador/replicadb:0.18.2
 
 # Should show version info
 ```
@@ -226,7 +226,7 @@ git status
 git add .
 git commit -m "commit message"
 git stash  # or stash if not ready to commit
-./release.sh 0.16.0
+./release.sh 0.18.2
 ```
 
 ### Script Fails: "Invalid version format"
@@ -234,9 +234,9 @@ git stash  # or stash if not ready to commit
 **Solution:**
 ```bash
 # Use semantic versioning X.Y.Z
-./release.sh 0.16.0    # ✓ Correct
+./release.sh 0.18.2    # ✓ Correct
 ./release.sh 0.16      # ✗ Wrong - missing patch version
-./release.sh v0.16.0   # ✗ Wrong - don't include 'v' prefix
+./release.sh v0.18.2   # ✗ Wrong - don't include 'v' prefix
 ```
 
 ### CI/CD Pipeline Fails
@@ -254,16 +254,16 @@ If a release needs to be rolled back:
 
 ```bash
 # Remove the tag from origin
-git push origin --delete v0.16.0
+git push origin --delete v0.18.2
 
 # Delete the local tag
-git tag -d v0.16.0
+git tag -d v0.18.2
 
 # Revert the commit
 git revert HEAD
 
 # Create new release with patch version
-./release.sh 0.16.1
+./release.sh 0.18.3
 ```
 
 ## Release History
@@ -275,7 +275,7 @@ View all releases:
 git tag -l | sort -V
 
 # Show tag details
-git show v0.16.0
+git show v0.18.2
 
 # View GitHub releases
 # https://github.com/osalvador/ReplicaDB/releases
