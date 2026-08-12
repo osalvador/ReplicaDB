@@ -1,0 +1,19 @@
+src/test/java/org/replicadb/db2/DB22PostgresTest.java
+  s_37e44801529776::t_e8ef0f1d17cf86 318,343
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "d70a64a77fcd10056833cd8b6be35931bd6043ea",
+  "prompts": {},
+  "sessions": {
+    "s_37e44801529776": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "fa191495-e4ba-45dd-96b8-40ade63a1c3c",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
