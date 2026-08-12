@@ -1,0 +1,19 @@
+docs/_includes/navigation.html
+  s_a46ee769a9bde4::t_f035b2a0a72a2a 17-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "2c32e2266bd88970c36254f201a4646899293ebf",
+  "prompts": {},
+  "sessions": {
+    "s_a46ee769a9bde4": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "0ba7db85-903b-48cc-a914-870063eafe17",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
