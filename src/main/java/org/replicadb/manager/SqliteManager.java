@@ -243,7 +243,15 @@ public class SqliteManager extends SqlManager {
 							}
 							break;
 						case Types.DATE :
-							java.sql.Date dateVal = resultSet.getDate(i);
+							java.sql.Date dateVal;
+							try {
+								dateVal = resultSet.getDate(i);
+							} catch (SQLException e) {
+								// sqlite-jdbc may reject TEXT dates without a time component
+								String s = resultSet.getString(i);
+								if (s == null || resultSet.wasNull()) { ps.setNull(i, Types.DATE); break; }
+								dateVal = java.sql.Date.valueOf(s);
+							}
 							if (resultSet.wasNull() || dateVal == null) {
 								ps.setNull(i, Types.DATE);
 							} else {
@@ -263,7 +271,15 @@ public class SqliteManager extends SqlManager {
 						case Types.TIMESTAMP_WITH_TIMEZONE :
 						case -101 :
 						case -102 :
-							java.sql.Timestamp tsVal = resultSet.getTimestamp(i);
+							java.sql.Timestamp tsVal;
+							try {
+								tsVal = resultSet.getTimestamp(i);
+							} catch (SQLException e) {
+								// sqlite-jdbc may reject TEXT timestamps without fractional seconds
+								String s = resultSet.getString(i);
+								if (s == null || resultSet.wasNull()) { ps.setNull(i, Types.TIMESTAMP); break; }
+								tsVal = java.sql.Timestamp.valueOf(s);
+							}
 							if (resultSet.wasNull() || tsVal == null) {
 								ps.setNull(i, Types.TIMESTAMP);
 							} else {
@@ -279,18 +295,22 @@ public class SqliteManager extends SqlManager {
 							}
 							break;
 						case Types.BLOB :
-							final Blob blobData = resultSet.getBlob(i);
-							if (blobData != null) {
-								ps.setBytes(i, blobData.getBytes(1, (int) blobData.length()));
-								blobData.free();
-							} else
+							// sqlite-jdbc does not implement getBlob(); use getBytes() directly
+							byte[] blobBytes = resultSet.getBytes(i);
+							if (resultSet.wasNull() || blobBytes == null) {
 								ps.setNull(i, Types.BLOB);
+							} else {
+								ps.setBytes(i, blobBytes);
+							}
 							break;
 						case Types.CLOB :
-							final Clob clobData = resultSet.getClob(i);
-							ps.setString(i, this.clobToString(clobData));
-							if (clobData != null)
-								clobData.free();
+							// sqlite-jdbc does not implement getClob(); use getString() directly
+							String clobStr = resultSet.getString(i);
+							if (resultSet.wasNull() || clobStr == null) {
+								ps.setNull(i, Types.CLOB);
+							} else {
+								ps.setString(i, clobStr);
+							}
 							break;
 						case Types.BOOLEAN :
 							boolean boolVal = resultSet.getBoolean(i);
