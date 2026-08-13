@@ -138,6 +138,35 @@ The [configuration wizard](https://osalvador.github.io/ReplicaDB/wizard/index.ht
 
 The command-line equivalents are `--source-auth-mode`, `--source-auth-principal-id`, `--source-auth-login-hint`, `--source-auth-client-certificate`, `--source-auth-client-key` and the corresponding `--sink-auth-*` options.
 
+## Multiple table configuration
+
+Declare explicit source-to-sink pairs in one options file with contiguous
+numeric indexes:
+
+```properties
+mode=complete
+jobs=4
+source.connect=${SOURCE_CONNECT}
+source.user=${SOURCE_USER}
+source.password=${SOURCE_PASSWORD}
+sink.connect=${SINK_CONNECT}
+sink.user=${SINK_USER}
+sink.password=${SINK_PASSWORD}
+
+replication.table.1.source=dbo.customers
+replication.table.1.sink=dbo.customers
+replication.table.2.source=dbo.orders
+replication.table.2.sink=dbo.sales_orders
+```
+
+Pairs run sequentially. `jobs=4` applies only to parallel work inside the
+current table, not to four concurrent tables. A failed pair stops the
+remaining entries. Do not combine the catalog with scalar `source.table` or
+`sink.table`, `source.query`, `--source-table`, or `--sink-table`. For
+`incremental` and `complete-atomic`, use `sink.staging.schema` and leave
+staging table names to ReplicaDB so each pair is isolated. Wildcards, regex
+filters, and automatic table discovery remain future work.
+
 ## Docker
 
 For containerized deployments or environments without Java installed, ReplicaDB is available as a Docker image.

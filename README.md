@@ -188,6 +188,45 @@ $ replicadb --options-file replicadb.conf
 
 ![ReplicaDB-Ora2PG.gif](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif)
 
+## Replicate multiple tables
+
+Several source-to-sink table pairs can be declared in one options file. Each
+pair is executed in numeric order, and ReplicaDB completes its normal
+pre-tasks, parallel jobs, post-tasks, and cleanup before starting the next
+pair:
+
+```properties
+mode=complete
+jobs=4
+source.connect=${SOURCE_CONNECT}
+source.user=${SOURCE_USER}
+source.password=${SOURCE_PASSWORD}
+sink.connect=${SINK_CONNECT}
+sink.user=${SINK_USER}
+sink.password=${SINK_PASSWORD}
+
+replication.table.1.source=dbo.customers
+replication.table.1.sink=dbo.customers
+replication.table.2.source=dbo.orders
+replication.table.2.sink=dbo.sales_orders
+replication.table.3.source=dbo.products
+replication.table.3.sink=dbo.catalog_products
+```
+
+`jobs=4` controls up to four parallel tasks for the table currently being
+replicated; it does not run four tables concurrently. A failure stops the
+remaining pairs and returns a non-zero exit code. Indexed entries must be
+contiguous and must contain both `.source` and `.sink` values.
+
+The indexed catalog cannot be combined with `source.table`, `sink.table`,
+`source.query`, `--source-table`, or `--sink-table`. In `incremental` and
+`complete-atomic` modes, use `sink.staging.schema` and let ReplicaDB generate
+a staging table for each pair; a fixed `sink.staging.table` or alias is
+rejected to prevent table state from being shared. Wildcards, regular
+expressions, automatic catalog discovery, and scheduling are outside this
+MVP. An external query can generate the indexed entries from
+`information_schema` before starting ReplicaDB.
+
 ## PostgreSQL to Oracle
 
 ```bash
@@ -230,7 +269,7 @@ See [DB2 Documentation](https://osalvador.github.io/ReplicaDB/docs/docs.html) fo
 # Roadmap
 
 Features: 
-- Replicate multiple tables in a single run
+- Automatic table discovery with wildcard or regular-expression filters
 - Scheduling
 - Web interface
 - Server mode with API 

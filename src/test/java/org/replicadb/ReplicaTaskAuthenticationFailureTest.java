@@ -67,6 +67,36 @@ class ReplicaTaskAuthenticationFailureTest {
     }
 
     @Test
+    void closesBothManagersWhenSourceReadFails() throws Exception {
+        ToolOptions options = options();
+        RuntimeException readFailure = new RuntimeException("source read failed");
+        RecordingManager source = new RecordingManager(null, null, readFailure, null);
+        RecordingManager sink = new RecordingManager(null, null);
+
+        Exception thrown = assertThrows(Exception.class,
+                () -> new ReplicaTask(0, options, new StubManagerFactory(source, sink)).call());
+
+        assertSame(readFailure, thrown);
+        assertTrue(source.closed);
+        assertTrue(sink.closed);
+    }
+
+    @Test
+    void closesBothManagersWhenSinkInsertFails() throws Exception {
+        ToolOptions options = options();
+        RuntimeException insertFailure = new RuntimeException("sink insert failed");
+        RecordingManager source = new RecordingManager(null, null);
+        RecordingManager sink = new RecordingManager(null, null, null, insertFailure);
+
+        Exception thrown = assertThrows(Exception.class,
+                () -> new ReplicaTask(0, options, new StubManagerFactory(source, sink)).call());
+
+        assertSame(insertFailure, thrown);
+        assertTrue(source.closed);
+        assertTrue(sink.closed);
+    }
+
+    @Test
     void rejectsInteractiveAuthenticationWithParallelJobs() throws Exception {
         ToolOptions options = options();
         options.getSourceAuthentication().setMode(AzureAuthenticationMode.ACTIVE_DIRECTORY_INTERACTIVE);
@@ -135,20 +165,35 @@ class ReplicaTaskAuthenticationFailureTest {
     private static final class RecordingManager extends ConnManager {
         private final Exception connectionFailure;
         private final Exception closeFailure;
+        private final Exception readFailure;
+        private final Exception insertFailure;
         private boolean closed;
 
         private RecordingManager(Exception connectionFailure, Exception closeFailure) {
+            this(connectionFailure, closeFailure, null, null);
+        }
+
+        private RecordingManager(Exception connectionFailure, Exception closeFailure,
+                                 Exception readFailure, Exception insertFailure) {
             this.connectionFailure = connectionFailure;
             this.closeFailure = closeFailure;
+            this.readFailure = readFailure;
+            this.insertFailure = insertFailure;
         }
 
         @Override
-        public ResultSet readTable(String tableName, String[] columns, int nThread) {
+        public ResultSet readTable(String tableName, String[] columns, int nThread) throws Exception {
+            if (readFailure != null) {
+                throw readFailure;
+            }
             return null;
         }
 
         @Override
-        public int insertDataToTable(ResultSet resultSet, int taskId) {
+        public int insertDataToTable(ResultSet resultSet, int taskId) throws Exception {
+            if (insertFailure != null) {
+                throw insertFailure;
+            }
             return 0;
         }
 

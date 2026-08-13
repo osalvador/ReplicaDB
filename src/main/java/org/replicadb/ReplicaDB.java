@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.replicadb.cli.ReplicationTable;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.CredentialRedactor;
 import org.replicadb.manager.ConnManager;
@@ -115,6 +116,10 @@ public class ReplicaDB {
 	 *         otherwise
 	 */
 	public static int processReplica(ToolOptions options) {
+		return processReplica(options, new ManagerFactory());
+	}
+
+	static int processReplica(ToolOptions options, ManagerFactory managerFactory) {
 		LOG.info("Running ReplicaDB version: {}", options.getVersion());
 		ReplicaDB.setLogToMode(options.getVerboseLevel());
 		LOG.info("Setting verbose mode {}", options.getVerboseLevel());
@@ -125,7 +130,10 @@ public class ReplicaDB {
 
 		final boolean shouldProcess = !options.isHelp() && !options.isVersion();
 		if (shouldProcess) {
-			return executeReplication(options);
+			if (options.hasReplicationTables()) {
+				return executeMultipleReplications(options, managerFactory);
+			}
+			return executeSingleReplication(options, managerFactory);
 		}
 
 		return SUCCESS;
@@ -139,18 +147,20 @@ public class ReplicaDB {
 	 * @return SUCCESS (0) if replication completed successfully, ERROR (1)
 	 *         otherwise
 	 */
-	private static int executeReplication(ToolOptions options) {
+	static int executeSingleReplication(ToolOptions options, ManagerFactory managerFactory) {
 		int exitCode = SUCCESS;
 		ConnManager sourceDs = null;
 		ConnManager sinkDs = null;
 		ExecutorService preSinkTasksExecutor = null;
 		ExecutorService replicaTasksService = null;
 
+		ConnManager.resetGeneratedSinkStagingTableName();
+
 		// Reset static temp files map to avoid stale references between replication runs
 		FileManager.setTempFilesPath(new HashMap<>());
 
 		try {
-			new ManagerFactory().validateAzureAuthenticationConfiguration(options);
+			managerFactory.validateAzureAuthenticationConfiguration(options);
 		} catch (final IllegalArgumentException e) {
 			LOG.error("Invalid Azure authentication configuration: {}", e.getMessage());
 			return ERROR;
@@ -161,14 +171,14 @@ public class ReplicaDB {
 		final ITransaction transaction = Sentry.startTransaction("processReplica()", "task");
 
 		try {
-			final ReplicationManagers managers = createConnectionManagers(options);
+			final ReplicationManagers managers = createConnectionManagers(options, managerFactory);
 			sourceDs = managers.sourceDs;
 			sinkDs = managers.sinkDs;
 
 			preSinkTasksExecutor = Executors.newSingleThreadExecutor();
 			final Future<Integer> preSinkTasksFuture = executePreTasks(sourceDs, sinkDs, preSinkTasksExecutor);
 
-			replicaTasksService = executeReplicationTasks(options);
+			replicaTasksService = executeReplicationTasks(options, managerFactory);
 
 			waitForTaskCompletion(preSinkTasksFuture);
 			executePostTasks(sourceDs, sinkDs);
@@ -196,6 +206,27 @@ public class ReplicaDB {
 		return exitCode;
 	}
 
+	static int executeMultipleReplications(ToolOptions baseOptions, ManagerFactory managerFactory) {
+		int exitCode = SUCCESS;
+		List<ReplicationTable> replicationTables = baseOptions.getReplicationTables();
+
+		for (int index = 0; index < replicationTables.size(); index++) {
+			ReplicationTable replicationTable = replicationTables.get(index);
+			ToolOptions tableOptions = baseOptions.forReplicationTable(replicationTable);
+			LOG.info("Starting replication table {}/{}: {} -> {}", index + 1, replicationTables.size(),
+					replicationTable.sourceTable(), replicationTable.sinkTable());
+
+			exitCode = executeSingleReplication(tableOptions, managerFactory);
+			if (exitCode != SUCCESS) {
+				LOG.error("Replication table {}/{} failed: {} -> {}", index + 1, replicationTables.size(),
+						replicationTable.sourceTable(), replicationTable.sinkTable());
+				break;
+			}
+		}
+
+		return exitCode;
+	}
+
 	/**
 	 * Creates and initializes connection managers for source and sink.
 	 *
@@ -203,8 +234,7 @@ public class ReplicaDB {
 	 *            the configuration options
 	 * @return ReplicationManagers containing both source and sink managers
 	 */
-	private static ReplicationManagers createConnectionManagers(ToolOptions options) {
-		final ManagerFactory managerFactory = new ManagerFactory();
+	private static ReplicationManagers createConnectionManagers(ToolOptions options, ManagerFactory managerFactory) {
 		final ConnManager sourceDs = managerFactory.accept(options, DataSourceType.SOURCE);
 		final ConnManager sinkDs = managerFactory.accept(options, DataSourceType.SINK);
 		return new ReplicationManagers(sourceDs, sinkDs);
@@ -251,11 +281,11 @@ public class ReplicaDB {
 	 * @throws ExecutionException
 	 *             if a task fails
 	 */
-	private static ExecutorService executeReplicationTasks(ToolOptions options)
+	private static ExecutorService executeReplicationTasks(ToolOptions options, ManagerFactory managerFactory)
 			throws InterruptedException, ExecutionException {
 		final List<ReplicaTask> replicaTasks = new ArrayList<>();
 		for (int i = 0; i < options.getJobs(); i++) {
-			replicaTasks.add(new ReplicaTask(i, options));
+			replicaTasks.add(new ReplicaTask(i, options, managerFactory));
 		}
 
 		final ExecutorService replicaTasksService = Executors.newFixedThreadPool(options.getJobs());
@@ -332,26 +362,49 @@ public class ReplicaDB {
 	 */
 	private static void cleanupResources(ConnManager sourceDs, ConnManager sinkDs, ExecutorService preSinkTasksExecutor,
 			ExecutorService replicaTasksService) {
-		try {
-			if (sinkDs != null) {
+		Exception cleanupFailure = null;
+
+		if (sinkDs != null) {
+			try {
 				sinkDs.cleanUp();
+			} catch (final Exception e) {
+				cleanupFailure = addCleanupFailure(cleanupFailure, e);
+			}
+			try {
 				sinkDs.close();
+			} catch (final Exception e) {
+				cleanupFailure = addCleanupFailure(cleanupFailure, e);
 			}
-			if (sourceDs != null) {
-				sourceDs.close();
-			}
-
-			if (preSinkTasksExecutor != null) {
-				preSinkTasksExecutor.shutdownNow();
-			}
-			if (replicaTasksService != null) {
-				replicaTasksService.shutdownNow();
-			}
-
-		} catch (final Exception e) {
-			LOG.error("Error during cleanup: {} ({})",
-					CredentialRedactor.redactMessage(e.getMessage()), e.getClass().getName());
 		}
+		if (sourceDs != null) {
+			try {
+				sourceDs.close();
+			} catch (final Exception e) {
+				cleanupFailure = addCleanupFailure(cleanupFailure, e);
+			}
+		}
+
+		if (preSinkTasksExecutor != null) {
+			preSinkTasksExecutor.shutdownNow();
+		}
+		if (replicaTasksService != null) {
+			replicaTasksService.shutdownNow();
+		}
+
+		if (cleanupFailure != null) {
+			LOG.error("Error during cleanup: {} ({})",
+					CredentialRedactor.redactMessage(cleanupFailure.getMessage()),
+					cleanupFailure.getClass().getName());
+		}
+	}
+
+	private static Exception addCleanupFailure(Exception currentFailure, Exception cleanupFailure) {
+		if (currentFailure == null) {
+			return cleanupFailure;
+		}
+
+		currentFailure.addSuppressed(cleanupFailure);
+		return currentFailure;
 	}
 
 	/**

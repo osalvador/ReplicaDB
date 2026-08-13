@@ -8,6 +8,21 @@ public final class AzureAuthenticationOptions {
     private String clientCertificate;
     private String clientKey;
 
+    public AzureAuthenticationOptions() {
+    }
+
+    public AzureAuthenticationOptions(AzureAuthenticationOptions other) {
+        if (other == null) {
+            return;
+        }
+
+        this.mode = other.mode;
+        this.principalId = other.principalId;
+        this.loginHint = other.loginHint;
+        this.clientCertificate = other.clientCertificate;
+        this.clientKey = other.clientKey;
+    }
+
     public AzureAuthenticationMode getMode() {
         return mode;
     }
