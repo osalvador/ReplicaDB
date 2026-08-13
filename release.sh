@@ -11,7 +11,7 @@
 # 5. Pushes to origin (CI/CD builds release automatically)
 #
 # Usage: ./release.sh <version>
-# Example: ./release.sh 0.18.3
+# Example: ./release.sh 0.18.4
 ################################################################################
 
 set -e
@@ -178,8 +178,6 @@ show_release_summary() {
     echo -e "${GREEN}Release Assets:${NC}"
     echo "  - ReplicaDB-${new_version}.tar.gz"
     echo "  - ReplicaDB-${new_version}.zip"
-    echo "  - ReplicaDB-${new_version}-no-oracle.tar.gz"
-    echo "  - ReplicaDB-${new_version}-no-oracle.zip"
     echo
     echo -e "${GREEN}Docker Images:${NC}"
     echo "  - osalvador/replicadb:${new_version}"
@@ -201,7 +199,7 @@ main() {
         print_error "Missing version argument"
         echo
         echo "Usage: ./release.sh <version>"
-        echo "Example: ./release.sh 0.18.3"
+        echo "Example: ./release.sh 0.18.4"
         echo
         echo "Steps performed:"
         echo "  1. Validate version format (semantic versioning)"

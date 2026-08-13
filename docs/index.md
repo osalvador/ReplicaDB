@@ -81,8 +81,8 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Download the latest release from GitHub and extract the archive:
 
 ```bash
-$ curl -o ReplicaDB-0.18.3.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.18.3/ReplicaDB-0.18.3.tar.gz"
-$ tar -xvzf ReplicaDB-0.18.3.tar.gz
+$ curl -o ReplicaDB-0.18.4.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.18.4/ReplicaDB-0.18.4.tar.gz"
+$ tar -xvzf ReplicaDB-0.18.4.tar.gz
 $ ./bin/replicadb --help
 ```
 

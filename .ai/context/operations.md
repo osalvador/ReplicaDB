@@ -1,5 +1,5 @@
 ## Build and Runtime
-`pom.xml` targets Java 17 and pins JUnit Jupiter modules and Surefire 3.5.3. The `test` profile assembles a jar-with-dependencies; `release` and `release-no-oracle` create an executable jar and copy runtime dependencies. The launcher scripts resolve the distribution layout and invoke `org.replicadb.ReplicaDB`.
+`pom.xml` targets Java 17 and pins JUnit Jupiter modules and Surefire 3.5.3. The `test` profile assembles a jar-with-dependencies; the `release` profile creates the executable jar and copies all runtime dependencies into the distribution. The launcher scripts resolve the distribution layout and invoke `org.replicadb.ReplicaDB`.
 
 `Dockerfile` uses Eclipse Temurin 17 on Ubuntu Noble; `Containerfile` uses the UBI9 OpenJDK 17 runtime. Both unpack a versioned release archive and start the shell launcher with `conf/replicadb.conf`. The Java 17 migration also requires the existing `java.nio` module-opening flag for ORC paths.
 
