@@ -29,6 +29,11 @@ public abstract class ConnManager {
 
     private static String randomSinkStagingTableName;
 
+    /** Clears generated staging state between sequential table replications. */
+    public static void resetGeneratedSinkStagingTableName() {
+        randomSinkStagingTableName = null;
+    }
+
     /**
      * Execute a SQL statement to read the named set of columns from a table.
      * If columns is null, all columns from the table are read. This is a direct

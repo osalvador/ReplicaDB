@@ -447,6 +447,43 @@ By default, all columns within a table are selected for replication. You can sel
 
 You can control which rows are replicated by adding a SQL `WHERE` clause to the statement. By default, ReplicaDB generates statements of the form `SELECT <column list> FROM <table name>`. You can append a `WHERE` clause to this with the `--source-where` argument. For example: `--source-where "id > 400"`. Only rows where the `id` column has a value greater than 400 will be replicated.
 
+### Multiple table configuration
+
+To replicate several source-to-sink table pairs in one run, declare indexed
+entries in the options file:
+
+```properties
+mode=incremental
+jobs=4
+source.connect=${SOURCE_CONNECT}
+source.user=${SOURCE_USER}
+source.password=${SOURCE_PASSWORD}
+sink.connect=${SINK_CONNECT}
+sink.user=${SINK_USER}
+sink.password=${SINK_PASSWORD}
+sink.staging.schema=dbo
+
+replication.table.1.source=dbo.customers
+replication.table.1.sink=dbo.customers
+replication.table.2.source=dbo.orders
+replication.table.2.sink=dbo.sales_orders
+```
+
+Entries run sequentially in numeric order. ReplicaDB completes the normal
+pre-source, pre-sink, `jobs`, post-sink, and cleanup lifecycle for one pair
+before creating managers for the next. `jobs=4` controls parallel partitions
+inside the current table; it does not execute four tables concurrently. If a
+pair fails, later pairs are not started and the process returns an error.
+
+The catalog requires contiguous indexes beginning at `1`, with both
+`.source` and `.sink` values for every index. It cannot be combined with
+`source.table`, `sink.table`, `source.query`, `--source-table`, or
+`--sink-table`. For `incremental` and `complete-atomic`, configure
+`sink.staging.schema` rather than a fixed `sink.staging.table` or alias so
+each pair receives isolated staging state. Wildcards, regular expressions,
+automatic table discovery, and scheduling are not part of this feature; an
+external catalog query can generate the explicit entries when needed.
+
 <br>
 ## 3.4 Free-form Query Replications
 

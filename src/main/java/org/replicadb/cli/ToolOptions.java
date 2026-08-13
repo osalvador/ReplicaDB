@@ -8,7 +8,9 @@ import org.replicadb.config.CredentialRedactor;
 import org.replicadb.manager.util.ColumnDescriptor;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
 
 public class ToolOptions {
@@ -62,11 +64,76 @@ public class ToolOptions {
 
     private List<ColumnDescriptor> sourceColumnDescriptors;
     private String[] sourcePrimaryKeys;
+    private List<ReplicationTable> replicationTables = List.of();
 
     private Options options;
 
     public ToolOptions(String[] args) throws ParseException, IOException {
         checkOptions(args);
+    }
+
+    private ToolOptions() {
+    }
+
+    public ToolOptions forReplicationTable(ReplicationTable replicationTable) {
+        Objects.requireNonNull(replicationTable, "replicationTable must not be null");
+
+        ToolOptions copy = new ToolOptions();
+        copy.sourceConnect = sourceConnect;
+        copy.sourceUser = sourceUser;
+        copy.sourcePassword = sourcePassword;
+        copy.sourceTable = replicationTable.sourceTable();
+        copy.sourceColumns = sourceColumns;
+        copy.sourceWhere = sourceWhere;
+        copy.sourceQuery = sourceQuery;
+        copy.sourceFileFormat = sourceFileFormat;
+        copy.sinkConnect = sinkConnect;
+        copy.sinkUser = sinkUser;
+        copy.sinkPassword = sinkPassword;
+        copy.sinkTable = replicationTable.sinkTable();
+        copy.sinkStagingTable = sinkStagingTable;
+        copy.sinkStagingTableAlias = sinkStagingTableAlias;
+        copy.sinkStagingSchema = sinkStagingSchema;
+        copy.sinkColumns = sinkColumns;
+        copy.sinkFileFormat = sinkFileFormat;
+        copy.sinkDisableEscape = sinkDisableEscape;
+        copy.sinkDisableIndex = sinkDisableIndex;
+        copy.sinkDisableTruncate = sinkDisableTruncate;
+        copy.sinkAutoCreate = sinkAutoCreate;
+        copy.sinkAnalyze = sinkAnalyze;
+        copy.jobs = jobs;
+        copy.fetchSize = fetchSize;
+        copy.bandwidthThrottling = bandwidthThrottling;
+        copy.help = help;
+        copy.version = version;
+        copy.verboseLevel = verboseLevel;
+        copy.quotedIdentifiers = quotedIdentifiers;
+        copy.optionsFile = optionsFile;
+        copy.mode = mode;
+        copy.sourceConnectionParams = copyProperties(sourceConnectionParams);
+        copy.sinkConnectionParams = copyProperties(sinkConnectionParams);
+        copy.sourceAuthentication = new AzureAuthenticationOptions(sourceAuthentication);
+        copy.sinkAuthentication = new AzureAuthenticationOptions(sinkAuthentication);
+        copy.sentryDsn = sentryDsn;
+        copy.sourceColumnDescriptors = sourceColumnDescriptors == null
+                ? null
+                : List.copyOf(sourceColumnDescriptors);
+        copy.sourcePrimaryKeys = sourcePrimaryKeys == null
+                ? null
+                : Arrays.copyOf(sourcePrimaryKeys, sourcePrimaryKeys.length);
+        copy.replicationTables = List.of();
+        copy.options = options;
+        return copy;
+    }
+
+    private static Properties copyProperties(Properties properties) {
+        if (properties == null) {
+            return null;
+        }
+
+        Properties copy = new Properties();
+        copy.putAll(properties);
+        return copy;
     }
 
     private void checkOptions(String[] args) throws ParseException, IOException {
@@ -483,6 +550,8 @@ public class ToolOptions {
             setSourceFileFormatNotNull(line.getOptionValue("source-file-format"));
             setSinkFileFormatNotNull(line.getOptionValue("sink-file-format"));
 
+            validateReplicationTableOptions(line);
+
             //Check for required values
             if (!checkRequiredValues()) throw new IllegalArgumentException("Missing any of the required parameters:" +
                     " source-connect=" + this.sourceConnect + " OR sink-connect=" + this.sinkConnect);
@@ -535,6 +604,32 @@ public class ToolOptions {
             }
         }
         return false;
+    }
+
+    private void validateReplicationTableOptions(CommandLine line) {
+        if (!hasReplicationTables()) {
+            return;
+        }
+
+        if (hasValue(sourceQuery)) {
+            throw new IllegalArgumentException("source.query cannot be used with replication.table.* entries.");
+        }
+        if (hasValue(sourceTable) || hasValue(sinkTable)) {
+            throw new IllegalArgumentException(
+                    "source.table and sink.table cannot be used with replication.table.* entries.");
+        }
+        if (line.hasOption("source-table") || line.hasOption("sink-table")) {
+            throw new IllegalArgumentException(
+                    "--source-table and --sink-table cannot be used with replication.table.* entries.");
+        }
+        if (ReplicationMode.INCREMENTAL.getModeText().equals(mode)
+                || ReplicationMode.COMPLETE_ATOMIC.getModeText().equals(mode)) {
+            if (hasValue(sinkStagingTable) || hasValue(sinkStagingTableAlias)) {
+                throw new IllegalArgumentException(
+                        "Fixed sink staging tables are not supported with replication.table.* entries; "
+                                + "configure sink.staging.schema instead.");
+            }
+        }
     }
 
     public String getVersion() {
@@ -606,6 +701,7 @@ public class ToolOptions {
         setSourceFileFormat(prop.getProperty("source.file.format"));
         setSinkFileFormat(prop.getProperty("sink.file.format"));
         setSentryDsn(prop.getProperty("sentry.dsn"));
+        setReplicationTables(of.getReplicationTables());
 
         // Connection params
         setSinkConnectionParams(of.getSinkConnectionParams());
@@ -1244,6 +1340,18 @@ public class ToolOptions {
 
     public void setSourcePrimaryKeys(String[] sourcePrimaryKeys) {
         this.sourcePrimaryKeys = sourcePrimaryKeys;
+    }
+
+    public List<ReplicationTable> getReplicationTables() {
+        return replicationTables;
+    }
+
+    public boolean hasReplicationTables() {
+        return !replicationTables.isEmpty();
+    }
+
+    private void setReplicationTables(List<ReplicationTable> replicationTables) {
+        this.replicationTables = replicationTables == null ? List.of() : List.copyOf(replicationTables);
     }
 
 }
