@@ -11,7 +11,7 @@
 # 5. Pushes to origin (CI/CD builds release automatically)
 #
 # Usage: ./release.sh <version>
-# Example: ./release.sh 0.18.2
+# Example: ./release.sh 0.18.3
 ################################################################################
 
 set -e
@@ -201,7 +201,7 @@ main() {
         print_error "Missing version argument"
         echo
         echo "Usage: ./release.sh <version>"
-        echo "Example: ./release.sh 0.18.2"
+        echo "Example: ./release.sh 0.18.3"
         echo
         echo "Steps performed:"
         echo "  1. Validate version format (semantic versioning)"
