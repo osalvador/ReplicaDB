@@ -16,6 +16,8 @@ import java.nio.file.Paths;
 import java.sql.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers
 class Postgres2DuckDBTest {
@@ -42,23 +44,27 @@ class Postgres2DuckDBTest {
 
     @AfterEach
     void tearDown() throws SQLException {
-        // Truncate sink table and close connections
-        duckdbConn.createStatement().execute("DELETE FROM t_sink");
-        this.duckdbConn.close();
-        this.postgresConn.close();
+        try (Statement statement = duckdbConn.createStatement()) {
+            statement.execute("DELETE FROM t_sink");
+        } finally {
+            duckdbConn.close();
+            postgresConn.close();
+        }
     }
 
-    public int countSinkRows() throws SQLException {
-        Statement stmt = duckdbConn.createStatement();
-        ResultSet rs = stmt.executeQuery("SELECT count(*) FROM t_sink");
-        rs.next();
-        int count = rs.getInt(1);
-        LOG.info("DuckDB sink rows: {}", count);
-        return count;
+    private int countSinkRows() throws SQLException {
+        try (Statement statement = duckdbConn.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT count(*) FROM t_sink")) {
+            resultSet.next();
+            int count = resultSet.getInt(1);
+            LOG.info("DuckDB sink rows: {}", count);
+            return count;
+        }
     }
 
     @Test
-    void testPostgres2DuckDBComplete() throws ParseException, IOException, SQLException {
+    void testPostgres2DuckDBNullValuesPreservedByStandardJdbcManager()
+            throws ParseException, IOException, SQLException {
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", postgres.getJdbcUrl(),
@@ -67,7 +73,21 @@ class Postgres2DuckDBTest {
                 "--sink-connect", duckdb.getJdbcUrl()
         };
         ToolOptions options = new ToolOptions(args);
-        Assertions.assertEquals(0, ReplicaDB.processReplica(options));
+
+        assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+
+        String nullRowQuery = "SELECT C_SMALLINT, C_BIGINT, C_NUMERIC, C_DECIMAL, "
+                + "C_REAL, C_DOUBLE_PRECISION, C_FLOAT, C_BOOLEAN, C_CHARACTER, "
+                + "C_CHARACTER_VAR, C_DATE, C_TIMESTAMP_WITHOUT_TIMEZONE "
+                + "FROM t_sink WHERE C_SMALLINT IS NULL";
+        try (Statement statement = duckdbConn.createStatement();
+             ResultSet resultSet = statement.executeQuery(nullRowQuery)) {
+            assertTrue(resultSet.next(), "Expected the source NULL row in DuckDB");
+            for (int column = 1; column <= 12; column++) {
+                assertNull(resultSet.getObject(column), "Column " + column + " should remain NULL");
+            }
+            assertTrue(!resultSet.next(), "Expected one source NULL row in DuckDB");
+        }
     }
 }
