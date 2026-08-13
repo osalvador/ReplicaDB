@@ -57,7 +57,29 @@ jobs:
       run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
 
     - name: Integration tests (exclude Oracle cross-version)
-      run: mvn -B -q test --file pom.xml -Dtest="org/replicadb/${{ matrix.source }}/*Test,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest,!org/replicadb/mongo/Mongo2DB2Test" -Dsurefire.timeout=1200
+      run: mvn -B test --file pom.xml -Dtest="org/replicadb/${{ matrix.source }}/*Test,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest,!org/replicadb/mongo/Mongo2DB2Test" -Dsurefire.timeout=1200
+
+    - name: Report skipped tests
+      if: always()
+      run: |
+        python3 - <<'PY'
+        from pathlib import Path
+        import xml.etree.ElementTree as ET
+
+        skipped = [
+            f"{testcase.get('classname')}.{testcase.get('name')}: {skipped_node.get('message') or 'no reason provided'}"
+            for report in sorted(Path("target/surefire-reports").glob("TEST-*.xml"))
+            for testcase in ET.parse(report).getroot().findall(".//testcase")
+            for skipped_node in [testcase.find("skipped")]
+            if skipped_node is not None
+        ]
+
+        if skipped:
+            print("Skipped tests:")
+            print("\n".join(f"- {test}" for test in skipped))
+        else:
+            print("No skipped tests in the generated Surefire reports.")
+        PY
 
   non_integration:
     runs-on: ubuntu-latest
@@ -84,7 +106,29 @@ jobs:
       run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
 
     - name: Non-integration tests (exclude Oracle cross-version)
-      run: mvn -B -q test --file pom.xml -Dtest="org/replicadb/*Test,org/replicadb/cli/*Test,org/replicadb/manager/*Test,org/replicadb/config/*Test,org/replicadb/rowset/*Test,org/replicadb/file/*Test,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest"
+      run: mvn -B test --file pom.xml -Dtest="org/replicadb/*Test,org/replicadb/cli/*Test,org/replicadb/manager/*Test,org/replicadb/config/*Test,org/replicadb/rowset/*Test,org/replicadb/file/*Test,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest"
+
+    - name: Report skipped tests
+      if: always()
+      run: |
+        python3 - <<'PY'
+        from pathlib import Path
+        import xml.etree.ElementTree as ET
+
+        skipped = [
+            f"{testcase.get('classname')}.{testcase.get('name')}: {skipped_node.get('message') or 'no reason provided'}"
+            for report in sorted(Path("target/surefire-reports").glob("TEST-*.xml"))
+            for testcase in ET.parse(report).getroot().findall(".//testcase")
+            for skipped_node in [testcase.find("skipped")]
+            if skipped_node is not None
+        ]
+
+        if skipped:
+            print("Skipped tests:")
+            print("\n".join(f"- {test}" for test in skipped))
+        else:
+            print("No skipped tests in the generated Surefire reports.")
+        PY
 
   package:
     runs-on: ubuntu-latest
