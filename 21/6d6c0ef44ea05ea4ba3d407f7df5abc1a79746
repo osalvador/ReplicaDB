@@ -1,0 +1,49 @@
+.ai/archive/multi-table-replication.plan.md
+  s_0661efe04e7f25::t_4a496bf19d8922 1-263
+README.md
+  s_0661efe04e7f25::t_7493af841fa737 191-229,272
+conf/_replicadb.conf
+  s_0661efe04e7f25::t_0bf33ff03607ed 40-46
+docs/docs/docs.md
+  s_0661efe04e7f25::t_5de13b5dda07a3 450-486
+docs/index.md
+  s_0661efe04e7f25::t_23013f89cefcef 141-169
+src/main/java/org/replicadb/ReplicaDB.java
+  s_0661efe04e7f25::t_495e96250e03fd 13,119-122,133-136,150,157-158,163,174,181,209-229,237,284,288,365-368,370-373,375-376,378-380,382-383,385,387-392,394,396-397,401-409
+src/main/java/org/replicadb/cli/AzureAuthenticationOptions.java
+  s_0661efe04e7f25::t_69b028f1dce8c2 11-25
+src/main/java/org/replicadb/cli/OptionsFile.java
+  s_0661efe04e7f25::t_e4f668df5c16cb 9,11-12,15-17,24-26,37-99,110-113,122-141
+src/main/java/org/replicadb/cli/ReplicationTable.java
+  s_0661efe04e7f25::t_d72c9e990cc387 1-15
+src/main/java/org/replicadb/cli/ToolOptions.java
+  s_0661efe04e7f25::t_75085246f72f3f 11,13,67,75-138,553-554,609-634,704,1345-1356
+src/main/java/org/replicadb/manager/ConnManager.java
+  s_0661efe04e7f25::t_ba5477f213c914 32-36
+src/test/java/org/replicadb/ReplicaDBMultipleTablesTest.java
+  s_0661efe04e7f25::t_3ea2174d036a02 1-325
+src/test/java/org/replicadb/ReplicaTaskAuthenticationFailureTest.java
+  s_0661efe04e7f25::t_de3316acc4a48c 69-98,168-169,173-177,180-181,185-188,193-196
+src/test/java/org/replicadb/cli/ReplicationTableTest.java
+  s_0661efe04e7f25::t_3186775dcbbccb 1-34
+src/test/java/org/replicadb/cli/ToolOptionsMultipleTablesTest.java
+  s_0661efe04e7f25::t_00de688ab5db8c 1-246
+src/test/java/org/replicadb/manager/ConnManagerStagingIsolationTest.java
+  s_0661efe04e7f25::t_50540a3dd0d0fd 1-122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "216d6c0ef44ea05ea4ba3d407f7df5abc1a79746",
+  "prompts": {},
+  "sessions": {
+    "s_0661efe04e7f25": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "521b8eb7-a27b-4090-b142-e4e60b530c8d",
+        "model": "gpt-5.3-codex"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
