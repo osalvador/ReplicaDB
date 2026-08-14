@@ -1,0 +1,51 @@
+.ai/archive/phase-0a-execution-context-rich-task-result.plan.md
+  s_13f9c44ab6e725::t_1eaa43b93b771f 1-216
+src/main/java/org/replicadb/ReplicaDB.java
+  s_13f9c44ab6e725::t_9b32668d861de5 61-75,300-301,303-304,307-310
+src/main/java/org/replicadb/ReplicaTask.java
+  s_13f9c44ab6e725::t_06793e43d2e102 16,36-37,76,78,86-87
+src/main/java/org/replicadb/ReplicaTaskResult.java
+  s_13f9c44ab6e725::t_856942a93c8086 1-18
+src/main/java/org/replicadb/cli/ToolOptions.java
+  s_13f9c44ab6e725::t_0855d2293aae19 8,69,720-723
+src/main/java/org/replicadb/execution/ReplicationExecutionContext.java
+  s_13f9c44ab6e725::t_d61bb1dcfe87f6 1-40
+src/main/java/org/replicadb/manager/ConnManager.java
+  s_13f9c44ab6e725::t_0c12acf747f923 175-187,197-199
+src/main/java/org/replicadb/manager/LocalFileManager.java
+  s_13f9c44ab6e725::t_ceef83123a3359 74
+src/main/java/org/replicadb/manager/file/FileManager.java
+  s_13f9c44ab6e725::t_d82610c1974d5d 73-74,77-78,81-82,85-86
+src/test/java/org/replicadb/ReplicaDBMultipleTablesTest.java
+  s_13f9c44ab6e725::t_3c54f8fb80b9f4 212
+src/test/java/org/replicadb/ReplicaDBTaskSummaryTest.java
+  s_13f9c44ab6e725::t_52e2c049b60090 1-41
+src/test/java/org/replicadb/ReplicaTaskResultTest.java
+  s_13f9c44ab6e725::t_5f813b10009e38 1-28
+src/test/java/org/replicadb/ReplicaTaskTest.java
+  s_13f9c44ab6e725::t_9530cae2df4e0d 1-117
+src/test/java/org/replicadb/cli/ToolOptionsExecutionContextTest.java
+  s_13f9c44ab6e725::t_e5ec50e48d2ac3 1-38
+src/test/java/org/replicadb/execution/ReplicationExecutionContextConcurrencyTest.java
+  s_13f9c44ab6e725::t_4c535be5ac0109 1-136
+src/test/java/org/replicadb/execution/ReplicationExecutionContextTest.java
+  s_13f9c44ab6e725::t_c9b076012c2055 1-47
+src/test/java/org/replicadb/manager/ConnManagerStagingIsolationTest.java
+  s_13f9c44ab6e725::t_4abbb8b4b146d8 17-20,25,27-29,32,36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "c228ddccc6fe770d0b29430fe7b795188efdf139",
+  "prompts": {},
+  "sessions": {
+    "s_13f9c44ab6e725": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "88bc34c5-f225-4af8-a0fb-d735dad440a5",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
