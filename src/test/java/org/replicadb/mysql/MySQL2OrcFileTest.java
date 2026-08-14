@@ -12,7 +12,6 @@ import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbMysqlContainer;
 import org.replicadb.manager.file.FileFormats;
-import org.replicadb.manager.file.FileManager;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -20,7 +19,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.HashMap;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,7 +53,6 @@ class MySQL2OrcFileTest {
         this.mysqlConn.close();
 
         // Clean the static tempFiles HashMap
-        FileManager.setTempFilesPath(new HashMap<>());
     }
 
     public int countSinkRows() throws IOException {

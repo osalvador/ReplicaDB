@@ -10,7 +10,6 @@ import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbMariaDBContainer;
 import org.replicadb.manager.file.FileFormats;
-import org.replicadb.manager.file.FileManager;
 import org.testcontainers.containers.MariaDBContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -18,7 +17,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.HashMap;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,7 +49,6 @@ class MariaDB2OrcFileTest {
         sinkFile.delete();
         this.mariadbConn.close();
 
-        FileManager.setTempFilesPath(new HashMap<>());
     }
 
     public int countSinkRows() throws IOException {

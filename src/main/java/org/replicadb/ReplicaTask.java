@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-public final class ReplicaTask implements Callable<Integer> {
+public final class ReplicaTask implements Callable<ReplicaTaskResult> {
 
     private static final Logger LOG = LogManager.getLogger(ReplicaTask.class.getName());
 
@@ -33,7 +33,8 @@ public final class ReplicaTask implements Callable<Integer> {
     }
 
     @Override
-    public Integer call() throws Exception {
+    public ReplicaTaskResult call() throws Exception {
+        final long startedAtMillis = System.currentTimeMillis();
         String taskName = "TaskId-" + this.taskId;
 
         Thread.currentThread().setName(taskName);
@@ -72,8 +73,9 @@ public final class ReplicaTask implements Callable<Integer> {
                 throw e;
             }
 
+            long processedRows;
             try {
-                int processedRows = sinkDs.insertDataToTable(rs, taskId);
+                processedRows = sinkDs.insertDataToTable(rs, taskId);
                 // TODO determine the total rows processed in all the managers
                 LOG.info("A total of {} rows processed by task {}", processedRows, taskId);
             } catch (Exception e) {
@@ -81,7 +83,8 @@ public final class ReplicaTask implements Callable<Integer> {
                 throw e;
             }
 
-            return this.taskId;
+                return new ReplicaTaskResult(this.taskId, processedRows, startedAtMillis,
+                    System.currentTimeMillis(), null);
         } catch (Exception e) {
             failure = e;
             throw e;

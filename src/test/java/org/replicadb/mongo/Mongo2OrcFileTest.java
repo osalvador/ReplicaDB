@@ -13,7 +13,6 @@ import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbMongodbContainer;
 import org.replicadb.manager.file.FileFormats;
-import org.replicadb.manager.file.FileManager;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -22,7 +21,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.HashMap;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -58,7 +56,6 @@ class Mongo2OrcFileTest {
         if (sinkFile.exists()) {
             sinkFile.delete();
         }
-        FileManager.setTempFilesPath(new HashMap<>());
     }
 
     @AfterEach
@@ -70,7 +67,6 @@ class Mongo2OrcFileTest {
         Files.deleteIfExists(Paths.get(SINK_FILE_PATH));
         // Clean up crc file
         Files.deleteIfExists(Paths.get("/tmp/." + new File(SINK_FILE_PATH).getName() + ".crc"));
-        FileManager.setTempFilesPath(new HashMap<>());
     }
 
     public int countSinkRows() throws IOException {

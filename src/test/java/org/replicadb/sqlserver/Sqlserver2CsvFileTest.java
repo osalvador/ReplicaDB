@@ -9,7 +9,6 @@ import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbSqlserverContainer;
 import org.replicadb.manager.file.FileFormats;
-import org.replicadb.manager.file.FileManager;
 import org.testcontainers.containers.MSSQLServerContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -20,7 +19,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -55,8 +53,6 @@ class Sqlserver2CsvFileTest {
       LOG.info("Deleted file: {}", sinkFile.delete());
       this.sqlserverConn.close();
 
-      // Clean the static temFiles HasMap.
-      FileManager.setTempFilesPath(new HashMap<>());
    }
 
 

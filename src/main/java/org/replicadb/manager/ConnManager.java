@@ -27,13 +27,6 @@ public abstract class ConnManager {
 
     protected ToolOptions options;
 
-    private static String randomSinkStagingTableName;
-
-    /** Clears generated staging state between sequential table replications. */
-    public static void resetGeneratedSinkStagingTableName() {
-        randomSinkStagingTableName = null;
-    }
-
     /**
      * Execute a SQL statement to read the named set of columns from a table.
      * If columns is null, all columns from the table are read. This is a direct
@@ -179,24 +172,31 @@ public abstract class ConnManager {
 
         if (options.getSinkStagingTable() != null && !options.getSinkStagingTable().isEmpty()) {
             return this.options.getSinkStagingTable();
-        } else if (randomSinkStagingTableName != null && !randomSinkStagingTableName.isEmpty()) {
-            return randomSinkStagingTableName;
-        } else {
-            // Create new randomSinkStagingTableName
+        }
+
+        String generatedName = options.getExecutionContext().getSinkStagingTableName();
+        if (generatedName != null && !generatedName.isEmpty()) {
+            return generatedName;
+        }
+
+        synchronized (options.getExecutionContext()) {
+            generatedName = options.getExecutionContext().getSinkStagingTableName();
+            if (generatedName != null && !generatedName.isEmpty()) {
+                return generatedName;
+            }
+
             Random random = new Random();
             String randomName = "repdb" + random.nextInt(90) + 10;
 
             String tableName = getSinkTableName();
 
-            // Staging table Alias name.
-            // Sometimes the size of the table along with the random name exceeds the maximum size of an object name in some databases
             if (options.getSinkStagingTableAlias() != null && !options.getSinkStagingTableAlias().isEmpty()) {
                 tableName = options.getSinkStagingTableAlias();
             }
 
-            randomSinkStagingTableName = getTableNameFromQualifiedTableName(tableName) + randomName;
-
-            return randomSinkStagingTableName;
+            generatedName = getTableNameFromQualifiedTableName(tableName) + randomName;
+            options.getExecutionContext().setSinkStagingTableName(generatedName);
+            return generatedName;
         }
     }
 

@@ -11,7 +11,6 @@ import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbDB2Container;
 import org.replicadb.manager.file.FileFormats;
-import org.replicadb.manager.file.FileManager;
 import org.testcontainers.containers.Db2Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -26,7 +25,6 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -61,7 +59,6 @@ class DB22CsvFileTest {
             }
         }
 
-        FileManager.setTempFilesPath(new HashMap<>());
 
         File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
         if (sinkFile.exists()) {
@@ -75,7 +72,6 @@ class DB22CsvFileTest {
         LOG.info("Deleted file: {}", sinkFile.delete());
         this.db2Conn.close();
 
-        FileManager.setTempFilesPath(new HashMap<>());
     }
 
     public int countSinkRows() throws IOException {

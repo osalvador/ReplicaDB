@@ -16,14 +16,12 @@ import org.replicadb.config.CredentialRedactor;
 import org.replicadb.manager.ConnManager;
 import org.replicadb.manager.DataSourceType;
 import org.replicadb.manager.ManagerFactory;
-import org.replicadb.manager.file.FileManager;
 
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.*;
 
@@ -59,6 +57,21 @@ public class ReplicaDB {
 	private static final Logger LOG = LogManager.getLogger(ReplicaDB.class.getName());
 	private static final int SUCCESS = 0;
 	private static final int ERROR = 1;
+
+	record ReplicaTaskResultsSummary(long totalRowsProcessed, long maxDurationMillis, int taskCount) {
+	}
+
+	static ReplicaTaskResultsSummary summarize(List<ReplicaTaskResult> results) {
+		long totalRowsProcessed = 0;
+		long maxDurationMillis = 0;
+
+		for (ReplicaTaskResult result : results) {
+			totalRowsProcessed += result.rowsProcessed();
+			maxDurationMillis = Math.max(maxDurationMillis, result.durationMillis());
+		}
+
+		return new ReplicaTaskResultsSummary(totalRowsProcessed, maxDurationMillis, results.size());
+	}
 
 	/** Timeout in milliseconds for pre-sink tasks. */
 	private static final int PRE_SINK_TASK_TIMEOUT_MS = 500;
@@ -153,11 +166,6 @@ public class ReplicaDB {
 		ConnManager sinkDs = null;
 		ExecutorService preSinkTasksExecutor = null;
 		ExecutorService replicaTasksService = null;
-
-		ConnManager.resetGeneratedSinkStagingTableName();
-
-		// Reset static temp files map to avoid stale references between replication runs
-		FileManager.setTempFilesPath(new HashMap<>());
 
 		try {
 			managerFactory.validateAzureAuthenticationConfiguration(options);
@@ -289,11 +297,16 @@ public class ReplicaDB {
 		}
 
 		final ExecutorService replicaTasksService = Executors.newFixedThreadPool(options.getJobs());
-		final List<Future<Integer>> futures = replicaTasksService.invokeAll(replicaTasks);
+		final List<Future<ReplicaTaskResult>> futures = replicaTasksService.invokeAll(replicaTasks);
+		final List<ReplicaTaskResult> results = new ArrayList<>();
 
-		for (final Future<Integer> future : futures) {
-			future.get(); // This will throw ExecutionException if any task failed
+		for (final Future<ReplicaTaskResult> future : futures) {
+			results.add(future.get()); // This will throw ExecutionException if any task failed
 		}
+
+		final ReplicaTaskResultsSummary summary = summarize(results);
+		LOG.info("Replication tasks completed: {} rows across {} tasks, longest task {}ms",
+				summary.totalRowsProcessed(), summary.taskCount(), summary.maxDurationMillis());
 
 		return replicaTasksService;
 	}
