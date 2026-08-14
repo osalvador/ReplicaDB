@@ -1,741 +1,810 @@
-# Architecture Decisions & Evolution Strategy
+# Architecture Decisions and Evolution Strategy
 
-## 📋 Executive Summary
+## Executive Summary
 
-This document consolidates all architectural decisions made for ReplicaDB's evolution from a CLI tool to a distributed, scalable API-first system. The strategy follows a **pragmatic 3-phase evolution** that starts simple and scales naturally without rewrites.
+ReplicaDB is currently a Java 17 command-line tool for heterogeneous batch data replication. The existing core owns database-specific connections, partitioning, type handling, staging, and sink lifecycle behavior.
 
-**Date**: October 3, 2025  
-**Status**: Approved  
-**Stakeholders**: Development Team
+The approved direction is to evolve the product into an operable job platform while preserving the CLI. The first product step is a control plane with API-managed jobs, scheduling, monitoring, durable execution state, and incremental watermarks.
 
----
+ReplicaDB is not being extended into a CDC, ETL, schema-migration, or universal data-reconciliation platform. The control plane manages and observes the batch engine; it does not move database-specific behavior into generic orchestration code.
 
-## 🎯 Core Decisions
+The control plane does not resume interrupted work. A run either completes or is executed again from the beginning. Safety comes from the staging-based replication modes, not from progress checkpoints.
 
-### **Decision 1: No Separate Shared Library - Single Codebase**
-**Status**: ✅ APPROVED
-
-**Original Proposal**: Extract ReplicaDB core into separate `replicadb-core` library.
-
-**Final Decision**: **Single Spring Boot codebase** with profile-based deployment slots.
-
-**Rationale**:
-- ✅ **Simpler maintenance**: One codebase, one build
-- ✅ **Zero duplication**: No need to sync core logic between projects
-- ✅ **Flexible deployment**: Same JAR deployed as API or Worker via profiles
-- ✅ **CLI compatibility**: CLI mode uses optimized startup (lazy loading)
-
-**Implementation**:
-```
-replicadb/
-├── src/main/java/org/replicadb/
-│   ├── ReplicaDbApplication.java    # Main with CLI detection
-│   ├── cli/                         # CLI commands (existing)
-│   ├── manager/                     # Database managers (existing)
-│   ├── api/                         # NEW: REST controllers
-│   ├── service/                     # NEW: Business logic
-│   ├── worker/                      # NEW: Worker slot
-│   └── config/                      # NEW: Profile configs
-└── src/main/resources/
-    └── application.yml               # Multi-profile configuration
-```
-
-**Deployment Slots**:
-```yaml
-# API Slot
-SPRING_PROFILES_ACTIVE=api
-# Enables: REST endpoints, Quartz scheduler, WebSocket monitoring
-
-# Worker Slot  
-SPRING_PROFILES_ACTIVE=worker
-# Enables: Job execution, queue listening, ReplicaDB core
-
-# CLI Mode
-# Auto-detected: No Spring Boot startup if CLI args present
-java -jar replicadb.jar --source... --sink...  # Fast CLI mode
-```
+**Date**: August 13, 2026
+**Last decision review**: August 14, 2026
+**Status**: Approved direction; Phase 0-a implemented; remaining Phase 0 work pending
+**Owner**: Development Team
 
 ---
 
-### **Decision 2: Three-Phase Evolution Strategy**
-**Status**: ✅ APPROVED
+## Core Decisions
 
-The evolution follows a **proven path** from monolithic to distributed architecture, with each phase delivering value while preparing for the next.
+### Decision 1: Single Codebase, Two Artifacts, CLI Compatibility
+
+**Status**: APPROVED
+
+ReplicaDB will remain a single codebase. The current CLI is the compatibility baseline. No separate `replicadb-core` project is extracted.
+
+The build produces **two artifacts from the same sources**:
+
+- `replicadb` — the existing CLI assembly. Spring Boot is never on its classpath.
+- `replicadb-server` — the managed runtime, started with the `api` or `worker` profile.
+
+A single fat artifact carrying Spring Boot into every CLI installation is rejected. It would change footprint, startup time, and dependency surface for users who never adopt the control plane, which contradicts the compatibility contract below.
+
+This preserves:
+
+- One implementation of manager dispatch, type mapping, staging, and lifecycle behavior.
+- Existing CLI arguments, options files, launcher scripts, and exit codes.
+- A gradual migration path from standalone execution to managed jobs.
+
+The current repository does not contain Spring Boot, REST, scheduler, worker, or broker runtime code. Those are planned deployment capabilities, not current features.
+
+```text
+Current:
+  CLI -> ToolOptions -> ReplicaDB core -> source/sink managers
+
+Target:
+  replicadb        (CLI)    ---------------------------> ReplicaDB core
+  replicadb-server (api)    -> JobDefinition -> Executor -> ReplicaDB core
+  replicadb-server (worker) -> JobRun -------> Executor -> ReplicaDB core
+```
+
+`ToolOptions` remains the configuration boundary for the existing core. The server translates a stored job definition into `ToolOptions` rather than duplicating manager behavior.
+
+PostgreSQL is required only by the managed `api` and `worker` profiles for control-plane metadata, scheduling, leases, watermarks, and worker coordination. The standalone CLI does not require it and remains executable with its existing source and sink configuration.
+
+#### CLI compatibility contract
+
+The CLI is a permanent execution mode across all implementation phases and deployment models. "Compatibility" is a verifiable contract, not an aspiration. A change breaks it if it alters any of:
+
+- Accepted arguments, options-file keys, and their semantics.
+- Process exit codes.
+- The ability to run with no metadata database reachable.
+- The `replicadb` artifact's classpath gaining a Spring Boot application context.
+
+#### Multi-table replication remains CLI-only
+
+`ReplicaDB.executeMultipleReplications` iterates a list of `ReplicationTable` entries sequentially and stops at the first failure, leaving earlier tables already applied. This partial-application outcome is acceptable for an interactive CLI invocation, but it is not a state model the control plane will manage: a single run identifier cannot honestly report "three of seven tables replicated", and retrying it would re-truncate tables that already succeeded.
+
+Therefore a managed `JobDefinition` targets **exactly one source/sink table pair**. Scheduling N tables means N job definitions, each with its own run history, watermark, and permissions. Options files containing a multi-table replication list remain fully supported through the CLI and are rejected by the API with an explicit validation error.
+
+### Decision 2: Monolithic Control Plane First
+
+**Status**: APPROVED
+
+The first evolution step is a monolithic control plane around the existing batch engine. It should provide value in a single-instance deployment before introducing distributed workers.
+
+The implementation target for Phase 1 is a Spring Boot application using the `api` profile. This profile starts the REST API and the scheduler in the same JVM. Spring Boot is not required by the existing CLI path.
+
+#### Phase 1 scope
+
+- REST API for job definitions and run management.
+- Scheduler for recurring executions.
+- Asynchronous execution so API requests do not block on replication.
+- Durable job history, run state, and incremental watermarks.
+- Monitoring of status, progress counters, timings, throughput, and errors.
+- Existing CLI remains usable without starting the API runtime.
+
+The API initially manages configuration and execution state. A future frontend can edit job definitions through the API without introducing a data transformation layer.
+
+```text
+                    +------------------+
+                    | REST API         |
+                    | Scheduler        |
+                    +--------+---------+
+                             |
+                       JobDefinition
+                             |
+                             v
+                    +------------------+          +---------------+
+                    | Job Executor     +--------->+ State store   |
+                    +--------+---------+          | Monitoring    |
+                             |                    +---------------+
+                             v
+                    +------------------+
+                    | ReplicaDB Core   |
+                    +--------+---------+
+                             |
+                       Source and sink
+```
+
+The monitoring transport is an implementation detail. REST polling is sufficient for the first version; a push channel can be added later if operational requirements justify it.
+
+#### Run concurrency inside one JVM
+
+Before Phase 0-a, the core kept process-global mutable state. `ConnManager.randomSinkStagingTableName` and `FileManager.tempFilesPath` were `static` and were reset at the start of every replication in `ReplicaDB.executeSingleReplication`. Two replications running concurrently in the same JVM could overwrite each other's staging table name and temporary file map, silently corrupting data or dropping another run's staging table.
+
+```text
+  Before Phase 0-a:
+  JobRun A --+                     +-- reset global state --+
+          +---- same JVM ------+                       +--> collision
+  JobRun B --+                     +-- reset global state --+
+```
+
+Phase 0-a, delivered in commit `c228ddc`, removes this static state and replaces it with a `ReplicationExecutionContext` owned by each `ToolOptions` instance. All managers and tasks created from one options instance share that context, while `ToolOptions.forReplicationTable(...)` creates a fresh context for each table. Generated staging names and temporary-file paths are therefore isolated across runs and remain shared within the parallel tasks of one run.
+
+The context also provides a run identifier and a concurrent temporary-file map. Generated staging-name creation is synchronized per context, so parallel managers cannot initialize different names for the same run. The static-state reason for forcing managed execution concurrency to one is resolved by Phase 0-a. The managed profile must still wait for the remaining Phase 0 cancellation and watermark work before exposing the complete execution contract.
+
+#### Replication mode guidance for managed jobs
+
+Because runs are never resumed (Decision 3), the safety of a retry depends entirely on the replication mode:
+
+| Mode | Sink during the run | Full re-execution | Commit point |
+|---|---|---|---|
+| `complete` | mutated from the start (`TRUNCATE` then direct writes) | destructive | none |
+| `complete-atomic` | untouched until the final swap | safe | `atomicInsertStagingTable()` |
+| `incremental` | untouched until the merge | safe when the merge is an idempotent upsert by primary key | `mergeStagingTable()` |
+
+`complete-atomic` is the **recommended mode for managed jobs** and the API surfaces that recommendation when a definition is created or updated. `complete` remains available, but the API must return an explicit warning stating that an interrupted or retried run leaves the sink truncated or partially loaded, and that warning must be persisted on the job definition so it is visible in the UI.
+
+#### State storage
+
+PostgreSQL is the mandatory state store for the managed `api` and `worker` profiles. It owns job definitions, runs, leases, watermarks, users, permissions, audit events, and scheduler coordination. In direct CLI mode the state store is not used at all. Sentry and application logs are telemetry, not the source of truth for job state. SQLite remains suitable for isolated CLI fixtures or unit tests, but it is not a supported control-plane deployment store.
+
+### Decision 3: Durable State, No Resume, and Incremental Watermarks
+
+**Status**: APPROVED
+
+The control plane distinguishes a reusable job definition from an individual execution. There is no third level.
+
+```text
+JobDefinition
+  configuration reference, schedule, mode,
+  one source/sink table pair, optional watermark column
+        |
+        v
+JobRun
+  status, attempt, timestamps, row counters, error,
+  executor identity, lease, heartbeat, committed watermark
+```
+
+A `Checkpoint` entity was considered and removed from the model. See "No resume" below.
+
+#### Job run states
+
+The initial state model supports:
+
+- `PENDING`
+- `RUNNING`
+- `SUCCEEDED`
+- `FAILED`
+- `CANCEL_REQUESTED`
+- `CANCELLED`
+- `RETRY_SCHEDULED`
+
+Retries and cancellation requests are state transitions. They must not be inferred from log messages.
+
+#### No resume
+
+**Status**: APPROVED as an explicit non-feature.
+
+An interrupted run is never continued. A retry executes the job from the beginning.
+
+This follows from how the engine partitions work, not from a wish to simplify scheduling. Partition assignment is manager-specific and is not reproducible across executions:
+
+```text
+PostgreSQL   SELECT * FROM (source-query) as T1 OFFSET ? LIMIT ?
+             no ORDER BY, so the row-to-task assignment may differ
+             between executions even over identical data
+
+Oracle       ... WHERE ora_hash(rowid, jobs-1) = ?
+             reproducible only while rowids remain stable
+```
+
+Skipping "already completed" partitions on a second execution would therefore drop rows silently on at least one supported source, with no error and no log entry. Correctness comes from the replication mode instead (see the mode table in Decision 2): `complete-atomic` and `incremental` leave the sink untouched until `postSinkTasks()`, so a full re-execution is safe.
+
+The control plane persists row counters and timings for observability. It must never present them as resumable progress, and no API field may imply that a retry continues where a previous attempt stopped.
+
+#### Incremental watermarks
+
+Watermarks apply only to `incremental` mode and are deliberately minimal.
+
+- The job definition declares **one source column** as the watermark column. Arbitrary expressions and multi-column watermarks are out of scope.
+- The committed value is persisted as a `String` holding the highest-precision textual representation the source driver can produce. This keeps one storage format across every supported engine.
+- The comparison type is **inferred from the source column metadata at run time** and used to bind the stored value back as a typed parameter. The value is never concatenated into SQL.
+- The predicate is injected by the engine and composes with the existing `$CONDITIONS` partition substitution. A `source-query` may be used only if it exposes the declared watermark column.
+- The initial value is explicit configuration. Absent it, the first run replicates everything the query returns.
+- The boundary is `>` against the last committed value, so a run never re-reads the previous boundary row.
+- Each parallel `ReplicaTask` reports its highest observed value; the executor reduces them to one candidate for the run.
+- The candidate is committed **only after `mergeStagingTable()` succeeds**.
+- A failed or cancelled run leaves the last committed watermark unchanged, so retrying cannot advance it twice.
+
+Accepted limitations, which must be stated in user-facing documentation:
+
+- **Deletes are never propagated.** The merge is an upsert by primary key.
+- **Sources without primary keys cannot merge**, and the engine already warns about this.
+- **Late-committing source transactions are lost.** A transaction whose timestamp precedes the committed watermark but which commits after the read will never be replicated. A configurable read lag subtracted from the committed value mitigates this; the default lag is `0` and must be tuned per source.
+- No watermark is inferred from an arbitrary `source-query`. Without a declared column the job still runs as a batch job, but the control plane does not automate its watermark.
+
+### Decision 4: API, Frontend, Scheduler, and Access Control
+
+**Status**: APPROVED
+
+The control plane exposes these operations:
+
+- Create, update, disable, and delete a job definition.
+- Trigger a run manually.
+- Schedule recurring runs.
+- Query the current run and historical runs.
+- Request cancellation.
+- Retry a failed run by re-executing its persisted definition.
+- View watermarks, counters, timings, and failure details.
+- Authenticate local users and manage their roles.
+- Enforce permissions for each job through backend-controlled ACLs.
+- Serve a small planning and monitoring frontend from the `api` profile.
+
+The API must execute runs asynchronously. The current `ReplicaDB.processReplica(ToolOptions)` method returns a run-level success/error code and does not expose progress events, so the first adapter reports coarse-grained state until Phase 0 widens the task result.
+
+#### API conventions
+
+These are decided so that they are not re-litigated per endpoint:
+
+- Base path is `/api/v1`. Breaking changes require a new major path segment.
+- Errors use RFC 7807 `application/problem+json`, and never echo connection strings or credentials.
+- Collection endpoints are paginated with `page` and `size`; default `size` is 50 and the maximum is 200.
+- Triggering a run requires an `Idempotency-Key` header. A replay of the same key within 24 hours returns the originally created run instead of starting a second one.
+- Session cookies are `HttpOnly`, `Secure`, `SameSite=Lax`, and every state-changing request carries a CSRF token.
+- Authentication endpoints are rate limited to 5 failed attempts per 15 minutes, counted per account and per source address.
+
+#### Credentials and secret references
+
+Job definitions must contain configuration references, not passwords, tokens, or credential-bearing connection strings. The reference syntax is the existing environment expansion, `${env:VARIABLE}`, resolved by the executor immediately before building `ToolOptions`. Provider-prefixed references such as `${secret:<provider>/<path>#<key>}` are reserved for a later secret-manager integration and are rejected until that integration exists. A resolved secret never enters the state store, the API responses, the audit log, or a dispatch payload.
+
+#### Identity and permissions
+
+The first identity model uses local users stored in PostgreSQL. `ADMIN`, `OPERATOR`, and `VIEWER` are global roles, while job-level ACLs grant `VIEW`, `EDIT`, `EXECUTE`, and `CANCEL` permissions. The backend is the authority for these permissions; hiding a button in the frontend is not a security control.
+
+### Decision 5: Immediate Cancellation
+
+**Status**: APPROVED
+
+`POST /api/v1/runs/{id}/cancel` stops the replication as soon as it is invoked. Cancellation is immediate and unconditional: it does not wait for a partition boundary, a batch commit, or any other safe point.
+
+The core has no cancellation support today. There are no interrupt checks in the copy path, no access to the active statements, and `ReplicaDB.executeReplicationTasks` blocks on `invokeAll` until every task finishes. Phase 0 must add:
+
+- A per-run cancellation token carried by the execution context.
+- Access to the active `Statement` of each `ReplicaTask` so a control thread can call `Statement.cancel()`. `Future.cancel(true)` alone is insufficient, because a thread blocked inside a JDBC call does not observe interruption.
+- Interrupt checks in the row-copy loop so a task exits promptly and still runs its cleanup.
+- Replacement of the blocking `invokeAll` pattern with individually cancellable futures.
+
+Cancellation also interrupts `mergeStagingTable()` and `atomicInsertStagingTable()` when they are already running. The endpoint's contract is obedience, not consistency.
+
+Consequently the API response to a cancellation request must **explicitly warn that the sink may be left in an indeterminate state**. The warning is returned by the API and recorded on the run; it is not merely a frontend message. Its severity depends on the mode and on when cancellation arrives:
+
+| Mode | Cancelled before `postSinkTasks()` | Cancelled during merge or swap |
+|---|---|---|
+| `incremental` | sink intact, staging discarded | partially merged rows, watermark not advanced |
+| `complete-atomic` | sink intact, staging discarded | swap interrupted, sink indeterminate |
+| `complete` | sink already truncated or partially loaded | not applicable |
+
+After cancellation the engine runs its normal cleanup path and drops the staging table when it was auto-generated. A user-provided `sink-staging-table` is left untouched, consistent with existing behavior.
+
+A cancelled run never advances the watermark and terminates in `CANCELLED`, never in `FAILED`.
+
+### Decision 6: PostgreSQL Worker Dispatch
+
+**Status**: APPROVED FOR PHASE 2
+
+Distributed workers are introduced as a second phase when a single control-plane instance cannot provide the required concurrency or isolation. PostgreSQL is both the durable source of truth and the dispatch coordination point. `LISTEN/NOTIFY` wakes workers quickly, while periodic polling is the mandatory recovery path for missed notifications.
+
+```text
+                         +----------------------+
+                         | PostgreSQL state     |
+                         | definitions          |
+                         | runs / leases        |
+                         | watermarks           |
+                         | users / permissions  |
+                         +----------+-----------+
+                                    ^
+                                    |
+                      API + Quartz  |  Worker updates
+                                    |
+                         +----------+-----------+
+                         | JobRun(PENDING)      |
+                         +----------+-----------+
+                                    |
+                       LISTEN/NOTIFY + polling
+                                    |
+                         +----------v-----------+
+                         | Worker execution     |
+                         | claim -> ToolOptions |
+                         | -> ReplicaDB core    |
+                         +----------------------+
+```
+
+The distributed contract is:
+
+- The API inserts the `JobRun` and issues `pg_notify` in the same PostgreSQL transaction.
+- The notification payload contains only the durable `JobRun` identifier; never credentials or a complete configuration.
+- Every worker receives the signal, but workers compete to claim work using PostgreSQL row locking.
+- Workers load the job definition and last committed watermark from PostgreSQL.
+- A worker claims one run at a time by default.
+- Worker loss is recovered through leases, heartbeats, and polling of expired or retryable runs.
+- Duplicate notifications and duplicate polling must be safe under the claim, sink idempotency, and watermark commit rules.
+- The API reads status only from PostgreSQL.
+
+`LISTEN/NOTIFY` provides no acknowledgements, replay, consumer groups, or durable per-worker delivery: it is a wake-up signal, not a work queue. The durable work item is always the `JobRun` row, so periodic polling is the mandatory recovery path and notification delivery is only an optimization. An external broker is deliberately excluded from this phase.
+
+#### Lease and heartbeat rules
+
+- Every lease and heartbeat timestamp is computed with PostgreSQL `now()`, never with a worker's local clock. Workers do not need synchronized clocks and clock skew cannot expire a healthy lease.
+- The default heartbeat interval is 30 seconds and the default lease duration is 5 minutes, so a lease survives several missed heartbeats.
+- The heartbeat keeps running during `mergeStagingTable()` and `atomicInsertStagingTable()`. Those are server-side operations that can take minutes, and a lapsed lease during a merge would let a second worker start a duplicate run.
+- A run whose `lease_until` has elapsed returns to `RETRY_SCHEDULED` and becomes claimable again.
+
+### Decision 7: Explicitly Out of Scope
+
+The following are deliberately excluded from the current roadmap:
+
+- **Resuming an interrupted run**: partition assignment is not reproducible across executions, so partition-level resume would lose rows silently. See Decision 3.
+- **Managed multi-table jobs**: multi-table replication stays in the CLI. See Decision 1.
+- **Delete propagation**: incremental merge is an upsert by primary key and never removes rows from the sink.
+- **Exactly-once execution**: the model is at-least-once, made safe by claim state, idempotent merges, and watermark commit rules.
+- **CDC and real-time replication**: this requires log readers, offsets, ordering, delete capture, and backpressure that are different from batch execution.
+- **Universal validation or reconciliation**: source data may change during a run, queries may be non-repeatable, and heterogeneous databases do not provide one equivalent consistency or comparison model. Operational row counters are not proof of source/sink equality.
+- **Schema evolution, mappings, and ETL transformations**: ReplicaDB remains a transport tool. Query-specific conversions stay in `source-query` for now. A future frontend may edit job configuration, but it will not add a transformation engine through this architecture decision.
 
 ---
 
-## 🚀 Phase 1: Monolithic Spring Boot API (CURRENT)
+## Implementation Phases
 
-### **Overview**
-Add REST API, scheduling, and web monitoring to existing ReplicaDB CLI without breaking backward compatibility.
+### Phase 0: Core and State Foundation
 
-### **Architecture**
-```
-┌─────────────────────────────────────────────┐
-│     Single Spring Boot Application         │
-├─────────────────────────────────────────────┤
-│ REST API + WebSocket                        │
-│ Quartz Scheduler                            │
-│ In-Memory Job Queue                         │
-│ ReplicaDB Core (direct integration)         │
-│ SQLite Database (job metadata)              │
-└─────────────────────────────────────────────┘
-```
+This phase prepares the existing core for managed execution without adding an HTTP server. Most of its cost is **inside the engine**, not in the state layer: the control plane cannot honestly offer watermarks or cancellation until the core supports them. Direct CLI execution remains independent of the managed state store.
 
-### **Key Features**
-- ✅ REST API for job management (CRUD operations)
-- ✅ Quartz scheduler for cron-based job execution
-- ✅ Real-time monitoring via WebSocket
-- ✅ Job history and audit trail
-- ✅ **CLI remains fully functional** (optimized startup)
+#### Phase 0-a: Per-run execution context and rich task results — IMPLEMENTED
 
-### **Job Execution Model**
-```java
-// Phase 1: Direct execution in API service
-@Service
-public class JobExecutionService {
-    
-    public void executeJob(JobDefinition job) {
-        // Convert API job to ReplicaDB ToolOptions
-        ToolOptions options = toToolOptions(job);
-        
-        // Execute directly using existing ReplicaDB code
-        int result = ReplicaDB.processReplica(options);
-        
-        // Already uses threads internally with --jobs parameter
-    }
-}
-```
+Delivered in commit `c228ddc` and covered by focused JUnit tests, concurrency tests, orchestration regressions, and the successful `Only CI/CT` workflow:
 
-### **Parallelism Strategy**
-- **Model**: 1 Job = N Threads (ReplicaDB's current model)
-- **Configuration**: `--jobs` parameter determines internal thread count
-- **Typical**: `--jobs=4` creates 4 threads for parallel processing
-- **No changes**: Uses ReplicaDB's existing partitioning strategies
+- Replaced the static generated staging-table name and temporary-file map with `ReplicationExecutionContext`, owned by `ToolOptions`.
+- Preserved sharing of generated staging state across parallel tasks in one run while isolating independent runs and multi-table `ToolOptions` copies.
+- Added a run identifier and a `ConcurrentHashMap`-backed temporary-file registry to the context.
+- Made generated staging-name initialization safe when multiple managers first access the same run context concurrently.
+- Widened `ReplicaTask` from `Callable<Integer>` to `Callable<ReplicaTaskResult>`.
+- Added row counts, start/finish timestamps, duration calculation, and a reserved nullable watermark candidate to the task result.
+- Added run-level aggregation for total rows, task count, and longest task duration without changing the `processReplica(ToolOptions)` exit-code contract.
+- Removed obsolete static reset calls and updated file-manager and multi-table tests.
 
-### **CLI Optimization**
-```java
-public static void main(String[] args) {
-    // Detect CLI mode vs API mode
-    if (isCliMode(args)) {
-        // Fast path: No Spring Boot startup
-        runCliMode(args);
-    } else {
-        // API mode: Full Spring Boot
-        SpringApplication.run(ReplicaDbApplication.class, args);
-    }
-}
-```
+The Phase 0-a exit criterion is met: two concurrent runs use independent staging names and temporary-file maps, verified across 100 repetitions. The implementation does not yet add cancellation or watermark extraction/injection.
 
-### **Deployment**
-```yaml
-# Single container deployment
-docker run -p 8080:8080 replicadb:latest
+#### Core changes
 
-# Or traditional CLI
-java -jar replicadb.jar --source... --sink...
-```
+The remaining core items are prerequisites for Phase 1 and are not optional.
 
-### **Size Impact**
-- **Current CLI**: 134 MB (182 KB core + 134 MB dependencies)
-- **Phase 1 API**: ~209 MB (+75 MB Spring Boot overhead)
-- **Memory**: 270-320 MB (similar to current CLI)
+1. **Cancellation plumbing.** Extend the existing `ReplicationExecutionContext` with a per-run cancellation token, expose each task's active `Statement`, add interrupt checks to the copy loop, and replace the blocking `invokeAll` with individually cancellable futures, as required by Decision 5.
+2. **Watermark injection.** Populate `ReplicaTaskResult.watermarkCandidate`, inject a typed `> :lastWatermark` predicate composed with the existing `$CONDITIONS` partition substitution, and infer the bind type from the source column metadata.
 
----
+#### State layer
 
-## 🔄 Phase 2: Kubernetes with Redis Queue
+- Introduce `JobDefinition` and `JobRun` domain models. There is no `Checkpoint` entity.
+- Add a persistence layer for job definitions, run states, and watermarks.
+- Define legal state transitions and the claim mechanism, using PostgreSQL row locking rather than application-level optimistic locking.
+- Add an execution service that converts a job definition into `ToolOptions`.
+- Keep `ReplicaDB.processReplica(ToolOptions)` as the compatibility entry point.
 
-### **Overview**
-Separate API service from worker execution using Redis message queue for job distribution and horizontal worker scaling.
+#### Resources and tools
 
-### **Architecture**
-```
-┌──────────────────┐    ┌─────────────┐    ┌──────────────────┐
-│  API Service     │───→│   Redis     │←───│ Worker Service   │
-│  (REST + UI)     │    │   Queue     │    │ (Job Execution)  │
-│  Scheduler       │    │             │    │                  │
-└────────┬─────────┘    └─────────────┘    └──────────────────┘
-         │                                           ↑
-         │                                           │
-    ┌────▼────┐                                     │
-    │Database │                                     │
-    │(SQLite) │─────────────────────────────────────┘
-    └─────────┘           (Job metadata)
+- Java 17 and the existing Maven build, producing the two artifacts of Decision 1.
+- Spring JDBC for the PostgreSQL metadata store; the replication managers remain unchanged.
+- **Flyway** for versioning the metadata schema. Migrations are forward-only, and a rolling upgrade must tolerate one release of schema skew between `api` and `worker` instances.
+- JUnit Jupiter 6, Mockito, and Testcontainers for state, retry, cancellation, and integration tests.
+
+#### Exit criteria
+
+- **Met in Phase 0-a:** Two replications run concurrently in one JVM with independent staging tables and temporary files.
+- **Met in Phase 0-a:** Task results expose row counters and timings, and the executor aggregates them into a run-level summary.
+- A cancellation request stops an in-flight replication, including during a merge, and the run ends in `CANCELLED`.
+- A failed or cancelled incremental run leaves its previous watermark unchanged.
+- A successful staging load and merge commit exactly one new watermark, reduced from all parallel tasks.
+- A retry can identify the previous run and attempt number, and never claims to resume it.
+- CLI behavior and existing `ToolOptions` configuration remain compatible, including multi-table options files.
+
+### Phase 1: Spring Boot API and Scheduler
+
+This is the first user-facing platform phase. API and scheduler run together in one Spring Boot process, while the existing replication core continues to execute the actual database transfer.
+
+#### Spring Boot modules
+
+The planned runtime would use the following components:
+
+- `spring-boot-starter-web` for REST controllers and JSON requests.
+- `spring-boot-starter-validation` for validating job definitions before persistence.
+- `spring-boot-starter-jdbc` for the metadata repository while preserving the project's JDBC-oriented design.
+- `spring-boot-starter-security` for authentication and endpoint authorization.
+- `spring-session-jdbc` for server-side sessions persisted in PostgreSQL.
+- `spring-boot-starter-quartz` for durable schedules, misfire handling, and non-overlapping triggers.
+- `spring-boot-starter-actuator` and Micrometer for health, counters, and operational metrics.
+- The existing Log4j2 and Sentry integration for logs and error reporting, with credential redaction preserved.
+- An OpenAPI generator or documentation library can be added once the endpoint contract is stable.
+
+These dependencies belong exclusively to the `replicadb-server` artifact. The `replicadb` CLI assembly is built from the same sources without them, as decided in Decision 1.
+
+#### API and scheduler execution
+
+The API and scheduler are not two separate processes in this phase:
+
+```text
+Spring Boot process (profile=api)
+    |
+    +-- REST controllers
+    +-- Quartz scheduler
+    +-- Job repository / state store
+    +-- Bounded execution executor
+    +-- ReplicaDB execution service
+              |
+              +-- ReplicaDB.processReplica(ToolOptions)
 ```
 
-### **Key Changes from Phase 1**
-- ✅ Redis queue for job distribution
-- ✅ Separate API and Worker deployments
-- ✅ Horizontal worker scaling via Kubernetes
-- ✅ Same codebase, different deployment slots
+The execution sequence is:
 
-### **Job Execution Model**
-```java
-// API Service: Submit jobs to queue
-@Service
-@Profile("api")
-public class JobDispatchService {
-    
-    public void submitJob(JobDefinition job) {
-        // Calculate optimal --jobs parameter
-        int optimalJobs = calculateOptimalJobs(job);
-        job.setJobs(optimalJobs);
-        
-        // Publish complete job to Redis
-        redisTemplate.convertAndSend("replication-jobs", job);
-    }
-    
-    private int calculateOptimalJobs(JobDefinition job) {
-        long estimatedRows = estimateTotalRows(job);
-        
-        if (estimatedRows < 100_000) return 1;      // Small: no parallelism
-        if (estimatedRows < 1_000_000) return 2;    // Medium: 2 threads
-        if (estimatedRows < 10_000_000) return 4;   // Large: 4 threads
-        return 6;                                    // XLarge: max 6 threads
-    }
-}
+1. A client creates a `JobDefinition` through the API.
+2. The API validates and stores the definition without storing raw secrets.
+3. A manual request or Quartz trigger creates a `JobRun` in `PENDING` state.
+4. Quartz submits the run to a bounded application executor. Quartz must not hold a scheduler thread while a database replication is running.
+5. The executor claims the run, changes it to `RUNNING`, resolves configuration references, and creates `ToolOptions`.
+6. The executor calls the existing ReplicaDB core.
+7. Row counters, timings, errors, and the final state are persisted.
+8. For incremental mode, the watermark candidate reduced from all parallel tasks is committed only after the sink staging and merge operations succeed.
 
-// Worker Service: Process jobs from queue
-@Component
-@Profile("worker")
-public class WorkerJobExecutor {
-    
-    @RabbitListener(queues = "replication-jobs")
-    public void processJob(JobDefinition job) {
-        LOG.info("Worker processing job {} with {} threads",
-            job.getId(), job.getJobs());
-        
-        // Execute with ReplicaDB core
-        ToolOptions options = toToolOptions(job);
-        int result = ReplicaDB.processReplica(options);
-        
-        publishJobCompletedEvent(job.getId(), result);
-    }
-}
+By default, a job should not overlap with another run of itself. Quartz's non-concurrent execution controls or an equivalent database claim must enforce this rule. Different jobs may run concurrently subject to configured resource limits, and only after the Phase 0 execution-context refactor has removed the static state described in Decision 2.
+
+#### Operational defaults
+
+These values are decided so that the first deployment is operable without further discussion. They are configurable; the defaults are what ships.
+
+| Concern | Default | Rationale |
+|---|---|---|
+| Run history retention | 90 days | Bounded growth of `JobRun`; a scheduled purge deletes older rows |
+| Audit event retention | 365 days | Longer than run history because it supports access review |
+| Maximum run duration | 24 hours | Exceeding it cancels the run and marks it `FAILED` with a timeout reason |
+| Schedule timezone | explicit IANA zone per job, `UTC` when unset | Avoids ambiguous and skipped local times across DST transitions |
+| Persisted run log | last 256 KB of the run's own log, truncated from the head | Enough for a failure diagnosis in the UI without turning PostgreSQL into a log store |
+| Full run logs | process logs and Sentry | The state store is the source of truth for state, not for output |
+| Metadata backup | daily managed backup with point-in-time recovery | The metadata store becomes critical once jobs are managed there |
+
+#### API surface
+
+The first API remains small and explicit:
+
+```text
+POST   /api/v1/jobs                 Create a job definition
+GET    /api/v1/jobs                 List job definitions
+GET    /api/v1/jobs/{id}            Read a definition and current state
+PUT    /api/v1/jobs/{id}            Update a definition
+POST   /api/v1/jobs/{id}/runs       Trigger a manual run (Idempotency-Key)
+GET    /api/v1/jobs/{id}/runs       Read historical runs for a job
+GET    /api/v1/runs                 List runs, filterable by state
+GET    /api/v1/runs/{id}            Read run status and counters
+GET    /api/v1/runs/{id}/log        Read the persisted log excerpt
+POST   /api/v1/runs/{id}/cancel     Cancel immediately, returns the sink warning
+POST   /api/v1/runs/{id}/retry      Re-execute the job from the beginning
 ```
 
-### **Critical Decision: 1 Pod = 1 Complete Job**
+The API returns a run identifier quickly. Clients poll `GET /api/v1/runs/{id}` initially; server-sent events or WebSocket monitoring can be considered later without changing the execution contract.
 
-**Why this model?**
-- ✅ **Simplicity**: Uses ReplicaDB's existing partitioning logic
-- ✅ **Performance**: ReplicaDB's internal threads are optimized per database
-- ✅ **Compatibility**: No changes to core replication logic
-- ✅ **Proven**: Current CLI model already works this way
+#### Frontend, users, and permissions
 
-**How ReplicaDB Partitions Internally:**
+The frontend is a separate web package from `docs/markdown/`, which remains an unrelated Markdown tool. A small React/TypeScript/Vite application is compiled to static assets and served by the `replicadb-server` process under the `api` profile, keeping the first deployment to one public application.
 
-Each database has its own optimized strategy:
-
-1. **Oracle**: `ora_hash(rowid, N-1) = threadId` - Hash-based distribution
-2. **SQL Server**: `ABS(CHECKSUM(%%physloc%%)) % N = threadId` - Physical location hash
-3. **PostgreSQL/MySQL**: `OFFSET threadId*chunkSize LIMIT chunkSize` - Calculated ranges
-4. **MongoDB**: `skip(threadId*chunkSize).limit(chunkSize)` - Skip/limit with _id sort
-
-**Example Execution:**
-```
-Job: 10M rows, --jobs=4
-
-Worker Pod receives job → Launches ReplicaDB with --jobs=4
-├─ Thread 0: Processes partition 0 (2.5M rows)
-├─ Thread 1: Processes partition 1 (2.5M rows)
-├─ Thread 2: Processes partition 2 (2.5M rows)
-└─ Thread 3: Processes partition 3 (2.5M rows)
-
-Result: All threads in same pod, job completes in ~15 minutes
+```text
+Browser
+  |
+  +-- Login session cookie (HttpOnly, Secure, SameSite)
+  |
+  +-- Frontend static assets served by api
+  |
+  +-- REST API
+        |
+        +-- Spring Security authentication
+        +-- role checks
+        +-- job ACL checks
+        +-- JobDefinition / JobRun services
 ```
 
-### **Kubernetes Deployment**
-```yaml
-# api-deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: replicadb-api
-spec:
-  replicas: 2  # High availability
-  template:
-    spec:
-      containers:
-      - name: replicadb
-        image: replicadb:latest
-        env:
-        - name: SPRING_PROFILES_ACTIVE
-          value: "api"
-        - name: REDIS_URL
-          value: "redis://redis-service:6379"
-        resources:
-          requests:
-            cpu: "500m"
-            memory: "512Mi"
+The initial screens are:
 
----
-# worker-deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: replicadb-worker
-spec:
-  replicas: 5  # Scale based on load
-  template:
-    spec:
-      containers:
-      - name: replicadb
-        image: replicadb:latest
-        env:
-        - name: SPRING_PROFILES_ACTIVE
-          value: "worker"
-        - name: REDIS_URL
-          value: "redis://redis-service:6379"
-        - name: REPLICA_JOBS_DEFAULT
-          value: "4"  # Default threads per job
-        resources:
-          requests:
-            cpu: "4000m"    # 4 CPUs for 4 threads
-            memory: "4Gi"
-          limits:
-            cpu: "4000m"
-            memory: "4Gi"
-```
+- Login and session management.
+- Dashboard of jobs visible to the current user.
+- Job editor for the source/sink table pair, mode, parallelism, watermark column, and schedule.
+- Run history and run detail with status, counters, log excerpt, and errors.
+- Job permission editor for authorized users.
+- User and role administration for `ADMIN` users.
 
-### **Scaling Strategy**
-```yaml
-# HPA based on Redis queue depth
-apiVersion: keda.sh/v1alpha1
-kind: ScaledObject
-metadata:
-  name: replicadb-worker-scaler
-spec:
-  scaleTargetRef:
-    name: replicadb-worker
-  minReplicaCount: 2
-  maxReplicaCount: 20
-  triggers:
-  - type: redis
-    metadata:
-      listName: replication-jobs
-      listLength: "2"  # Scale up if more than 2 jobs queued
-```
+The initial persistence model should include `app_user`, `app_role`, `app_user_role`, `job_permission`, `user_session`, and `audit_event`. Passwords are stored only as Argon2id hashes. The first administrator must be bootstrapped through a deployment-controlled setup flow; no default password may exist.
 
-**Scaling Behavior:**
-- 0-2 jobs in queue: 2 workers (minimum)
-- 3-4 jobs: Scale to 4 workers
-- 5-10 jobs: Scale to 10 workers
-- 11-20 jobs: Scale to 20 workers (maximum)
+Every job endpoint must authorize the requested operation in the backend. A typical rule is that `ADMIN` bypasses job ACLs, while `OPERATOR` and `VIEWER` can access only jobs for which their user has the corresponding permission. Login attempts, user changes, permission changes, job changes, and execution actions should be auditable without recording passwords or connection secrets.
 
-### **Performance Characteristics**
-```
-Single Job (10M rows):
-- 1 worker pod with --jobs=4
-- Time: ~15 minutes
-- CPU: 100% utilization (4 cores)
+#### How the API deployment starts
 
-Multiple Jobs (5 jobs × 10M rows):
-- 5 worker pods, each with --jobs=4
-- Time: ~15 minutes (parallel)
-- CPU: 100% utilization (20 cores total)
-- Throughput: 3.3M rows/minute
-```
+The two artifacts of Decision 1 are started as follows:
 
----
-
-## 🎯 Phase 3: Hybrid Chunking Model (ADVANCED)
-
-### **Overview**
-Introduce intelligent chunking at the API level for optimal resource utilization, while maintaining job-level execution for smaller workloads.
-
-### **Architecture**
-```
-┌──────────────────┐    ┌─────────────┐    
-│  API Service     │───→│   Redis     │    
-│  + Smart         │    │   Queues    │    
-│  Chunking        │    │             │    
-│  Analyzer        │    │ ┌─────────┐ │
-└──────────────────┘    │ │ jobs    │ │
-                        │ │ chunks  │ │
-                        │ └─────────┘ │
-                        └──────┬──────┘
-                               │
-                    ┌──────────▼────────────┐
-                    │   Worker Pool         │
-                    ├───────────────────────┤
-                    │ • Job Processor       │
-                    │ • Chunk Processor     │
-                    │ (Same worker, dual Q) │
-                    └───────────────────────┘
-```
-
-### **Decision Logic**
-```java
-@Service
-public class SmartJobDispatcher {
-    
-    public void submitJob(JobDefinition job) {
-        // Analyze table characteristics
-        TableAnalysis analysis = analyzeTable(job);
-        
-        // Decision: Chunking vs Complete Job
-        if (shouldUseChunking(analysis)) {
-            submitWithChunking(job, analysis);
-        } else {
-            submitCompleteJob(job);
-        }
-    }
-    
-    private boolean shouldUseChunking(TableAnalysis analysis) {
-        // Chunking enabled IF:
-        // 1. Table is large (>5M rows)
-        // 2. Has efficient chunking strategy available
-        
-        if (analysis.getTotalRows() < 5_000_000) {
-            return false; // Small/medium: use complete job
-        }
-        
-        // Check if fast chunking strategy exists
-        if (analysis.hasNumericPrimaryKey()) return true;  // PK range chunking
-        if (analysis.getDatabaseType() == DatabaseType.ORACLE) return true;  // ora_hash
-        if (analysis.getDatabaseType() == DatabaseType.SQLSERVER) return true;  // physloc
-        
-        return false; // No efficient strategy: use complete job
-    }
-}
-```
-
-### **Chunking Strategies by Database**
-
-#### **1. PostgreSQL/MySQL with Numeric PK (OPTIMAL)**
-```java
-public class PKRangeChunkingStrategy {
-    
-    public List<JobChunk> createChunks(JobDefinition job) {
-        // Query PK range
-        long minPK = queryMin("SELECT MIN(id) FROM " + table);
-        long maxPK = queryMax("SELECT MAX(id) FROM " + table);
-        
-        // Calculate chunk size (target: 500K-1M rows per chunk)
-        int chunkSize = 500_000;
-        
-        List<JobChunk> chunks = new ArrayList<>();
-        for (long start = minPK; start <= maxPK; start += chunkSize) {
-            long end = Math.min(start + chunkSize - 1, maxPK);
-            
-            JobChunk chunk = new JobChunk();
-            chunk.setSourceWhere("id BETWEEN " + start + " AND " + end);
-            chunk.setJobs(1); // IMPORTANT: Single thread per chunk!
-            
-            chunks.add(chunk);
-        }
-        
-        return chunks;
-    }
-}
-```
-
-**Generated SQL per worker:**
-```sql
--- Worker 1
-SELECT * FROM orders WHERE id BETWEEN 1 AND 500000;
-
--- Worker 2  
-SELECT * FROM orders WHERE id BETWEEN 500001 AND 1000000;
-
--- Worker N
-SELECT * FROM orders WHERE id BETWEEN 9500001 AND 10000000;
-```
-
-**Benefits:**
-- ✅ Index-optimized queries (WHERE on PK)
-- ✅ Perfect load balancing (equal chunk sizes)
-- ✅ Fault tolerance (chunk failure doesn't affect others)
-- ✅ Maximum parallelism (20 chunks = 20 workers possible)
-
-#### **2. Oracle with ROWID Hash**
-```java
-public class OracleRowidHashChunkingStrategy {
-    
-    public List<JobChunk> createChunks(JobDefinition job, int targetChunks) {
-        List<JobChunk> chunks = new ArrayList<>();
-        
-        for (int i = 0; i < targetChunks; i++) {
-            JobChunk chunk = new JobChunk();
-            chunk.setSourceWhere(
-                "ora_hash(rowid, " + (targetChunks - 1) + ") = " + i
-            );
-            chunk.setJobs(1);
-            chunks.add(chunk);
-        }
-        
-        return chunks;
-    }
-}
-```
-
-**Benefits:**
-- ✅ Uniform distribution (hash-based)
-- ✅ No PK required
-- ✅ Fast queries (physical ROWID)
-
-#### **3. SQL Server with Physical Location**
-```java
-public class SqlServerPhyslocChunkingStrategy {
-    
-    public List<JobChunk> createChunks(JobDefinition job, int targetChunks) {
-        List<JobChunk> chunks = new ArrayList<>();
-        
-        for (int i = 0; i < targetChunks; i++) {
-            JobChunk chunk = new JobChunk();
-            chunk.setSourceWhere(
-                "ABS(CHECKSUM(%%physloc%%)) % " + targetChunks + " = " + i
-            );
-            chunk.setJobs(1);
-            chunks.add(chunk);
-        }
-        
-        return chunks;
-    }
-}
-```
-
-### **Worker Implementation**
-```java
-@Component
-@Profile("worker")
-public class HybridWorkerExecutor {
-    
-    // Queue 1: Complete jobs
-    @RabbitListener(queues = "replication-jobs")
-    public void processCompleteJob(JobDefinition job) {
-        LOG.info("Processing complete job {} with {} threads",
-            job.getId(), job.getJobs());
-        
-        ToolOptions options = toToolOptions(job);
-        ReplicaDB.processReplica(options);
-    }
-    
-    // Queue 2: Individual chunks
-    @RabbitListener(queues = "replication-chunks")
-    public void processChunk(JobChunk chunk) {
-        LOG.info("Processing chunk {}/{} of job {}",
-            chunk.getChunkNumber(),
-            chunk.getTotalChunks(),
-            chunk.getJobId());
-        
-        ToolOptions options = toToolOptions(chunk);
-        options.setJobs(1); // ALWAYS 1 for chunks!
-        
-        ReplicaDB.processReplica(options);
-        
-        // Check if job complete
-        checkJobCompletion(chunk.getJobId());
-    }
-}
-```
-
-### **Decision Matrix**
-
-| Table Size | Has PK | Database | Strategy | Chunks | --jobs |
-|------------|--------|----------|----------|--------|--------|
-| <500K rows | Any | Any | Complete Job | 0 | 1 |
-| 500K-5M | Any | Any | Complete Job | 0 | 2-4 |
-| >5M | Numeric PK | PostgreSQL/MySQL | PK Range Chunking | 20+ | 1 |
-| >5M | Any | Oracle | ROWID Hash Chunking | 20+ | 1 |
-| >5M | Any | SQL Server | Physloc Chunking | 20+ | 1 |
-| >5M | No PK/UUID | PostgreSQL/MySQL | Complete Job | 0 | 4-6 |
-
-### **Performance Comparison**
-
-**Scenario: 10M rows table**
-
-#### **Phase 2 (Complete Job)**
-```
-Configuration:
-- 1 worker pod
-- --jobs=4 (4 threads)
-- 4 CPUs
-
-Time: 15 minutes
-Throughput: 666K rows/min
-```
-
-#### **Phase 3 (Chunking)**
-```
-Configuration:
-- 20 worker pods (auto-scaled)
-- 20 chunks × 500K rows
-- --jobs=1 per chunk
-- 1 CPU per pod
-
-Time: 10 minutes
-Throughput: 1M rows/min
-Improvement: 33% faster
-```
-
-### **Kubernetes Auto-Scaling**
-```yaml
-apiVersion: keda.sh/v1alpha1
-kind: ScaledObject
-metadata:
-  name: replicadb-worker-scaler-v2
-spec:
-  scaleTargetRef:
-    name: replicadb-worker
-  minReplicaCount: 2
-  maxReplicaCount: 50  # Support up to 50 chunks in parallel
-  triggers:
-  # Scale by complete jobs
-  - type: redis
-    metadata:
-      listName: replication-jobs
-      listLength: "2"
-  # Scale by chunks (higher priority)
-  - type: redis
-    metadata:
-      listName: replication-chunks
-      listLength: "5"  # 1 pod per 5 chunks
-```
-
----
-
-## 📊 Summary of Decisions
-
-### **✅ Architecture: Single Codebase with Profiles**
-- No separate core library
-- Profile-based deployment (api/worker/cli)
-- Same image, different configuration
-
-### **✅ Phase 1: Monolithic Start**
-- Single Spring Boot service
-- Direct ReplicaDB core integration
-- In-memory job queue
-- CLI remains functional (optimized startup)
-
-### **✅ Phase 2: Kubernetes with Redis**
-- 1 pod = 1 complete job
-- Job uses ReplicaDB's internal threading (--jobs=N)
-- Redis queue for job distribution
-- Horizontal worker scaling
-
-### **✅ Phase 3: Hybrid Chunking**
-- Smart chunking for large tables (>5M rows)
-- Strategy selection based on table analysis
-- Dual queue: jobs + chunks
-- Maximum parallelism for optimal performance
-
----
-
-## 🎯 Implementation Priorities
-
-### **Priority 1: Phase 1 (IMMEDIATE)**
-- [ ] Add REST API to existing codebase
-- [ ] Implement profile-based configuration
-- [ ] Add Quartz scheduler
-- [ ] Create WebSocket monitoring
-- [ ] Optimize CLI startup
-
-### **Priority 2: Phase 2 (6-12 MONTHS)**
-- [ ] Add Redis integration
-- [ ] Implement job queue pattern
-- [ ] Create K8s deployment manifests
-- [ ] Add HPA configuration
-- [ ] Performance testing
-
-### **Priority 3: Phase 3 (12+ MONTHS)**
-- [ ] Implement table analysis service
-- [ ] Create chunking strategies
-- [ ] Add chunk tracking and recovery
-- [ ] Dual queue implementation
-- [ ] Advanced performance optimization
-
----
-
-## 📈 Success Metrics
-
-### **Phase 1**
-- ✅ API response time <500ms
-- ✅ CLI startup time <2 seconds
-- ✅ Zero breaking changes to CLI
-- ✅ 100% backward compatibility
-
-### **Phase 2**
-- ✅ Support 10+ concurrent jobs
-- ✅ Worker auto-scaling <30 seconds
-- ✅ Zero job loss on worker failure
-- ✅ 99% queue processing success
-
-### **Phase 3**
-- ✅ 30-50% performance improvement on large tables
-- ✅ Support 50+ parallel chunks
-- ✅ Smart strategy selection 95% accuracy
-- ✅ Optimal resource utilization
-
----
-
-## 🔒 Constraints & Limitations
-
-### **Phase 1 Constraints**
-- Single instance deployment only
-- No horizontal scalability
-- SQLite database limitations
-
-### **Phase 2 Constraints**
-- Job-level parallelism only (no chunking)
-- Potential thread imbalance in Phase 2
-- OFFSET/LIMIT inefficiency for some databases
-
-### **Phase 3 Considerations**
-- Chunking requires PK or database-specific features
-- Increased complexity in job tracking
-- More moving parts for monitoring
-
----
-
-## 🚦 Migration Strategy
-
-### **Phase 1 → Phase 2**
 ```bash
-# 1. Add Redis to infrastructure
-kubectl apply -f redis-deployment.yaml
+# Existing CLI artifact: no Spring Boot context on the classpath
+./bin/replicadb --options-file ./conf/replicadb.conf
 
-# 2. Deploy API with Redis config
-kubectl apply -f api-deployment.yaml
+# Server artifact: Spring Boot starts REST API and Quartz together
+java -Dspring.profiles.active=api -jar replicadb-server.jar
 
-# 3. Deploy workers
-kubectl apply -f worker-deployment.yaml
-
-# 4. Migrate data (if needed)
-# SQLite → PostgreSQL migration script
+# Equivalent container path
+docker run -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=api \
+  -e REPLICADB_METADATA_URL=${REPLICADB_METADATA_URL} \
+  replicadb-server:api
 ```
 
-### **Phase 2 → Phase 3**
-```bash
-# 1. Deploy updated API with chunking logic
-kubectl apply -f api-deployment-v2.yaml
+At startup, Spring Boot loads the `api` profile configuration, connects to the metadata store, registers Quartz jobs, exposes the HTTP port, and creates the bounded executor. The scheduler then creates run records; it does not invoke database managers directly.
 
-# 2. Update worker to support dual queues
-kubectl apply -f worker-deployment-v2.yaml
+#### Phase 1 resources
 
-# 3. Update HPA for chunk scaling
-kubectl apply -f worker-hpa-v2.yaml
+- One API container or JVM process.
+- PostgreSQL for local, managed, and multi-instance control-plane deployments.
+- Network access from the API process to the configured source and sink databases.
+- CPU and memory reserved for the executor's concurrent ReplicaDB runs.
+- Environment variables or a secret manager for credentials and connection references.
+- Frontend Node/Vite build tooling, with compiled assets packaged into the `replicadb-server` image.
+- Docker or Podman for packaging; Testcontainers for API, metadata, security, and database integration tests.
 
-# 4. Enable chunking flag
-kubectl set env deployment/replicadb-api CHUNKING_ENABLED=true
+### Phase 2: Distributed Workers
+
+This phase separates the Spring Boot API/scheduler from replication execution. It is only justified when one API process cannot provide enough isolation or concurrency.
+
+#### Components
+
+- `api` deployment: Spring Boot REST API, Quartz scheduler, job repository, and run dispatcher.
+- `worker` deployment: same codebase with the worker profile and no public API requirement.
+- Mandatory PostgreSQL metadata database for job definitions, runs, leases, and watermarks.
+- PostgreSQL `LISTEN/NOTIFY` connection for low-latency worker wake-up.
+- Periodic PostgreSQL polling for startup recovery, reconnects, and missed notifications.
+- Optional Kubernetes deployment, autoscaling, and centralized logs/metrics.
+
+#### Worker runtime
+
+`replicadb-server` under the `worker` profile is a runtime mode of the same artifact, not a second replication engine. It starts the common execution services and one PostgreSQL dispatch coordinator:
+
+```text
+replicadb-server (worker)
+    |
+    +-- PostgresNotifyDispatcher
+    |       +-- dedicated LISTEN connection
+    |       +-- NOTIFY wake-up handler
+    |       +-- periodic polling fallback
+    |
+    +-- RunClaimService
+    +-- LeaseRecoveryService
+    +-- ReplicationExecutionService
+    +-- WatermarkRepository
+    +-- ReplicaDB core
 ```
+
+The worker should execute one `JobRun` at a time by default. ReplicaDB's existing `jobs` option still controls the internal parallel tasks for that run. A future `worker.max-concurrent-runs` setting must be bounded because total database pressure is approximately:
+
+```text
+worker instances * concurrent runs per worker * jobs per run
+```
+
+#### PostgreSQL notification and claim flow
+
+```text
+API + Quartz
+  |
+  | PostgreSQL transaction
+  +-- INSERT JobRun(PENDING)
+  +-- SELECT pg_notify('replicadb_runs', run_id)
+  +-- COMMIT
+        |
+        v
+   All LISTEN workers wake up
+        |
+        v
+   One worker claims with
+   FOR UPDATE SKIP LOCKED
+        |
+        v
+   ReplicaDB execution
+        |
+        v
+   PostgreSQL state + watermark
+```
+
+The API inserts the `JobRun` and issues `pg_notify` in the same transaction. PostgreSQL delivers the notification after commit, so a worker never wakes for a run that was rolled back. The payload contains only a `runId` and must remain below PostgreSQL's notification payload limit; all job data is loaded from the state tables. The claim transaction, not the notification, is what assigns a run to exactly one active worker.
+
+#### Claim transaction and polling fallback
+
+```text
+BEGIN
+  select an eligible PENDING or RETRY_SCHEDULED run
+  using FOR UPDATE SKIP LOCKED
+  update it to RUNNING with worker_id and lease_until
+COMMIT
+```
+
+The claim must select only runs whose `available_at` has elapsed and whose lease is empty or expired. PostgreSQL row locking allows several workers to claim different runs concurrently without waiting on already claimed rows. A worker must never select a `PENDING` row and update it later in a separate unprotected operation.
+
+The worker performs a periodic fallback poll even when `LISTEN` is active. It polls at startup, after reconnecting, and on a configurable interval. This covers a worker that was offline when `NOTIFY` was sent and makes notification delivery an optimization rather than a correctness dependency.
+
+#### Common execution and recovery
+
+The notification handler and polling fallback execute the same sequence after discovering eligible work:
+
+```text
+1. Receive a notification or find an eligible row by polling
+2. Atomically claim JobRun(PENDING or RETRY_SCHEDULED)
+3. Set RUNNING, workerId, heartbeatAt, and leaseUntil
+4. Load an immutable job-definition snapshot
+5. Resolve secret references and build ToolOptions
+6. Execute ReplicaDB core
+7. Persist row counters, timings, error, and terminal state
+8. Commit the watermark only after staging and merge succeed
+9. Release the lease through a terminal state
+```
+
+The `JobRun` contains a lease and heartbeat governed by the rules in Decision 6. A recovery process returns a run to `RETRY_SCHEDULED` when `lease_until` expires, which handles a worker process that disappears during a database operation. Because runs are never resumed, that retry re-executes the job from the beginning. The worker uses a dedicated PostgreSQL connection for `LISTEN`; replication source and sink connections remain owned by the existing ReplicaDB tasks.
+
+The execution model is at-least-once, not exactly-once. Duplicate notifications and polling must be handled by the claim state, the idempotent sink merge, and the watermark commit rules. The API reads status only from PostgreSQL; it does not infer status from notification delivery or worker logs.
+
+The Phase 0 rich task result is what allows a worker to persist row counters and a watermark candidate. Without it the worker records only coarse-grained lifecycle state.
+
+#### Optional worker shapes
+
+The same worker profile can run as either:
+
+- A long-lived worker pool with a dedicated `LISTEN` connection and polling fallback.
+- An ephemeral task started with a `runId`, which executes one run and exits.
+
+The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral tasks are useful on Cloud Run Jobs, Azure Container Apps Jobs, ECS tasks, or Kubernetes Jobs when the platform starts them with a `runId`; those tasks still claim the run from PostgreSQL and do not rely on a notification remaining available.
+
+#### Phase 2 resources
+
+- At least one API instance and one worker instance.
+- Managed PostgreSQL with private connectivity from API and workers.
+- Dedicated PostgreSQL listener connection per long-lived worker.
+- Worker leases, heartbeats, retry limits, and dead-run recovery process.
+- Docker Compose for local topology tests and Kubernetes for production scaling when required.
+- Micrometer/Actuator or an equivalent metrics pipeline, plus centralized logs and Sentry error reporting.
+- Load tests that measure notification wake-up, polling fallback, row-claim contention, database load, worker recovery, duplicate notifications, and duplicate polling.
+
+## Implementation Priorities
+
+### Priority 1: Core and State Contract
+
+- [x] Replace the static staging-name and temp-file state with a per-run execution context. **Completed in Phase 0-a (`c228ddc`).**
+- [x] Widen the `ReplicaTask` result to carry counters, timings, and a watermark candidate. **Counters and timings completed in Phase 0-a (`c228ddc`); watermark population remains pending.**
+- [ ] Add cancellation: statement handles, interrupt checks, cancellable futures.
+- [ ] Implement watermark injection with type inference from source column metadata.
+- [ ] Define `JobDefinition` and `JobRun` persistence models and Flyway migrations.
+- [ ] Define legal state transitions, retry behavior, and idempotency rules.
+- [ ] Split the build into the `replicadb` and `replicadb-server` artifacts.
+- [ ] Preserve CLI behavior, including multi-table options files.
+- [ ] Add focused tests for concurrent runs, cancellation, and watermark advancement.
+
+### Priority 2: Monolithic Control Plane
+
+- [ ] Add the `/api/v1` REST API for job and run management.
+- [ ] Reject multi-table definitions at the API boundary with an explicit error.
+- [ ] Add Quartz scheduling with an explicit timezone per job.
+- [ ] Add asynchronous execution and monitoring.
+- [ ] Add run history, operational counters, persisted log excerpts, and error details.
+- [ ] Return and persist the indeterminate-sink warning on cancellation.
+- [ ] Add local-user authentication with Spring Security and PostgreSQL sessions.
+- [ ] Add global roles `ADMIN`, `OPERATOR`, and `VIEWER`.
+- [ ] Add per-job ACLs for `VIEW`, `EDIT`, `EXECUTE`, and `CANCEL`.
+- [ ] Add the planning and monitoring frontend to the `replicadb-server` package.
+- [ ] Add audit events, retention purge jobs, and secure bootstrap of the first administrator.
+- [ ] Keep credentials outside persisted job payloads.
+
+### Priority 3: Optional Distributed Deployment
+
+- [ ] Define the PostgreSQL worker dispatcher and state schema.
+- [ ] Implement atomic run claims, leases, heartbeats, and retry scheduling using PostgreSQL `now()`.
+- [ ] Keep heartbeats alive during long merge and swap operations.
+- [ ] Implement the dedicated `LISTEN/NOTIFY` connection and reconnect logic.
+- [ ] Implement periodic polling as the mandatory notification-recovery path.
+- [ ] Dispatch run identifiers without transporting secrets.
+- [ ] Test worker loss, retries, missed notifications, duplicate notifications, and duplicate polling.
 
 ---
 
-## 📚 References
+## Success Metrics
 
-### **Internal Documentation**
-- `implementation_plan.md` - Detailed implementation tasks
-- `strategic_architecture_plan.md` - Original architecture analysis
-- ReplicaDB Source Code Analysis - Partitioning strategies
+### Phase 0
 
-### **External Resources**
-- Spring Boot Profiles: https://spring.io/guides/gs/multi-module/
-- KEDA Scaling: https://keda.sh/docs/
+- **Met:** Two concurrent runs in one JVM produce two distinct staging tables and zero cross-run interference across 100 repetitions.
+- **Met:** Task results report row counts and timings, and run-level aggregation reports the total rows and longest task duration.
+- A cancellation request halts source reads within 5 seconds at the 95th percentile.
+- Control-plane overhead adds no more than 5% to the wall-clock duration of an equivalent CLI run.
+
+### Phase 1
+
+- CLI invocation, exit codes, and existing configuration remain compatible, verified by the existing CLI test suite with zero modifications.
+- The `replicadb` artifact contains no Spring Boot classes.
+- A failed or cancelled run never advances its incremental watermark.
+- Restarting the control plane does not lose persisted run state.
+- Monitoring exposes status, counters, timestamps, and failure details.
+- Unauthorized users cannot view, edit, execute, or cancel jobs.
+- Administrators can manage users, roles, job permissions, and audit history.
+- The frontend can create, schedule, execute, and monitor jobs through the API.
+- Credentials are absent from job payloads, state records, API responses, and logs.
+- A replayed `Idempotency-Key` never produces a second run.
+
+### Phase 2
+
+- Worker loss does not lose a persisted run; the run reappears as claimable within one lease period.
+- Duplicate notifications and duplicate database polling do not advance a watermark twice.
+- Expired worker leases return recoverable runs to the retry path.
+- A worker reconnects and rescans PostgreSQL after a listener failure.
+- Missed notifications are recovered by polling within one polling interval.
+- A merge lasting longer than the lease duration never triggers a duplicate claim.
+- Concurrency and scaling limits are established from reproducible benchmarks.
+
+---
+
+## Constraints and Limitations
+
+### Current core
+
+- Phase 0-a removed the static staging-name and temporary-file state. Each `ToolOptions` owns one `ReplicationExecutionContext`; a multi-table copy receives a fresh context.
+- `ReplicaTask` now returns `ReplicaTaskResult` with row counts and timings, and `executeReplicationTasks` aggregates those results. Cancellation and watermark candidates are not implemented yet.
+- Each parallel task owns its source and sink managers; the state layer must not assume shared JDBC connections.
+- Manager capabilities differ by source, sink, and replication mode.
+- Multi-table replication stops at the first failure and leaves earlier tables applied; it is a CLI-only capability.
+
+### Execution semantics
+
+- Runs are never resumed. A retry is a full re-execution.
+- Partition assignment is not reproducible across executions, so no feature may depend on partition identity.
+- Retrying a `complete` run is destructive because the sink is truncated before any write.
+- Cancelling during a merge or atomic swap leaves the sink in an indeterminate state, and the API must say so.
+- Watermarks exist only for `incremental` mode, use a single declared column, and never propagate deletes.
+- An incremental merge requires primary keys on the source.
+- Monitoring counters describe execution; they do not prove source/sink equality.
+
+### Deployment
+
+- PostgreSQL is mandatory for the `api` and `worker` profiles; the CLI does not use it.
+- SQLite is limited to isolated CLI fixtures or unit tests.
+- The CLI remains available in every implementation phase and deployment model.
+- PostgreSQL `LISTEN/NOTIFY` is a wake-up signal, not a durable queue; polling recovery is mandatory.
+- Workers require a dedicated listener connection and must reconnect and re-subscribe after failure.
+- Lease and heartbeat timestamps come from PostgreSQL `now()`, never from worker clocks.
+- PostgreSQL row locking and leases must prevent two workers from claiming the same run.
+- User passwords are stored only as Argon2id hashes; sessions require secure cookie and CSRF configuration.
+- Every job operation must enforce ACLs in the backend, independently of frontend visibility.
+- The first administrator requires a controlled bootstrap flow with no default password.
+- The frontend is served by the `api` profile; workers expose no public login or UI.
+- Secrets are resolved by the executor and never transported as job data.
+- More workers increase source and sink contention; scaling limits must be measured.
+
+---
+
+## References
+
+### Internal Documentation
+
+- `README.md` - CLI, deployment, and compatibility baseline.
+- `docs/docs/docs.md` - Replication modes and connector behavior.
+- `src/main/java/org/replicadb/ReplicaDB.java` - Orchestration, multi-table loop, and task execution.
+- `src/main/java/org/replicadb/ReplicaTask.java` - Task execution and rich result production.
+- `src/main/java/org/replicadb/ReplicaTaskResult.java` - Row counters, timings, and reserved watermark candidate.
+- `src/main/java/org/replicadb/execution/ReplicationExecutionContext.java` - Per-run identifier, staging name, and temporary-file state.
+- `src/main/java/org/replicadb/cli/ReplicationMode.java` - `complete`, `complete-atomic`, `incremental`.
+- `src/main/java/org/replicadb/cli/ToolOptions.java` - Current configuration boundary.
+- `src/main/java/org/replicadb/manager/SqlManager.java` - Staging, merge, and atomic swap behavior.
+- `src/main/java/org/replicadb/manager/ConnManager.java` - Per-run staging-table name access.
+- `src/main/java/org/replicadb/manager/file/FileManager.java` - Per-run temporary-file access.
+- `openspec/` - Change proposals and specs for engine-level behavior; this document governs product direction, not individual engine changes.
+- `.ai/context/execution.md` - Current execution and lifecycle constraints.
+- `.ai/context/operations.md` - Current runtime, telemetry, and deployment constraints.
+
+### External Resources
+
 - ReplicaDB GitHub: https://github.com/osalvador/ReplicaDB
+- PostgreSQL `NOTIFY`: https://www.postgresql.org/docs/current/sql-notify.html
+- PostgreSQL `LISTEN`: https://www.postgresql.org/docs/current/sql-listen.html
+- PostgreSQL explicit locking: https://www.postgresql.org/docs/current/explicit-locking.html
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: October 3, 2025  
-**Next Review**: After Phase 1 completion
+**Document Version**: 2.1
+**Last Updated**: August 14, 2026
+**Next Review**: Before implementation of Phase 0-b cancellation and watermark changes
