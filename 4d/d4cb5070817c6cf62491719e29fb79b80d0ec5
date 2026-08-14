@@ -1,0 +1,75 @@
+.ai/archive/phase-0b1-cancellation-plumbing.plan.md
+  s_77bba167b90dbc::t_d419b4da9044ce 1-267
+ARCHITECTURE_DECISIONS.md
+  s_77bba167b90dbc::t_1d7558a9162833 369,375,397,673,810
+src/main/java/org/replicadb/ReplicaDB.java
+  s_77bba167b90dbc::t_68ba8a6322d611 16,61,204-206,208-219,304,311-341,343-345,347-351
+src/main/java/org/replicadb/execution/ReplicationCancelledException.java
+  s_77bba167b90dbc::t_879e1d4b704b3b 1-14
+src/main/java/org/replicadb/execution/ReplicationExecutionContext.java
+  s_77bba167b90dbc::t_e2aa399312bb6d 3-7,9,12,16-17,20-21,51-84
+src/main/java/org/replicadb/manager/ConnManager.java
+  s_77bba167b90dbc::t_e21e56ccdf74df 6,309-323
+src/main/java/org/replicadb/manager/KafkaManager.java
+  s_77bba167b90dbc::t_9457a1471a8695 94
+src/main/java/org/replicadb/manager/MongoDBManager.java
+  s_77bba167b90dbc::t_c458b141ea2e23 257,694
+src/main/java/org/replicadb/manager/MySQLManager.java
+  s_77bba167b90dbc::t_b59c92a2706ea0 71,73,98,159-162,277,279,308-310
+src/main/java/org/replicadb/manager/OracleManager.java
+  s_77bba167b90dbc::t_16fa45a36f5aac 189-190,192,205,422-426,480,484,486,543-546
+src/main/java/org/replicadb/manager/PostgresqlManager.java
+  s_77bba167b90dbc::t_1d5beb45af09e0 161,379,382,422-424,696
+src/main/java/org/replicadb/manager/SQLServerManager.java
+  s_77bba167b90dbc::t_60e698d993ef21 434-438,503-506,674,678,680,739-742
+src/main/java/org/replicadb/manager/SqlManager.java
+  s_77bba167b90dbc::t_37bf5e2855d10a 152,319,475,477,480-485,487-501,503-509
+src/main/java/org/replicadb/manager/SqliteManager.java
+  s_77bba167b90dbc::t_2081e9980aa923 181,183,195,383-386,441,443,476-478
+src/main/java/org/replicadb/manager/StandardJDBCManager.java
+  s_77bba167b90dbc::t_15c706c10e2f78 110,112,123,266-269,396
+src/main/java/org/replicadb/manager/db2/Db2Manager.java
+  s_77bba167b90dbc::t_96af8a363e8766 233,235,245,464-467,578,584,640-642
+src/main/java/org/replicadb/manager/file/CsvFileManager.java
+  s_77bba167b90dbc::t_0a47c6ea60ed00 260
+src/main/java/org/replicadb/manager/file/FileManager.java
+  s_77bba167b90dbc::t_dde39f4d1d2f65 4,90-96
+src/main/java/org/replicadb/manager/file/OrcFileManager.java
+  s_77bba167b90dbc::t_d0a9a22f54f695 98
+src/test/java/org/replicadb/ReplicaDBCancellationTest.java
+  s_77bba167b90dbc::t_13e1d729fa1174 1-199
+src/test/java/org/replicadb/execution/ReplicationCancelledExceptionTest.java
+  s_77bba167b90dbc::t_717da6698f7f79 1-19
+src/test/java/org/replicadb/execution/ReplicationExecutionContextTest.java
+  s_77bba167b90dbc::t_649af293ed595e 5-6,9,11,15-19,56-96
+src/test/java/org/replicadb/manager/ConnManagerCancellationTest.java
+  s_77bba167b90dbc::t_70d32b84ea71db 1-130
+src/test/java/org/replicadb/manager/SQLServerManagerCancellationGuardTest.java
+  s_77bba167b90dbc::t_703c53e86a079f 1-31
+src/test/java/org/replicadb/manager/SqlManagerCancellationTest.java
+  s_77bba167b90dbc::t_a24a7102da74ec 1-103
+src/test/java/org/replicadb/manager/SqliteManagerCancellationTest.java
+  s_77bba167b90dbc::t_70cc60829284d8 1-151
+src/test/java/org/replicadb/manager/file/CsvFileManagerCancellationTest.java
+  s_77bba167b90dbc::t_8940aa6df616b9 1-108
+src/test/java/org/replicadb/manager/file/FileManagerCancellationTest.java
+  s_77bba167b90dbc::t_8f898305b51249 1-72
+src/test/java/org/replicadb/postgres/PostgresqlManagerCancellationTest.java
+  s_77bba167b90dbc::t_56bd66314cc346 1-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "4dd4cb5070817c6cf62491719e29fb79b80d0ec5",
+  "prompts": {},
+  "sessions": {
+    "s_77bba167b90dbc": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "ecf140eb-1d30-4577-b151-a7e2c2a9ab70",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
