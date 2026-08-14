@@ -230,7 +230,9 @@ public class Db2Manager extends SqlManager {
 
         String sqlCdm = getInsertSQLCommand(tableName, allColumns, columnsNumber);
         PreparedStatement ps = this.getConnection().prepareStatement(sqlCdm);
+        registerActiveStatement(ps);
 
+        try {
         final int batchSize = options.getFetchSize();
         int count = 0;
 
@@ -240,6 +242,7 @@ public class Db2Manager extends SqlManager {
             BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
 
             do {
+                checkCancellation();
                 bt.acquiere();
 
                 for (int i = 1; i <= columnsNumber; i++) {
@@ -456,10 +459,12 @@ public class Db2Manager extends SqlManager {
             logBatchException(batchException);
             throw batchException;
         }
-        ps.close();
-
         this.getConnection().commit();
         return totalRows;
+        } finally {
+            unregisterActiveStatement(ps);
+            ps.close();
+        }
     }
 
     private Map<String, Integer> getSinkColumnTypes(String tableName) throws SQLException {
@@ -570,11 +575,13 @@ public class Db2Manager extends SqlManager {
      */
     @Override
     protected void mergeStagingTable() throws SQLException {
+        checkCancellation();
         this.getConnection().commit();
 
         Statement statement = this.getConnection().createStatement();
 
         try {
+            registerActiveStatement(statement);
             String[] pks = this.getSinkPrimaryKeys(this.getSinkTableName());
             if (pks == null || pks.length == 0) {
                 throw new IllegalArgumentException("Sink table must have at least one primary key column for incremental mode.");
@@ -626,12 +633,13 @@ public class Db2Manager extends SqlManager {
 
             LOG.info("Merging staging table and sink table with this command: {}", sql);
             statement.executeUpdate(sql.toString());
-            statement.close();
             this.getConnection().commit();
         } catch (Exception e) {
-            statement.close();
             this.connection.rollback();
             throw e;
+        } finally {
+            unregisterActiveStatement(statement);
+            statement.close();
         }
     }
 

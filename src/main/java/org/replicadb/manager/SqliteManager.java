@@ -178,7 +178,9 @@ public class SqliteManager extends SqlManager {
 
 		final String sqlCdm = this.getInsertSQLCommand(tableName, allColumns, columnsNumber);
 		final PreparedStatement ps = this.getConnection().prepareStatement(sqlCdm);
+		registerActiveStatement(ps);
 
+		try {
 		final int batchSize = this.options.getFetchSize();
 		int count = 0;
 
@@ -190,6 +192,7 @@ public class SqliteManager extends SqlManager {
 					this.options.getFetchSize(), resultSet);
 
 			do {
+				checkCancellation();
 				bt.acquiere();
 
 				// Get Columns values
@@ -375,10 +378,12 @@ public class SqliteManager extends SqlManager {
 		}
 
 		ps.executeBatch(); // insert remaining records
-		ps.close();
-
 		this.getConnection().commit();
 		return totalRows;
+		} finally {
+			unregisterActiveStatement(ps);
+			ps.close();
+		}
 	}
 
 	private String getInsertSQLCommand(String tableName, String allColumns, int columnsNumber) {
@@ -433,7 +438,9 @@ public class SqliteManager extends SqlManager {
 
 	@Override
 	protected void mergeStagingTable() throws SQLException {
+		checkCancellation();
 		final Statement statement = this.getConnection().createStatement();
+		registerActiveStatement(statement);
 
 		try {
 			final String[] pks = this.getSinkPrimaryKeys(this.getSinkTableName());
@@ -461,13 +468,14 @@ public class SqliteManager extends SqlManager {
 
 			LOG.info("Merging staging table and sink table with this command: {}", sql);
 			statement.executeUpdate(sql.toString());
-			statement.close();
 			this.getConnection().commit();
 
 		} catch (final Exception e) {
-			statement.close();
 			this.connection.rollback();
 			throw e;
+		} finally {
+			unregisterActiveStatement(statement);
+			statement.close();
 		}
 	}
 

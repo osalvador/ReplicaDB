@@ -186,7 +186,10 @@ public class OracleManager extends SqlManager {
 
         String sqlCdm = getInsertSQLCommand(tableName, allColumns, columnsNumber);
         PreparedStatement ps = this.getConnection().prepareStatement(sqlCdm);
+        registerActiveStatement(ps);
+        List<AutoCloseable> openStreams = new ArrayList<>();
 
+        try {
         final int batchSize = options.getFetchSize();
         int count = 0;
 
@@ -194,14 +197,12 @@ public class OracleManager extends SqlManager {
 
         oracleAlterSession(true);
 
-        // Track streams that need to be closed after batch execution
-        List<AutoCloseable> openStreams = new ArrayList<>();
-
         if (resultSet.next()) {
             // Create Bandwidth Throttling
             BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
 
             do {
+                checkCancellation();
                 bt.acquiere();
 
                 // Get Columns values
@@ -416,11 +417,13 @@ public class OracleManager extends SqlManager {
         this.getConnection().commit();
         // Close all remaining streams after final batch
         closeStreams(openStreams);
-        
-        ps.close();
-
         this.getConnection().commit();
         return totalRows;
+        } finally {
+            closeStreams(openStreams);
+            unregisterActiveStatement(ps);
+            ps.close();
+        }
     }
 
     private String getInsertSQLCommand(String tableName, String allColumns, int columnsNumber) {
@@ -474,10 +477,13 @@ public class OracleManager extends SqlManager {
 
     @Override
     protected void mergeStagingTable() throws SQLException {
+        checkCancellation();
         this.getConnection().commit();
 
         Statement statement = this.getConnection().createStatement();
+        registerActiveStatement(statement);
 
+        try {
         String[] pks = this.getSinkPrimaryKeys(this.getSinkTableName());
         // Primary key is required
         if (pks == null || pks.length == 0) {
@@ -533,8 +539,11 @@ public class OracleManager extends SqlManager {
 
         LOG.info("Merging staging table and sink table with this command: {}", sql);
         statement.executeUpdate(sql.toString());
-        statement.close();
         this.getConnection().commit();
+        } finally {
+            unregisterActiveStatement(statement);
+            statement.close();
+        }
     }
 
     @Override

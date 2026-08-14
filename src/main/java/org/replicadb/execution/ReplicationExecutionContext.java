@@ -1,13 +1,24 @@
 package org.replicadb.execution;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class ReplicationExecutionContext {
 
+    private static final Logger LOG = LogManager.getLogger(ReplicationExecutionContext.class.getName());
+
     private final String runId = UUID.randomUUID().toString();
     private final Map<Integer, String> tempFilesPath = new ConcurrentHashMap<>();
+    private final AtomicBoolean cancellationRequested = new AtomicBoolean(false);
+    private final Set<Statement> activeStatements = ConcurrentHashMap.newKeySet();
     private volatile String sinkStagingTableName;
 
     public String getRunId() {
@@ -36,5 +47,39 @@ public final class ReplicationExecutionContext {
 
     public int getTempFilePathSize() {
         return tempFilesPath.size();
+    }
+
+    public void requestCancellation() {
+        cancellationRequested.set(true);
+        cancelActiveStatements();
+    }
+
+    public boolean isCancellationRequested() {
+        return cancellationRequested.get();
+    }
+
+    public void registerActiveStatement(Statement statement) {
+        activeStatements.add(statement);
+        if (cancellationRequested.get()) {
+            cancelStatement(statement);
+        }
+    }
+
+    public void unregisterActiveStatement(Statement statement) {
+        activeStatements.remove(statement);
+    }
+
+    private void cancelActiveStatements() {
+        for (Statement statement : activeStatements) {
+            cancelStatement(statement);
+        }
+    }
+
+    private void cancelStatement(Statement statement) {
+        try {
+            statement.cancel();
+        } catch (SQLException e) {
+            LOG.warn("Failed to cancel statement for run {}: {}", runId, e.getMessage());
+        }
     }
 }
