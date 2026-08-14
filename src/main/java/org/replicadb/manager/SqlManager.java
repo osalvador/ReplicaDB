@@ -149,6 +149,7 @@ public abstract class SqlManager extends ConnManager {
             statement.setFetchSize(fetchSize);
         }
         this.lastStatement = statement;
+        registerActiveStatement(statement);
         if (null != args) {
             for (int i = 0; i < args.length; i++) {
                 statement.setObject(i + 1, args[i]);
@@ -315,6 +316,7 @@ public abstract class SqlManager extends ConnManager {
 
     public void release() {
         if (null != this.lastStatement) {
+            unregisterActiveStatement(this.lastStatement);
             try {
                 this.lastStatement.close();
             } catch (SQLException e) {
@@ -470,35 +472,41 @@ public abstract class SqlManager extends ConnManager {
      * @throws SQLException
      */
     public void atomicInsertStagingTable() throws SQLException {
+        checkCancellation();
         Statement statement = this.getConnection().createStatement();
+        registerActiveStatement(statement);
         StringBuilder sql = new StringBuilder();
-        String allColls = null;
         try {
-            allColls = getAllSinkColumns(null);
-        } catch (NullPointerException e) {
-            // Ignore this exception
-        }
+            String allColls = null;
+            try {
+                allColls = getAllSinkColumns(null);
+            } catch (NullPointerException e) {
+                // Ignore this exception
+            }
 
-        if (allColls != null) {
-            sql.append(" INSERT INTO ")
-                    .append(this.getSinkTableName())
-                    .append(" (" + allColls + ")")
-                    .append(" SELECT ")
-                    .append(allColls)
-                    .append(" FROM ")
-                    .append(getQualifiedStagingTableName());
-        } else {
-            sql.append(" INSERT INTO ")
-                    .append(this.getSinkTableName())
-                    .append(" SELECT * ")
-                    .append(" FROM ")
-                    .append(getQualifiedStagingTableName());
-        }
+            if (allColls != null) {
+                sql.append(" INSERT INTO ")
+                        .append(this.getSinkTableName())
+                        .append(" (" + allColls + ")")
+                        .append(" SELECT ")
+                        .append(allColls)
+                        .append(" FROM ")
+                        .append(getQualifiedStagingTableName());
+            } else {
+                sql.append(" INSERT INTO ")
+                        .append(this.getSinkTableName())
+                        .append(" SELECT * ")
+                        .append(" FROM ")
+                        .append(getQualifiedStagingTableName());
+            }
 
-        LOG.info("Inserting data from staging table to sink table within a transaction: {}", sql);
-        statement.executeUpdate(sql.toString());
-        statement.close();
-        this.getConnection().commit();
+            LOG.info("Inserting data from staging table to sink table within a transaction: {}", sql);
+            statement.executeUpdate(sql.toString());
+            this.getConnection().commit();
+        } finally {
+            unregisterActiveStatement(statement);
+            statement.close();
+        }
     }
 
     /**

@@ -257,6 +257,7 @@ public class CsvFileManager extends FileManager {
                 // Create Bandwidth Throttling
                 BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
                 do {
+                    checkCancellation();
                     bt.acquiere();
                     for (int i = 1; i <= columnCount; ++i) {
                         Object object = resultSet.getObject(i);

@@ -366,13 +366,13 @@ Delivered in commit `c228ddc` and covered by focused JUnit tests, concurrency te
 - Added run-level aggregation for total rows, task count, and longest task duration without changing the `processReplica(ToolOptions)` exit-code contract.
 - Removed obsolete static reset calls and updated file-manager and multi-table tests.
 
-The Phase 0-a exit criterion is met: two concurrent runs use independent staging names and temporary-file maps, verified across 100 repetitions. The implementation does not yet add cancellation or watermark extraction/injection.
+The Phase 0-a exit criterion is met: two concurrent runs use independent staging names and temporary-file maps, verified across 100 repetitions. Phase 0-a did not add cancellation or watermark extraction/injection; cancellation plumbing is implemented in the Phase 0-b1 work below, while watermark extraction/injection remains pending.
 
 #### Core changes
 
 The remaining core items are prerequisites for Phase 1 and are not optional.
 
-1. **Cancellation plumbing.** Extend the existing `ReplicationExecutionContext` with a per-run cancellation token, expose each task's active `Statement`, add interrupt checks to the copy loop, and replace the blocking `invokeAll` with individually cancellable futures, as required by Decision 5.
+1. **Cancellation plumbing — IMPLEMENTED in Phase 0-b1 (current working tree).** Extended `ReplicationExecutionContext` with a per-run cancellation token and active-statement registry, added interrupt checks to JDBC, native, and file copy loops, registered SQL merge/atomic-insert statements, and replaced blocking `invokeAll` with individually cancellable futures. Cancellation propagates as `CANCELLED` and runs normal cleanup. SQL Server `BulkCopy` remains best-effort because its API has no mid-transfer cancel hook; MongoDB native merge has a pre-merge guard but no driver statement to cancel; dedicated mid-stream tests remain absent for MongoDB, Kafka, and ORC.
 2. **Watermark injection.** Populate `ReplicaTaskResult.watermarkCandidate`, inject a typed `> :lastWatermark` predicate composed with the existing `$CONDITIONS` partition substitution, and infer the bind type from the source column metadata.
 
 #### State layer
@@ -394,7 +394,7 @@ The remaining core items are prerequisites for Phase 1 and are not optional.
 
 - **Met in Phase 0-a:** Two replications run concurrently in one JVM with independent staging tables and temporary files.
 - **Met in Phase 0-a:** Task results expose row counters and timings, and the executor aggregates them into a run-level summary.
-- A cancellation request stops an in-flight replication, including during a merge, and the run ends in `CANCELLED`.
+- **Met in Phase 0-b1 for JDBC manager paths:** A cancellation request stops an in-flight replication, including SQL merge and atomic-insert statements, and the run ends in `CANCELLED`. SQL Server `BulkCopy` is best-effort, while MongoDB's native merge can be guarded before it starts but has no active statement hook.
 - A failed or cancelled incremental run leaves its previous watermark unchanged.
 - A successful staging load and merge commit exactly one new watermark, reduced from all parallel tasks.
 - A retry can identify the previous run and attempt number, and never claims to resume it.
@@ -670,7 +670,7 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 
 - [x] Replace the static staging-name and temp-file state with a per-run execution context. **Completed in Phase 0-a (`c228ddc`).**
 - [x] Widen the `ReplicaTask` result to carry counters, timings, and a watermark candidate. **Counters and timings completed in Phase 0-a (`c228ddc`); watermark population remains pending.**
-- [ ] Add cancellation: statement handles, interrupt checks, cancellable futures.
+- [x] Add cancellation: statement handles, interrupt checks, cancellable futures. **Implemented in Phase 0-b1 (current working tree).**
 - [ ] Implement watermark injection with type inference from source column metadata.
 - [ ] Define `JobDefinition` and `JobRun` persistence models and Flyway migrations.
 - [ ] Define legal state transitions, retry behavior, and idempotency rules.
@@ -807,4 +807,4 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 
 **Document Version**: 2.1
 **Last Updated**: August 14, 2026
-**Next Review**: Before implementation of Phase 0-b cancellation and watermark changes
+**Next Review**: Before implementation of Phase 0-b2 watermark injection

@@ -95,6 +95,7 @@ public class OrcFileManager extends FileManager {
             // Create Bandwidth Throttling
             BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
             do {
+                checkCancellation();
                 bt.acquiere();
                 processedRows++;
                 int row = batch.size++;

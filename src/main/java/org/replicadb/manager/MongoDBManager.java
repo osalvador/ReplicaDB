@@ -254,6 +254,7 @@ public class MongoDBManager extends SqlManager {
 			final BandwidthThrottling bt = new BandwidthThrottling(this.options.getBandwidthThrottling(),
 					this.options.getFetchSize(), resultSet);
 			do {
+				checkCancellation();
 				bt.acquiere();
 				if (this.isSourceAndSinkMongoDB()) {
 					// Add document to bulk
@@ -690,6 +691,7 @@ public class MongoDBManager extends SqlManager {
 
 	@Override
 	protected void mergeStagingTable() throws Exception {
+		checkCancellation();
 
 		this.getConnection();
 

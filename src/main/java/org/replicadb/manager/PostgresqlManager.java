@@ -158,6 +158,7 @@ public class PostgresqlManager extends SqlManager {
                 BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
 
                 do {
+                    checkCancellation();
                     bt.acquiere();
 
                     // Get Columns values
@@ -375,8 +376,10 @@ public class PostgresqlManager extends SqlManager {
 
     @Override
     protected void mergeStagingTable() throws SQLException {
+           checkCancellation();
 
         Statement statement = this.getConnection().createStatement();
+           registerActiveStatement(statement);
 
         try {
             String[] pks = this.getSinkPrimaryKeys(this.getSinkTableName());
@@ -411,13 +414,14 @@ public class PostgresqlManager extends SqlManager {
 
             LOG.info("Merging staging table and sink table with this command: {}", sql);
             statement.executeUpdate(sql.toString());
-            statement.close();
             this.getConnection().commit();
 
         } catch (Exception e) {
-            statement.close();
             this.connection.rollback();
             throw e;
+        } finally {
+            unregisterActiveStatement(statement);
+            statement.close();
         }
     }
 
@@ -689,6 +693,7 @@ public class PostgresqlManager extends SqlManager {
         
         if (resultSet.next()) {
             do {
+                checkCancellation();
                 bt.acquiere();
                 
                 // Build row data in memory

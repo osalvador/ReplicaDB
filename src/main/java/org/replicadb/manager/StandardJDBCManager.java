@@ -107,7 +107,9 @@ public class StandardJDBCManager extends SqlManager {
 
       String sqlCdm = getInsertSQLCommand(tableName, allColumns, columnsNumber);
       PreparedStatement ps = this.getConnection().prepareStatement(sqlCdm);
+      registerActiveStatement(ps);
 
+      try {
       final int batchSize = options.getFetchSize();
       int count = 0;
 
@@ -118,6 +120,7 @@ public class StandardJDBCManager extends SqlManager {
          BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
 
          do {
+            checkCancellation();
             bt.acquiere();
 
             // Get Columns values
@@ -258,10 +261,12 @@ public class StandardJDBCManager extends SqlManager {
       }
 
       ps.executeBatch(); // insert remaining records
-      ps.close();
-
       this.getConnection().commit();
       return totalRows;
+      } finally {
+         unregisterActiveStatement(ps);
+         ps.close();
+      }
    }
 
    private String getInsertSQLCommand (String tableName, String allColumns, int columnsNumber) {
@@ -388,7 +393,7 @@ public class StandardJDBCManager extends SqlManager {
    }
    @Override
    protected void mergeStagingTable () throws Exception {
-      // Not necessary
+      checkCancellation();
    }
    @Override
    protected void truncateTable () throws SQLException {

@@ -1,6 +1,7 @@
 package org.replicadb.manager.file;
 
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.execution.ReplicationCancelledException;
 import org.replicadb.manager.DataSourceType;
 
 import java.io.File;
@@ -84,6 +85,13 @@ public abstract class FileManager {
 
     public int getTempFilePathSize() {
         return options.getExecutionContext().getTempFilePathSize();
+    }
+
+    protected void checkCancellation() throws ReplicationCancelledException {
+        if (options.getExecutionContext().isCancellationRequested()) {
+            throw new ReplicationCancelledException(
+                    "Replication run " + options.getExecutionContext().getRunId() + " was cancelled");
+        }
     }
 
 }

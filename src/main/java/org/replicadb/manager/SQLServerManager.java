@@ -431,6 +431,11 @@ public class SQLServerManager extends SqlManager {
          sinkColumnOrdinals = getSinkColumnOrdinals(tableName);
       }
 
+      if (shouldAbortBeforeBulkCopy()) {
+         checkCancellation();
+      }
+
+      // SQLServerBulkCopy exposes no mid-transfer cancellation hook.
       SQLServerBulkCopy bulkCopy = new SQLServerBulkCopy(this.getConnection());
       // BulkCopy Options
       SQLServerBulkCopyOptions copyOptions = new SQLServerBulkCopyOptions();
@@ -493,6 +498,10 @@ public class SQLServerManager extends SqlManager {
       
       this.getConnection().commit();
       return getNumFetchedRows(resultSet);
+   }
+
+   boolean shouldAbortBeforeBulkCopy() {
+      return options.getExecutionContext().isCancellationRequested();
    }
 
    /**
@@ -662,10 +671,13 @@ public class SQLServerManager extends SqlManager {
 
    @Override
    protected void mergeStagingTable () throws SQLException {
+      checkCancellation();
       this.getConnection().commit();
 
       Statement statement = this.getConnection().createStatement();
+      registerActiveStatement(statement);
 
+      try {
       String[] pks = this.getSinkPrimaryKeys(this.getSinkTableName());
       // Primary key is required
       if (pks == null || pks.length == 0) {
@@ -723,8 +735,11 @@ public class SQLServerManager extends SqlManager {
 
       LOG.info("Merging staging table and sink table with this command: {}", sql);
       statement.executeUpdate(sql.toString());
-      statement.close();
       this.getConnection().commit();
+      } finally {
+         unregisterActiveStatement(statement);
+         statement.close();
+      }
    }
 
    @Override

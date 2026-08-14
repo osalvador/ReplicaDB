@@ -13,6 +13,7 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.replicadb.cli.ReplicationTable;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.CredentialRedactor;
+import org.replicadb.execution.ReplicationCancelledException;
 import org.replicadb.manager.ConnManager;
 import org.replicadb.manager.DataSourceType;
 import org.replicadb.manager.ManagerFactory;
@@ -57,6 +58,7 @@ public class ReplicaDB {
 	private static final Logger LOG = LogManager.getLogger(ReplicaDB.class.getName());
 	private static final int SUCCESS = 0;
 	private static final int ERROR = 1;
+	static final int CANCELLED = 2;
 
 	record ReplicaTaskResultsSummary(long totalRowsProcessed, long maxDurationMillis, int taskCount) {
 	}
@@ -199,13 +201,22 @@ public class ReplicaDB {
 			transaction.setThrowable(e);
 			transaction.setStatus(SpanStatus.INTERNAL_ERROR);
 			exitCode = ERROR;
+		} catch (final ReplicationCancelledException e) {
+			LOG.info("Replication was cancelled: {}", CredentialRedactor.redactMessage(e.getMessage()));
+			exitCode = CANCELLED;
 		} catch (final Exception e) {
-			LOG.error("Got exception running ReplicaDB: {} ({})",
-					CredentialRedactor.redactMessage(e.getMessage()), e.getClass().getName());
-			Sentry.captureException(e);
-			transaction.setThrowable(e);
-			transaction.setStatus(SpanStatus.INTERNAL_ERROR);
-			exitCode = ERROR;
+			if (options.getExecutionContext().isCancellationRequested()) {
+				LOG.info("Replication was cancelled after an operation was interrupted: {}",
+						CredentialRedactor.redactMessage(e.getMessage()));
+				exitCode = CANCELLED;
+			} else {
+				LOG.error("Got exception running ReplicaDB: {} ({})",
+						CredentialRedactor.redactMessage(e.getMessage()), e.getClass().getName());
+				Sentry.captureException(e);
+				transaction.setThrowable(e);
+				transaction.setStatus(SpanStatus.INTERNAL_ERROR);
+				exitCode = ERROR;
+			}
 		} finally {
 			transaction.finish();
 			cleanupResources(sourceDs, sinkDs, preSinkTasksExecutor, replicaTasksService);
@@ -290,25 +301,54 @@ public class ReplicaDB {
 	 *             if a task fails
 	 */
 	private static ExecutorService executeReplicationTasks(ToolOptions options, ManagerFactory managerFactory)
-			throws InterruptedException, ExecutionException {
+			throws InterruptedException, ExecutionException, SQLException {
 		final List<ReplicaTask> replicaTasks = new ArrayList<>();
 		for (int i = 0; i < options.getJobs(); i++) {
 			replicaTasks.add(new ReplicaTask(i, options, managerFactory));
 		}
 
 		final ExecutorService replicaTasksService = Executors.newFixedThreadPool(options.getJobs());
-		final List<Future<ReplicaTaskResult>> futures = replicaTasksService.invokeAll(replicaTasks);
-		final List<ReplicaTaskResult> results = new ArrayList<>();
+		try {
+			final List<Future<ReplicaTaskResult>> futures = new ArrayList<>();
+			for (final ReplicaTask replicaTask : replicaTasks) {
+				futures.add(replicaTasksService.submit(replicaTask));
+			}
+			final List<ReplicaTaskResult> results = new ArrayList<>();
 
-		for (final Future<ReplicaTaskResult> future : futures) {
-			results.add(future.get()); // This will throw ExecutionException if any task failed
+			for (final Future<ReplicaTaskResult> future : futures) {
+				try {
+					results.add(future.get());
+				} catch (final ExecutionException e) {
+					if (e.getCause() instanceof ReplicationCancelledException cancellation) {
+						for (final Future<ReplicaTaskResult> sibling : futures) {
+							if (sibling != future) {
+								sibling.cancel(true);
+							}
+						}
+						throw cancellation;
+					}
+					if (options.getExecutionContext().isCancellationRequested()) {
+						for (final Future<ReplicaTaskResult> sibling : futures) {
+							if (sibling != future) {
+								sibling.cancel(true);
+							}
+						}
+						throw new ReplicationCancelledException(
+								"Replication run " + options.getExecutionContext().getRunId() + " was cancelled", e.getCause());
+					}
+					throw e;
+				}
+			}
+
+			final ReplicaTaskResultsSummary summary = summarize(results);
+			LOG.info("Replication tasks completed: {} rows across {} tasks, longest task {}ms",
+					summary.totalRowsProcessed(), summary.taskCount(), summary.maxDurationMillis());
+
+			return replicaTasksService;
+		} catch (final InterruptedException | ExecutionException | SQLException e) {
+			replicaTasksService.shutdownNow();
+			throw e;
 		}
-
-		final ReplicaTaskResultsSummary summary = summarize(results);
-		LOG.info("Replication tasks completed: {} rows across {} tasks, longest task {}ms",
-				summary.totalRowsProcessed(), summary.taskCount(), summary.maxDurationMillis());
-
-		return replicaTasksService;
 	}
 
 	/**

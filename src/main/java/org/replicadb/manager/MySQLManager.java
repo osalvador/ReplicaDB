@@ -68,7 +68,9 @@ public class MySQLManager extends SqlManager {
          // Get MySQL LOAD DATA manager
          String loadDataSql = getLoadDataSql(tableName, allColumns, rsmd);
          PreparedStatement statement = this.connection.prepareStatement(loadDataSql);
+         registerActiveStatement(statement);
 
+         try {
          JdbcPreparedStatement mysqlStatement = null;
          MariaDbStatement mariadbStatement = null;
          if (statement.isWrapperFor(MariaDbStatement.class)) {
@@ -93,6 +95,7 @@ public class MySQLManager extends SqlManager {
             BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
 
             do {
+               checkCancellation();
                bt.acquiere();
 
                // Get Columns values
@@ -152,6 +155,10 @@ public class MySQLManager extends SqlManager {
          // insert remaining records
          if (rowCounts != 0) {
             copyData(loadDataSql, row, mariadbStatement, mysqlStatement);
+         }
+         } finally {
+            unregisterActiveStatement(statement);
+            statement.close();
          }
 
       } catch (Exception e) {
@@ -267,7 +274,9 @@ public class MySQLManager extends SqlManager {
 
    @Override
    protected void mergeStagingTable () throws SQLException {
+      checkCancellation();
       Statement statement = this.getConnection().createStatement();
+      registerActiveStatement(statement);
 
       try {
          String[] pks = this.getSinkPrimaryKeys(this.getSinkTableName());
@@ -291,13 +300,14 @@ public class MySQLManager extends SqlManager {
 
          LOG.info("Merging staging table and sink table with this command: {}", sql);
          statement.executeUpdate(sql.toString());
-         statement.close();
          this.getConnection().commit();
 
       } catch (Exception e) {
-         statement.close();
          this.connection.rollback();
          throw e;
+      } finally {
+         unregisterActiveStatement(statement);
+         statement.close();
       }
    }
 

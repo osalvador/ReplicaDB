@@ -3,6 +3,7 @@ package org.replicadb.manager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.execution.ReplicationCancelledException;
 
 import java.sql.*;
 import java.util.Random;
@@ -304,5 +305,20 @@ public abstract class ConnManager {
      * @return
      */
     public abstract String[] getSinkPrimaryKeys(String tableName);
+
+    protected void checkCancellation() throws ReplicationCancelledException {
+        if (options.getExecutionContext().isCancellationRequested()) {
+            throw new ReplicationCancelledException(
+                    "Replication run " + options.getExecutionContext().getRunId() + " was cancelled");
+        }
+    }
+
+    protected void registerActiveStatement(Statement statement) {
+        options.getExecutionContext().registerActiveStatement(statement);
+    }
+
+    protected void unregisterActiveStatement(Statement statement) {
+        options.getExecutionContext().unregisterActiveStatement(statement);
+    }
 
 }

@@ -91,6 +91,7 @@ public class KafkaManager extends SqlManager {
             BandwidthThrottling bt = new BandwidthThrottling(options.getBandwidthThrottling(), options.getFetchSize(), resultSet);
 
             do {
+                checkCancellation();
                 bt.acquiere();
 
                 // Just one sink column and is a JSON.
