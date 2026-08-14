@@ -8,7 +8,6 @@ import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbOracleContainer;
 import org.replicadb.manager.file.FileFormats;
-import org.replicadb.manager.file.FileManager;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.File;
@@ -18,7 +17,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -55,7 +53,6 @@ class Oracle2CsvFileTest {
         }
         
         // Reset temp files map before each test to prevent duplicate merges
-        FileManager.setTempFilesPath(new HashMap<>());
         
         // Ensure sink file is deleted before test
         File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
@@ -80,7 +77,6 @@ class Oracle2CsvFileTest {
         
         this.oracleConn.close();
 
-        FileManager.setTempFilesPath(new HashMap<>());
     }
 
     public int countSinkRows() throws IOException {

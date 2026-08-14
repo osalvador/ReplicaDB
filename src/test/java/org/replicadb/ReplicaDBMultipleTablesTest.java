@@ -7,7 +7,6 @@ import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.ConnManager;
 import org.replicadb.manager.DataSourceType;
 import org.replicadb.manager.ManagerFactory;
-import org.replicadb.manager.file.FileManager;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,9 +14,7 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -78,7 +75,6 @@ class ReplicaDBMultipleTablesTest {
     @Test
     void resetsStagingAndTemporaryStateAtEachTableBoundary() throws Exception {
         ToolOptions options = multiTableOptions("incremental");
-        FileManager.setTempFilesPath(new HashMap<>(Map.of(7, "stale-file")));
         RecordingManagerFactory managerFactory = new RecordingManagerFactory();
 
         assertEquals(0, ReplicaDB.processReplica(options, managerFactory));
@@ -213,7 +209,7 @@ class ReplicaDBMultipleTablesTest {
             String tableName = DataSourceType.SOURCE.equals(dataSourceType)
                     ? options.getSourceTable()
                     : options.getSinkTable();
-                tempFileSizes.add(FileManager.getTempFilePathSize());
+                tempFileSizes.add(options.getExecutionContext().getTempFilePathSize());
             events.add("create:" + tableName);
                 RecordingManager manager = new RecordingManager(options, dataSourceType, events,
                     DataSourceType.SOURCE.equals(dataSourceType)

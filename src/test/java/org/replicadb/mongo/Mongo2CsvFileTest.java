@@ -9,7 +9,6 @@ import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbMongodbContainer;
 import org.replicadb.manager.file.FileFormats;
-import org.replicadb.manager.file.FileManager;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.File;
@@ -19,7 +18,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -44,7 +42,6 @@ class Mongo2CsvFileTest {
     void before() throws SQLException {
         this.mongoClient = MongoClients.create(mongoContainer.getMongoConnectionString());
         this.mongoDatabaseName = mongoContainer.getMongoConnectionString().getDatabase();
-        FileManager.setTempFilesPath(new HashMap<>());
     }
 
     @AfterEach
@@ -52,7 +49,6 @@ class Mongo2CsvFileTest {
         // Clean up connections
         mongoClient.getDatabase(mongoDatabaseName).getCollection(SINK_COLLECTION).deleteMany(new Document());
         this.mongoClient.close();
-        FileManager.setTempFilesPath(new HashMap<>());
     }
 
     private void cleanupFile(String fileUriPath, String tempFilePrefix) {
@@ -86,7 +82,6 @@ class Mongo2CsvFileTest {
         String tempFilePrefix = sinkFilePath.substring(sinkFilePath.lastIndexOf('/') + 1) + ".repdb.";
         
         cleanupFile(sinkFilePath, tempFilePrefix);
-        FileManager.setTempFilesPath(new HashMap<>());
         
         try {
             String[] args = {
@@ -110,7 +105,6 @@ class Mongo2CsvFileTest {
         String tempFilePrefix = sinkFilePath.substring(sinkFilePath.lastIndexOf('/') + 1) + ".repdb.";
         
         cleanupFile(sinkFilePath, tempFilePrefix);
-        FileManager.setTempFilesPath(new HashMap<>());
         
         try {
             String[] args = {

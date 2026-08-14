@@ -14,28 +14,27 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 class ConnManagerStagingIsolationTest {
 
     @Test
-    void generatedStagingNameIsSharedWithinRunButResetBetweenTables() throws Exception {
-        ConnManager.resetGeneratedSinkStagingTableName();
-        StagingManager first = new StagingManager(options("customers", "customer_copy"));
-        StagingManager firstTask = new StagingManager(options("customers", "customer_copy"));
+    void generatedStagingNameIsSharedAcrossManagersOfTheSameRun() throws Exception {
+        ToolOptions options = options("customers", "customer_copy");
+        StagingManager first = new StagingManager(options);
+        StagingManager firstTask = new StagingManager(options);
 
         String firstName = first.getSinkStagingTableName();
 
         assertEquals(firstName, firstTask.getSinkStagingTableName());
-
-        ConnManager.resetGeneratedSinkStagingTableName();
-        StagingManager second = new StagingManager(options("orders", "order_copy"));
-
-        assertNotEquals(firstName, second.getSinkStagingTableName());
-        assertEquals(second.getSinkStagingTableName(),
-                new StagingManager(options("orders", "order_copy")).getSinkStagingTableName());
     }
 
     @Test
-    void userDefinedStagingNameIsNotReplacedByReset() throws Exception {
-        StagingManager manager = new StagingManager(options("customers", "customer_copy", "custom_staging"));
+    void generatedStagingNameIsIsolatedAcrossDifferentRuns() throws Exception {
+        StagingManager first = new StagingManager(options("customers", "customer_copy"));
+        StagingManager second = new StagingManager(options("orders", "order_copy"));
 
-        ConnManager.resetGeneratedSinkStagingTableName();
+        assertNotEquals(first.getSinkStagingTableName(), second.getSinkStagingTableName());
+    }
+
+    @Test
+    void userDefinedStagingNameIsNotReplacedByGeneration() throws Exception {
+        StagingManager manager = new StagingManager(options("customers", "customer_copy", "custom_staging"));
 
         assertEquals("custom_staging", manager.getSinkStagingTableName());
     }

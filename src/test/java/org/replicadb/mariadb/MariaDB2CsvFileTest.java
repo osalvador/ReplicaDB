@@ -8,7 +8,6 @@ import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbMariaDBContainer;
 import org.replicadb.manager.file.FileFormats;
-import org.replicadb.manager.file.FileManager;
 import org.testcontainers.containers.MariaDBContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -19,7 +18,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -55,7 +53,6 @@ class MariaDB2CsvFileTest {
         }
         
         // Reset temp files map
-        FileManager.setTempFilesPath(new HashMap<>());
         
         // Ensure sink file is deleted before test
         File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
@@ -70,7 +67,6 @@ class MariaDB2CsvFileTest {
         sinkFile.delete();
         this.mariadbConn.close();
 
-        FileManager.setTempFilesPath(new HashMap<>());
     }
 
     public int countSinkRows() throws IOException {

@@ -71,7 +71,7 @@ public class LocalFileManager extends SqlManager {
         LOG.info("Temporal file path: {}",randomFileUrl);
 
         // Save the path of temp file
-        FileManager.setTempFilePath(taskId,randomFileUrl);
+        this.fileManager.setTempFilePath(taskId, randomFileUrl);
 
         // Create the OutputStream
         File tempFile = getFileFromPathString(randomFileUrl);

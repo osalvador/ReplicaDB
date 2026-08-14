@@ -8,7 +8,6 @@ import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.ReplicadbMysqlContainer;
 import org.replicadb.manager.file.FileFormats;
-import org.replicadb.manager.file.FileManager;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -19,7 +18,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -56,7 +54,6 @@ class MySQL2CsvFileTest {
         }
         
         // Reset temp files map
-        FileManager.setTempFilesPath(new HashMap<>());
         
         // Ensure sink file is deleted before test
         File sinkFile = new File(URI.create(SINK_FILE_URI_PATH));
@@ -72,7 +69,6 @@ class MySQL2CsvFileTest {
         this.mysqlConn.close();
 
         // Clean the static tempFiles HashMap
-        FileManager.setTempFilesPath(new HashMap<>());
     }
 
     public int countSinkRows() throws IOException {

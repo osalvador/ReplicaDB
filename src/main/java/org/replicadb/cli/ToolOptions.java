@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.config.CredentialRedactor;
+import org.replicadb.execution.ReplicationExecutionContext;
 import org.replicadb.manager.util.ColumnDescriptor;
 
 import java.io.IOException;
@@ -65,6 +66,7 @@ public class ToolOptions {
     private List<ColumnDescriptor> sourceColumnDescriptors;
     private String[] sourcePrimaryKeys;
     private List<ReplicationTable> replicationTables = List.of();
+    private final ReplicationExecutionContext executionContext = new ReplicationExecutionContext();
 
     private Options options;
 
@@ -713,6 +715,10 @@ public class ToolOptions {
      */
     public String getSourceConnect() {
         return sourceConnect;
+    }
+
+    public ReplicationExecutionContext getExecutionContext() {
+        return executionContext;
     }
 
     public void setSourceConnect(String sourceConnect) {
