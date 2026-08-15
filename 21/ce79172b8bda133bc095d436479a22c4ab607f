@@ -1,0 +1,89 @@
+.ai/archive/phase-0b2-watermark-injection.plan.md
+  s_0aa78236609869::t_7f9b220750aff3 1-238
+ARCHITECTURE_DECISIONS.md
+  s_0aa78236609869::t_fbe8becbe2e332 15,264,285-286,371,373-386,388-401,403,424-426,700-701,774-776,815,818-819,822-824,838-840
+README.md
+  s_0aa78236609869::t_9729b2ac893903 154
+docs/docs/docs.md
+  s_0aa78236609869::t_24388e13675d8b 172-179,237-238
+src/main/java/org/replicadb/ReplicaDB.java
+  s_0aa78236609869::t_264d15423b025e 20,26,65-70,74-77,80,85-92,95,211-212,216-218,321,327,367-374,378
+src/main/java/org/replicadb/ReplicaTask.java
+  s_0aa78236609869::t_640190b528c47b 86-94,96
+src/main/java/org/replicadb/cli/ToolOptions.java
+  s_0aa78236609869::t_777c2050f36cd0 32-33,94-95,250-267,568-569,580,662-678,741-742,887-912
+src/main/java/org/replicadb/execution/ReplicationExecutionContext.java
+  s_0aa78236609869::t_d3922491656b0e 23,37-47
+src/main/java/org/replicadb/manager/ConnManager.java
+  s_0aa78236609869::t_ac721396a87ffb 324-335
+src/main/java/org/replicadb/manager/DenodoManager.java
+  s_0aa78236609869::t_859b31d0cf589c 6,69,87-93,101-103,106-108
+src/main/java/org/replicadb/manager/MySQLManager.java
+  s_0aa78236609869::t_49c58019990d29 14,340-348,351-353,355-357
+src/main/java/org/replicadb/manager/OracleManager.java
+  s_0aa78236609869::t_66710a871e8fd4 9,60,78-82,101-109,118-120
+src/main/java/org/replicadb/manager/PostgresqlManager.java
+  s_0aa78236609869::t_9ccedcabc135e6 15,292,315-321,345-347,360-362
+src/main/java/org/replicadb/manager/SQLServerManager.java
+  s_0aa78236609869::t_6210250ec02e5c 13,756,775-782,784,786,795-803,810-812
+src/main/java/org/replicadb/manager/SqlManager.java
+  s_0aa78236609869::t_95d28d2289ab78 10,44-47,182-186,340-360,766-767,772,775-778
+src/main/java/org/replicadb/manager/SqliteManager.java
+  s_0aa78236609869::t_92291890b554c0 8,154-162,166-168,170-172
+src/main/java/org/replicadb/manager/StandardJDBCManager.java
+  s_0aa78236609869::t_9a2b76169debd5 8,75-76,89-95,97-98
+src/main/java/org/replicadb/manager/db2/Db2Manager.java
+  s_0aa78236609869::t_0e4c3df52966e7 11,97,105-110,114,128
+src/main/java/org/replicadb/manager/util/WatermarkBinder.java
+  s_0aa78236609869::t_a86b8dc05b1e32 1-94
+src/test/java/org/replicadb/ReplicaDBMultipleTablesTest.java
+  s_0aa78236609869::t_f97bd5d893d3b6 24,131-147
+src/test/java/org/replicadb/ReplicaDBTaskSummaryTest.java
+  s_0aa78236609869::t_3259c0bedf5fd4 5,9,43-61
+src/test/java/org/replicadb/ReplicaDBWatermarkCommitTest.java
+  s_0aa78236609869::t_2b1e25e3e52884 1-192
+src/test/java/org/replicadb/ReplicaTaskTest.java
+  s_0aa78236609869::t_22206d3d4180d7 11,17,38-75,102-103,115-122
+src/test/java/org/replicadb/cli/ToolOptionsIncrementalWatermarkTest.java
+  s_0aa78236609869::t_a6ff335ea7fe11 1-77
+src/test/java/org/replicadb/db2/Db2ManagerWatermarkTest.java
+  s_0aa78236609869::t_a2057cfcbe1576 1-158
+src/test/java/org/replicadb/manager/DenodoManagerWatermarkTest.java
+  s_0aa78236609869::t_90ea3708f2bdfb 1-126
+src/test/java/org/replicadb/manager/MySQLManagerWatermarkTest.java
+  s_0aa78236609869::t_ca28b0b82c36bf 1-133
+src/test/java/org/replicadb/manager/OracleManagerWatermarkTest.java
+  s_0aa78236609869::t_eb168fc067ed62 1-151
+src/test/java/org/replicadb/manager/PostgresqlManagerWatermarkTest.java
+  s_0aa78236609869::t_67ac8947af2015 1-128
+src/test/java/org/replicadb/manager/SQLServerManagerWatermarkTest.java
+  s_0aa78236609869::t_abe1d603ed12de 1-142
+src/test/java/org/replicadb/manager/SqlManagerWatermarkCandidateTest.java
+  s_0aa78236609869::t_e8f5a3992ed156 1-143
+src/test/java/org/replicadb/manager/SqlManagerWatermarkMetadataProbeTest.java
+  s_0aa78236609869::t_81ab05fb4b6c93 1-114
+src/test/java/org/replicadb/manager/SqliteManagerWatermarkTest.java
+  s_0aa78236609869::t_3de19e6b193b59 1-138
+src/test/java/org/replicadb/manager/StandardJDBCManagerWatermarkTest.java
+  s_0aa78236609869::t_b41d16cd459413 1-132
+src/test/java/org/replicadb/manager/util/WatermarkBinderTest.java
+  s_0aa78236609869::t_cd7b5d1bdfaaa4 1-99
+src/test/java/org/replicadb/postgres/Postgres2PostgresTest.java
+  s_0aa78236609869::t_a769f9dcefc221 19,102-193
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "21ce79172b8bda133bc095d436479a22c4ab607f",
+  "prompts": {},
+  "sessions": {
+    "s_0aa78236609869": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "641545e9-0631-4cb0-96d1-1f67d68f9b3f",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
