@@ -16,6 +16,20 @@ Please note we have a code of conduct, please follow it in all your interactions
 4. You may merge the Pull Request in once you have the sign-off of two other developers, or if you 
    do not have permission to do that, you may request the second reviewer to merge it for you.
 
+## Building the server skeleton
+
+The root Maven project builds the standalone CLI artifact. The unreleased `replicadb-server` sibling project depends on that installed artifact:
+
+```bash
+mvn install -DskipTests
+mvn -f replicadb-server/pom.xml test
+mvn -f replicadb-server/pom.xml spring-boot:run -Dspring-boot.run.profiles=api
+```
+
+The server skeleton listens on port 8080 and exposes only `/actuator/health`. It is unauthenticated and does not yet include metadata persistence, job execution, or scheduling, so it is not suitable for a real deployment.
+
+When `replicadb-server` reports that `org.replicadb:ReplicaDB` cannot be resolved, install the root project first with `mvn install -DskipTests`. The two projects are sibling Maven builds rather than a reactor.
+
 ## Testing Guidelines
 
 ### Oracle Database Testing

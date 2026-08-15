@@ -12,7 +12,7 @@ The control plane does not resume interrupted work. A run either completes or is
 
 **Date**: August 13, 2026
 **Last decision review**: August 14, 2026
-**Status**: Approved direction; Phase 0-a, Phase 0-b1, and Phase 0-b2 implemented; Phase 0-c (state layer) pending
+**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, and Phase 1a (artifact split) implemented; Phase 1b (state layer) pending
 **Owner**: Development Team
 
 ---
@@ -396,13 +396,13 @@ Covered by focused JUnit tests (mocked-connection manager unit tests asserting g
 - Populated `ReplicaTaskResult.watermarkCandidate` from `ReplicaTask`, and widened `ReplicaDB.summarize(...)` to reduce all tasks' candidates to one run-level value.
 - Exposed the reduced candidate on `ReplicationExecutionContext.setWatermarkCandidate(...)`/`getWatermarkCandidate()` **only after `executePostTasks()` (staging load + merge) completes without throwing** — a failed run, a cancelled run (either the explicit `ReplicationCancelledException` path or the flag-checked generic-exception path), and every other exception path leave it unset.
 
-Scope boundary: this phase does not persist the watermark anywhere. No `JobDefinition`/`JobRun`/PostgreSQL state store exists yet (Phase 0-c). The reduced candidate is exposed only on the in-memory `ReplicationExecutionContext` for a future Phase 0-c job-execution service to read and persist; the CLI itself has no mechanism to feed a previous run's committed value back in automatically — the caller (a script, an orchestrator, or Phase 0-c) must pass it via `--incremental-watermark-value` on the next invocation.
+Scope boundary: this phase does not persist the watermark anywhere. No `JobDefinition`/`JobRun`/PostgreSQL state store exists yet (Phase 1b). The reduced candidate is exposed only on the in-memory `ReplicationExecutionContext` for a future Phase 1b job-execution service to read and persist; the CLI itself has no mechanism to feed a previous run's committed value back in automatically — the caller (a script, an orchestrator, or Phase 1b) must pass it via `--incremental-watermark-value` on the next invocation.
 
 #### Core changes
 
 1. **Watermark injection.** ~~Populate `ReplicaTaskResult.watermarkCandidate`, inject a typed `> :lastWatermark` predicate composed with the existing `$CONDITIONS` partition substitution, and infer the bind type from the source column metadata.~~ Implemented in Phase 0-b2 above.
 
-#### State layer
+#### State layer (deferred to Phase 1b)
 
 - Introduce `JobDefinition` and `JobRun` domain models. There is no `Checkpoint` entity.
 - Add a persistence layer for job definitions, run states, and watermarks.
@@ -422,14 +422,25 @@ Scope boundary: this phase does not persist the watermark anywhere. No `JobDefin
 - **Met in Phase 0-a:** Two replications run concurrently in one JVM with independent staging tables and temporary files.
 - **Met in Phase 0-a:** Task results expose row counters and timings, and the executor aggregates them into a run-level summary.
 - **Met in Phase 0-b1:** A cancellation request stops an in-flight replication, including SQL merge and atomic-insert statements, and the run ends in `CANCELLED`, never in `FAILED`, even when a JDBC driver reports the cancelled statement as a plain `SQLException`. SQL Server `BulkCopy` and PostgreSQL `COPY` remain best-effort, and MongoDB's native merge has a pre-merge guard but no active statement to cancel mid-operation.
-- **Met in Phase 0-b2, at the core level:** A failed or cancelled incremental run leaves its previous watermark unchanged (verified: the reduced candidate is never written to `ReplicationExecutionContext` unless `executePostTasks()` succeeds). Persisting that unchanged value across runs is Phase 0-c's responsibility once a state store exists.
-- **Met in Phase 0-b2, at the core level:** A successful staging load and merge commit exactly one new watermark, reduced from all parallel tasks, exposed on `ReplicationExecutionContext`. Durable commit to a state store is Phase 0-c's responsibility.
+- **Met in Phase 0-b2, at the core level:** A failed or cancelled incremental run leaves its previous watermark unchanged (verified: the reduced candidate is never written to `ReplicationExecutionContext` unless `executePostTasks()` succeeds). Persisting that unchanged value across runs is Phase 1b's responsibility once a state store exists.
+- **Met in Phase 0-b2, at the core level:** A successful staging load and merge commit exactly one new watermark, reduced from all parallel tasks, exposed on `ReplicationExecutionContext`. Durable commit to a state store is Phase 1b's responsibility.
 - A retry can identify the previous run and attempt number, and never claims to resume it.
 - CLI behavior and existing `ToolOptions` configuration remain compatible, including multi-table options files.
 
 ### Phase 1: Spring Boot API and Scheduler
 
 This is the first user-facing platform phase. API and scheduler run together in one Spring Boot process, while the existing replication core continues to execute the actual database transfer.
+
+#### Phase 1a: Artifact split — IMPLEMENTED
+
+Delivered as the standalone `replicadb-server` sibling Maven project:
+
+- The `replicadb` CLI remains the root Maven artifact, with no Spring Boot dependency or application context on its classpath.
+- `replicadb-server` builds against the installed CLI artifact, starts under the `api` profile, and exposes only `/actuator/health` through Actuator.
+- The server skeleton excludes inherited MongoDB auto-configuration until the metadata state layer exists, so startup does not require an external database.
+- CI builds and tests the server module after installing the CLI artifact; the release workflow uploads its unreleased `0.1.0-SNAPSHOT` jar as a separate build artifact rather than publishing it with the CLI release assets.
+
+The next slice is **Phase 1b: State layer**, covering `JobDefinition`/`JobRun`, Flyway migrations, PostgreSQL persistence, row-locking claims, and the execution service. REST resources, scheduling, security, and the frontend remain pending after Phase 1a.
 
 #### Spring Boot modules
 

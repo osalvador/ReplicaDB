@@ -130,11 +130,32 @@ jobs:
             print("No skipped tests in the generated Surefire reports.")
         PY
 
+  server:
+    runs-on: ubuntu-latest
+    name: Server module
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up JDK 17
+      uses: actions/setup-java@v5
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
+        settings-path: ${{ github.workspace }} # location for the settings.xml file
+
+    - name: Install CLI artifact
+      run: mvn -B install -DskipTests --file pom.xml
+
+    - name: Test server module
+      run: mvn -B test --file replicadb-server/pom.xml
+
   package:
     runs-on: ubuntu-latest
     needs:
       - integration
       - non_integration
+      - server
     name: Package release
 
     steps:
