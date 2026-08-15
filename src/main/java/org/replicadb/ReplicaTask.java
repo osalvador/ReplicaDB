@@ -83,8 +83,17 @@ public final class ReplicaTask implements Callable<ReplicaTaskResult> {
                 throw e;
             }
 
+            String watermarkCandidate;
+            try {
+                watermarkCandidate = sourceDs.resolveWatermarkCandidate(taskId);
+            } catch (Exception e) {
+                LOG.error("ERROR in {} resolving watermark candidate: {}", taskName,
+                    CredentialRedactor.redactMessage(e.getMessage()));
+                throw e;
+            }
+
                 return new ReplicaTaskResult(this.taskId, processedRows, startedAtMillis,
-                    System.currentTimeMillis(), null);
+                    System.currentTimeMillis(), watermarkCandidate);
         } catch (Exception e) {
             failure = e;
             throw e;

@@ -20,6 +20,7 @@ public final class ReplicationExecutionContext {
     private final AtomicBoolean cancellationRequested = new AtomicBoolean(false);
     private final Set<Statement> activeStatements = ConcurrentHashMap.newKeySet();
     private volatile String sinkStagingTableName;
+    private volatile String watermarkCandidate;
 
     public String getRunId() {
         return runId;
@@ -31,6 +32,17 @@ public final class ReplicationExecutionContext {
 
     public void setSinkStagingTableName(String sinkStagingTableName) {
         this.sinkStagingTableName = sinkStagingTableName;
+    }
+
+    /**
+     * The run-level reduced watermark candidate, set only after a successful merge (Task 2.3).
+     */
+    public String getWatermarkCandidate() {
+        return watermarkCandidate;
+    }
+
+    public void setWatermarkCandidate(String watermarkCandidate) {
+        this.watermarkCandidate = watermarkCandidate;
     }
 
     public Map<Integer, String> getTempFilesPath() {

@@ -10,6 +10,7 @@ import org.replicadb.cli.AzureAuthenticationMode;
 import org.replicadb.cli.AzureAuthenticationOptions;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.manager.util.WatermarkBinder;
 import org.replicadb.rowset.CsvCachedRowSetImpl;
 import org.replicadb.rowset.MongoDBRowSetImpl;
 
@@ -752,6 +753,7 @@ public class SQLServerManager extends SqlManager {
       String allColumns = this.options.getSourceColumns() == null ? "*" : this.options.getSourceColumns();
 
       String sqlCmd;
+      Object watermarkBindValue = null;
 
       // Read table with source-query option specified
       if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
@@ -770,10 +772,18 @@ public class SQLServerManager extends SqlManager {
              " FROM " +
              escapeTableName(tableName);
 
+         sqlCmd = sqlCmd + " where " + options.getSourceWhere();
+
+         if (options.getIncrementalWatermarkColumn() != null && options.getIncrementalWatermarkValue() != null) {
+            watermarkBindValue = WatermarkBinder.convertToBoundValue(options.getIncrementalWatermarkValue(),
+                    WatermarkBinder.resolveColumnType(options.getSourceColumnDescriptors(), options.getIncrementalWatermarkColumn()));
+            sqlCmd = sqlCmd + " AND " + escapeColName(options.getIncrementalWatermarkColumn()) + " > ?";
+         }
+
          if (options.getJobs() == 1)
-            sqlCmd = sqlCmd + " where " + options.getSourceWhere() + " AND 0 = ?";
+            sqlCmd = sqlCmd + " AND 0 = ?";
          else
-            sqlCmd = sqlCmd + " where " + options.getSourceWhere() + " AND ABS(CHECKSUM(%% physloc %%)) % " + (options.getJobs()) + " = ?";
+            sqlCmd = sqlCmd + " AND ABS(CHECKSUM(%% physloc %%)) % " + (options.getJobs()) + " = ?";
 
       } else {
          // Full table read. Force NO_IDEX and table scan
@@ -782,14 +792,24 @@ public class SQLServerManager extends SqlManager {
              " FROM " +
              escapeTableName(tableName);
 
-         if (options.getJobs() == 1)
+         if (options.getIncrementalWatermarkColumn() != null && options.getIncrementalWatermarkValue() != null) {
+            watermarkBindValue = WatermarkBinder.convertToBoundValue(options.getIncrementalWatermarkValue(),
+                    WatermarkBinder.resolveColumnType(options.getSourceColumnDescriptors(), options.getIncrementalWatermarkColumn()));
+            sqlCmd = sqlCmd + " where " + escapeColName(options.getIncrementalWatermarkColumn()) + " > ?";
+            if (options.getJobs() == 1)
+               sqlCmd = sqlCmd + " AND 0 = ?";
+            else
+               sqlCmd = sqlCmd + " AND ABS(CHECKSUM(%% physloc %%)) % " + (options.getJobs()) + " = ?";
+         } else if (options.getJobs() == 1)
             sqlCmd = sqlCmd + " where 0 = ?";
          else
             sqlCmd = sqlCmd + " where ABS(CHECKSUM(%% physloc %%)) % " + (options.getJobs()) + " = ?";
 
       }
 
-      return super.execute(sqlCmd, (Object) nThread);
+      return watermarkBindValue != null
+          ? super.execute(sqlCmd, watermarkBindValue, (Object) nThread)
+          : super.execute(sqlCmd, (Object) nThread);
 
    }
 

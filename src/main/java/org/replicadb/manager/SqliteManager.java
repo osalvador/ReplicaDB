@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.util.BandwidthThrottling;
+import org.replicadb.manager.util.WatermarkBinder;
 
 import java.io.IOException;
 import java.sql.*;
@@ -150,12 +151,25 @@ public class SqliteManager extends SqlManager {
 
 		}
 
+		Object watermarkBindValue = null;
+		if (this.options.getSourceQuery() == null && this.options.getIncrementalWatermarkColumn() != null
+			&& this.options.getIncrementalWatermarkValue() != null) {
+			watermarkBindValue = WatermarkBinder.convertToBoundValue(this.options.getIncrementalWatermarkValue(),
+				WatermarkBinder.resolveColumnType(this.options.getSourceColumnDescriptors(), this.options.getIncrementalWatermarkColumn()));
+			sqlCmd = sqlCmd + (sqlCmd.contains(" WHERE ") ? " AND " : " WHERE ")
+				+ escapeColName(this.options.getIncrementalWatermarkColumn()) + " > ?";
+		}
+
 		sqlCmd = sqlCmd + " LIMIT ? OFFSET ? ";
 
 		if (this.options.getJobs() == nThread + 1) {
-			return super.execute(sqlCmd, "-1", offset);
+			return watermarkBindValue != null
+				? super.execute(sqlCmd, watermarkBindValue, "-1", offset)
+				: super.execute(sqlCmd, "-1", offset);
 		} else {
-			return super.execute(sqlCmd, chunkSize, offset);
+			return watermarkBindValue != null
+				? super.execute(sqlCmd, watermarkBindValue, chunkSize, offset)
+				: super.execute(sqlCmd, chunkSize, offset);
 		}
 
 	}

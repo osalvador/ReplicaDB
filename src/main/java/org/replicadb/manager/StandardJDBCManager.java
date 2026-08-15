@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.util.BandwidthThrottling;
+import org.replicadb.manager.util.WatermarkBinder;
 
 import java.io.IOException;
 import java.sql.*;
@@ -71,6 +72,8 @@ public class StandardJDBCManager extends SqlManager {
       if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
          sqlCmd = "SELECT  * FROM (" +
              options.getSourceQuery() + ") as T1 ";
+
+         return super.execute(sqlCmd);
       } else {
 
          sqlCmd = "SELECT " +
@@ -83,9 +86,16 @@ public class StandardJDBCManager extends SqlManager {
             sqlCmd = sqlCmd + " WHERE " + options.getSourceWhere();
          }
 
-      }
+         if (options.getIncrementalWatermarkColumn() != null && options.getIncrementalWatermarkValue() != null) {
+            Object watermarkBindValue = WatermarkBinder.convertToBoundValue(options.getIncrementalWatermarkValue(),
+                WatermarkBinder.resolveColumnType(options.getSourceColumnDescriptors(), options.getIncrementalWatermarkColumn()));
+            sqlCmd = sqlCmd + (sqlCmd.contains(" WHERE ") ? " AND " : " WHERE ")
+                + escapeColName(options.getIncrementalWatermarkColumn()) + " > ?";
+            return super.execute(sqlCmd, watermarkBindValue);
+         }
 
-      return super.execute(sqlCmd);
+         return super.execute(sqlCmd);
+      }
 
    }
 

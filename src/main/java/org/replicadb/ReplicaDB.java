@@ -17,11 +17,13 @@ import org.replicadb.execution.ReplicationCancelledException;
 import org.replicadb.manager.ConnManager;
 import org.replicadb.manager.DataSourceType;
 import org.replicadb.manager.ManagerFactory;
+import org.replicadb.manager.util.WatermarkBinder;
 
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
@@ -60,19 +62,37 @@ public class ReplicaDB {
 	private static final int ERROR = 1;
 	static final int CANCELLED = 2;
 
-	record ReplicaTaskResultsSummary(long totalRowsProcessed, long maxDurationMillis, int taskCount) {
+	record ReplicaTaskResultsSummary(long totalRowsProcessed, long maxDurationMillis, int taskCount,
+			String watermarkCandidate) {
+	}
+
+	/** Holds the executor and result summary of {@link #executeReplicationTasks}, since a caller needs both. */
+	private record ReplicationTasksResult(ExecutorService executor, ReplicaTaskResultsSummary summary) {
 	}
 
 	static ReplicaTaskResultsSummary summarize(List<ReplicaTaskResult> results) {
+		return summarize(results, Types.VARCHAR);
+	}
+
+	static ReplicaTaskResultsSummary summarize(List<ReplicaTaskResult> results, int watermarkJdbcType) {
 		long totalRowsProcessed = 0;
 		long maxDurationMillis = 0;
+		String watermarkCandidate = null;
 
 		for (ReplicaTaskResult result : results) {
 			totalRowsProcessed += result.rowsProcessed();
 			maxDurationMillis = Math.max(maxDurationMillis, result.durationMillis());
+
+			String candidate = result.watermarkCandidate();
+			if (candidate != null) {
+				watermarkCandidate = watermarkCandidate == null
+						|| WatermarkBinder.compareCandidates(candidate, watermarkCandidate, watermarkJdbcType) > 0
+								? candidate
+								: watermarkCandidate;
+			}
 		}
 
-		return new ReplicaTaskResultsSummary(totalRowsProcessed, maxDurationMillis, results.size());
+		return new ReplicaTaskResultsSummary(totalRowsProcessed, maxDurationMillis, results.size(), watermarkCandidate);
 	}
 
 	/** Timeout in milliseconds for pre-sink tasks. */
@@ -188,10 +208,14 @@ public class ReplicaDB {
 			preSinkTasksExecutor = Executors.newSingleThreadExecutor();
 			final Future<Integer> preSinkTasksFuture = executePreTasks(sourceDs, sinkDs, preSinkTasksExecutor);
 
-			replicaTasksService = executeReplicationTasks(options, managerFactory);
+			final ReplicationTasksResult replicationTasksResult = executeReplicationTasks(options, managerFactory);
+			replicaTasksService = replicationTasksResult.executor();
 
 			waitForTaskCompletion(preSinkTasksFuture);
 			executePostTasks(sourceDs, sinkDs);
+			if (options.getIncrementalWatermarkColumn() != null) {
+				options.getExecutionContext().setWatermarkCandidate(replicationTasksResult.summary().watermarkCandidate());
+			}
 			shutdownExecutors(preSinkTasksExecutor, replicaTasksService);
 
 		} catch (final InterruptedException e) {
@@ -294,13 +318,13 @@ public class ReplicaDB {
 	 *
 	 * @param options
 	 *            the configuration options containing job count
-	 * @return ExecutorService used for replication tasks
+	 * @return the ExecutorService used for replication tasks and the aggregated result summary
 	 * @throws InterruptedException
 	 *             if task execution is interrupted
 	 * @throws ExecutionException
 	 *             if a task fails
 	 */
-	private static ExecutorService executeReplicationTasks(ToolOptions options, ManagerFactory managerFactory)
+	private static ReplicationTasksResult executeReplicationTasks(ToolOptions options, ManagerFactory managerFactory)
 			throws InterruptedException, ExecutionException, SQLException {
 		final List<ReplicaTask> replicaTasks = new ArrayList<>();
 		for (int i = 0; i < options.getJobs(); i++) {
@@ -340,11 +364,18 @@ public class ReplicaDB {
 				}
 			}
 
-			final ReplicaTaskResultsSummary summary = summarize(results);
+			final ReplicaTaskResultsSummary summary;
+			if (options.getIncrementalWatermarkColumn() != null) {
+				int watermarkJdbcType = WatermarkBinder.resolveColumnType(
+						options.getSourceColumnDescriptors(), options.getIncrementalWatermarkColumn());
+				summary = summarize(results, watermarkJdbcType);
+			} else {
+				summary = summarize(results);
+			}
 			LOG.info("Replication tasks completed: {} rows across {} tasks, longest task {}ms",
 					summary.totalRowsProcessed(), summary.taskCount(), summary.maxDurationMillis());
 
-			return replicaTasksService;
+			return new ReplicationTasksResult(replicaTasksService, summary);
 		} catch (final InterruptedException | ExecutionException | SQLException e) {
 			replicaTasksService.shutdownNow();
 			throw e;
