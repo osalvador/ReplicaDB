@@ -1,0 +1,33 @@
+.ai/archive/phase-1a-artifact-split.plan.md
+  s_0fb05c82158893::t_756dc80082245f 1-195
+replicadb-server/pom.xml
+  s_0fb05c82158893::t_0f8c698fefb087 1-52
+replicadb-server/src/main/java/org/replicadb/server/ReplicaDbServerApplication.java
+  s_0fb05c82158893::t_1bdfa91351e42f 1-12
+replicadb-server/src/main/resources/application.yml
+  s_0fb05c82158893::t_43d110948a8106 1-12
+replicadb-server/src/test/java/org/replicadb/server/CoreDependencyResolutionTest.java
+  s_0fb05c82158893::t_3e496feaddc5a3 1-19
+replicadb-server/src/test/java/org/replicadb/server/HealthEndpointTest.java
+  s_0fb05c82158893::t_94c88b9111f02f 1-41
+replicadb-server/src/test/java/org/replicadb/server/ReplicaDbServerApplicationTest.java
+  s_0fb05c82158893::t_dde2175d765f72 1-14
+src/test/java/org/replicadb/NoSpringBootOnClasspathTest.java
+  s_0fb05c82158893::t_93a04391e113f6 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "a0d6012a579f71b2f2c53c128312fad95a8589fc",
+  "prompts": {},
+  "sessions": {
+    "s_0fb05c82158893": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "e689a383-e65f-479f-a383-df5d0f8155db",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
