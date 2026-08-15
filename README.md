@@ -62,6 +62,19 @@ Before installing ReplicaDB, ensure you have:
   - **Sink database**: INSERT, UPDATE, DELETE, and CREATE TABLE permissions
 - **(Optional)** Docker or Podman for containerized deployment
 
+## Server artifact (early development)
+
+The repository currently builds two separate Maven artifacts. The root project remains the standalone CLI and does not include Spring Boot. Install it locally before building or running the server artifact:
+
+```bash
+mvn install -DskipTests
+mvn -f replicadb-server/pom.xml spring-boot:run -Dspring-boot.run.profiles=api
+```
+
+The server skeleton listens on port 8080 and exposes `/actuator/health`. It is unreleased, unauthenticated, and has no metadata persistence or scheduler yet; do not use it for a real deployment.
+
+If Maven reports that `org.replicadb:ReplicaDB` cannot be resolved, run `mvn install -DskipTests` from the repository root first. The sibling server project resolves the CLI artifact from the local Maven repository rather than from a reactor build.
+
 ## Stand Alone
 
 ### System Requirements

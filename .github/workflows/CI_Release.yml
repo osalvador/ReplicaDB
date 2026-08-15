@@ -54,6 +54,16 @@ jobs:
         zip -r -X ReplicaDB-${REPLICADB_RELEASE_VERSION}.zip ReplicaDB-*.jar README.md lib conf bin LICENSE
         ls -lah        
 
+    - name: Build server artifact
+      run: mvn -B package --file replicadb-server/pom.xml
+
+    - name: Upload server artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: replicadb-server-jar
+        path: replicadb-server/target/replicadb-server-*.jar
+        if-no-files-found: error
+
     - uses: "marvinpinto/action-automatic-releases@latest"
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"

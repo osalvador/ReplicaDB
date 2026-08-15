@@ -1,0 +1,12 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: replicadb-server
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

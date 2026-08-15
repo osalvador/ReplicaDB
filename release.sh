@@ -27,6 +27,7 @@ NC='\033[0m' # No Color
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 POM_FILE="${REPO_ROOT}/pom.xml"
 README_FILE="${REPO_ROOT}/README.md"
+SERVER_POM_FILE="${REPO_ROOT}/replicadb-server/pom.xml"
 
 ################################################################################
 # Functions
@@ -104,6 +105,22 @@ update_pom_version() {
     
     print_success "pom.xml updated"
 }
+update_server_pom_dependency_version() {
+    local old_version=$1
+    local new_version=$2
+
+    if [[ ! -f "$SERVER_POM_FILE" ]]; then
+        print_error "Server pom.xml not found: $SERVER_POM_FILE"
+        exit 1
+    fi
+
+    print_info "Updating replicadb-server dependency: $old_version -> $new_version"
+
+    sed -i.bak "/<artifactId>ReplicaDB<\/artifactId>/,/<\/dependency>/ s/<version>${old_version}<\/version>/<version>${new_version}<\/version>/" "$SERVER_POM_FILE"
+    rm -f "${SERVER_POM_FILE}.bak"
+
+    print_success "replicadb-server dependency updated"
+}
 update_readme_version() {
     local old_version=$1
     local new_version=$2
@@ -127,7 +144,7 @@ create_release_commit() {
     local version=$1
     
     print_info "Creating release commit..."
-    git add "$POM_FILE" "$README_FILE"
+    git add "$POM_FILE" "$README_FILE" "$SERVER_POM_FILE"
     git commit -m "Release v${version}" || print_warning "Commit may have failed or nothing to commit"
     
     print_success "Release commit created"
@@ -239,6 +256,7 @@ main() {
     print_header "Executing Release Steps"
     
     update_pom_version "$old_version" "$new_version"
+    update_server_pom_dependency_version "$old_version" "$new_version"
     update_readme_version "$old_version" "$new_version"
     create_release_commit "$new_version"
     create_git_tag "$new_version"
