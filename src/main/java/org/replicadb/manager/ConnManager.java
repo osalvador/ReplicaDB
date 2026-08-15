@@ -321,4 +321,16 @@ public abstract class ConnManager {
         options.getExecutionContext().unregisterActiveStatement(statement);
     }
 
+    /**
+     * Resolves this task's highest observed watermark column value after a successful read.
+     * Default no-op for non-SQL managers that cannot build a bindable SQL watermark probe.
+     *
+     * @param taskId the task identifier
+     * @return the highest-precision textual representation of the observed value, or null when
+     *         no watermark column is configured or the manager does not support one.
+     */
+    public String resolveWatermarkCandidate(int taskId) throws SQLException {
+        return null;
+    }
+
 }

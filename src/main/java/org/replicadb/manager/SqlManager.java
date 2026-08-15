@@ -7,6 +7,7 @@ import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.util.ColumnDescriptor;
+import org.replicadb.manager.util.WatermarkBinder;
 
 import java.io.IOException;
 import java.sql.*;
@@ -39,6 +40,10 @@ public abstract class SqlManager extends ConnManager {
     private int rowSize = 0;
     private long fetchs = 0L;
     private boolean sinkTableJustCreated = false;
+
+    // Last SQL/bind args executed on the SOURCE side, reused by resolveWatermarkCandidate()'s MAX() probe.
+    private String lastReadSql;
+    private Object[] lastReadArgs;
 
     /**
      * Constructs the SqlManager.
@@ -172,6 +177,11 @@ public abstract class SqlManager extends ConnManager {
             LOG.info("{}: {}", Thread.currentThread().getName(), sb);
         } else {
             LOG.info("{}: No parameters to bind", Thread.currentThread().getName());
+        }
+
+        if (DataSourceType.SOURCE.equals(this.dsType)) {
+            this.lastReadSql = stmt;
+            this.lastReadArgs = args;
         }
 
         ResultSet resultSet = statement.executeQuery();
@@ -324,6 +334,27 @@ public abstract class SqlManager extends ConnManager {
             }
 
             this.lastStatement = null;
+        }
+    }
+
+    /**
+     * Resolves this task's highest observed watermark column value by issuing a follow-up
+     * {@code SELECT MAX(...)} probe wrapping the exact SQL/bind args of this task's own read.
+     */
+    @Override
+    public String resolveWatermarkCandidate(int taskId) throws SQLException {
+        if (options.getIncrementalWatermarkColumn() == null || lastReadSql == null) {
+            return null;
+        }
+
+        String maxSql = "SELECT MAX(" + escapeColName(options.getIncrementalWatermarkColumn())
+                + ") FROM (" + lastReadSql + ") wm_probe";
+        ResultSet rs = execute(maxSql, lastReadArgs);
+        try {
+            rs.next();
+            return rs.getString(1);
+        } finally {
+            release();
         }
     }
 
@@ -732,13 +763,18 @@ public abstract class SqlManager extends ConnManager {
     }
 
     /**
-     * Default implementation of preSourceTasks that probes source metadata when auto-create is enabled.
+     * Default implementation of preSourceTasks that probes source metadata when auto-create is enabled
+     * or when an incremental watermark column is declared.
      * Concrete managers can override this and call super.preSourceTasks() if needed.
      */
     @Override
     public void preSourceTasks() throws Exception {
-        if (options.isSinkAutoCreate()) {
+        if (options.isSinkAutoCreate() || options.getIncrementalWatermarkColumn() != null) {
             probeSourceMetadata();
+        }
+        if (options.getIncrementalWatermarkColumn() != null) {
+            // Fail fast here, before any parallel task starts reading, rather than later inside readTable().
+            WatermarkBinder.resolveColumnType(options.getSourceColumnDescriptors(), options.getIncrementalWatermarkColumn());
         }
     }
 

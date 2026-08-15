@@ -12,7 +12,7 @@ The control plane does not resume interrupted work. A run either completes or is
 
 **Date**: August 13, 2026
 **Last decision review**: August 14, 2026
-**Status**: Approved direction; Phase 0-a implemented; remaining Phase 0 work pending
+**Status**: Approved direction; Phase 0-a, Phase 0-b1, and Phase 0-b2 implemented; Phase 0-c (state layer) pending
 **Owner**: Development Team
 
 ---
@@ -261,7 +261,7 @@ The first identity model uses local users stored in PostgreSQL. `ADMIN`, `OPERAT
 
 `POST /api/v1/runs/{id}/cancel` stops the replication as soon as it is invoked. Cancellation is immediate and unconditional: it does not wait for a partition boundary, a batch commit, or any other safe point.
 
-The core has no cancellation support today. There are no interrupt checks in the copy path, no access to the active statements, and `ReplicaDB.executeReplicationTasks` blocks on `invokeAll` until every task finishes. Phase 0 must add:
+The core had no cancellation support before Phase 0-b1: there were no interrupt checks in the copy path, no access to the active statements, and `ReplicaDB.executeReplicationTasks` blocked on `invokeAll` until every task finished. Phase 0 added:
 
 - A per-run cancellation token carried by the execution context.
 - Access to the active `Statement` of each `ReplicaTask` so a control thread can call `Statement.cancel()`. `Future.cancel(true)` alone is insufficient, because a thread blocked inside a JDBC call does not observe interruption.
@@ -281,6 +281,8 @@ Consequently the API response to a cancellation request must **explicitly warn t
 After cancellation the engine runs its normal cleanup path and drops the staging table when it was auto-generated. A user-provided `sink-staging-table` is left untouched, consistent with existing behavior.
 
 A cancelled run never advances the watermark and terminates in `CANCELLED`, never in `FAILED`.
+
+This decision's core-side plumbing is implemented in Phase 0-b1 (commit `4dd4cb5`). What remains for Phase 1 is the `/api/v1/runs/{id}/cancel` endpoint itself and persisting the indeterminate-state warning on the run record; SQL Server `BulkCopy` and PostgreSQL `COPY` cancellation remain best-effort rather than immediate.
 
 ### Decision 6: PostgreSQL Worker Dispatch
 
@@ -366,14 +368,39 @@ Delivered in commit `c228ddc` and covered by focused JUnit tests, concurrency te
 - Added run-level aggregation for total rows, task count, and longest task duration without changing the `processReplica(ToolOptions)` exit-code contract.
 - Removed obsolete static reset calls and updated file-manager and multi-table tests.
 
-The Phase 0-a exit criterion is met: two concurrent runs use independent staging names and temporary-file maps, verified across 100 repetitions. Phase 0-a did not add cancellation or watermark extraction/injection; cancellation plumbing is implemented in the Phase 0-b1 work below, while watermark extraction/injection remains pending.
+The Phase 0-a exit criterion is met: two concurrent runs use independent staging names and temporary-file maps, verified across 100 repetitions. Phase 0-a did not add cancellation or watermark extraction/injection; cancellation plumbing is implemented in Phase 0-b1 below, while watermark extraction/injection remains pending.
+
+#### Phase 0-b1: Cancellation plumbing — IMPLEMENTED
+
+Delivered in commit `4dd4cb5`, covered by focused JUnit tests (Mockito-backed context/manager unit tests, `CountDownLatch`-synchronized mid-loop cancellation tests, and a Testcontainers-backed PostgreSQL `COPY` cancellation test), orchestration regressions, and the successful `Only CI/CT` workflow:
+
+- Extended `ReplicationExecutionContext` with an `AtomicBoolean` cancellation flag and a concurrent active-`Statement` registry. `requestCancellation()` sets the flag and calls `.cancel()` on every registered statement, tolerating a failing `cancel()` on one statement without skipping the rest.
+- Added `ReplicationCancelledException` (checked, extends `SQLException`) so cancellation propagates through every existing manager method's declared `throws` clause without any signature changes.
+- Added `checkCancellation()`/`registerActiveStatement()`/`unregisterActiveStatement()` helpers to `ConnManager` and `FileManager`, and centralized source-side statement tracking in `SqlManager.execute()`/`release()` so `readTable()` cancellation is covered for every SQL manager in one place.
+- Wired per-row interrupt checks and active-statement tracking into the batch insert loops of `StandardJDBCManager`, `MySQLManager`, `OracleManager`, `Db2Manager`, `SqliteManager`, PostgreSQL's binary and text `COPY`, MongoDB's bulk write, Kafka's producer loop, and the CSV/ORC file writers; added a best-effort pre-flight guard before SQL Server's `BulkCopy` (no mid-transfer cancel hook exists in that API).
+- Guarded `SqlManager.atomicInsertStagingTable()` and every real `mergeStagingTable()` override, including a pre-merge guard for MongoDB's native aggregation merge, which has no `Statement` to register.
+- Replaced the blocking `invokeAll(...)` in `ReplicaDB.executeReplicationTasks(...)` with individually submitted, cancellable futures. A cancellation observed on one task cancels its sibling futures and shuts the executor down before rethrowing, so no thread pool is leaked on the cancelled or failed path.
+- Added a package-visible `CANCELLED` exit code distinct from `SUCCESS`/`ERROR`. `executeSingleReplication(...)` maps both `ReplicationCancelledException` and any other exception observed while the execution context's cancellation flag is set to `CANCELLED`, so a JDBC driver that reports a cancelled `Statement` as an ordinary `SQLException` is still classified as `CANCELLED`, not `FAILED`.
+- Cleanup already ran unconditionally before this change (`finally { cleanupResources(...); }`), so a cancelled run continues to drop an auto-generated staging table and leave a user-provided one untouched without further modification.
+
+Known limitations, accepted for this plan and unchanged by later work: SQL Server `BulkCopy` and PostgreSQL's `COPY` protocol are best-effort — cancellation is observed at the next loop iteration or call boundary, not as an immediate `Statement.cancel()`; MongoDB, Kafka, and ORC have cancellation checks wired in but no dedicated mid-stream cancellation test (only non-cancelled regression coverage); Decision 5's full per-mode/per-timing severity table is exercised only through general cleanup-path tests, not one assertion per table cell.
+
+#### Phase 0-b2: Watermark injection — IMPLEMENTED
+
+Covered by focused JUnit tests (mocked-connection manager unit tests asserting generated SQL and bind order, orchestration unit tests, and a Testcontainers-backed PostgreSQL end-to-end test):
+
+- Added `--incremental-watermark-column`/`--incremental-watermark-value` CLI and options-file settings to `ToolOptions`, validated to require `incremental` mode and to reject combination with `replication.table.*` multi-table entries.
+- Added `manager.util.WatermarkBinder`, which resolves the watermark column's JDBC type from the existing `probeSourceMetadata()`/`ColumnDescriptor` machinery (now also triggered by a declared watermark column, not just `sink.auto-create`), converts the configured value into a typed bind parameter, and reduces per-task candidate strings type-aware (not lexicographically) for run-level aggregation.
+- Injected a bound `AND <column> > ?` predicate into the 8 JDBC-based managers' existing `readTable()` query-building code (`Db2Manager`, `DenodoManager` — source-only, since Denodo cannot be a sink — `MySQLManager`, `OracleManager`, `PostgresqlManager`, `SqliteManager`, `SQLServerManager`, `StandardJDBCManager`), positioned correctly relative to each manager's existing partition/pagination binds. Non-SQL managers (`MongoDBManager`, `KafkaManager`, `S3Manager`, file managers) are explicitly out of scope, consistent with their existing merge/incremental limitations.
+- Centralized the last-executed source SQL/bind-args in `SqlManager.execute()` and added `resolveWatermarkCandidate(int taskId)`, which issues a follow-up `SELECT MAX(...)` probe reusing the same query shape and bind values to report each task's highest observed value.
+- Populated `ReplicaTaskResult.watermarkCandidate` from `ReplicaTask`, and widened `ReplicaDB.summarize(...)` to reduce all tasks' candidates to one run-level value.
+- Exposed the reduced candidate on `ReplicationExecutionContext.setWatermarkCandidate(...)`/`getWatermarkCandidate()` **only after `executePostTasks()` (staging load + merge) completes without throwing** — a failed run, a cancelled run (either the explicit `ReplicationCancelledException` path or the flag-checked generic-exception path), and every other exception path leave it unset.
+
+Scope boundary: this phase does not persist the watermark anywhere. No `JobDefinition`/`JobRun`/PostgreSQL state store exists yet (Phase 0-c). The reduced candidate is exposed only on the in-memory `ReplicationExecutionContext` for a future Phase 0-c job-execution service to read and persist; the CLI itself has no mechanism to feed a previous run's committed value back in automatically — the caller (a script, an orchestrator, or Phase 0-c) must pass it via `--incremental-watermark-value` on the next invocation.
 
 #### Core changes
 
-The remaining core items are prerequisites for Phase 1 and are not optional.
-
-1. **Cancellation plumbing — IMPLEMENTED in Phase 0-b1 (current working tree).** Extended `ReplicationExecutionContext` with a per-run cancellation token and active-statement registry, added interrupt checks to JDBC, native, and file copy loops, registered SQL merge/atomic-insert statements, and replaced blocking `invokeAll` with individually cancellable futures. Cancellation propagates as `CANCELLED` and runs normal cleanup. SQL Server `BulkCopy` remains best-effort because its API has no mid-transfer cancel hook; MongoDB native merge has a pre-merge guard but no driver statement to cancel; dedicated mid-stream tests remain absent for MongoDB, Kafka, and ORC.
-2. **Watermark injection.** Populate `ReplicaTaskResult.watermarkCandidate`, inject a typed `> :lastWatermark` predicate composed with the existing `$CONDITIONS` partition substitution, and infer the bind type from the source column metadata.
+1. **Watermark injection.** ~~Populate `ReplicaTaskResult.watermarkCandidate`, inject a typed `> :lastWatermark` predicate composed with the existing `$CONDITIONS` partition substitution, and infer the bind type from the source column metadata.~~ Implemented in Phase 0-b2 above.
 
 #### State layer
 
@@ -394,9 +421,9 @@ The remaining core items are prerequisites for Phase 1 and are not optional.
 
 - **Met in Phase 0-a:** Two replications run concurrently in one JVM with independent staging tables and temporary files.
 - **Met in Phase 0-a:** Task results expose row counters and timings, and the executor aggregates them into a run-level summary.
-- **Met in Phase 0-b1 for JDBC manager paths:** A cancellation request stops an in-flight replication, including SQL merge and atomic-insert statements, and the run ends in `CANCELLED`. SQL Server `BulkCopy` is best-effort, while MongoDB's native merge can be guarded before it starts but has no active statement hook.
-- A failed or cancelled incremental run leaves its previous watermark unchanged.
-- A successful staging load and merge commit exactly one new watermark, reduced from all parallel tasks.
+- **Met in Phase 0-b1:** A cancellation request stops an in-flight replication, including SQL merge and atomic-insert statements, and the run ends in `CANCELLED`, never in `FAILED`, even when a JDBC driver reports the cancelled statement as a plain `SQLException`. SQL Server `BulkCopy` and PostgreSQL `COPY` remain best-effort, and MongoDB's native merge has a pre-merge guard but no active statement to cancel mid-operation.
+- **Met in Phase 0-b2, at the core level:** A failed or cancelled incremental run leaves its previous watermark unchanged (verified: the reduced candidate is never written to `ReplicationExecutionContext` unless `executePostTasks()` succeeds). Persisting that unchanged value across runs is Phase 0-c's responsibility once a state store exists.
+- **Met in Phase 0-b2, at the core level:** A successful staging load and merge commit exactly one new watermark, reduced from all parallel tasks, exposed on `ReplicationExecutionContext`. Durable commit to a state store is Phase 0-c's responsibility.
 - A retry can identify the previous run and attempt number, and never claims to resume it.
 - CLI behavior and existing `ToolOptions` configuration remain compatible, including multi-table options files.
 
@@ -670,8 +697,8 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 
 - [x] Replace the static staging-name and temp-file state with a per-run execution context. **Completed in Phase 0-a (`c228ddc`).**
 - [x] Widen the `ReplicaTask` result to carry counters, timings, and a watermark candidate. **Counters and timings completed in Phase 0-a (`c228ddc`); watermark population remains pending.**
-- [x] Add cancellation: statement handles, interrupt checks, cancellable futures. **Implemented in Phase 0-b1 (current working tree).**
-- [ ] Implement watermark injection with type inference from source column metadata.
+- [x] Add cancellation: statement handles, interrupt checks, cancellable futures. **Implemented in Phase 0-b1 (commit `4dd4cb5`).**
+- [x] Implement watermark injection with type inference from source column metadata. **Implemented in Phase 0-b2.**
 - [ ] Define `JobDefinition` and `JobRun` persistence models and Flyway migrations.
 - [ ] Define legal state transitions, retry behavior, and idempotency rules.
 - [ ] Split the build into the `replicadb` and `replicadb-server` artifacts.
@@ -744,7 +771,9 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 ### Current core
 
 - Phase 0-a removed the static staging-name and temporary-file state. Each `ToolOptions` owns one `ReplicationExecutionContext`; a multi-table copy receives a fresh context.
-- `ReplicaTask` now returns `ReplicaTaskResult` with row counts and timings, and `executeReplicationTasks` aggregates those results. Cancellation and watermark candidates are not implemented yet.
+- `ReplicaTask` now returns `ReplicaTaskResult` with row counts, timings, and a populated watermark candidate; `executeReplicationTasks` reduces those candidates to one run-level value.
+- Phase 0-b1 added the per-run cancellation token, active-statement registry, and cancellable futures described above; SQL Server `BulkCopy` and PostgreSQL `COPY` cancellation remain best-effort, and MongoDB/Kafka/ORC lack dedicated mid-stream cancellation tests.
+- Phase 0-b2 added watermark predicate injection to the 8 JDBC-based managers (Denodo source-only); MongoDB/Kafka/S3/file managers do not support it. The reduced watermark candidate is exposed on `ReplicationExecutionContext` only after a successful merge; it is not persisted anywhere until Phase 0-c adds the state layer.
 - Each parallel task owns its source and sink managers; the state layer must not assume shared JDBC connections.
 - Manager capabilities differ by source, sink, and replication mode.
 - Multi-table replication stops at the first failure and leaves earlier tables applied; it is a CLI-only capability.
@@ -783,15 +812,16 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 
 - `README.md` - CLI, deployment, and compatibility baseline.
 - `docs/docs/docs.md` - Replication modes and connector behavior.
-- `src/main/java/org/replicadb/ReplicaDB.java` - Orchestration, multi-table loop, and task execution.
+- `src/main/java/org/replicadb/ReplicaDB.java` - Orchestration, multi-table loop, cancellable task execution, and the `CANCELLED` exit code.
 - `src/main/java/org/replicadb/ReplicaTask.java` - Task execution and rich result production.
 - `src/main/java/org/replicadb/ReplicaTaskResult.java` - Row counters, timings, and reserved watermark candidate.
-- `src/main/java/org/replicadb/execution/ReplicationExecutionContext.java` - Per-run identifier, staging name, and temporary-file state.
+- `src/main/java/org/replicadb/execution/ReplicationExecutionContext.java` - Per-run identifier, staging name, temporary-file state, cancellation flag, and active-statement registry.
+- `src/main/java/org/replicadb/execution/ReplicationCancelledException.java` - Checked cancellation signal propagated through existing manager method signatures.
 - `src/main/java/org/replicadb/cli/ReplicationMode.java` - `complete`, `complete-atomic`, `incremental`.
 - `src/main/java/org/replicadb/cli/ToolOptions.java` - Current configuration boundary.
-- `src/main/java/org/replicadb/manager/SqlManager.java` - Staging, merge, and atomic swap behavior.
-- `src/main/java/org/replicadb/manager/ConnManager.java` - Per-run staging-table name access.
-- `src/main/java/org/replicadb/manager/file/FileManager.java` - Per-run temporary-file access.
+- `src/main/java/org/replicadb/manager/SqlManager.java` - Staging, merge, atomic swap, and cancellation-aware statement lifecycle.
+- `src/main/java/org/replicadb/manager/ConnManager.java` - Per-run staging-table name access and cancellation helpers.
+- `src/main/java/org/replicadb/manager/file/FileManager.java` - Per-run temporary-file access and cancellation helper.
 - `openspec/` - Change proposals and specs for engine-level behavior; this document governs product direction, not individual engine changes.
 - `.ai/context/execution.md` - Current execution and lifecycle constraints.
 - `.ai/context/operations.md` - Current runtime, telemetry, and deployment constraints.
@@ -805,6 +835,6 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 
 ---
 
-**Document Version**: 2.1
-**Last Updated**: August 14, 2026
-**Next Review**: Before implementation of Phase 0-b2 watermark injection
+**Document Version**: 2.2
+**Last Updated**: August 15, 2026
+**Next Review**: Before implementation of Phase 0-c (`JobDefinition`/`JobRun` persistence and the state layer)

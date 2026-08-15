@@ -169,6 +169,14 @@ To do this, it is necessary to have a strategy for filtering the new data at the
 
 Currently, you must store the last value of the column used to determine changes in the source table. In future versions, ReplicaDB will do this automatically.
 
+**Automated watermark tracking**: Instead of manually building a `--source-where` clause, you can declare a single source column as an incremental watermark with `--incremental-watermark-column <column-name>` and, optionally, `--incremental-watermark-value <value>` for the last value already replicated. ReplicaDB then injects a typed `<column> > <value>` predicate into the source query — the value is always bound as a parameter, never concatenated into SQL. This only applies to `incremental` mode, and the column must be exposed by `--source-table` (an arbitrary `--source-query` is not supported, since ReplicaDB cannot infer a watermark from it). If `--incremental-watermark-value` is omitted, the first run replicates everything the query returns. After a successful run, ReplicaDB reports the highest observed value for that column; store it externally (e.g., in your orchestration layer) and pass it back as `--incremental-watermark-value` on the next run. A failed or cancelled run never advances this value.
+
+Accepted limitations of automated watermark tracking:
+
+- Deletes are never propagated; the merge is an upsert by primary key.
+- Sources without primary keys cannot merge, and ReplicaDB already warns about this.
+- Late-committing source transactions can be missed: a transaction that commits after the read, with a timestamp before the committed watermark, will never be replicated. A configurable read-lag setting to mitigate this is not yet available.
+
 In the `incremental` mode, the `INSERT or UPDATE` or `UPSERT` technique is used in the sink table. ReplicaDB needs to create a staging table in the sink database, where data is copied in parallel. The last step of the replication is to merge the staging table with the sink table. ReplicaDB will perform the following actions in an `incremental` replication:
 
   - Automatically create the staging table in the sink database.
@@ -226,6 +234,8 @@ usage: replicadb [OPTIONS]
 |---------------------------------------------------------|----------------------------------------------------------------------------------------------------------|--------------------|
 | `--fetch-size <fetch-size>`                             | Number of entries to read from database at once.                                                         | `100`              |
 | `-h`,`--help`                                           | Print this help screen                                                                                   |                    |
+| `--incremental-watermark-column <column-name>`          | Source database column to use as the incremental watermark. Only valid with `--mode incremental`.        |                    |
+| `--incremental-watermark-value <value>`                 | Last committed watermark value; rows with a watermark column value greater than this are replicated.     |                    |
 | `-j`,`--jobs <n>`                                       | Use n jobs to replicate in parallel.                                                                     | `4`                |
 | `--mode <mode>`                                         | Specifies the replication mode. The allowed values are `complete`, `complete-atomic` or `incremental`    | `complete`         |
 | `--options-file <file-path>`                            | Options file path location                                                                               |

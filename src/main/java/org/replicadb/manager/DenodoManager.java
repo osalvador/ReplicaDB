@@ -3,6 +3,7 @@ package org.replicadb.manager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.manager.util.WatermarkBinder;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -65,6 +66,7 @@ public class DenodoManager extends SqlManager {
 
         long offset = nThread * chunkSize;
         String sqlCmd;
+        Object watermarkBindValue = null;
 
         // Read table with source-query option specified
         if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
@@ -82,6 +84,13 @@ public class DenodoManager extends SqlManager {
                 sqlCmd = sqlCmd + " WHERE " + options.getSourceWhere();
             }
 
+            if (options.getIncrementalWatermarkColumn() != null && options.getIncrementalWatermarkValue() != null) {
+                watermarkBindValue = WatermarkBinder.convertToBoundValue(options.getIncrementalWatermarkValue(),
+                        WatermarkBinder.resolveColumnType(options.getSourceColumnDescriptors(), options.getIncrementalWatermarkColumn()));
+                sqlCmd = sqlCmd + (sqlCmd.contains(" WHERE ") ? " AND " : " WHERE ")
+                        + escapeColName(options.getIncrementalWatermarkColumn()) + " > ?";
+            }
+
             sqlCmd = sqlCmd + " OFFSET ? ";
 
         }
@@ -89,10 +98,14 @@ public class DenodoManager extends SqlManager {
         String limit = " LIMIT ?";
 
         if (this.options.getJobs() == nThread + 1) {
-            return super.execute(sqlCmd, offset);
+            return watermarkBindValue != null
+                    ? super.execute(sqlCmd, watermarkBindValue, offset)
+                    : super.execute(sqlCmd, offset);
         } else {
             sqlCmd = sqlCmd + limit;
-            return super.execute(sqlCmd, offset, chunkSize);
+            return watermarkBindValue != null
+                    ? super.execute(sqlCmd, watermarkBindValue, offset, chunkSize)
+                    : super.execute(sqlCmd, offset, chunkSize);
         }
 
     }

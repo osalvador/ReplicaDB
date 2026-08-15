@@ -151,6 +151,7 @@ You can create a configuration file for a ReplicaDB process by filling out a sim
 - Source table must exist and be accessible with SELECT permissions
 - Sink table must exist with a compatible schema
 - For `incremental` mode, sink table must have primary keys defined
+- For `incremental` mode, `--incremental-watermark-column` (with an optional `--incremental-watermark-value`) automates the `--source-where` filtering described in the [full documentation](https://osalvador.github.io/ReplicaDB/docs/docs.html)
 
 ```bash
 $ replicadb --mode=complete -j=1 \

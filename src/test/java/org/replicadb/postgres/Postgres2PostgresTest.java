@@ -16,6 +16,7 @@ import java.nio.file.Paths;
 import java.sql.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers
@@ -96,6 +97,98 @@ class Postgres2PostgresTest {
         ToolOptions options = new ToolOptions(args);
         assertEquals(0, ReplicaDB.processReplica(options));
         assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+    }
+
+    @Test
+    void testPostgres2PostgresIncrementalWithWatermarkColumnFirstRunReplicatesEverything() throws ParseException, IOException, SQLException {
+        long maxWatermark = queryMaxCInteger();
+
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--sink-staging-schema", "public",
+                "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+                "--incremental-watermark-column", "c_integer"
+        };
+        ToolOptions options = new ToolOptions(args);
+
+        assertEquals(0, ReplicaDB.processReplica(options));
+
+        // Absent a value, the first run replicates everything the query returns.
+        assertEquals(TOTAL_SINK_ROWS, countSinkRows());
+        assertEquals(String.valueOf(maxWatermark), options.getExecutionContext().getWatermarkCandidate());
+    }
+
+    @Test
+    void testPostgres2PostgresIncrementalWatermarkOnlyReplicatesRowsAboveCommittedValue() throws ParseException, IOException, SQLException {
+        long maxWatermark = queryMaxCInteger();
+        long committedWatermark = maxWatermark - 10;
+        long expectedRows = queryCountAboveCInteger(committedWatermark);
+
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--sink-staging-schema", "public",
+                "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+                "--incremental-watermark-column", "c_integer",
+                "--incremental-watermark-value", String.valueOf(committedWatermark)
+        };
+        ToolOptions options = new ToolOptions(args);
+
+        assertEquals(0, ReplicaDB.processReplica(options));
+
+        assertEquals(expectedRows, countSinkRows());
+        assertEquals(String.valueOf(maxWatermark), options.getExecutionContext().getWatermarkCandidate());
+    }
+
+    @Test
+    void testPostgres2PostgresIncrementalWatermarkUnchangedOnMergeFailure() throws Exception {
+        String[] args = {
+                "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
+                "--source-connect", postgres.getJdbcUrl(),
+                "--source-user", postgres.getUsername(),
+                "--source-password", postgres.getPassword(),
+                "--sink-connect", postgres.getJdbcUrl(),
+                "--sink-user", postgres.getUsername(),
+                "--sink-password", postgres.getPassword(),
+                "--sink-staging-schema", "nonexistent_schema_wm_test",
+                "--mode", ReplicationMode.INCREMENTAL.getModeText(),
+                "--incremental-watermark-column", "c_integer"
+        };
+        ToolOptions options = new ToolOptions(args);
+
+        int exitCode = ReplicaDB.processReplica(options);
+
+        assertEquals(1, exitCode);
+        assertNull(options.getExecutionContext().getWatermarkCandidate());
+    }
+
+    private long queryMaxCInteger() throws SQLException {
+        try (Statement stmt = postgresConn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT MAX(c_integer) FROM t_source")) {
+            rs.next();
+            return rs.getLong(1);
+        }
+    }
+
+    private long queryCountAboveCInteger(long threshold) throws SQLException {
+        try (PreparedStatement stmt = postgresConn.prepareStatement("SELECT count(*) FROM t_source WHERE c_integer > ?")) {
+            stmt.setLong(1, threshold);
+            try (ResultSet rs = stmt.executeQuery()) {
+                rs.next();
+                return rs.getLong(1);
+            }
+        }
     }
 
     @Test

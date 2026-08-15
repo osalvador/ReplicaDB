@@ -8,6 +8,7 @@ import org.replicadb.manager.DataSourceType;
 import org.replicadb.manager.JdbcDrivers;
 import org.replicadb.manager.SqlManager;
 import org.replicadb.manager.util.BandwidthThrottling;
+import org.replicadb.manager.util.WatermarkBinder;
 
 import java.io.IOException;
 import java.sql.Array;
@@ -93,6 +94,7 @@ public class Db2Manager extends SqlManager {
         String allColumns = this.options.getSourceColumns() == null ? "*" : this.options.getSourceColumns();
 
         String baseQuery;
+        Object watermarkBindValue = null;
         if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
             baseQuery = "SELECT * FROM (" + options.getSourceQuery() + ") AS SRC";
         } else {
@@ -100,10 +102,16 @@ public class Db2Manager extends SqlManager {
             if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
                 baseQuery = baseQuery + " WHERE " + options.getSourceWhere();
             }
+            if (options.getIncrementalWatermarkColumn() != null && options.getIncrementalWatermarkValue() != null) {
+                watermarkBindValue = WatermarkBinder.convertToBoundValue(options.getIncrementalWatermarkValue(),
+                    WatermarkBinder.resolveColumnType(options.getSourceColumnDescriptors(), options.getIncrementalWatermarkColumn()));
+                baseQuery = baseQuery + (baseQuery.contains(" WHERE ") ? " AND " : " WHERE ")
+                    + escapeColName(options.getIncrementalWatermarkColumn()) + " > ?";
+            }
         }
 
         if (this.options.getJobs() == 1) {
-            return super.execute(baseQuery);
+            return watermarkBindValue != null ? super.execute(baseQuery, watermarkBindValue) : super.execute(baseQuery);
         }
 
         PartitionProjection partitionProjection = resolvePartitionProjection(baseQuery, allColumns);
@@ -117,7 +125,7 @@ public class Db2Manager extends SqlManager {
             + partitionProjection.partitionAlias + " = " + nThread;
 
         LOG.debug("{}: Reading table with command: {}", Thread.currentThread().getName(), sqlCmd);
-        return super.execute(sqlCmd);
+        return watermarkBindValue != null ? super.execute(sqlCmd, watermarkBindValue) : super.execute(sqlCmd);
     }
 
     private PartitionProjection resolvePartitionProjection(String baseQuery, String sourceColumns) throws SQLException {

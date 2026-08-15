@@ -29,6 +29,8 @@ public class ToolOptions {
     private String sourceWhere;
     private String sourceQuery;
     private String sourceFileFormat;
+    private String incrementalWatermarkColumn;
+    private String incrementalWatermarkValue;
 
     private String sinkConnect;
     private String sinkUser;
@@ -89,6 +91,8 @@ public class ToolOptions {
         copy.sourceWhere = sourceWhere;
         copy.sourceQuery = sourceQuery;
         copy.sourceFileFormat = sourceFileFormat;
+        // incrementalWatermarkColumn/incrementalWatermarkValue are never copied: validateIncrementalWatermarkOptions()
+        // rejects combining them with replication.table.* entries, so a replication-table copy never needs them.
         copy.sinkConnect = sinkConnect;
         copy.sinkUser = sinkUser;
         copy.sinkPassword = sinkPassword;
@@ -240,6 +244,24 @@ public class ToolOptions {
                         .desc("Source database WHERE clause to use during extraction")
                         .hasArg()
                         .argName("where clause")
+                        .build()
+        );
+
+        options.addOption(
+                Option.builder()
+                        .longOpt("incremental-watermark-column")
+                        .desc("Source database column to use as the incremental watermark. Only valid with --mode incremental.")
+                        .hasArg()
+                        .argName("column-name")
+                        .build()
+        );
+
+        options.addOption(
+                Option.builder()
+                        .longOpt("incremental-watermark-value")
+                        .desc("Last committed watermark value; rows with a watermark column value greater than this are replicated. Absent on the first run replicates everything.")
+                        .hasArg()
+                        .argName("value")
                         .build()
         );
 
@@ -543,6 +565,8 @@ public class ToolOptions {
             setSourceTableNotNull(line.getOptionValue("source-table"));
             setSourceUserNotNull(line.getOptionValue("source-user"));
             setSourceWhereNotNull(line.getOptionValue("source-where"));
+            setIncrementalWatermarkColumnNotNull(line.getOptionValue("incremental-watermark-column"));
+            setIncrementalWatermarkValueNotNull(line.getOptionValue("incremental-watermark-value"));
             setJobsNotNull(line.getOptionValue("jobs"));
             setFetchSizeNotNull(line.getOptionValue("fetch-size"));
             setBandwidthThrottlingNotNull(line.getOptionValue("bandwidth-throttling"));
@@ -553,6 +577,7 @@ public class ToolOptions {
             setSinkFileFormatNotNull(line.getOptionValue("sink-file-format"));
 
             validateReplicationTableOptions(line);
+            validateIncrementalWatermarkOptions();
 
             //Check for required values
             if (!checkRequiredValues()) throw new IllegalArgumentException("Missing any of the required parameters:" +
@@ -634,6 +659,23 @@ public class ToolOptions {
         }
     }
 
+    private void validateIncrementalWatermarkOptions() {
+        if (hasValue(incrementalWatermarkValue) && !hasValue(incrementalWatermarkColumn)) {
+            throw new IllegalArgumentException(
+                    "incremental-watermark-value cannot be used without incremental-watermark-column.");
+        }
+        if (hasValue(incrementalWatermarkColumn)) {
+            if (!ReplicationMode.INCREMENTAL.getModeText().equals(mode)) {
+                throw new IllegalArgumentException(
+                        "incremental-watermark-column is only supported with --mode incremental.");
+            }
+            if (hasReplicationTables()) {
+                throw new IllegalArgumentException(
+                        "incremental-watermark-column cannot be used with replication.table.* entries.");
+            }
+        }
+    }
+
     public String getVersion() {
         return ToolOptions.class.getPackage().getImplementationVersion();
     }
@@ -696,6 +738,8 @@ public class ToolOptions {
         setSourceTable(prop.getProperty("source.table"));
         setSourceUser(prop.getProperty("source.user"));
         setSourceWhere(prop.getProperty("source.where"));
+        setIncrementalWatermarkColumn(prop.getProperty("incremental.watermark.column"));
+        setIncrementalWatermarkValue(prop.getProperty("incremental.watermark.value"));
         setJobs(prop.getProperty("jobs"));
         setFetchSize(prop.getProperty("fetch.size"));
         setBandwidthThrottling(prop.getProperty("bandwidth.throttling"));
@@ -838,6 +882,32 @@ public class ToolOptions {
     public void setSourceWhereNotNull(String sourceWhere) {
         if (sourceWhere != null && !sourceWhere.isEmpty())
             this.sourceWhere = sourceWhere;
+    }
+
+    public String getIncrementalWatermarkColumn() {
+        return incrementalWatermarkColumn;
+    }
+
+    public void setIncrementalWatermarkColumn(String incrementalWatermarkColumn) {
+        this.incrementalWatermarkColumn = incrementalWatermarkColumn;
+    }
+
+    public void setIncrementalWatermarkColumnNotNull(String incrementalWatermarkColumn) {
+        if (incrementalWatermarkColumn != null && !incrementalWatermarkColumn.isEmpty())
+            this.incrementalWatermarkColumn = incrementalWatermarkColumn;
+    }
+
+    public String getIncrementalWatermarkValue() {
+        return incrementalWatermarkValue;
+    }
+
+    public void setIncrementalWatermarkValue(String incrementalWatermarkValue) {
+        this.incrementalWatermarkValue = incrementalWatermarkValue;
+    }
+
+    public void setIncrementalWatermarkValueNotNull(String incrementalWatermarkValue) {
+        if (incrementalWatermarkValue != null && !incrementalWatermarkValue.isEmpty())
+            this.incrementalWatermarkValue = incrementalWatermarkValue;
     }
 
     public String getSourceQuery() {

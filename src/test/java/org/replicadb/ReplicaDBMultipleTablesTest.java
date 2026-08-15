@@ -21,6 +21,7 @@ import java.util.concurrent.Future;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ReplicaDBMultipleTablesTest {
@@ -125,6 +126,23 @@ class ReplicaDBMultipleTablesTest {
         assertEquals(0, ReplicaDB.processReplica(options, managerFactory));
 
         assertTrue(managerFactory.createdTableNames().isEmpty());
+    }
+
+    @Test
+    void incrementalWatermarkColumnWithReplicationTableEntriesThrows() throws IOException {
+        Path optionsFile = Files.createTempFile("replicadb-multiple-tables-watermark-", ".properties");
+        Files.writeString(optionsFile, String.join(System.lineSeparator(),
+                "mode=incremental",
+                "jobs=1",
+                "source.connect=jdbc:postgresql://source",
+                "sink.connect=jdbc:postgresql://sink",
+                "incremental.watermark.column=c_integer",
+                "replication.table.1.source=customers",
+                "replication.table.1.sink=customer_copy"));
+        optionsFile.toFile().deleteOnExit();
+        String[] args = {"--options-file", optionsFile.toString()};
+
+        assertThrows(IllegalArgumentException.class, () -> new ToolOptions(args));
     }
 
     private static ToolOptions multiTableOptions(String mode) throws Exception {

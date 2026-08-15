@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.util.BandwidthThrottling;
+import org.replicadb.manager.util.WatermarkBinder;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -56,6 +57,7 @@ public class OracleManager extends SqlManager {
         String allColumns = this.options.getSourceColumns() == null ? "*" : this.options.getSourceColumns();
 
         String sqlCmd;
+        Object watermarkBindValue = null;
 
         // Read table with source-query option specified
         if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
@@ -73,6 +75,11 @@ public class OracleManager extends SqlManager {
                     allColumns +
                     " FROM " +
                     escapeTableName(tableName) + " where " + options.getSourceWhere();
+            if (options.getIncrementalWatermarkColumn() != null && options.getIncrementalWatermarkValue() != null) {
+                watermarkBindValue = WatermarkBinder.convertToBoundValue(options.getIncrementalWatermarkValue(),
+                        WatermarkBinder.resolveColumnType(options.getSourceColumnDescriptors(), options.getIncrementalWatermarkColumn()));
+                sqlCmd = sqlCmd + " AND " + escapeColName(options.getIncrementalWatermarkColumn()) + " > ?";
+            }
             if (options.getJobs() == 1)
                 sqlCmd = sqlCmd + " AND 0 = ?";
             else
@@ -91,7 +98,15 @@ public class OracleManager extends SqlManager {
                 LOG.debug("Using flashback query with SCN {}", this.oracleSourceScn);
             }
 
-            if (options.getJobs() == 1)
+            if (options.getIncrementalWatermarkColumn() != null && options.getIncrementalWatermarkValue() != null) {
+                watermarkBindValue = WatermarkBinder.convertToBoundValue(options.getIncrementalWatermarkValue(),
+                        WatermarkBinder.resolveColumnType(options.getSourceColumnDescriptors(), options.getIncrementalWatermarkColumn()));
+                sqlCmd = sqlCmd + " where " + escapeColName(options.getIncrementalWatermarkColumn()) + " > ?";
+                if (options.getJobs() == 1)
+                    sqlCmd = sqlCmd + " AND 0 = ?";
+                else
+                    sqlCmd = sqlCmd + " AND ora_hash(rowid," + (options.getJobs() - 1) + ") = ?";
+            } else if (options.getJobs() == 1)
                 sqlCmd = sqlCmd + " where 0 = ?";
             else
                 sqlCmd = sqlCmd + " where ora_hash(rowid," + (options.getJobs() - 1) + ") = ?";
@@ -100,7 +115,9 @@ public class OracleManager extends SqlManager {
         }
 
         try {
-            return super.execute(sqlCmd, (Object) nThread);
+            return watermarkBindValue != null
+                    ? super.execute(sqlCmd, watermarkBindValue, (Object) nThread)
+                    : super.execute(sqlCmd, (Object) nThread);
         } catch (SQLException e) {
             // Handle flashback-specific errors
             if (e.getErrorCode() == 8181) {

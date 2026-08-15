@@ -12,6 +12,7 @@ import org.postgresql.copy.CopyManager;
 import org.postgresql.jdbc.PgConnection;
 import org.postgresql.util.ByteConverter;
 import org.replicadb.manager.util.BandwidthThrottling;
+import org.replicadb.manager.util.WatermarkBinder;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -288,6 +289,7 @@ public class PostgresqlManager extends SqlManager {
                   offset);
         
         String sqlCmd;
+        Object watermarkBindValue = null;
 
         // Read table with source-query option specified
         if (options.getSourceQuery() != null && !options.getSourceQuery().isEmpty()) {
@@ -308,6 +310,13 @@ public class PostgresqlManager extends SqlManager {
             // Source Where
             if (options.getSourceWhere() != null && !options.getSourceWhere().isEmpty()) {
                 sqlCmd = sqlCmd + " WHERE " + options.getSourceWhere();
+            }
+
+            if (options.getIncrementalWatermarkColumn() != null && options.getIncrementalWatermarkValue() != null) {
+                watermarkBindValue = WatermarkBinder.convertToBoundValue(options.getIncrementalWatermarkValue(),
+                        WatermarkBinder.resolveColumnType(options.getSourceColumnDescriptors(), options.getIncrementalWatermarkColumn()));
+                sqlCmd = sqlCmd + (sqlCmd.contains(" WHERE ") ? " AND " : " WHERE ")
+                        + escapeColName(options.getIncrementalWatermarkColumn()) + " > ?";
             }
 
             sqlCmd = sqlCmd + " OFFSET ? ";
@@ -333,7 +342,9 @@ public class PostgresqlManager extends SqlManager {
                      offset);
             
             // Explicitly call execute(String, Object...) with offset as vararg parameter
-            return super.execute(sqlCmd, new Object[]{offset});
+            return watermarkBindValue != null
+                    ? super.execute(sqlCmd, watermarkBindValue, offset)
+                    : super.execute(sqlCmd, new Object[]{offset});
         } else {
             sqlCmd = sqlCmd + limit;
             
@@ -346,7 +357,9 @@ public class PostgresqlManager extends SqlManager {
                      offset,
                      chunkSize);
             
-            return super.execute(sqlCmd, offset, chunkSize);
+            return watermarkBindValue != null
+                    ? super.execute(sqlCmd, watermarkBindValue, offset, chunkSize)
+                    : super.execute(sqlCmd, offset, chunkSize);
         }
 
     }
