@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -68,6 +69,48 @@ public class JobDefinitionRepository {
     public List<JobDefinition> findAll() {
         String sql = "SELECT " + SELECT_COLUMNS + " FROM job_definition ORDER BY name";
         return jdbcTemplate.query(sql, Map.of(), ROW_MAPPER);
+    }
+
+    public List<JobDefinition> findPage(int page, int size) {
+        validatePage(page, size);
+        String sql = "SELECT " + SELECT_COLUMNS
+                + " FROM job_definition ORDER BY name, id LIMIT :size OFFSET :offset";
+        return jdbcTemplate.query(sql, new MapSqlParameterSource()
+                .addValue("size", size)
+                .addValue("offset", (long) page * size), ROW_MAPPER);
+    }
+
+    public long count() {
+        Long count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM job_definition", Map.of(), Long.class);
+        return count == null ? 0 : count;
+    }
+
+    public JobDefinition update(JobDefinition definition) {
+        String sql = """
+                UPDATE job_definition
+                SET source_connect = :sourceConnect, source_user = :sourceUser,
+                    source_password = :sourcePassword, source_table = :sourceTable,
+                    source_where = :sourceWhere, sink_connect = :sinkConnect,
+                    sink_user = :sinkUser, sink_password = :sinkPassword,
+                    sink_table = :sinkTable, mode = :mode, jobs = :jobs,
+                    incremental_watermark_column = :incrementalWatermarkColumn,
+                    initial_watermark_value = :initialWatermarkValue, updated_at = now()
+                WHERE id = :id
+                """;
+        int updated = jdbcTemplate.update(sql, parameters(definition));
+        if (updated != 1) {
+            throw new NoSuchElementException("JobDefinition not found: " + definition.id());
+        }
+        return findById(definition.id()).orElseThrow();
+    }
+
+    private static void validatePage(int page, int size) {
+        if (page < 0) {
+            throw new IllegalArgumentException("page must not be negative");
+        }
+        if (size < 1) {
+            throw new IllegalArgumentException("size must be positive");
+        }
     }
 
     private Optional<JobDefinition> queryOne(String sql, Map<String, ?> parameters) {

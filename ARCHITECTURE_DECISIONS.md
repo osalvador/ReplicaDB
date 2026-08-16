@@ -12,7 +12,7 @@ The control plane does not resume interrupted work. A run either completes or is
 
 **Date**: August 13, 2026
 **Last decision review**: August 14, 2026
-**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, and Phase 1a (artifact split) implemented; Phase 1b (state layer) pending
+**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), and Phase 1b (state layer) implemented; Phase 1c (REST API, scheduler, security, frontend) pending
 **Owner**: Development Team
 
 ---
@@ -142,6 +142,8 @@ Because runs are never resumed (Decision 3), the safety of a retry depends entir
 
 PostgreSQL is the mandatory state store for the managed `api` and `worker` profiles. It owns job definitions, runs, leases, watermarks, users, permissions, audit events, and scheduler coordination. In direct CLI mode the state store is not used at all. Sentry and application logs are telemetry, not the source of truth for job state. SQLite remains suitable for isolated CLI fixtures or unit tests, but it is not a supported control-plane deployment store.
 
+Phase 1b implements the job-definition and job-run portion of this store: Flyway-versioned `job_definition`/`job_run` tables accessed through Spring JDBC repositories. Leases and heartbeats carry simple single-instance values until Phase 2's distributed-worker rules apply; users, permissions, and audit events remain Phase 1c work.
+
 ### Decision 3: Durable State, No Resume, and Incremental Watermarks
 
 **Status**: APPROVED
@@ -175,6 +177,8 @@ The initial state model supports:
 
 Retries and cancellation requests are state transitions. They must not be inferred from log messages.
 
+Implemented in Phase 1b as the `JobRunStatus` enum, with `JobRunStateMachine` enforcing the legal transitions between them (for example `FAILED → RETRY_SCHEDULED`, never a transition back to `RUNNING` on the same row).
+
 #### No resume
 
 **Status**: APPROVED as an explicit non-feature.
@@ -195,6 +199,8 @@ Oracle       ... WHERE ora_hash(rowid, jobs-1) = ?
 Skipping "already completed" partitions on a second execution would therefore drop rows silently on at least one supported source, with no error and no log entry. Correctness comes from the replication mode instead (see the mode table in Decision 2): `complete-atomic` and `incremental` leave the sink untouched until `postSinkTasks()`, so a full re-execution is safe.
 
 The control plane persists row counters and timings for observability. It must never present them as resumable progress, and no API field may imply that a retry continues where a previous attempt stopped.
+
+Phase 1b's `JobRunRepository.scheduleRetry(...)` implements this precisely: it transitions the failed row to `RETRY_SCHEDULED` and inserts a brand-new `PENDING` row referencing the failed run as `previousRunId` with `attempt` incremented — it never resets the original row back to `RUNNING`.
 
 #### Incremental watermarks
 
@@ -250,6 +256,8 @@ These are decided so that they are not re-litigated per endpoint:
 #### Credentials and secret references
 
 Job definitions must contain configuration references, not passwords, tokens, or credential-bearing connection strings. The reference syntax is the existing environment expansion, `${env:VARIABLE}`, resolved by the executor immediately before building `ToolOptions`. Provider-prefixed references such as `${secret:<provider>/<path>#<key>}` are reserved for a later secret-manager integration and are rejected until that integration exists. A resolved secret never enters the state store, the API responses, the audit log, or a dispatch payload.
+
+Implemented in Phase 1b at the domain model: `JobDefinition`'s validation rejects a `sourcePassword`/`sinkPassword` that is not `null` or a well-formed `${env:VARIABLE}` reference, and rejects a connection string with embedded credentials (URI user-info or a `password=`-style parameter). `JobDefinitionEnvResolver` performs the resolution and explicitly rejects `${secret:...}`.
 
 #### Identity and permissions
 
@@ -396,19 +404,19 @@ Covered by focused JUnit tests (mocked-connection manager unit tests asserting g
 - Populated `ReplicaTaskResult.watermarkCandidate` from `ReplicaTask`, and widened `ReplicaDB.summarize(...)` to reduce all tasks' candidates to one run-level value.
 - Exposed the reduced candidate on `ReplicationExecutionContext.setWatermarkCandidate(...)`/`getWatermarkCandidate()` **only after `executePostTasks()` (staging load + merge) completes without throwing** — a failed run, a cancelled run (either the explicit `ReplicationCancelledException` path or the flag-checked generic-exception path), and every other exception path leave it unset.
 
-Scope boundary: this phase does not persist the watermark anywhere. No `JobDefinition`/`JobRun`/PostgreSQL state store exists yet (Phase 1b). The reduced candidate is exposed only on the in-memory `ReplicationExecutionContext` for a future Phase 1b job-execution service to read and persist; the CLI itself has no mechanism to feed a previous run's committed value back in automatically — the caller (a script, an orchestrator, or Phase 1b) must pass it via `--incremental-watermark-value` on the next invocation.
+Scope boundary at the time of Phase 0-b2: this phase did not persist the watermark anywhere, since no `JobDefinition`/`JobRun`/PostgreSQL state store existed yet. Phase 1b (below) added `JobExecutionService`, which reads the reduced candidate from `ReplicationExecutionContext` and persists it as `JobRun.committedWatermark` after a successful run. The CLI itself still has no mechanism to feed a previous run's committed value back in automatically — a script, an orchestrator, or the Phase 1b execution service must pass it via `--incremental-watermark-value` on the next invocation.
 
 #### Core changes
 
 1. **Watermark injection.** ~~Populate `ReplicaTaskResult.watermarkCandidate`, inject a typed `> :lastWatermark` predicate composed with the existing `$CONDITIONS` partition substitution, and infer the bind type from the source column metadata.~~ Implemented in Phase 0-b2 above.
 
-#### State layer (deferred to Phase 1b)
+#### State layer — IMPLEMENTED IN PHASE 1B
 
-- Introduce `JobDefinition` and `JobRun` domain models. There is no `Checkpoint` entity.
-- Add a persistence layer for job definitions, run states, and watermarks.
-- Define legal state transitions and the claim mechanism, using PostgreSQL row locking rather than application-level optimistic locking.
-- Add an execution service that converts a job definition into `ToolOptions`.
-- Keep `ReplicaDB.processReplica(ToolOptions)` as the compatibility entry point.
+- ~~Introduce `JobDefinition` and `JobRun` domain models. There is no `Checkpoint` entity.~~ Implemented in Phase 1b below.
+- ~~Add a persistence layer for job definitions, run states, and watermarks.~~ Implemented in Phase 1b below.
+- ~~Define legal state transitions and the claim mechanism, using PostgreSQL row locking rather than application-level optimistic locking.~~ Implemented in Phase 1b below.
+- ~~Add an execution service that converts a job definition into `ToolOptions`.~~ Implemented in Phase 1b below.
+- `ReplicaDB.processReplica(ToolOptions)` remains the compatibility entry point; Phase 1b's execution service calls it unchanged.
 
 #### Resources and tools
 
@@ -422,8 +430,8 @@ Scope boundary: this phase does not persist the watermark anywhere. No `JobDefin
 - **Met in Phase 0-a:** Two replications run concurrently in one JVM with independent staging tables and temporary files.
 - **Met in Phase 0-a:** Task results expose row counters and timings, and the executor aggregates them into a run-level summary.
 - **Met in Phase 0-b1:** A cancellation request stops an in-flight replication, including SQL merge and atomic-insert statements, and the run ends in `CANCELLED`, never in `FAILED`, even when a JDBC driver reports the cancelled statement as a plain `SQLException`. SQL Server `BulkCopy` and PostgreSQL `COPY` remain best-effort, and MongoDB's native merge has a pre-merge guard but no active statement to cancel mid-operation.
-- **Met in Phase 0-b2, at the core level:** A failed or cancelled incremental run leaves its previous watermark unchanged (verified: the reduced candidate is never written to `ReplicationExecutionContext` unless `executePostTasks()` succeeds). Persisting that unchanged value across runs is Phase 1b's responsibility once a state store exists.
-- **Met in Phase 0-b2, at the core level:** A successful staging load and merge commit exactly one new watermark, reduced from all parallel tasks, exposed on `ReplicationExecutionContext`. Durable commit to a state store is Phase 1b's responsibility.
+- **Met in Phase 0-b2, at the core level; durably persisted in Phase 1b:** A failed or cancelled incremental run leaves its previous watermark unchanged (verified at the core level: the reduced candidate is never written to `ReplicationExecutionContext` unless `executePostTasks()` succeeds; verified at the state layer: `JobRunRepository.findLastCommittedWatermark(...)` returns the prior `SUCCEEDED` run's value after a `FAILED` or `CANCELLED` run).
+- **Met in Phase 0-b2, at the core level; durably persisted in Phase 1b:** A successful staging load and merge commit exactly one new watermark, reduced from all parallel tasks, exposed on `ReplicationExecutionContext` and persisted by `JobExecutionService` as `JobRun.committedWatermark`.
 - A retry can identify the previous run and attempt number, and never claims to resume it.
 - CLI behavior and existing `ToolOptions` configuration remain compatible, including multi-table options files.
 
@@ -440,7 +448,21 @@ Delivered as the standalone `replicadb-server` sibling Maven project:
 - The server skeleton excludes inherited MongoDB auto-configuration until the metadata state layer exists, so startup does not require an external database.
 - CI builds and tests the server module after installing the CLI artifact; the release workflow uploads its unreleased `0.1.0-SNAPSHOT` jar as a separate build artifact rather than publishing it with the CLI release assets.
 
-The next slice is **Phase 1b: State layer**, covering `JobDefinition`/`JobRun`, Flyway migrations, PostgreSQL persistence, row-locking claims, and the execution service. REST resources, scheduling, security, and the frontend remain pending after Phase 1a.
+The next slice, **Phase 1b: State layer**, is implemented below. The slice after that, **Phase 1c**, covers REST resources, scheduling, security, and the frontend, all of which remain pending.
+
+#### Phase 1b: State layer — IMPLEMENTED
+
+Delivered as additions to `replicadb-server` plus one small, additive core change, covered by focused JUnit unit tests and Testcontainers-backed PostgreSQL integration tests:
+
+- **Domain**: `JobDefinition` and `JobRun` Java records under `org.replicadb.server.job.domain`. `JobDefinition` reuses the existing public `org.replicadb.cli.ReplicationMode` enum instead of duplicating it, and its compact constructor enforces Decision 1's one-source/sink-table-pair rule, a positive `jobs` value, and Decision 4's credential-reference rule (`sourcePassword`/`sinkPassword` must be `null` or `${env:VARIABLE}`, and connection strings may not embed credentials). `JobRunStatus` is the 7-value enum from Decision 3, with `isTerminal()` and `fromReplicaExitCode(int)` mapping `ReplicaDB.processReplica`'s `0`/`1`/`2` to `SUCCEEDED`/`FAILED`/`CANCELLED`. `JobRunStateMachine.assertLegalTransition(from, to)` enforces the transition table from Decision 3.
+- **Persistence**: Forward-only Flyway migrations `V1__create_job_definition.sql` and `V2__create_job_run.sql` create the metadata schema, including `job_run`'s `executor_identity`/`lease_until`/`heartbeat_at` columns (populated with simple single-instance values now, ready for Phase 2's lease rules without a later `ALTER TABLE`). `JobDefinitionRepository` and `JobRunRepository` use `NamedParameterJdbcTemplate` (Spring JDBC, not JPA). `JobRunRepository.claimNextPending(executorIdentity, leaseDuration)` runs a `SELECT ... FOR UPDATE SKIP LOCKED` followed by a conditional `UPDATE` in one transaction — real PostgreSQL row locking, not application-level optimistic locking. `scheduleRetry(failedRunId)` implements Decision 3's "no resume" rule as described above. `findLastCommittedWatermark(jobDefinitionId)` returns the last `SUCCEEDED` run's watermark, falling back to the job definition's `initialWatermarkValue`.
+- **Execution service**: `JobDefinitionEnvResolver` resolves `${env:VARIABLE}` references (rejecting `${secret:...}` explicitly, per Decision 4) immediately before `ToolOptionsArgsBuilder` converts the resolved `JobDefinition` into the `String[]` CLI-style args that `ToolOptions`'s only public constructor accepts — this is the concrete mechanism behind "converts a job definition into `ToolOptions`". `JobExecutionService.executeNextPending(executorIdentity)` claims a run, builds `ToolOptions`, calls the unchanged `ReplicaDB.processReplica(options)`, maps the exit code via `JobRunStatus.fromReplicaExitCode(...)`, and persists `rowsProcessed`/`durationMillis` for every outcome and `committedWatermark` only on success. It never logs the resolved connect strings, passwords, or the built args array.
+- **Core widening**: `ReplicationExecutionContext` gained `rowsProcessed`/`durationMillis` accessors, populated unconditionally by `ReplicaDB.executeSingleReplication` right after the parallel tasks finish — unlike the watermark candidate, which stays conditional on `executePostTasks()` succeeding. This is what lets `JobExecutionService` persist row counters and timings for a `FAILED`/`CANCELLED` run, not only a `SUCCEEDED` one.
+- **Runtime alignment**: `replicadb-server` now depends on `spring-boot-starter-log4j2` instead of Spring Boot's default logging bridge, because ReplicaDB core's Sentry initialization requires a Log4j2 `LoggerContext`; without this, `ReplicaDB.processReplica(...)` fails immediately when invoked from the managed runtime.
+- **Testing**: Testcontainers PostgreSQL via Spring Boot's `@ServiceConnection` backs the full-context and repository tests (including the two Phase 1a context tests, updated to boot with the now-mandatory `DataSource`); a dependency-light `FlywayMigrationTest` validates the migrations with a raw `PostgreSQLContainer` before any Spring wiring exists; `JobExecutionServiceIT` exercises a real end-to-end `incremental` run against SQLite source/sink fixture files, asserting the persisted `committedWatermark` and that a failed run leaves the prior committed value unchanged.
+- **CI**: The `server` job in `CT_Push.yml` now sets the same `TESTCONTAINERS_CONFIG_FILE`/`DOCKER_HOST`/`TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE` env and `docker info` check as the `integration`/`non_integration` jobs, since its tests now require Docker.
+
+Known limitations, accepted for this phase and not yet addressed: `JobRun.errorMessage` on `FAILED` is a generic message, since `processReplica(ToolOptions)` does not expose the underlying exception (except when `ToolOptions` construction itself throws); no REST endpoint, Quartz scheduler, or security triggers `JobExecutionService`/`scheduleRetry` yet, both are exercised only from tests; `executor_identity`/`lease_until`/`heartbeat_at` use simple single-instance values until Phase 2's distributed-worker lease rules apply; no `mode_warning` column exists yet for Decision 2's `complete`-mode API warning, since no API exists to surface it. See `.ai/archive/phase-1b-state-layer.plan.md` for the full implementation plan and execution retrospective.
 
 #### Spring Boot modules
 
@@ -707,14 +729,14 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 ### Priority 1: Core and State Contract
 
 - [x] Replace the static staging-name and temp-file state with a per-run execution context. **Completed in Phase 0-a (`c228ddc`).**
-- [x] Widen the `ReplicaTask` result to carry counters, timings, and a watermark candidate. **Counters and timings completed in Phase 0-a (`c228ddc`); watermark population remains pending.**
+- [x] Widen the `ReplicaTask` result to carry counters, timings, and a watermark candidate. **Counters and timings completed in Phase 0-a (`c228ddc`); watermark candidate population completed in Phase 0-b2.**
 - [x] Add cancellation: statement handles, interrupt checks, cancellable futures. **Implemented in Phase 0-b1 (commit `4dd4cb5`).**
 - [x] Implement watermark injection with type inference from source column metadata. **Implemented in Phase 0-b2.**
-- [ ] Define `JobDefinition` and `JobRun` persistence models and Flyway migrations.
-- [ ] Define legal state transitions, retry behavior, and idempotency rules.
-- [ ] Split the build into the `replicadb` and `replicadb-server` artifacts.
-- [ ] Preserve CLI behavior, including multi-table options files.
-- [ ] Add focused tests for concurrent runs, cancellation, and watermark advancement.
+- [x] Define `JobDefinition` and `JobRun` persistence models and Flyway migrations. **Completed in Phase 1b** (`JobDefinition`/`JobRun` records, `V1__create_job_definition.sql`, `V2__create_job_run.sql`).
+- [x] Define legal state transitions, retry behavior, and idempotency rules. **Completed in Phase 1b** (`JobRunStateMachine`, `JobRunRepository.claimNextPending(...)`/`scheduleRetry(...)`).
+- [x] Split the build into the `replicadb` and `replicadb-server` artifacts. **Completed in Phase 1a.**
+- [x] Preserve CLI behavior, including multi-table options files. **Continuously verified**; the Phase 1b state-layer additions do not touch `ToolOptions`'s CLI/options-file contract.
+- [x] Add focused tests for concurrent runs, cancellation, and watermark advancement. **Completed across Phase 0-a, Phase 0-b1, and Phase 0-b2.**
 
 ### Priority 2: Monolithic Control Plane
 
@@ -722,14 +744,14 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 - [ ] Reject multi-table definitions at the API boundary with an explicit error.
 - [ ] Add Quartz scheduling with an explicit timezone per job.
 - [ ] Add asynchronous execution and monitoring.
-- [ ] Add run history, operational counters, persisted log excerpts, and error details.
+- [ ] Add run history, operational counters, persisted log excerpts, and error details. *(Run history plus row counters and durations are already persisted per `JobRun` since Phase 1b; log excerpts and API-facing error detail remain pending.)*
 - [ ] Return and persist the indeterminate-sink warning on cancellation.
 - [ ] Add local-user authentication with Spring Security and PostgreSQL sessions.
 - [ ] Add global roles `ADMIN`, `OPERATOR`, and `VIEWER`.
 - [ ] Add per-job ACLs for `VIEW`, `EDIT`, `EXECUTE`, and `CANCEL`.
 - [ ] Add the planning and monitoring frontend to the `replicadb-server` package.
 - [ ] Add audit events, retention purge jobs, and secure bootstrap of the first administrator.
-- [ ] Keep credentials outside persisted job payloads.
+- [x] Keep credentials outside persisted job payloads. **Enforced in Phase 1b**: `JobDefinition`'s compact constructor rejects a `sourcePassword`/`sinkPassword` that is not `null` or an `${env:VARIABLE}` reference, and rejects connection strings with embedded credentials, so `job_definition` never holds a literal secret.
 
 ### Priority 3: Optional Distributed Deployment
 
@@ -755,14 +777,14 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 ### Phase 1
 
 - CLI invocation, exit codes, and existing configuration remain compatible, verified by the existing CLI test suite with zero modifications.
-- The `replicadb` artifact contains no Spring Boot classes.
-- A failed or cancelled run never advances its incremental watermark.
-- Restarting the control plane does not lose persisted run state.
+- The `replicadb` artifact contains no Spring Boot classes. **Met** — verified by `NoSpringBootOnClasspathTest`.
+- A failed or cancelled run never advances its incremental watermark. **Met at the state layer since Phase 1b** — `JobRunRepository.findLastCommittedWatermark(...)` returns the prior `SUCCEEDED` run's value after a `FAILED`/`CANCELLED` run.
+- Restarting the control plane does not lose persisted run state. **Met since Phase 1b** for the persisted `JobDefinition`/`JobRun` rows themselves; a process restart mid-execution still leaves that one run `RUNNING` until Phase 2's lease-expiry recovery reclaims it.
 - Monitoring exposes status, counters, timestamps, and failure details.
 - Unauthorized users cannot view, edit, execute, or cancel jobs.
 - Administrators can manage users, roles, job permissions, and audit history.
 - The frontend can create, schedule, execute, and monitor jobs through the API.
-- Credentials are absent from job payloads, state records, API responses, and logs.
+- Credentials are absent from job payloads, state records, API responses, and logs. **Met for state records since Phase 1b** — `JobDefinition` rejects a literal password or a credential-bearing connection string; API responses and logs remain to be verified once Phase 1c exists.
 - A replayed `Idempotency-Key` never produces a second run.
 
 ### Phase 2
@@ -784,7 +806,9 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 - Phase 0-a removed the static staging-name and temporary-file state. Each `ToolOptions` owns one `ReplicationExecutionContext`; a multi-table copy receives a fresh context.
 - `ReplicaTask` now returns `ReplicaTaskResult` with row counts, timings, and a populated watermark candidate; `executeReplicationTasks` reduces those candidates to one run-level value.
 - Phase 0-b1 added the per-run cancellation token, active-statement registry, and cancellable futures described above; SQL Server `BulkCopy` and PostgreSQL `COPY` cancellation remain best-effort, and MongoDB/Kafka/ORC lack dedicated mid-stream cancellation tests.
-- Phase 0-b2 added watermark predicate injection to the 8 JDBC-based managers (Denodo source-only); MongoDB/Kafka/S3/file managers do not support it. The reduced watermark candidate is exposed on `ReplicationExecutionContext` only after a successful merge; it is not persisted anywhere until Phase 0-c adds the state layer.
+- Phase 0-b2 added watermark predicate injection to the 8 JDBC-based managers (Denodo source-only); MongoDB/Kafka/S3/file managers do not support it. The reduced watermark candidate is exposed on `ReplicationExecutionContext` only after a successful merge.
+- Phase 1b added `ReplicationExecutionContext.getRowsProcessed()`/`getDurationMillis()`, populated unconditionally right after the parallel tasks finish (unlike the watermark candidate, which stays conditional on merge success), so `JobExecutionService` can persist row counters and timings for every outcome, not only success.
+- `ReplicaDB.processReplica(ToolOptions)` still returns only an exit code (`0`/`1`/`2`); it does not expose the underlying exception. `JobRun.errorMessage` on `FAILED` is therefore a generic message except when `ToolOptions` construction itself throws — widening the core's error contract remains open for a later phase.
 - Each parallel task owns its source and sink managers; the state layer must not assume shared JDBC connections.
 - Manager capabilities differ by source, sink, and replication mode.
 - Multi-table replication stops at the first failure and leaves earlier tables applied; it is a CLI-only capability.
@@ -801,7 +825,7 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 
 ### Deployment
 
-- PostgreSQL is mandatory for the `api` and `worker` profiles; the CLI does not use it.
+- PostgreSQL is mandatory for the `api` and `worker` profiles; the CLI does not use it. **Implemented in Phase 1b**: `application-api.yml` wires `spring.datasource`/`spring.flyway`, and the `job_definition`/`job_run` schema is versioned by Flyway migrations.
 - SQLite is limited to isolated CLI fixtures or unit tests.
 - The CLI remains available in every implementation phase and deployment model.
 - PostgreSQL `LISTEN/NOTIFY` is a wake-up signal, not a durable queue; polling recovery is mandatory.
@@ -833,6 +857,17 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 - `src/main/java/org/replicadb/manager/SqlManager.java` - Staging, merge, atomic swap, and cancellation-aware statement lifecycle.
 - `src/main/java/org/replicadb/manager/ConnManager.java` - Per-run staging-table name access and cancellation helpers.
 - `src/main/java/org/replicadb/manager/file/FileManager.java` - Per-run temporary-file access and cancellation helper.
+- `replicadb-server/src/main/java/org/replicadb/server/job/domain/JobDefinition.java` - Validated job definition record (one source/sink table pair, `${env:VARIABLE}`-only credential references).
+- `replicadb-server/src/main/java/org/replicadb/server/job/domain/JobRun.java` - Job run record: status, attempt, lease/heartbeat, counters, committed watermark, error message.
+- `replicadb-server/src/main/java/org/replicadb/server/job/domain/JobRunStatus.java` - The 7 job-run states, `isTerminal()`, and `fromReplicaExitCode(...)`.
+- `replicadb-server/src/main/java/org/replicadb/server/job/domain/JobRunStateMachine.java` - Legal `JobRun` state transitions.
+- `replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobDefinitionRepository.java` - Spring JDBC persistence for job definitions.
+- `replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobRunRepository.java` - Row-locking claim (`FOR UPDATE SKIP LOCKED`), state transitions, `scheduleRetry(...)`, and watermark lookup.
+- `replicadb-server/src/main/java/org/replicadb/server/job/execution/JobDefinitionEnvResolver.java` - `${env:VARIABLE}` resolution; rejects `${secret:...}`.
+- `replicadb-server/src/main/java/org/replicadb/server/job/execution/ToolOptionsArgsBuilder.java` - Converts a `JobDefinition` into the `String[]` args `ToolOptions` expects.
+- `replicadb-server/src/main/java/org/replicadb/server/job/execution/JobExecutionService.java` - Claims a run, invokes `ReplicaDB.processReplica(ToolOptions)`, and persists the outcome.
+- `replicadb-server/src/main/resources/db/migration/V1__create_job_definition.sql`, `V2__create_job_run.sql` - Forward-only Flyway migrations for the metadata schema.
+- `.ai/archive/phase-1b-state-layer.plan.md` - Phase 1b implementation plan and execution retrospective.
 - `openspec/` - Change proposals and specs for engine-level behavior; this document governs product direction, not individual engine changes.
 - `.ai/context/execution.md` - Current execution and lifecycle constraints.
 - `.ai/context/operations.md` - Current runtime, telemetry, and deployment constraints.
@@ -846,6 +881,6 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 
 ---
 
-**Document Version**: 2.2
-**Last Updated**: August 15, 2026
-**Next Review**: Before implementation of Phase 0-c (`JobDefinition`/`JobRun` persistence and the state layer)
+**Document Version**: 2.3
+**Last Updated**: August 16, 2026
+**Next Review**: Before implementation of Phase 1c (REST API, scheduler, security, and frontend)

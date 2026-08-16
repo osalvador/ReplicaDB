@@ -11,6 +11,7 @@ import org.replicadb.server.job.persistence.JobRunRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.function.Consumer;
 
 @Service
 public class JobExecutionService {
@@ -33,10 +34,10 @@ public class JobExecutionService {
     public Optional<JobRunOutcome> executeNextPending(String executorIdentity) {
         Optional<JobRun> claimed = jobRunRepository.claimNextPending(executorIdentity,
                 java.time.Duration.ofMinutes(5));
-        return claimed.map(this::executeClaimedRun);
+        return claimed.map(run -> executeClaimedRun(run, options -> { }));
     }
 
-    private JobRunOutcome executeClaimedRun(JobRun run) {
+    public JobRunOutcome executeClaimedRun(JobRun run, Consumer<ToolOptions> onStarted) {
         ToolOptions options = null;
         try {
             JobDefinition definition = jobDefinitionRepository.findById(run.jobDefinitionId())
@@ -47,6 +48,7 @@ public class JobExecutionService {
             String[] arguments = argumentsBuilder.build(definition, previousWatermark,
                     environmentResolver::resolve);
             options = new ToolOptions(arguments);
+                onStarted.accept(options);
 
             int exitCode = ReplicaDB.processReplica(options);
             JobRunStatus status = JobRunStatus.fromReplicaExitCode(exitCode);

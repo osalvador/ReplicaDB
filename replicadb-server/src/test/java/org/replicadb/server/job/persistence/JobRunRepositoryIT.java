@@ -70,9 +70,10 @@ class JobRunRepositoryIT {
 
     @Test
     void skipsALockedPendingRowAndClaimsTheNextOne() throws Exception {
-        JobDefinition definition = jobDefinitionRepository.insert(definition());
-        JobRun first = jobRunRepository.insertPending(definition.id(), null, 1);
-        JobRun second = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobDefinition firstDefinition = jobDefinitionRepository.insert(definition());
+        JobDefinition secondDefinition = jobDefinitionRepository.insert(definition());
+        JobRun first = jobRunRepository.insertPending(firstDefinition.id(), null, 1);
+        JobRun second = jobRunRepository.insertPending(secondDefinition.id(), null, 1);
 
         try (Connection connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
@@ -109,14 +110,144 @@ class JobRunRepositoryIT {
 
     @Test
     void rejectsIllegalTransitionAfterCancellation() {
-        JobDefinition definition = jobDefinitionRepository.insert(definition());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobDefinition pendingDefinition = jobDefinitionRepository.insert(definition());
+        JobDefinition runningDefinition = jobDefinitionRepository.insert(definition());
+        JobRun pending = jobRunRepository.insertPending(pendingDefinition.id(), null, 1);
+        jobRunRepository.insertPending(runningDefinition.id(), null, 1);
         JobRun running = jobRunRepository.claimNextPending("worker-1", Duration.ofMinutes(5)).orElseThrow();
 
         jobRunRepository.markCancelled(running.id(), 4, 12);
 
         assertThrows(IllegalStateException.class,
                 () -> jobRunRepository.markSucceeded(pending.id(), 4, 12, "42"));
+    }
+
+    @Test
+    void claimsOnlyTheRequestedPendingRun() {
+        JobDefinition firstDefinition = jobDefinitionRepository.insert(definition());
+        JobDefinition secondDefinition = jobDefinitionRepository.insert(definition());
+        JobRun first = jobRunRepository.insertPending(firstDefinition.id(), null, 1);
+        JobRun second = jobRunRepository.insertPending(secondDefinition.id(), null, 1);
+
+        JobRun claimed = jobRunRepository.claimById(second.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
+
+        assertEquals(second.id(), claimed.id());
+        assertEquals(JobRunStatus.PENDING,
+                jobRunRepository.findById(first.id()).orElseThrow().status());
+        assertEquals(JobRunStatus.RUNNING, claimed.status());
+    }
+
+    @Test
+    void returnsEmptyWhenRequestedRunIsNotPendingOrDoesNotExist() {
+        JobDefinition definition = jobDefinitionRepository.insert(definition());
+        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun running = jobRunRepository.claimById(pending.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
+
+        assertTrue(jobRunRepository.claimById(running.id(), "worker-2", Duration.ofMinutes(5)).isEmpty());
+        assertTrue(jobRunRepository.claimById(UUID.randomUUID(), "worker-2", Duration.ofMinutes(5)).isEmpty());
+    }
+
+    @Test
+    void reportsOnlyActiveStatuses() {
+        JobDefinition definition = jobDefinitionRepository.insert(definition());
+        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        assertTrue(jobRunRepository.hasActiveRun(definition.id()));
+
+        JobRun running = jobRunRepository.claimById(pending.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
+        assertTrue(jobRunRepository.hasActiveRun(definition.id()));
+        jobRunRepository.markCancelRequested(running.id());
+        assertTrue(jobRunRepository.hasActiveRun(definition.id()));
+        jobRunRepository.markCancelled(running.id(), 0, 0);
+        assertTrue(!jobRunRepository.hasActiveRun(definition.id()));
+    }
+
+    @Test
+    void rejectsConcurrentPendingRunsForOneDefinitionButAllowsAnotherAfterTerminalState() throws Exception {
+        JobDefinition definition = jobDefinitionRepository.insert(definition());
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            var start = new java.util.concurrent.CountDownLatch(1);
+            Future<?> first = executor.submit(() -> insertAfter(start, definition.id()));
+            Future<?> second = executor.submit(() -> insertAfter(start, definition.id()));
+            start.countDown();
+
+            int successes = 0;
+            int failures = 0;
+            for (Future<?> future : new Future<?>[]{first, second}) {
+                try {
+                    future.get(2, TimeUnit.SECONDS);
+                    successes++;
+                } catch (java.util.concurrent.ExecutionException exception) {
+                    assertTrue(exception.getCause() instanceof IllegalStateException);
+                    failures++;
+                }
+            }
+            assertEquals(1, successes);
+            assertEquals(1, failures);
+
+            JobRun running = jobRunRepository.claimNextPending("worker-1", Duration.ofMinutes(5)).orElseThrow();
+            jobRunRepository.markSucceeded(running.id(), 0, 0, null);
+            assertTrue(!jobRunRepository.hasActiveRun(definition.id()));
+            jobRunRepository.insertPending(definition.id(), null, 2);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void markCancelRequestedIsIdempotentAfterTerminalTransition() {
+        JobDefinition definition = jobDefinitionRepository.insert(definition());
+        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun running = jobRunRepository.claimById(pending.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
+        jobRunRepository.markSucceeded(running.id(), 0, 0, null);
+
+        jobRunRepository.markCancelRequested(running.id());
+        assertEquals(JobRunStatus.SUCCEEDED, jobRunRepository.findById(running.id()).orElseThrow().status());
+    }
+
+    @Test
+    void cancelsAPendingRunWithoutClaimingIt() {
+        JobDefinition definition = jobDefinitionRepository.insert(definition());
+        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+
+        jobRunRepository.markPendingCancelled(pending.id());
+
+        JobRun cancelled = jobRunRepository.findById(pending.id()).orElseThrow();
+        assertEquals(JobRunStatus.CANCELLED, cancelled.status());
+        assertEquals(0, cancelled.rowsProcessed());
+    }
+
+    @Test
+    void paginatesRunsAndFiltersByDefinitionAndStatus() {
+        UUID filteredDefinitionId = null;
+        for (int index = 0; index < 5; index++) {
+            JobDefinition definition = jobDefinitionRepository.insert(definition());
+            if (index == 0) {
+                filteredDefinitionId = definition.id();
+            }
+            JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+            JobRun running = jobRunRepository.claimById(pending.id(), "worker-" + index,
+                    Duration.ofMinutes(5)).orElseThrow();
+            if (index % 2 == 0) {
+                jobRunRepository.markSucceeded(running.id(), index, index, null);
+            } else {
+                jobRunRepository.markFailed(running.id(), index, index, "failure");
+            }
+        }
+
+        assertEquals(5, jobRunRepository.count(null, null));
+        assertEquals(2, jobRunRepository.findPage(null, JobRunStatus.FAILED, 0, 2).size());
+        assertEquals(3, jobRunRepository.count(null, JobRunStatus.SUCCEEDED));
+        assertEquals(1, jobRunRepository.count(filteredDefinitionId, null));
+
+        java.util.List<JobRun> firstPage = jobRunRepository.findPage(null, null, 0, 2);
+        java.util.List<JobRun> secondPage = jobRunRepository.findPage(null, null, 1, 2);
+        java.util.List<JobRun> thirdPage = jobRunRepository.findPage(null, null, 2, 2);
+        assertEquals(2, firstPage.size());
+        assertEquals(2, secondPage.size());
+        assertEquals(1, thirdPage.size());
+        assertEquals(5, java.util.stream.Stream.of(firstPage, secondPage, thirdPage)
+                .mapToInt(java.util.List::size).sum());
     }
 
     @Test
@@ -167,5 +298,15 @@ class JobRunRepositoryIT {
                 null, "job-" + UUID.randomUUID(), "jdbc:source", null, "${env:SOURCE_PASSWORD}",
                 "source_table", null, "jdbc:sink", null, "${env:SINK_PASSWORD}", "sink_table",
                 ReplicationMode.INCREMENTAL, 1, "updated_at", "0", null, null);
+    }
+
+    private void insertAfter(java.util.concurrent.CountDownLatch start, UUID definitionId) {
+        try {
+            start.await(2, TimeUnit.SECONDS);
+            jobRunRepository.insertPending(definitionId, null, 1);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(exception);
+        }
     }
 }

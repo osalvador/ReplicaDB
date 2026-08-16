@@ -5,3 +5,7 @@ spring:
     password: ${DB_PASSWORD:}
   flyway:
     enabled: true
+replicadb:
+  server:
+    execution:
+      pool-size: 4
