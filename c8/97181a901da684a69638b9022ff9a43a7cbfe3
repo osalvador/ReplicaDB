@@ -1,0 +1,47 @@
+.ai/archive/phase-1b-state-layer.plan.md
+  s_63b59be7d7c8f7::t_63633f3ca317a2 1-315
+replicadb-server/src/main/java/org/replicadb/server/job/domain/JobRun.java
+  s_63b59be7d7c8f7::t_55cd86213e1519 1-30
+replicadb-server/src/main/java/org/replicadb/server/job/domain/JobRunStateMachine.java
+  s_63b59be7d7c8f7::t_bdead9d13cc331 1-27
+replicadb-server/src/main/java/org/replicadb/server/job/domain/JobRunStatus.java
+  s_63b59be7d7c8f7::t_0f3dd84900a31f 1-24
+replicadb-server/src/main/resources/db/migration/V1__create_job_definition.sql
+  s_63b59be7d7c8f7::t_5ad4fdb01ef3c1 1-20
+replicadb-server/src/main/resources/db/migration/V2__create_job_run.sql
+  s_63b59be7d7c8f7::t_d1b17e38899976 1-24
+replicadb-server/src/test/java/org/replicadb/server/job/domain/JobRunStateMachineTest.java
+  s_63b59be7d7c8f7::t_e813708429886f 1-38
+replicadb-server/src/test/java/org/replicadb/server/job/domain/JobRunStatusTest.java
+  s_63b59be7d7c8f7::t_e3accf2ad9014e 1-34
+replicadb-server/src/test/java/org/replicadb/server/job/domain/JobRunTest.java
+  s_63b59be7d7c8f7::t_674dfc90f249f4 1-28
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/FlywayMigrationTest.java
+  s_63b59be7d7c8f7::t_a2b0338329c0b8 1-29
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/PersistenceDependencyResolutionTest.java
+  s_63b59be7d7c8f7::t_9a51bba9464f0f 1-16
+src/main/java/org/replicadb/ReplicaDB.java
+  s_63b59be7d7c8f7::t_e065a895af83a1 213-214
+src/main/java/org/replicadb/execution/ReplicationExecutionContext.java
+  s_63b59be7d7c8f7::t_22162fc60991e6 24-25,50-65
+src/test/java/org/replicadb/ReplicaDBRunCountersTest.java
+  s_63b59be7d7c8f7::t_883b116341e7ae 1-206
+src/test/java/org/replicadb/execution/ReplicationExecutionContextTest.java
+  s_63b59be7d7c8f7::t_37d81948fe5cc8 31-32,51-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "c897181a901da684a69638b9022ff9a43a7cbfe3",
+  "prompts": {},
+  "sessions": {
+    "s_63b59be7d7c8f7": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "5c0fd674-d583-4925-95df-4c2b40a7c5a1",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
