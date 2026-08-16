@@ -1,0 +1,87 @@
+.ai/archive/phase-1c-1-rest-api-core.plan.md
+  s_526166eb65fab8::t_2945a364908835 1-285
+replicadb-server/pom.xml
+  s_526166eb65fab8::t_e38f0502d33651 62-65,123
+replicadb-server/src/main/java/org/replicadb/server/ReplicaDbServerApplication.java
+  s_526166eb65fab8::t_b581a00667feac 5,8
+replicadb-server/src/main/java/org/replicadb/server/job/api/GlobalExceptionHandler.java
+  s_526166eb65fab8::t_ad90210a27ddb3 1-76
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobDefinitionController.java
+  s_526166eb65fab8::t_d21b3273a44dc1 1-74
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobDefinitionMapper.java
+  s_526166eb65fab8::t_46ea7983132619 1-53
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobDefinitionRequest.java
+  s_526166eb65fab8::t_8e49683ce5039c 1-25
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobDefinitionResponse.java
+  s_526166eb65fab8::t_a6a93428c6f6ab 1-25
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobRunController.java
+  s_526166eb65fab8::t_5a9b5e846e5000 1-192
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobRunResponse.java
+  s_526166eb65fab8::t_15a45d1e5d1b3d 1-33
+replicadb-server/src/main/java/org/replicadb/server/job/api/PageRequestParams.java
+  s_526166eb65fab8::t_f737e6c7418ede 1-13
+replicadb-server/src/main/java/org/replicadb/server/job/api/PageResponse.java
+  s_526166eb65fab8::t_fd2eb17cfed97f 1-10
+replicadb-server/src/main/java/org/replicadb/server/job/execution/IdempotencyCleanupTask.java
+  s_526166eb65fab8::t_127a6d13811e54 1-24
+replicadb-server/src/main/java/org/replicadb/server/job/execution/JobExecutionService.java
+  s_526166eb65fab8::t_4f1425bdaea81f 14,37,40,51,78
+replicadb-server/src/main/java/org/replicadb/server/job/execution/RunExecutionCoordinator.java
+  s_526166eb65fab8::t_b974fe6f8ca571 1-93
+replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobDefinitionRepository.java
+  s_526166eb65fab8::t_1dd59a33c29f96 17,74-115,182
+replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobRunRepository.java
+  s_526166eb65fab8::t_f719994fef013a 9,52-57,62-105,173-199,202,207,255-293,330
+replicadb-server/src/main/java/org/replicadb/server/job/persistence/RunTriggerIdempotencyRepository.java
+  s_526166eb65fab8::t_2210e51d1df823 1-53
+replicadb-server/src/main/resources/application-api.yml
+  s_526166eb65fab8::t_e33605ed674371 8-11
+replicadb-server/src/main/resources/application.yml
+  s_526166eb65fab8::t_2cad6a9f592bd7 12-16
+replicadb-server/src/main/resources/db/migration/V3__add_job_run_active_constraint.sql
+  s_526166eb65fab8::t_86f3c146c5f5ff 1-3
+replicadb-server/src/main/resources/db/migration/V4__create_run_trigger_idempotency.sql
+  s_526166eb65fab8::t_d7139fc4814296 1-9
+replicadb-server/src/test/java/org/replicadb/server/job/api/GlobalExceptionHandlerTest.java
+  s_526166eb65fab8::t_c5b436f1016d3e 1-122
+replicadb-server/src/test/java/org/replicadb/server/job/api/JobDefinitionControllerTest.java
+  s_526166eb65fab8::t_d358f4230c631a 1-181
+replicadb-server/src/test/java/org/replicadb/server/job/api/JobDefinitionMapperTest.java
+  s_526166eb65fab8::t_324a9b2ffab8e6 1-55
+replicadb-server/src/test/java/org/replicadb/server/job/api/JobLifecycleIT.java
+  s_526166eb65fab8::t_e655e39842a98d 1-153
+replicadb-server/src/test/java/org/replicadb/server/job/api/JobRunControllerTest.java
+  s_526166eb65fab8::t_5e1f263c8d29f7 1-331
+replicadb-server/src/test/java/org/replicadb/server/job/api/PageRequestParamsTest.java
+  s_526166eb65fab8::t_70d22f5baf70d9 1-30
+replicadb-server/src/test/java/org/replicadb/server/job/execution/IdempotencyCleanupTaskTest.java
+  s_526166eb65fab8::t_4aec56f04aa3f7 1-32
+replicadb-server/src/test/java/org/replicadb/server/job/execution/JobExecutionServiceIT.java
+  s_526166eb65fab8::t_e05dcd91b35c43 8,30-31,143-166,199
+replicadb-server/src/test/java/org/replicadb/server/job/execution/RunExecutionCoordinatorTest.java
+  s_526166eb65fab8::t_053248f16ebaad 1-173
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/FlywayMigrationTest.java
+  s_526166eb65fab8::t_0b1595c75b8261 25-26,29
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/JobDefinitionRepositoryIT.java
+  s_526166eb65fab8::t_c5e6b10b88b9b1 10,14-16,19,34-41,74-135,142
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/JobRunRepositoryIT.java
+  s_526166eb65fab8::t_457c5e6f73fe83 73-76,113-116,125-252,302-312
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/RunTriggerIdempotencyRepositoryIT.java
+  s_526166eb65fab8::t_4d14327bcc282b 1-131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "24bec4a0a16e4ba7dfa52af88cdb0fd729469a3f",
+  "prompts": {},
+  "sessions": {
+    "s_526166eb65fab8": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "e236fae6-9d6f-44fa-9f30-ecea024746bb",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
