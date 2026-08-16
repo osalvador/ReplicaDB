@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 import org.replicadb.cli.ReplicationMode;
+import org.replicadb.cli.ToolOptions;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobRun;
@@ -26,6 +27,8 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -136,6 +139,30 @@ class JobExecutionServiceIT {
         verify(repository, never()).markFailed(any(), any(Long.class), any(Long.class), anyString());
         verify(repository, never()).markCancelled(any(), any(Long.class), any(Long.class));
     }
+
+        @Test
+        void invokesStartedCallbackWithOptionsBeforeReturningOutcome() throws Exception {
+        Path sourceDatabase = createDatabase("source-callback.db", true, "orders");
+        Path sinkDatabase = createDatabase("sink-callback.db", true, "orders_copy");
+        JobDefinition definition = jobDefinition(sourceDatabase, sinkDatabase,
+            "orders", "orders_copy", ReplicationMode.COMPLETE, null, null);
+        JobDefinition persistedDefinition = jobDefinitionRepository.insert(definition);
+        JobRun pending = jobRunRepository.insertPending(persistedDefinition.id(), null, 1);
+        JobRun claimed = jobRunRepository.claimNextPending("callback-worker", java.time.Duration.ofMinutes(5))
+            .orElseThrow();
+        AtomicInteger callbackCount = new AtomicInteger();
+        AtomicReference<ToolOptions> startedOptions = new AtomicReference<>();
+
+        JobRunOutcome outcome = executionService.executeClaimedRun(claimed, options -> {
+            callbackCount.incrementAndGet();
+            startedOptions.set(options);
+        });
+
+        assertEquals(claimed.id(), outcome.runId());
+        assertEquals(1, callbackCount.get());
+        assertTrue(startedOptions.get() != null);
+        assertEquals(JobRunStatus.SUCCEEDED, jobRunRepository.findById(claimed.id()).orElseThrow().status());
+        }
 
     private Path createDatabase(String filename, boolean createTable, String tableName) throws SQLException {
         Path database = tempDirectory.resolve(filename);

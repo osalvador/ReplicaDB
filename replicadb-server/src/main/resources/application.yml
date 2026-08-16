@@ -10,3 +10,7 @@ management:
     web:
       exposure:
         include: health
+replicadb:
+  server:
+    execution:
+      pool-size: 4
