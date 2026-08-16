@@ -1,0 +1,20 @@
+CREATE TABLE job_definition (
+    id UUID PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    source_connect TEXT NOT NULL,
+    source_user VARCHAR(255),
+    source_password VARCHAR(255),
+    source_table VARCHAR(255) NOT NULL,
+    source_where TEXT,
+    sink_connect TEXT NOT NULL,
+    sink_user VARCHAR(255),
+    sink_password VARCHAR(255),
+    sink_table VARCHAR(255) NOT NULL,
+    mode VARCHAR(32) NOT NULL CHECK (mode IN ('complete', 'incremental', 'complete-atomic')),
+    jobs INTEGER NOT NULL DEFAULT 4 CHECK (jobs > 0),
+    incremental_watermark_column VARCHAR(255),
+    initial_watermark_value TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK (mode = 'incremental' OR incremental_watermark_column IS NULL)
+);

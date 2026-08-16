@@ -21,6 +21,8 @@ public final class ReplicationExecutionContext {
     private final Set<Statement> activeStatements = ConcurrentHashMap.newKeySet();
     private volatile String sinkStagingTableName;
     private volatile String watermarkCandidate;
+    private volatile long rowsProcessed;
+    private volatile long durationMillis;
 
     public String getRunId() {
         return runId;
@@ -43,6 +45,22 @@ public final class ReplicationExecutionContext {
 
     public void setWatermarkCandidate(String watermarkCandidate) {
         this.watermarkCandidate = watermarkCandidate;
+    }
+
+    public long getRowsProcessed() {
+        return rowsProcessed;
+    }
+
+    public void setRowsProcessed(long rowsProcessed) {
+        this.rowsProcessed = rowsProcessed;
+    }
+
+    public long getDurationMillis() {
+        return durationMillis;
+    }
+
+    public void setDurationMillis(long durationMillis) {
+        this.durationMillis = durationMillis;
     }
 
     public Map<Integer, String> getTempFilesPath() {

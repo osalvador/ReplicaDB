@@ -133,9 +133,15 @@ jobs:
   server:
     runs-on: ubuntu-latest
     name: Server module
+    env:
+      TESTCONTAINERS_CONFIG_FILE: src/test/resources/testcontainers-ci.properties
+      DOCKER_HOST: unix:///var/run/docker.sock
+      TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE: /var/run/docker.sock
 
     steps:
     - uses: actions/checkout@v7
+    - name: Check Docker info
+      run: docker info
     - name: Set up JDK 17
       uses: actions/setup-java@v5
       with:
