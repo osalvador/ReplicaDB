@@ -210,6 +210,8 @@ public class ReplicaDB {
 
 			final ReplicationTasksResult replicationTasksResult = executeReplicationTasks(options, managerFactory);
 			replicaTasksService = replicationTasksResult.executor();
+			options.getExecutionContext().setRowsProcessed(replicationTasksResult.summary().totalRowsProcessed());
+			options.getExecutionContext().setDurationMillis(replicationTasksResult.summary().maxDurationMillis());
 
 			waitForTaskCompletion(preSinkTasksFuture);
 			executePostTasks(sourceDs, sinkDs);

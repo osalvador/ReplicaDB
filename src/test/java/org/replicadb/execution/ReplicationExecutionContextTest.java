@@ -28,6 +28,8 @@ class ReplicationExecutionContextTest {
         assertNotEquals("", context.getRunId());
         assertNull(context.getSinkStagingTableName());
         assertEquals(0, context.getTempFilePathSize());
+        assertEquals(0, context.getRowsProcessed());
+        assertEquals(0, context.getDurationMillis());
     }
 
     @Test
@@ -44,6 +46,17 @@ class ReplicationExecutionContextTest {
         assertEquals(2, context.getTempFilePathSize());
         assertEquals(Map.of(0, "/tmp/orders-0.csv", 1, "/tmp/orders-1.csv"),
                 context.getTempFilesPath());
+    }
+
+    @Test
+    void storesRowsProcessedAndDuration() {
+        ReplicationExecutionContext context = new ReplicationExecutionContext();
+
+        context.setRowsProcessed(42);
+        context.setDurationMillis(1250);
+
+        assertEquals(42, context.getRowsProcessed());
+        assertEquals(1250, context.getDurationMillis());
     }
 
     @Test

@@ -1,0 +1,93 @@
+package org.replicadb.server.job.domain;
+
+import org.junit.jupiter.api.Test;
+import org.replicadb.cli.ReplicationMode;
+
+import java.time.Instant;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+class JobDefinitionTest {
+
+    @Test
+    void acceptsAValidDefinitionWithoutPasswords() {
+        assertDoesNotThrow(() -> definition(ReplicationMode.COMPLETE, null, null, null));
+    }
+
+    @Test
+    void acceptsEnvironmentPasswordReferences() {
+        assertDoesNotThrow(() -> definition(ReplicationMode.COMPLETE,
+                null, "${env:SOURCE_PASSWORD}", "${env:SINK_PASSWORD}"));
+    }
+
+    @Test
+    void rejectsBlankRequiredFields() {
+        assertThrows(IllegalArgumentException.class, () -> definition(
+                ReplicationMode.COMPLETE, "", null, null, "job"));
+        assertThrows(IllegalArgumentException.class, () -> definition(
+                ReplicationMode.COMPLETE, "source_watermark", null, null, " ", "job"));
+        assertThrows(IllegalArgumentException.class, () -> definition(
+                ReplicationMode.COMPLETE, "source_watermark", null, null, "source_table", ""));
+    }
+
+    @Test
+    void rejectsNonPositiveJobs() {
+        assertThrows(IllegalArgumentException.class, () -> new JobDefinition(
+                null, "job", "jdbc:source", null, null, "source_table", null,
+                "jdbc:sink", null, null, "sink_table", ReplicationMode.COMPLETE, 0,
+                null, null, null, null));
+    }
+
+    @Test
+    void rejectsWatermarkColumnOutsideIncrementalMode() {
+        assertThrows(IllegalArgumentException.class,
+                () -> definition(ReplicationMode.COMPLETE, "source_watermark", null, null));
+        assertThrows(IllegalArgumentException.class,
+                () -> definition(ReplicationMode.COMPLETE_ATOMIC, "source_watermark", null, null));
+    }
+
+    @Test
+    void rejectsLiteralSourcePassword() {
+        assertThrows(IllegalArgumentException.class,
+                () -> definition(ReplicationMode.COMPLETE, null, "literal-password", null));
+    }
+
+    @Test
+    void rejectsLiteralSinkPassword() {
+        assertThrows(IllegalArgumentException.class,
+                () -> definition(ReplicationMode.COMPLETE, null, null, "literal-password"));
+    }
+
+    @Test
+    void rejectsEmbeddedCredentialsInConnectionStrings() {
+        assertThrows(IllegalArgumentException.class, () -> new JobDefinition(
+                null, "job", "jdbc:postgresql://user:password@source", null, null, "source_table", null,
+                "jdbc:sink", null, null, "sink_table", ReplicationMode.COMPLETE, 1,
+                null, null, null, null));
+        assertThrows(IllegalArgumentException.class, () -> new JobDefinition(
+                null, "job", "jdbc:source", null, null, "source_table", null,
+                "jdbc:postgresql://sink?password=literal", null, null, "sink_table",
+                ReplicationMode.COMPLETE, 1, null, null, null, null));
+    }
+
+    private static JobDefinition definition(ReplicationMode mode, String watermarkColumn,
+                                             String sourcePassword, String sinkPassword) {
+        return definition(mode, watermarkColumn, sourcePassword, sinkPassword, "job", "source_table");
+    }
+
+    private static JobDefinition definition(ReplicationMode mode, String watermarkColumn,
+                                             String sourcePassword, String sinkPassword,
+                                             String name) {
+        return definition(mode, watermarkColumn, sourcePassword, sinkPassword, name, "source_table");
+    }
+
+    private static JobDefinition definition(ReplicationMode mode, String watermarkColumn,
+                                             String sourcePassword, String sinkPassword,
+                                             String sourceTable, String name) {
+        return new JobDefinition(
+                null, name, "jdbc:source", null, sourcePassword, sourceTable, null,
+                "jdbc:sink", null, sinkPassword, "sink_table", mode, 2,
+                watermarkColumn, null, Instant.now(), Instant.now());
+    }
+}
