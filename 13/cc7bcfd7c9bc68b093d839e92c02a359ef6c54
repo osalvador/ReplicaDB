@@ -1,0 +1,19 @@
+ARCHITECTURE_DECISIONS.md
+  s_454fde70901bdd::t_674d3ca073e48c 15,41,139,145,293,451,465-505,568,582-584,786-796,826-827,829-831,871,912,914-926,940-942
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "13cc7bcfd7c9bc68b093d839e92c02a359ef6c54",
+  "prompts": {},
+  "sessions": {
+    "s_454fde70901bdd": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "d51ddea3-407b-4089-a171-97d28e87ff40",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
