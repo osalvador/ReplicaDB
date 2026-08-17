@@ -1,0 +1,57 @@
+.ai/archive/phase-1c-2-quartz-scheduler.plan.md
+  s_454fde70901bdd::t_e33e783501c2f1 1-208
+replicadb-server/pom.xml
+  s_454fde70901bdd::t_98d848ffbacf16 66-75
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobScheduleController.java
+  s_454fde70901bdd::t_fd7557b51f7d03 1-75
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobScheduleRequest.java
+  s_454fde70901bdd::t_eb7a4a7d7aee5e 1-9
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobScheduleResponse.java
+  s_454fde70901bdd::t_53ebc0f66dd103 1-22
+replicadb-server/src/main/java/org/replicadb/server/job/domain/JobSchedule.java
+  s_454fde70901bdd::t_270934f1443f09 1-36
+replicadb-server/src/main/java/org/replicadb/server/job/execution/QuartzScheduleService.java
+  s_454fde70901bdd::t_be4b47396255d3 1-101
+replicadb-server/src/main/java/org/replicadb/server/job/execution/ScheduleReconciler.java
+  s_454fde70901bdd::t_723153a8f43750 1-42
+replicadb-server/src/main/java/org/replicadb/server/job/execution/ScheduledRunTriggerJob.java
+  s_454fde70901bdd::t_224588662f6493 1-50
+replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobScheduleRepository.java
+  s_454fde70901bdd::t_2f6655e4a8cbd6 1-83
+replicadb-server/src/main/resources/application.yml
+  s_454fde70901bdd::t_62e372f177ba11 6-10
+replicadb-server/src/main/resources/db/migration/V5__create_job_schedule.sql
+  s_454fde70901bdd::t_db40ee69e6f931 1-8
+replicadb-server/src/test/java/org/replicadb/server/job/api/JobScheduleControllerTest.java
+  s_454fde70901bdd::t_982850eb2ea39d 1-202
+replicadb-server/src/test/java/org/replicadb/server/job/api/ScheduledJobLifecycleIT.java
+  s_454fde70901bdd::t_82108d4aa53274 1-167
+replicadb-server/src/test/java/org/replicadb/server/job/domain/JobScheduleTest.java
+  s_454fde70901bdd::t_197e435692acee 1-55
+replicadb-server/src/test/java/org/replicadb/server/job/execution/QuartzScheduleServiceTest.java
+  s_454fde70901bdd::t_c79e9e2a8bbf5e 1-129
+replicadb-server/src/test/java/org/replicadb/server/job/execution/ScheduleReconcilerTest.java
+  s_454fde70901bdd::t_6f366c2524d356 1-117
+replicadb-server/src/test/java/org/replicadb/server/job/execution/ScheduledRunTriggerJobTest.java
+  s_454fde70901bdd::t_63c189bbff8e5f 1-83
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/FlywayMigrationTest.java
+  s_454fde70901bdd::t_4a0159ebb4b455 25-26
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/JobScheduleRepositoryIT.java
+  s_454fde70901bdd::t_caa44a9e7e4f35 1-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "8d12cdceb24b938d93fa364a2770730cb6922be5",
+  "prompts": {},
+  "sessions": {
+    "s_454fde70901bdd": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "d51ddea3-407b-4089-a171-97d28e87ff40",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
