@@ -1,0 +1,19 @@
+replicadb-server/src/main/resources/db/migration/V6__add_job_run_definition_created_index.sql
+  s_429fd44d6aa05a::t_6075f1f8ad2533 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b2f66ca68b7b6ede03d0fe8ca02cc06a63ad0056",
+  "prompts": {},
+  "sessions": {
+    "s_429fd44d6aa05a": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "a957ff11-94ad-414f-bbdf-7fbec2db86fb",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
