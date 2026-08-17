@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Import;
 import java.time.Instant;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -79,13 +80,27 @@ class JobDefinitionRepositoryIT {
         repository.insert(definition("page-b"));
         repository.insert(definition("page-d"));
 
-        assertEquals(5, repository.count());
-        assertEquals(java.util.List.of("page-a", "page-b"), repository.findPage(0, 2)
+        assertEquals(5, repository.count(null));
+        assertEquals(java.util.List.of("page-a", "page-b"), repository.findPage(0, 2, null)
             .stream().map(JobDefinition::name).toList());
-        assertEquals(java.util.List.of("page-c", "page-d"), repository.findPage(1, 2)
+        assertEquals(java.util.List.of("page-c", "page-d"), repository.findPage(1, 2, null)
             .stream().map(JobDefinition::name).toList());
-        assertEquals(java.util.List.of("page-e"), repository.findPage(2, 2)
+        assertEquals(java.util.List.of("page-e"), repository.findPage(2, 2, null)
             .stream().map(JobDefinition::name).toList());
+        }
+
+        @Test
+        void restrictsPagesAndCountsToAllowedIds() {
+        JobDefinition first = repository.insert(definition("restricted-a"));
+        JobDefinition second = repository.insert(definition("restricted-b"));
+        repository.insert(definition("restricted-c"));
+
+        assertEquals(2, repository.count(Set.of(first.id(), second.id())));
+        assertEquals(java.util.List.of("restricted-a", "restricted-b"),
+            repository.findPage(0, 10, Set.of(first.id(), second.id()))
+                .stream().map(JobDefinition::name).toList());
+        assertEquals(0, repository.count(Set.of()));
+        assertTrue(repository.findPage(0, 10, Set.of()).isEmpty());
         }
 
         @Test

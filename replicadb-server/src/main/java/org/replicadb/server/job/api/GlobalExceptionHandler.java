@@ -1,8 +1,11 @@
 package org.replicadb.server.job.api;
 
 import org.replicadb.config.CredentialRedactor;
+import org.replicadb.server.security.auth.TooManyAttemptsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -40,6 +43,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     ProblemDetail handleIllegalArgument(IllegalArgumentException exception) {
         return problem(HttpStatus.BAD_REQUEST, exception.getMessage());
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    ProblemDetail handleAuthenticationFailure(AuthenticationException exception) {
+        return problem(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+    }
+
+    @ExceptionHandler(TooManyAttemptsException.class)
+    ProblemDetail handleTooManyAttempts(TooManyAttemptsException exception) {
+        return problem(HttpStatus.TOO_MANY_REQUESTS, exception.getMessage());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    ProblemDetail handleAccessDenied(AccessDeniedException exception) {
+        return problem(HttpStatus.FORBIDDEN, "Access denied");
     }
 
     @ExceptionHandler(NoSuchElementException.class)

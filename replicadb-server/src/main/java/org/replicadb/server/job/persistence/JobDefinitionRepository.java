@@ -16,7 +16,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.sql.Types;
 
 @Repository
 public class JobDefinitionRepository {
@@ -71,18 +73,30 @@ public class JobDefinitionRepository {
         return jdbcTemplate.query(sql, Map.of(), ROW_MAPPER);
     }
 
-    public List<JobDefinition> findPage(int page, int size) {
+    public List<JobDefinition> findPage(int page, int size, Set<UUID> restrictToIds) {
         validatePage(page, size);
-        String sql = "SELECT " + SELECT_COLUMNS
-                + " FROM job_definition ORDER BY name, id LIMIT :size OFFSET :offset";
-        return jdbcTemplate.query(sql, new MapSqlParameterSource()
-                .addValue("size", size)
-                .addValue("offset", (long) page * size), ROW_MAPPER);
+        StringBuilder sql = new StringBuilder("SELECT " + SELECT_COLUMNS + " FROM job_definition WHERE 1 = 1");
+        MapSqlParameterSource parameters = new MapSqlParameterSource();
+        appendRestriction(sql, parameters, restrictToIds);
+        sql.append(" ORDER BY name, id LIMIT :size OFFSET :offset");
+        parameters.addValue("size", size).addValue("offset", (long) page * size);
+        return jdbcTemplate.query(sql.toString(), parameters, ROW_MAPPER);
     }
 
-    public long count() {
-        Long count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM job_definition", Map.of(), Long.class);
+    public long count(Set<UUID> restrictToIds) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM job_definition WHERE 1 = 1");
+        MapSqlParameterSource parameters = new MapSqlParameterSource();
+        appendRestriction(sql, parameters, restrictToIds);
+        Long count = jdbcTemplate.queryForObject(sql.toString(), parameters, Long.class);
         return count == null ? 0 : count;
+    }
+
+    private static void appendRestriction(StringBuilder sql, MapSqlParameterSource parameters,
+                                          Set<UUID> restrictToIds) {
+        if (restrictToIds != null) {
+            sql.append(" AND id = ANY(:restrictToIds)");
+            parameters.addValue("restrictToIds", restrictToIds.toArray(UUID[]::new), Types.ARRAY);
+        }
     }
 
     public JobDefinition update(JobDefinition definition) {

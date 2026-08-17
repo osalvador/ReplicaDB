@@ -5,6 +5,18 @@ spring:
     password: ${DB_PASSWORD:}
   flyway:
     enabled: true
+  session:
+    store-type: jdbc
+    jdbc:
+      initialize-schema: never
+    timeout: 30m
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: true
+        same-site: lax
 replicadb:
   server:
     execution:

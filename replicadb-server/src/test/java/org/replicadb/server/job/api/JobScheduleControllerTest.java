@@ -7,15 +7,23 @@ import org.junit.jupiter.api.Test;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.JobSchedule;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobScheduleRepository;
 import org.replicadb.server.job.execution.QuartzScheduleService;
+import org.replicadb.server.security.WithMockReplicaDbUser;
+import org.replicadb.server.security.domain.AppUser;
+import org.replicadb.server.security.domain.GlobalRole;
+import org.replicadb.server.security.domain.JobPermissionType;
+import org.replicadb.server.security.persistence.AppUserRepository;
+import org.replicadb.server.security.persistence.JobPermissionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -27,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -35,6 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("api")
 @Import(PostgresTestcontainersConfig.class)
+@WithMockUser(roles = "ADMIN")
 class JobScheduleControllerTest {
 
     @Autowired
@@ -49,6 +59,12 @@ class JobScheduleControllerTest {
     @Autowired
     private JobScheduleRepository jobScheduleRepository;
 
+        @Autowired
+        private AppUserRepository appUserRepository;
+
+        @Autowired
+        private JobPermissionRepository jobPermissionRepository;
+
     @Autowired
     private QuartzScheduleService quartzScheduleService;
 
@@ -57,7 +73,7 @@ class JobScheduleControllerTest {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE job_schedule, run_trigger_idempotency, job_run, job_definition CASCADE",
+        jdbcTemplate.update("TRUNCATE TABLE job_permission, job_schedule, run_trigger_idempotency, job_run, job_definition, app_user CASCADE",
                 Map.of());
     }
 
@@ -65,7 +81,7 @@ class JobScheduleControllerTest {
     void putsAValidScheduleAndReturnsItsNextFireTime() throws Exception {
         JobDefinition definition = insertDefinition();
 
-        mockMvc.perform(put(schedulePath(definition.id()))
+        mockMvc.perform(put(schedulePath(definition.id())).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(scheduleJson("0 0 1 1 1 ?", "Europe/Madrid", true)))
                 .andExpect(status().isOk())
@@ -78,7 +94,7 @@ class JobScheduleControllerTest {
     void rejectsAnInvalidCronExpressionWithProblemDetail() throws Exception {
         JobDefinition definition = insertDefinition();
 
-        mockMvc.perform(put(schedulePath(definition.id()))
+        mockMvc.perform(put(schedulePath(definition.id())).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(scheduleJson("not-a-cron", "UTC", true)))
                 .andExpect(status().isBadRequest())
@@ -89,7 +105,7 @@ class JobScheduleControllerTest {
     void defaultsAnAbsentTimezoneToUtc() throws Exception {
         JobDefinition definition = insertDefinition();
 
-        mockMvc.perform(put(schedulePath(definition.id()))
+        mockMvc.perform(put(schedulePath(definition.id())).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -103,7 +119,7 @@ class JobScheduleControllerTest {
 
     @Test
     void rejectsAnUnknownJobDefinition() throws Exception {
-        mockMvc.perform(put(schedulePath(UUID.randomUUID()))
+        mockMvc.perform(put(schedulePath(UUID.randomUUID())).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(scheduleJson("0 0 1 1 1 ?", "UTC", true)))
                 .andExpect(status().isNotFound())
@@ -114,7 +130,7 @@ class JobScheduleControllerTest {
     void disablesAStoredScheduleAndRemovesItsTrigger() throws Exception {
         JobDefinition definition = insertDefinition();
 
-        mockMvc.perform(put(schedulePath(definition.id()))
+        mockMvc.perform(put(schedulePath(definition.id())).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(scheduleJson("0 0 1 1 1 ?", "UTC", false)))
                 .andExpect(status().isOk())
@@ -154,11 +170,11 @@ class JobScheduleControllerTest {
         JobDefinition definition = insertDefinition();
         putSchedule(definition.id(), scheduleJson("0 0 1 1 1 ?", "UTC", true));
 
-        mockMvc.perform(delete(schedulePath(definition.id())))
+        mockMvc.perform(delete(schedulePath(definition.id())).with(csrf()))
                 .andExpect(status().isNoContent());
         mockMvc.perform(get(schedulePath(definition.id())))
                 .andExpect(status().isNotFound());
-        mockMvc.perform(delete(schedulePath(definition.id())))
+        mockMvc.perform(delete(schedulePath(definition.id())).with(csrf()))
                 .andExpect(status().isNoContent());
     }
 
@@ -166,7 +182,44 @@ class JobScheduleControllerTest {
     void deletingAJobWithoutAScheduleReturnsNoContent() throws Exception {
         JobDefinition definition = insertDefinition();
 
-        mockMvc.perform(delete(schedulePath(definition.id())))
+        mockMvc.perform(delete(schedulePath(definition.id())).with(csrf()))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @WithMockReplicaDbUser(userId = "00000000-0000-0000-0000-000000000017", username = "schedule-view-user",
+            role = GlobalRole.VIEWER)
+    void viewPermissionAllowsReadButNotScheduleMutation() throws Exception {
+        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000017");
+        appUserRepository.insert(new AppUser(userId, "schedule-view-user", "hash", GlobalRole.VIEWER, true, null, null));
+        JobDefinition definition = insertDefinition();
+        jobPermissionRepository.grant(definition.id(), userId, JobPermissionType.VIEW);
+        jobScheduleRepository.upsert(new JobSchedule(definition.id(), "0 0 1 1 1 ?", "UTC", true, null, null));
+
+        mockMvc.perform(get(schedulePath(definition.id())))
+                .andExpect(status().isOk());
+        mockMvc.perform(put(schedulePath(definition.id())).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(scheduleJson("0 0 1 2 1 ?", "UTC", true)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete(schedulePath(definition.id())).with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockReplicaDbUser(userId = "00000000-0000-0000-0000-000000000018", username = "schedule-edit-user",
+            role = GlobalRole.OPERATOR)
+    void editPermissionAllowsScheduleReplacementAndRemoval() throws Exception {
+        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000018");
+        appUserRepository.insert(new AppUser(userId, "schedule-edit-user", "hash", GlobalRole.OPERATOR, true, null, null));
+        JobDefinition definition = insertDefinition();
+        jobPermissionRepository.grant(definition.id(), userId, JobPermissionType.EDIT);
+
+        mockMvc.perform(put(schedulePath(definition.id())).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(scheduleJson("0 0 1 1 1 ?", "UTC", true)))
+                .andExpect(status().isOk());
+        mockMvc.perform(delete(schedulePath(definition.id())).with(csrf()))
                 .andExpect(status().isNoContent());
     }
 
@@ -179,7 +232,7 @@ class JobScheduleControllerTest {
     }
 
     private MvcResult putSchedule(UUID jobDefinitionId, String content) throws Exception {
-        return mockMvc.perform(put(schedulePath(jobDefinitionId))
+        return mockMvc.perform(put(schedulePath(jobDefinitionId)).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(content))
                 .andExpect(status().isOk())
