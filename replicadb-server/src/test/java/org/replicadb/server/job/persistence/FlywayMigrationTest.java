@@ -22,8 +22,8 @@ class FlywayMigrationTest {
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
                 .load();
 
-        assertEquals(6, flyway.migrate().migrationsExecuted);
-        assertEquals(6, flyway.info().applied().length);
+        assertEquals(9, flyway.migrate().migrationsExecuted);
+        assertEquals(9, flyway.info().applied().length);
         flyway.validate();
     }
 }

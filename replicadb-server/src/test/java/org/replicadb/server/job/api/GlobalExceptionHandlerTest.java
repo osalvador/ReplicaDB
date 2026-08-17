@@ -16,6 +16,9 @@ import java.util.Set;
 import java.util.NoSuchElementException;
 
 import jakarta.validation.ConstraintViolationException;
+import org.replicadb.server.security.auth.TooManyAttemptsException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -74,6 +77,29 @@ class GlobalExceptionHandlerTest {
         var problem = handler.handleConstraintViolation(new ConstraintViolationException(Set.of()));
 
         assertEquals(400, problem.getStatus());
+    }
+
+    @Test
+    void mapsAuthenticationFailureToGenericUnauthorizedProblem() {
+        var problem = handler.handleAuthenticationFailure(new BadCredentialsException("wrong password"));
+
+        assertEquals(401, problem.getStatus());
+        assertEquals("Invalid credentials", problem.getDetail());
+    }
+
+    @Test
+    void mapsTooManyAttemptsToRateLimitProblem() {
+        var problem = handler.handleTooManyAttempts(new TooManyAttemptsException());
+
+        assertEquals(429, problem.getStatus());
+    }
+
+    @Test
+    void mapsAccessDeniedToForbiddenProblem() {
+        var problem = handler.handleAccessDenied(new AccessDeniedException("internal permission detail"));
+
+        assertEquals(403, problem.getStatus());
+        assertEquals("Access denied", problem.getDetail());
     }
 
     private void assertProblem(String path, int status) throws Exception {

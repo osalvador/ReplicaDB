@@ -39,6 +39,6 @@ class HealthEndpointTest {
         ResponseEntity<String> response = restTemplate.getForEntity(
                 "http://localhost:" + port + "/actuator/env", String.class);
 
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
 }

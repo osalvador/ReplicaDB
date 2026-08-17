@@ -19,6 +19,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Repository
@@ -252,26 +253,28 @@ public class JobRunRepository {
         return jdbcTemplate.query(sql, Map.of("id", id), ROW_MAPPER).stream().findFirst();
     }
 
-    public List<JobRun> findPage(UUID jobDefinitionId, JobRunStatus status, int page, int size) {
+    public List<JobRun> findPage(UUID jobDefinitionId, JobRunStatus status, int page, int size,
+                                 Set<UUID> restrictToJobIds) {
         validatePage(page, size);
         StringBuilder sql = new StringBuilder("SELECT " + SELECT_COLUMNS + " FROM job_run WHERE 1 = 1");
         MapSqlParameterSource parameters = new MapSqlParameterSource();
-        appendFilters(sql, parameters, jobDefinitionId, status);
+        appendFilters(sql, parameters, jobDefinitionId, status, restrictToJobIds);
         sql.append(" ORDER BY created_at DESC, id DESC LIMIT :size OFFSET :offset");
         parameters.addValue("size", size).addValue("offset", (long) page * size);
         return jdbcTemplate.query(sql.toString(), parameters, ROW_MAPPER);
     }
 
-    public long count(UUID jobDefinitionId, JobRunStatus status) {
+    public long count(UUID jobDefinitionId, JobRunStatus status, Set<UUID> restrictToJobIds) {
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM job_run WHERE 1 = 1");
         MapSqlParameterSource parameters = new MapSqlParameterSource();
-        appendFilters(sql, parameters, jobDefinitionId, status);
+        appendFilters(sql, parameters, jobDefinitionId, status, restrictToJobIds);
         Long count = jdbcTemplate.queryForObject(sql.toString(), parameters, Long.class);
         return count == null ? 0 : count;
     }
 
     private static void appendFilters(StringBuilder sql, MapSqlParameterSource parameters,
-                                      UUID jobDefinitionId, JobRunStatus status) {
+                                      UUID jobDefinitionId, JobRunStatus status,
+                                      Set<UUID> restrictToJobIds) {
         if (jobDefinitionId != null) {
             sql.append(" AND job_definition_id = :jobDefinitionId");
             parameters.addValue("jobDefinitionId", jobDefinitionId);
@@ -279,6 +282,10 @@ public class JobRunRepository {
         if (status != null) {
             sql.append(" AND status = :status");
             parameters.addValue("status", status.name());
+        }
+        if (restrictToJobIds != null) {
+            sql.append(" AND job_definition_id = ANY(:restrictToJobIds)");
+            parameters.addValue("restrictToJobIds", restrictToJobIds.toArray(UUID[]::new), Types.ARRAY);
         }
     }
 

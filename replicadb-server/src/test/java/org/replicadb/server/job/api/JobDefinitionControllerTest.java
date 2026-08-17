@@ -8,6 +8,12 @@ import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
+import org.replicadb.server.security.WithMockReplicaDbUser;
+import org.replicadb.server.security.domain.AppUser;
+import org.replicadb.server.security.domain.GlobalRole;
+import org.replicadb.server.security.domain.JobPermissionType;
+import org.replicadb.server.security.persistence.AppUserRepository;
+import org.replicadb.server.security.persistence.JobPermissionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +23,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import java.util.Map;
 import java.util.UUID;
@@ -25,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -34,6 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("api")
 @Import(PostgresTestcontainersConfig.class)
+@WithMockUser(roles = "ADMIN")
 class JobDefinitionControllerTest {
 
     @Autowired
@@ -43,6 +52,12 @@ class JobDefinitionControllerTest {
     private JobDefinitionRepository repository;
 
     @Autowired
+    private AppUserRepository appUserRepository;
+
+    @Autowired
+    private JobPermissionRepository jobPermissionRepository;
+
+    @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
     @Autowired
@@ -50,12 +65,14 @@ class JobDefinitionControllerTest {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE run_trigger_idempotency, job_run, job_definition CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE job_permission, run_trigger_idempotency, job_run, job_definition, app_user CASCADE",
+            Map.of());
     }
 
     @Test
     void createsDefinitionWithLocation() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/jobs")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jobJson("created-job", "complete", 1)))
                 .andExpect(status().isCreated())
@@ -70,6 +87,7 @@ class JobDefinitionControllerTest {
     @Test
     void rejectsBlankNameOnCreateWithProblemDetail() throws Exception {
         mockMvc.perform(post("/api/v1/jobs")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jobJson("", "complete", 1)))
                 .andExpect(status().isBadRequest())
@@ -108,6 +126,7 @@ class JobDefinitionControllerTest {
         JobDefinition inserted = repository.insert(definition("update-job"));
 
         mockMvc.perform(put("/api/v1/jobs/" + inserted.id())
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateJson(null, "incremental")))
                 .andExpect(status().isOk())
@@ -118,6 +137,7 @@ class JobDefinitionControllerTest {
                 .andExpect(jsonPath("$.incrementalWatermarkColumn").value("updated_at"));
 
         mockMvc.perform(put("/api/v1/jobs/" + inserted.id())
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateJson("changed-name", "incremental")))
                 .andExpect(status().isBadRequest())
@@ -127,11 +147,82 @@ class JobDefinitionControllerTest {
     @Test
     void exposesCompleteModeWarning() throws Exception {
         mockMvc.perform(post("/api/v1/jobs")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jobJson("warning-job", "complete", 1)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.modeWarning").isNotEmpty());
     }
+
+            @Test
+            @WithMockUser(roles = "VIEWER")
+            void viewerCannotCreateDefinition() throws Exception {
+            mockMvc.perform(post("/api/v1/jobs")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(jobJson("viewer-create", "complete", 1)))
+                .andExpect(status().isForbidden());
+            }
+
+            @Test
+            @WithMockReplicaDbUser(userId = "00000000-0000-0000-0000-000000000011", username = "owner-user")
+            void creatorCanReadAndEditOwnDefinition() throws Exception {
+            UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000011");
+            appUserRepository.insert(new AppUser(userId, "owner-user", "hash", GlobalRole.OPERATOR, true, null, null));
+
+            MvcResult created = mockMvc.perform(post("/api/v1/jobs")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(jobJson("owner-job", "complete", 1)))
+                .andExpect(status().isCreated())
+                .andReturn();
+            UUID jobId = UUID.fromString(objectMapper.readTree(created.getResponse().getContentAsString()).get("id").asText());
+
+            mockMvc.perform(get("/api/v1/jobs/" + jobId))
+                .andExpect(status().isOk());
+            mockMvc.perform(put("/api/v1/jobs/" + jobId).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(updateJson(null, "incremental")))
+                .andExpect(status().isOk());
+            for (JobPermissionType permission : JobPermissionType.values()) {
+                org.junit.jupiter.api.Assertions.assertTrue(
+                    jobPermissionRepository.hasPermission(jobId, userId, permission));
+            }
+            }
+
+            @Test
+            @WithMockReplicaDbUser(userId = "00000000-0000-0000-0000-000000000012", username = "other-user")
+            void userWithoutPermissionCannotReadOrEditDefinition() throws Exception {
+            UUID jobId = repository.insert(definition("private-job")).id();
+            appUserRepository.insert(new AppUser(UUID.fromString("00000000-0000-0000-0000-000000000012"),
+                "other-user", "hash", GlobalRole.OPERATOR, true, null, null));
+
+            mockMvc.perform(get("/api/v1/jobs/" + jobId))
+                .andExpect(status().isForbidden());
+            mockMvc.perform(put("/api/v1/jobs/" + jobId).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(updateJson(null, "complete")))
+                .andExpect(status().isForbidden());
+            }
+
+            @Test
+            @WithMockReplicaDbUser(userId = "00000000-0000-0000-0000-000000000013", username = "list-user")
+            void nonAdminListFiltersVisibleDefinitionsBeforePagination() throws Exception {
+            UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000013");
+            appUserRepository.insert(new AppUser(userId, "list-user", "hash", GlobalRole.VIEWER, true, null, null));
+            JobDefinition first = repository.insert(definition("visible-a"));
+            JobDefinition second = repository.insert(definition("visible-b"));
+            JobDefinition third = repository.insert(definition("visible-c"));
+            repository.insert(definition("hidden-d"));
+            jobPermissionRepository.grant(first.id(), userId, JobPermissionType.VIEW);
+            jobPermissionRepository.grant(second.id(), userId, JobPermissionType.VIEW);
+            jobPermissionRepository.grant(third.id(), userId, JobPermissionType.VIEW);
+
+            mockMvc.perform(get("/api/v1/jobs").param("page", "1").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.totalElements").value(3));
+            }
 
     private static JobDefinition definition(String name) {
         return new JobDefinition(

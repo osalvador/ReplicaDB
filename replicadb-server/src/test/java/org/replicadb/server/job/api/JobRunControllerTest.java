@@ -10,6 +10,12 @@ import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
+import org.replicadb.server.security.WithMockReplicaDbUser;
+import org.replicadb.server.security.domain.AppUser;
+import org.replicadb.server.security.domain.GlobalRole;
+import org.replicadb.server.security.domain.JobPermissionType;
+import org.replicadb.server.security.persistence.AppUserRepository;
+import org.replicadb.server.security.persistence.JobPermissionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +23,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -35,6 +42,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -45,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @AutoConfigureMockMvc
 @ActiveProfiles("api")
 @Import(PostgresTestcontainersConfig.class)
+@WithMockUser(roles = "ADMIN")
 class JobRunControllerTest {
 
     @Autowired
@@ -57,6 +66,12 @@ class JobRunControllerTest {
     private JobRunRepository jobRunRepository;
 
     @Autowired
+    private AppUserRepository appUserRepository;
+
+    @Autowired
+    private JobPermissionRepository jobPermissionRepository;
+
+    @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
     @Autowired
@@ -67,7 +82,8 @@ class JobRunControllerTest {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE run_trigger_idempotency, job_run, job_definition CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE job_permission, run_trigger_idempotency, job_run, job_definition, app_user CASCADE",
+            Map.of());
     }
 
     @Test
@@ -127,7 +143,8 @@ class JobRunControllerTest {
             @Test
             void requiresAnIdempotencyKeyToTriggerARun() throws Exception {
             mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                    .post("/api/v1/jobs/" + UUID.randomUUID() + "/runs"))
+                    .post("/api/v1/jobs/" + UUID.randomUUID() + "/runs")
+                    .with(csrf()))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
             }
@@ -174,7 +191,8 @@ class JobRunControllerTest {
 
             mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                     .post("/api/v1/jobs/" + definition.id() + "/runs")
-                    .header("Idempotency-Key", "active-conflict"))
+                    .header("Idempotency-Key", "active-conflict")
+                    .with(csrf()))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
             }
@@ -185,7 +203,8 @@ class JobRunControllerTest {
             JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
 
             mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                    .post("/api/v1/runs/" + pending.id() + "/cancel"))
+                    .post("/api/v1/runs/" + pending.id() + "/cancel")
+                    .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.runId").value(pending.id().toString()))
                 .andExpect(jsonPath("$.status").value("CANCELLED"))
@@ -199,7 +218,8 @@ class JobRunControllerTest {
             JobRun succeeded = createTerminalRun(definition, JobRunStatus.SUCCEEDED);
 
             mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                    .post("/api/v1/runs/" + succeeded.id() + "/cancel"))
+                    .post("/api/v1/runs/" + succeeded.id() + "/cancel")
+                    .with(csrf()))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
             }
@@ -215,11 +235,13 @@ class JobRunControllerTest {
             JobRun incrementalRun = jobRunRepository.insertPending(incremental.id(), null, 1);
 
             MvcResult completeResponse = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                    .post("/api/v1/runs/" + completeRun.id() + "/cancel"))
+                    .post("/api/v1/runs/" + completeRun.id() + "/cancel")
+                .with(csrf()))
                 .andExpect(status().isOk())
                 .andReturn();
             MvcResult incrementalResponse = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                    .post("/api/v1/runs/" + incrementalRun.id() + "/cancel"))
+                    .post("/api/v1/runs/" + incrementalRun.id() + "/cancel")
+                .with(csrf()))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -238,7 +260,8 @@ class JobRunControllerTest {
             jobRunRepository.markFailed(running.id(), 0, 0, "retryable failure");
 
             MvcResult response = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                    .post("/api/v1/runs/" + failed.id() + "/retry"))
+                    .post("/api/v1/runs/" + failed.id() + "/retry")
+                .with(csrf()))
                 .andExpect(status().isAccepted())
                 .andExpect(header().string("Location", org.hamcrest.Matchers.startsWith("/api/v1/runs/")))
                 .andReturn();
@@ -257,9 +280,83 @@ class JobRunControllerTest {
             JobRun succeeded = createTerminalRun(definition, JobRunStatus.SUCCEEDED);
 
             mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                    .post("/api/v1/runs/" + succeeded.id() + "/retry"))
+                    .post("/api/v1/runs/" + succeeded.id() + "/retry")
+                .with(csrf()))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+            }
+
+            @Test
+            @WithMockReplicaDbUser(userId = "00000000-0000-0000-0000-000000000014", username = "view-run-user",
+                role = GlobalRole.VIEWER)
+            void viewOnlyUserCanReadButCannotExecuteCancelOrRetry() throws Exception {
+            UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000014");
+            appUserRepository.insert(new AppUser(userId, "view-run-user", "hash", GlobalRole.VIEWER, true, null, null));
+            JobDefinition definition = jobDefinitionRepository.insert(definition("view-run-job"));
+            jobPermissionRepository.grant(definition.id(), userId, JobPermissionType.VIEW);
+            JobRun failed = createTerminalRun(definition, JobRunStatus.FAILED);
+            JobRun pending = jobRunRepository.insertPending(definition.id(), null, 2);
+
+            mockMvc.perform(get("/api/v1/jobs/" + definition.id() + "/runs"))
+                .andExpect(status().isOk());
+            mockMvc.perform(get("/api/v1/runs/" + failed.id() + "/log"))
+                .andExpect(status().isOk());
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                    .post("/api/v1/jobs/" + definition.id() + "/runs")
+                    .header("Idempotency-Key", "view-only-trigger")
+                    .with(csrf()))
+                .andExpect(status().isForbidden());
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                    .post("/api/v1/runs/" + pending.id() + "/cancel")
+                    .with(csrf()))
+                .andExpect(status().isForbidden());
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                    .post("/api/v1/runs/" + failed.id() + "/retry")
+                    .with(csrf()))
+                .andExpect(status().isForbidden());
+            }
+
+            @Test
+            @WithMockReplicaDbUser(userId = "00000000-0000-0000-0000-000000000015", username = "execute-run-user",
+                role = GlobalRole.OPERATOR)
+            void executePermissionDoesNotGrantCancel() throws Exception {
+            UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000015");
+            appUserRepository.insert(new AppUser(userId, "execute-run-user", "hash", GlobalRole.OPERATOR, true, null, null));
+            JobDefinition definition = jobDefinitionRepository.insert(definition("execute-only-job"));
+            jobPermissionRepository.grant(definition.id(), userId, JobPermissionType.EXECUTE);
+
+            MvcResult triggered = trigger(definition.id(), "execute-only-trigger");
+            UUID runId = UUID.fromString(objectMapper.readTree(triggered.getResponse().getContentAsString())
+                .get("id").asText());
+
+            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                    .post("/api/v1/runs/" + runId + "/cancel")
+                    .with(csrf()))
+                .andExpect(status().isForbidden());
+            }
+
+            @Test
+            @WithMockReplicaDbUser(userId = "00000000-0000-0000-0000-000000000016", username = "history-user",
+                role = GlobalRole.VIEWER)
+            void globalRunHistoryFiltersByViewPermissionBeforePagination() throws Exception {
+            UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000016");
+            appUserRepository.insert(new AppUser(userId, "history-user", "hash", GlobalRole.VIEWER, true, null, null));
+            JobDefinition first = jobDefinitionRepository.insert(definition("history-visible-a"));
+            JobDefinition second = jobDefinitionRepository.insert(definition("history-visible-b"));
+            JobDefinition third = jobDefinitionRepository.insert(definition("history-visible-c"));
+            JobDefinition hidden = jobDefinitionRepository.insert(definition("history-hidden-d"));
+            createTerminalRun(first, JobRunStatus.SUCCEEDED);
+            createTerminalRun(second, JobRunStatus.SUCCEEDED);
+            createTerminalRun(third, JobRunStatus.SUCCEEDED);
+            createTerminalRun(hidden, JobRunStatus.SUCCEEDED);
+            jobPermissionRepository.grant(first.id(), userId, JobPermissionType.VIEW);
+            jobPermissionRepository.grant(second.id(), userId, JobPermissionType.VIEW);
+            jobPermissionRepository.grant(third.id(), userId, JobPermissionType.VIEW);
+
+            mockMvc.perform(get("/api/v1/runs").param("page", "1").param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.totalElements").value(3));
             }
 
     private JobRun createTerminalRun(JobDefinition definition, JobRunStatus status) {
@@ -293,7 +390,8 @@ class JobRunControllerTest {
     private MvcResult trigger(UUID jobDefinitionId, String idempotencyKey) throws Exception {
         return mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                         .post("/api/v1/jobs/" + jobDefinitionId + "/runs")
-                        .header("Idempotency-Key", idempotencyKey))
+                        .header("Idempotency-Key", idempotencyKey)
+                        .with(csrf()))
                 .andExpect(status().isAccepted())
                 .andReturn();
     }

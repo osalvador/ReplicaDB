@@ -5,7 +5,10 @@ import org.replicadb.server.job.domain.JobSchedule;
 import org.replicadb.server.job.execution.QuartzScheduleService;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobScheduleRepository;
+import org.replicadb.server.security.JobAccessService;
+import org.replicadb.server.security.domain.JobPermissionType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,18 +29,23 @@ public class JobScheduleController {
     private final JobDefinitionRepository jobDefinitionRepository;
     private final JobScheduleRepository jobScheduleRepository;
     private final QuartzScheduleService quartzScheduleService;
+    private final JobAccessService jobAccessService;
 
     public JobScheduleController(JobDefinitionRepository jobDefinitionRepository,
                                  JobScheduleRepository jobScheduleRepository,
-                                 QuartzScheduleService quartzScheduleService) {
+                                 QuartzScheduleService quartzScheduleService,
+                                 JobAccessService jobAccessService) {
         this.jobDefinitionRepository = jobDefinitionRepository;
         this.jobScheduleRepository = jobScheduleRepository;
         this.quartzScheduleService = quartzScheduleService;
+        this.jobAccessService = jobAccessService;
     }
 
     @PutMapping
     public JobScheduleResponse upsert(@PathVariable UUID jobDefinitionId,
-                                      @Valid @RequestBody JobScheduleRequest request) {
+                                      @Valid @RequestBody JobScheduleRequest request,
+                                      Authentication authentication) {
+        jobAccessService.require(authentication, jobDefinitionId, JobPermissionType.EDIT);
         findDefinition(jobDefinitionId);
         String timeZone = request.timeZone() == null || request.timeZone().isBlank()
                 ? "UTC" : request.timeZone();
@@ -49,7 +57,8 @@ public class JobScheduleController {
     }
 
     @GetMapping
-    public JobScheduleResponse get(@PathVariable UUID jobDefinitionId) {
+    public JobScheduleResponse get(@PathVariable UUID jobDefinitionId, Authentication authentication) {
+        jobAccessService.require(authentication, jobDefinitionId, JobPermissionType.VIEW);
         JobSchedule schedule = jobScheduleRepository.findByJobDefinitionId(jobDefinitionId)
                 .orElseThrow(() -> new NoSuchElementException(
                         "JobSchedule not found for job definition: " + jobDefinitionId));
@@ -57,7 +66,8 @@ public class JobScheduleController {
     }
 
     @DeleteMapping
-    public ResponseEntity<Void> delete(@PathVariable UUID jobDefinitionId) {
+    public ResponseEntity<Void> delete(@PathVariable UUID jobDefinitionId, Authentication authentication) {
+        jobAccessService.require(authentication, jobDefinitionId, JobPermissionType.EDIT);
         jobScheduleRepository.delete(jobDefinitionId);
         quartzScheduleService.unschedule(jobDefinitionId);
         return ResponseEntity.noContent().build();

@@ -19,6 +19,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -41,6 +43,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Import(PostgresTestcontainersConfig.class)
 class ScheduledJobLifecycleIT {
 
+    private static final String BOOTSTRAP_USERNAME = "scheduled-admin";
+    private static final String BOOTSTRAP_PASSWORD = UUID.randomUUID().toString();
+
+    private final Map<String, String> cookies = new LinkedHashMap<>();
+
+    @DynamicPropertySource
+    static void securityProperties(DynamicPropertyRegistry registry) {
+        registry.add("replicadb.security.bootstrap.enabled", () -> "true");
+        registry.add("REPLICADB_BOOTSTRAP_ADMIN_USERNAME", () -> BOOTSTRAP_USERNAME);
+        registry.add("REPLICADB_BOOTSTRAP_ADMIN_PASSWORD", () -> BOOTSTRAP_PASSWORD);
+    }
+
     @Autowired
     private TestRestTemplate restTemplate;
 
@@ -55,12 +69,14 @@ class ScheduledJobLifecycleIT {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE job_schedule, run_trigger_idempotency, job_run, job_definition CASCADE",
+        cookies.clear();
+        jdbcTemplate.update("TRUNCATE TABLE SPRING_SESSION_ATTRIBUTES, SPRING_SESSION, job_schedule, run_trigger_idempotency, job_run, job_definition CASCADE",
                 Map.of());
     }
 
     @Test
     void firesAScheduleAndRejectsAnOverlappingManualRun() throws Exception {
+        login();
         Path source = createDatabase("scheduled-source.db", 50_000);
         Path sink = createDatabase("scheduled-sink.db", 0);
         JobDefinitionResponse definition = createDefinition("scheduled-lifecycle", source, sink);
@@ -71,7 +87,7 @@ class ScheduledJobLifecycleIT {
                 new HttpEntity<>(Map.of(
                         "cronExpression", "*/1 * * * * ?",
                         "timeZone", "UTC",
-                        "enabled", true), jsonHeaders()),
+                        "enabled", true), authenticatedHeaders(true)),
                 String.class);
         assertEquals(HttpStatus.OK, schedule.getStatusCode());
         assertNotNull(schedule.getBody());
@@ -80,8 +96,9 @@ class ScheduledJobLifecycleIT {
         boolean succeeded = false;
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60);
         while (System.nanoTime() < deadline && !succeeded) {
-            ResponseEntity<String> runsResponse = restTemplate.getForEntity(
-                    "/api/v1/jobs/" + definition.id() + "/runs", String.class);
+            ResponseEntity<String> runsResponse = restTemplate.exchange(
+                "/api/v1/jobs/" + definition.id() + "/runs", HttpMethod.GET,
+                new HttpEntity<>(authenticatedHeaders(false)), String.class);
             assertEquals(HttpStatus.OK, runsResponse.getStatusCode());
             JsonNode runs = objectMapper.readTree(runsResponse.getBody());
             for (JsonNode run : runs.path("content")) {
@@ -109,7 +126,7 @@ class ScheduledJobLifecycleIT {
     }
 
     private ResponseEntity<String> triggerManually(UUID jobDefinitionId) {
-        HttpHeaders headers = jsonHeaders();
+        HttpHeaders headers = authenticatedHeaders(true);
         headers.set("Idempotency-Key", "scheduled-overlap-" + UUID.randomUUID());
         return restTemplate.exchange(
                 "/api/v1/jobs/" + jobDefinitionId + "/runs",
@@ -128,11 +145,54 @@ class ScheduledJobLifecycleIT {
         body.put("mode", "complete");
         body.put("jobs", 1);
 
-        ResponseEntity<JobDefinitionResponse> response = restTemplate.postForEntity(
-                "/api/v1/jobs", new HttpEntity<>(body, jsonHeaders()), JobDefinitionResponse.class);
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        ResponseEntity<String> response = restTemplate.postForEntity(
+            "/api/v1/jobs", new HttpEntity<>(body, authenticatedHeaders(true)), String.class);
+        assertEquals(HttpStatus.CREATED, response.getStatusCode(), response.getBody());
         assertNotNull(response.getBody());
-        return response.getBody();
+        try {
+            return objectMapper.readValue(response.getBody(), JobDefinitionResponse.class);
+        } catch (Exception exception) {
+            throw new AssertionError("Could not parse job definition response", exception);
+        }
+    }
+
+    private void login() {
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                "/api/v1/auth/login",
+                new HttpEntity<>(Map.of("username", BOOTSTRAP_USERNAME, "password", BOOTSTRAP_PASSWORD), jsonHeaders()),
+                String.class);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        storeCookies(response);
+        ResponseEntity<String> identity = restTemplate.exchange("/api/v1/auth/me", HttpMethod.GET,
+            new HttpEntity<>(authenticatedHeaders(false)), String.class);
+        assertEquals(HttpStatus.OK, identity.getStatusCode());
+        storeCookies(identity);
+        cookies.putIfAbsent("XSRF-TOKEN", UUID.randomUUID().toString());
+    }
+
+    private HttpHeaders authenticatedHeaders(boolean mutating) {
+        HttpHeaders headers = jsonHeaders();
+        headers.set(HttpHeaders.COOKIE, cookieHeader());
+        if (mutating) {
+            headers.set("X-XSRF-TOKEN", cookies.get("XSRF-TOKEN"));
+        }
+        return headers;
+    }
+
+    private void storeCookies(ResponseEntity<?> response) {
+        for (String value : response.getHeaders().getValuesAsList(HttpHeaders.SET_COOKIE)) {
+            String[] cookie = value.split(";", 2)[0].split("=", 2);
+            if (cookie.length == 2) {
+                cookies.put(cookie[0], cookie[1]);
+            }
+        }
+    }
+
+    private String cookieHeader() {
+        return cookies.entrySet().stream()
+                .map(entry -> entry.getKey() + "=" + entry.getValue())
+                .reduce((first, second) -> first + "; " + second)
+                .orElse("");
     }
 
     private Path createDatabase(String filename, int rowCount) throws SQLException {

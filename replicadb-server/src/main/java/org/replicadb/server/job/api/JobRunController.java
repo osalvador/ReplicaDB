@@ -5,6 +5,8 @@ import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.execution.RunExecutionCoordinator;
+import org.replicadb.server.security.JobAccessService;
+import org.replicadb.server.security.domain.JobPermissionType;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
 import org.replicadb.server.job.persistence.RunTriggerIdempotencyRepository;
@@ -16,12 +18,14 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 
 import java.net.URI;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -32,57 +36,70 @@ public class JobRunController {
     private final JobDefinitionRepository jobDefinitionRepository;
     private final RunTriggerIdempotencyRepository idempotencyRepository;
     private final RunExecutionCoordinator executionCoordinator;
+    private final JobAccessService jobAccessService;
 
     public JobRunController(JobRunRepository jobRunRepository,
                             JobDefinitionRepository jobDefinitionRepository,
                             RunTriggerIdempotencyRepository idempotencyRepository,
-                            RunExecutionCoordinator executionCoordinator) {
+                            RunExecutionCoordinator executionCoordinator,
+                            JobAccessService jobAccessService) {
         this.jobRunRepository = jobRunRepository;
         this.jobDefinitionRepository = jobDefinitionRepository;
         this.idempotencyRepository = idempotencyRepository;
         this.executionCoordinator = executionCoordinator;
+        this.jobAccessService = jobAccessService;
     }
 
     @GetMapping("/jobs/{jobDefinitionId}/runs")
     public PageResponse<JobRunResponse> listForJob(
             @PathVariable UUID jobDefinitionId,
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size) {
+            @RequestParam(required = false) Integer size,
+            Authentication authentication) {
+        jobAccessService.require(authentication, jobDefinitionId, JobPermissionType.VIEW);
         PageRequestParams params = PageRequestParams.of(page, size);
-        return pageResponse(jobRunRepository.findPage(jobDefinitionId, null, params.page(), params.size()),
-                params, jobRunRepository.count(jobDefinitionId, null));
+        return pageResponse(jobRunRepository.findPage(jobDefinitionId, null, params.page(), params.size(), null),
+            params, jobRunRepository.count(jobDefinitionId, null, null));
     }
 
     @GetMapping("/runs")
     public PageResponse<JobRunResponse> list(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size) {
+            @RequestParam(required = false) Integer size,
+            Authentication authentication) {
         PageRequestParams params = PageRequestParams.of(page, size);
         JobRunStatus parsedStatus = parseStatus(status);
-        return pageResponse(jobRunRepository.findPage(null, parsedStatus, params.page(), params.size()),
-                params, jobRunRepository.count(null, parsedStatus));
+        Optional<Set<UUID>> visibleJobIds = jobAccessService.visibleJobIds(authentication);
+        Set<UUID> restriction = visibleJobIds.orElse(null);
+        return pageResponse(jobRunRepository.findPage(null, parsedStatus, params.page(), params.size(), restriction),
+            params, jobRunRepository.count(null, parsedStatus, restriction));
     }
 
     @GetMapping("/runs/{id}")
-    public JobRunResponse get(@PathVariable UUID id) {
-        return JobRunResponse.from(findRun(id));
+    public JobRunResponse get(@PathVariable UUID id, Authentication authentication) {
+        JobRun run = findRun(id);
+        jobAccessService.require(authentication, run.jobDefinitionId(), JobPermissionType.VIEW);
+        return JobRunResponse.from(run);
     }
 
     @GetMapping("/runs/{id}/log")
-    public RunLogResponse log(@PathVariable UUID id) {
+    public RunLogResponse log(@PathVariable UUID id, Authentication authentication) {
         JobRun run = findRun(id);
+        jobAccessService.require(authentication, run.jobDefinitionId(), JobPermissionType.VIEW);
         return new RunLogResponse(run.id(), run.errorMessage() == null ? "" : run.errorMessage());
     }
 
     @PostMapping("/jobs/{jobDefinitionId}/runs")
     public ResponseEntity<JobRunResponse> trigger(
             @PathVariable UUID jobDefinitionId,
-            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            Authentication authentication) {
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 255) {
             throw new IllegalArgumentException("Idempotency-Key must be present and at most 255 characters");
         }
         JobDefinition definition = findDefinition(jobDefinitionId);
+        jobAccessService.require(authentication, jobDefinitionId, JobPermissionType.EXECUTE);
         Optional<UUID> existingRunId = idempotencyRepository.findValidRunId(idempotencyKey);
         if (existingRunId.isPresent()) {
             JobRun existingRun = findRun(existingRunId.get());
@@ -102,8 +119,9 @@ public class JobRunController {
     }
 
     @PostMapping("/runs/{id}/cancel")
-    public CancellationResponse cancel(@PathVariable UUID id) {
+    public CancellationResponse cancel(@PathVariable UUID id, Authentication authentication) {
         JobRun run = findRun(id);
+        jobAccessService.require(authentication, run.jobDefinitionId(), JobPermissionType.CANCEL);
         JobDefinition definition = findDefinition(run.jobDefinitionId());
         String warning = cancellationWarning(definition.mode());
 
@@ -130,8 +148,9 @@ public class JobRunController {
     }
 
     @PostMapping("/runs/{id}/retry")
-    public ResponseEntity<JobRunResponse> retry(@PathVariable UUID id) {
+    public ResponseEntity<JobRunResponse> retry(@PathVariable UUID id, Authentication authentication) {
         JobRun failedRun = findRun(id);
+        jobAccessService.require(authentication, failedRun.jobDefinitionId(), JobPermissionType.EXECUTE);
         if (failedRun.status() != JobRunStatus.FAILED) {
             throw new IllegalStateException("Only failed JobRuns can be retried: " + id);
         }
