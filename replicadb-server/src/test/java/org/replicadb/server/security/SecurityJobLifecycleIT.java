@@ -71,7 +71,7 @@ class SecurityJobLifecycleIT {
         admin.cookies.clear();
         operator.cookies.clear();
         jdbcTemplate.update("TRUNCATE TABLE SPRING_SESSION_ATTRIBUTES, SPRING_SESSION, job_permission, "
-                + "run_trigger_idempotency, job_run, job_definition CASCADE", Map.of());
+            + "run_trigger_idempotency, audit_event, job_run, job_definition CASCADE", Map.of());
     }
 
     @Test
@@ -93,6 +93,12 @@ class SecurityJobLifecycleIT {
                 Map.of(), "security-trigger-" + UUID.randomUUID(), HttpStatus.ACCEPTED);
         JsonNode run = objectMapper.readTree(trigger.getBody());
         UUID runId = UUID.fromString(run.get("id").asText());
+
+        ResponseEntity<String> audit = get(admin, "/api/v1/audit", HttpStatus.OK);
+        JsonNode auditContent = objectMapper.readTree(audit.getBody()).get("content");
+        assertTrue(containsAction(auditContent, "LOGIN_SUCCEEDED"));
+        assertTrue(containsAction(auditContent, "JOB_CREATED"));
+        assertTrue(containsAction(auditContent, "RUN_TRIGGERED"));
 
         post(operator, "/api/v1/runs/" + runId + "/cancel", Map.of(), null, HttpStatus.FORBIDDEN);
         getAnonymousReturnsUnauthorized();
@@ -171,6 +177,15 @@ class SecurityJobLifecycleIT {
     private void getAnonymousReturnsUnauthorized() {
         ResponseEntity<String> response = restTemplate.getForEntity("/api/v1/jobs", String.class);
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode(), response.getBody());
+    }
+
+    private static boolean containsAction(JsonNode events, String action) {
+        for (JsonNode event : events) {
+            if (action.equals(event.get("action").asText())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static HttpHeaders jsonHeaders() {

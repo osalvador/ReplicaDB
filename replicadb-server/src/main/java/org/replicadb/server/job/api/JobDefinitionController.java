@@ -2,6 +2,11 @@ package org.replicadb.server.job.api;
 
 import jakarta.validation.Valid;
 import jakarta.validation.groups.Default;
+import org.replicadb.server.audit.AuditActorResolver;
+import org.replicadb.server.audit.AuditService;
+import org.replicadb.server.audit.domain.AuditAction;
+import org.replicadb.server.audit.domain.AuditOutcome;
+import org.replicadb.server.audit.domain.AuditResourceType;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.security.JobAccessService;
 import org.replicadb.server.security.domain.JobPermissionType;
@@ -23,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
 import java.util.NoSuchElementException;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -35,14 +41,20 @@ public class JobDefinitionController {
     private final JobDefinitionMapper mapper;
     private final JobAccessService jobAccessService;
     private final JobPermissionRepository jobPermissionRepository;
+    private final AuditService auditService;
+    private final AuditActorResolver auditActorResolver;
 
     public JobDefinitionController(JobDefinitionRepository repository, JobDefinitionMapper mapper,
                                    JobAccessService jobAccessService,
-                                   JobPermissionRepository jobPermissionRepository) {
+                                   JobPermissionRepository jobPermissionRepository,
+                                   AuditService auditService,
+                                   AuditActorResolver auditActorResolver) {
         this.repository = repository;
         this.mapper = mapper;
         this.jobAccessService = jobAccessService;
         this.jobPermissionRepository = jobPermissionRepository;
+        this.auditService = auditService;
+        this.auditActorResolver = auditActorResolver;
     }
 
     @PostMapping
@@ -57,6 +69,9 @@ public class JobDefinitionController {
         if (!jobAccessService.isAdmin(authentication)) {
             jobPermissionRepository.grantAll(persisted.id(), jobAccessService.currentUserId(authentication));
         }
+        auditService.record(auditActorResolver.resolve(authentication), AuditAction.JOB_CREATED,
+            AuditResourceType.JOB_DEFINITION, persisted.id().toString(), AuditOutcome.SUCCESS,
+            auditDetail(persisted));
         return ResponseEntity.created(URI.create("/api/v1/jobs/" + persisted.id()))
                 .body(mapper.toResponse(persisted));
     }
@@ -90,11 +105,24 @@ public class JobDefinitionController {
         }
         JobDefinition replacement = mapper.toDefinition(request, existing.id(), existing.name(),
                 existing.createdAt(), existing.updatedAt());
-        return mapper.toResponse(repository.update(replacement));
+        JobDefinition persisted = repository.update(replacement);
+        auditService.record(auditActorResolver.resolve(authentication), AuditAction.JOB_UPDATED,
+            AuditResourceType.JOB_DEFINITION, persisted.id().toString(), AuditOutcome.SUCCESS,
+            auditDetail(persisted));
+        return mapper.toResponse(persisted);
     }
 
     private JobDefinition findDefinition(UUID id) {
         return repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("JobDefinition not found: " + id));
+    }
+
+    private static Map<String, String> auditDetail(JobDefinition definition) {
+        return Map.of(
+                "name", definition.name(),
+                "mode", definition.mode().getModeText(),
+                "jobs", Integer.toString(definition.jobs()),
+                "sourceTable", definition.sourceTable(),
+                "sinkTable", definition.sinkTable());
     }
 }

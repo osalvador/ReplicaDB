@@ -1,6 +1,12 @@
 package org.replicadb.server.security.execution;
 
 import org.junit.jupiter.api.Test;
+import org.replicadb.server.audit.AuditActorResolver;
+import org.replicadb.server.audit.AuditService;
+import org.replicadb.server.audit.domain.AuditAction;
+import org.replicadb.server.audit.domain.AuditActor;
+import org.replicadb.server.audit.domain.AuditOutcome;
+import org.replicadb.server.audit.domain.AuditResourceType;
 import org.replicadb.server.security.domain.AppUser;
 import org.replicadb.server.security.domain.GlobalRole;
 import org.replicadb.server.security.persistence.AppUserRepository;
@@ -9,6 +15,7 @@ import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -17,14 +24,18 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class AdminBootstrapRunnerTest {
 
     private final AppUserRepository repository = mock(AppUserRepository.class);
+    private final AuditService auditService = mock(AuditService.class);
+    private final AuditActorResolver auditActorResolver = mock(AuditActorResolver.class);
 
     @Test
     void createsEnabledAdminWithArgonHashFromEnvironment() {
@@ -33,8 +44,10 @@ class AdminBootstrapRunnerTest {
         when(repository.countByRole(GlobalRole.ADMIN)).thenReturn(0L);
         when(repository.insert(any(AppUser.class))).thenAnswer(invocation -> {
             AppUser user = invocation.getArgument(0);
-            inserted.set(user);
-            return user;
+            AppUser persisted = new AppUser(UUID.randomUUID(), user.username(), user.passwordHash(),
+                    user.role(), user.enabled(), user.createdAt(), user.updatedAt());
+            inserted.set(persisted);
+            return persisted;
         });
         AdminBootstrapRunner runner = runner(encoder, Map.of(
                 "REPLICADB_BOOTSTRAP_ADMIN_USERNAME", "bootstrap-admin",
@@ -47,6 +60,9 @@ class AdminBootstrapRunnerTest {
         assertEquals(GlobalRole.ADMIN, user.role());
         assertTrue(user.enabled());
         assertTrue(encoder.matches("bootstrap-password", user.passwordHash()));
+        verify(auditService).record(eq(AuditActor.system("bootstrap")), eq(AuditAction.USER_CREATED),
+            eq(AuditResourceType.USER), eq(user.id().toString()), eq(AuditOutcome.SUCCESS),
+            eq(Map.of("username", user.username(), "role", user.role().name())));
     }
 
     @Test
@@ -60,6 +76,7 @@ class AdminBootstrapRunnerTest {
         runner.run(null);
 
         verify(repository, never()).insert(any(AppUser.class));
+        verifyNoInteractions(auditService);
     }
 
     @Test
@@ -100,6 +117,7 @@ class AdminBootstrapRunnerTest {
     }
 
     private AdminBootstrapRunner runner(PasswordEncoder encoder, Map<String, String> values) {
-        return new AdminBootstrapRunner(repository, encoder, values::get);
+        when(auditActorResolver.system("bootstrap")).thenReturn(AuditActor.system("bootstrap"));
+        return new AdminBootstrapRunner(repository, encoder, values::get, auditService, auditActorResolver);
     }
 }

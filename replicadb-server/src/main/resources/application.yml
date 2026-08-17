@@ -19,3 +19,5 @@ replicadb:
   server:
     execution:
       pool-size: 4
+    audit:
+      retention-days: 365

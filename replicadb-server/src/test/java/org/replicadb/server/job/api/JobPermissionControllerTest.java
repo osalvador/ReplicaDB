@@ -3,6 +3,11 @@ package org.replicadb.server.job.api;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.replicadb.cli.ReplicationMode;
+import org.replicadb.server.audit.domain.AuditAction;
+import org.replicadb.server.audit.domain.AuditEvent;
+import org.replicadb.server.audit.domain.AuditResourceType;
+import org.replicadb.server.audit.persistence.AuditEventFilter;
+import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
@@ -32,6 +37,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
@@ -53,12 +59,16 @@ class JobPermissionControllerTest {
     @Autowired
     private JobPermissionRepository jobPermissionRepository;
 
+        @Autowired
+        private AuditEventRepository auditEventRepository;
+
     @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE job_permission, job_run, job_definition, app_user CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE audit_event, job_permission, job_run, job_definition, app_user CASCADE",
+                Map.of());
     }
 
     @Test
@@ -84,8 +94,13 @@ class JobPermissionControllerTest {
 
         mockMvc.perform(delete(path(definition.id()) + "/" + second.id()).with(csrf()))
                 .andExpect(status().isNoContent());
+        assertEquals(1, permissionEvents(AuditAction.JOB_PERMISSION_REVOKED).size());
         mockMvc.perform(delete(path(definition.id()) + "/" + second.id()).with(csrf()))
                 .andExpect(status().isNoContent());
+        assertEquals(2, permissionEvents(AuditAction.JOB_PERMISSION_REVOKED).size());
+        assertEquals(3, permissionEvents(AuditAction.JOB_PERMISSION_REPLACED).size());
+        assertTrue(permissionEvents(AuditAction.JOB_PERMISSION_REPLACED).stream()
+                .anyMatch(event -> "EDIT".equals(event.detail().get("permissions"))));
     }
 
     @Test
@@ -106,6 +121,8 @@ class JobPermissionControllerTest {
                 .andExpect(status().isForbidden());
         mockMvc.perform(delete(path(definition.id()) + "/" + target.id()).with(csrf()))
                 .andExpect(status().isForbidden());
+        assertTrue(permissionEvents(AuditAction.JOB_PERMISSION_REPLACED).isEmpty());
+        assertTrue(permissionEvents(AuditAction.JOB_PERMISSION_REVOKED).isEmpty());
     }
 
     @Test
@@ -117,6 +134,24 @@ class JobPermissionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"permissions\":[\"VIEW\"]}"))
                 .andExpect(status().isNotFound());
+        assertEquals(0, permissionEvents(AuditAction.JOB_PERMISSION_REPLACED).size());
+    }
+
+    @Test
+    void emptyReplacementRevokesAllAndAuditsNone() throws Exception {
+        AppUser target = appUserRepository.insert(user("empty-permission-target"));
+        JobDefinition definition = jobDefinitionRepository.insert(definition("empty-permission-job"));
+        jobPermissionRepository.grant(definition.id(), target.id(), JobPermissionType.VIEW);
+
+        mockMvc.perform(put(path(definition.id()) + "/" + target.id()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"permissions\":[]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.permissions.length()").value(0));
+
+        assertEquals("none", permissionEvents(AuditAction.JOB_PERMISSION_REPLACED).get(0)
+                .detail().get("permissions"));
+        assertFalse(jobPermissionRepository.hasPermission(definition.id(), target.id(), JobPermissionType.VIEW));
     }
 
     private void replace(UUID jobDefinitionId, UUID userId, String permissions) throws Exception {
@@ -129,6 +164,11 @@ class JobPermissionControllerTest {
     private static String path(UUID jobDefinitionId) {
         return "/api/v1/jobs/" + jobDefinitionId + "/permissions";
     }
+
+        private java.util.List<AuditEvent> permissionEvents(AuditAction action) {
+                return auditEventRepository.findPage(new AuditEventFilter(null, action,
+                                AuditResourceType.JOB_DEFINITION, null, null, null), 0, 50);
+        }
 
     private static AppUser user(String username) {
         return new AppUser(null, username, "hash", GlobalRole.VIEWER, true, null, null);

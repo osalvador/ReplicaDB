@@ -2,7 +2,13 @@ package org.replicadb.server.security.api;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.replicadb.server.audit.domain.AuditAction;
+import org.replicadb.server.audit.domain.AuditEvent;
+import org.replicadb.server.audit.domain.AuditResourceType;
+import org.replicadb.server.audit.persistence.AuditEventFilter;
+import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
+import org.replicadb.server.security.WithMockReplicaDbUser;
 import org.replicadb.server.security.domain.AppUser;
 import org.replicadb.server.security.domain.GlobalRole;
 import org.replicadb.server.security.persistence.AppUserRepository;
@@ -21,6 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -44,6 +51,9 @@ class UserControllerTest {
     @Autowired
     private AppUserRepository repository;
 
+        @Autowired
+        private AuditEventRepository auditEventRepository;
+
     @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
@@ -52,12 +62,17 @@ class UserControllerTest {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE SPRING_SESSION_ATTRIBUTES, SPRING_SESSION, app_user CASCADE", Map.of());
+                jdbcTemplate.update("TRUNCATE TABLE audit_event, SPRING_SESSION_ATTRIBUTES, SPRING_SESSION, app_user CASCADE",
+                                Map.of());
     }
 
     @Test
+        @WithMockReplicaDbUser(userId = "00000000-0000-0000-0000-000000000002",
+                        username = "acting-admin", role = GlobalRole.ADMIN)
     void adminCreatesUserWithoutReturningPassword() throws Exception {
         String username = uniqueUsername();
+                repository.insert(new AppUser(UUID.fromString("00000000-0000-0000-0000-000000000002"),
+                                "acting-admin", "hash", GlobalRole.ADMIN, true, null, null));
 
         mockMvc.perform(post("/api/v1/users")
                         .with(csrf())
@@ -69,6 +84,13 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.role").value("VIEWER"))
                 .andExpect(jsonPath("$.passwordHash").doesNotExist())
                 .andExpect(jsonPath("$.password").doesNotExist());
+
+        AppUser created = repository.findByUsername(username).orElseThrow();
+        var events = userEvents(AuditAction.USER_CREATED, created.id().toString());
+        assertEquals(1, events.size());
+        assertEquals("acting-admin", events.get(0).actor().username());
+        assertEquals(username, events.get(0).detail().get("username"));
+        assertEquals("VIEWER", events.get(0).detail().get("role"));
     }
 
     @Test
@@ -82,6 +104,8 @@ class UserControllerTest {
                         .content(createJson(username, "initial-password", "VIEWER")))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+
+        assertEquals(0, userEvents(AuditAction.USER_CREATED, null).size());
     }
 
     @Test
@@ -117,6 +141,10 @@ class UserControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("OPERATOR"))
                 .andExpect(jsonPath("$.enabled").value(false));
+
+        var events = userEvents(AuditAction.USER_UPDATED, existing.id().toString());
+        assertEquals(1, events.size());
+        assertEquals("OPERATOR", events.get(0).detail().get("role"));
     }
 
     @Test
@@ -133,6 +161,11 @@ class UserControllerTest {
         AppUser updated = repository.findById(existing.id()).orElseThrow();
         assertFalse(passwordEncoder.matches("old-password", updated.passwordHash()));
         assertTrue(passwordEncoder.matches("new-password", updated.passwordHash()));
+
+        var events = userEvents(AuditAction.USER_PASSWORD_CHANGED, existing.id().toString());
+        assertEquals(1, events.size());
+        assertFalse(events.get(0).detail().toString().contains("new-password"));
+        assertFalse(events.get(0).detail().toString().contains(updated.passwordHash()));
     }
 
     @Test
@@ -161,4 +194,9 @@ class UserControllerTest {
         return "{\"username\":\"" + username + "\",\"password\":\"" + password
                 + "\",\"role\":\"" + role + "\"}";
     }
+
+        private java.util.List<AuditEvent> userEvents(AuditAction action, String resourceId) {
+                return auditEventRepository.findPage(new AuditEventFilter(null, action,
+                                AuditResourceType.USER, resourceId, null, null), 0, 50);
+        }
 }

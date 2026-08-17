@@ -5,6 +5,11 @@ import org.replicadb.server.security.domain.GlobalRole;
 import org.replicadb.server.security.persistence.AppUserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.replicadb.server.audit.AuditActorResolver;
+import org.replicadb.server.audit.AuditService;
+import org.replicadb.server.audit.domain.AuditAction;
+import org.replicadb.server.audit.domain.AuditOutcome;
+import org.replicadb.server.audit.domain.AuditResourceType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -15,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.Objects;
+import java.util.Map;
 import java.util.function.Function;
 
 @Component
@@ -28,21 +34,30 @@ public class AdminBootstrapRunner implements ApplicationRunner {
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final Function<String, String> envLookup;
+    private final AuditService auditService;
+    private final AuditActorResolver auditActorResolver;
 
     @Autowired
     public AdminBootstrapRunner(AppUserRepository appUserRepository,
                                 PasswordEncoder passwordEncoder,
-                                Environment environment) {
+                                Environment environment,
+                                AuditService auditService,
+                                AuditActorResolver auditActorResolver) {
         this(appUserRepository, passwordEncoder,
-                name -> firstNonNull(System.getenv(name), environment.getProperty(name)));
+                name -> firstNonNull(System.getenv(name), environment.getProperty(name)),
+                auditService, auditActorResolver);
     }
 
     AdminBootstrapRunner(AppUserRepository appUserRepository,
                          PasswordEncoder passwordEncoder,
-                         Function<String, String> envLookup) {
+                         Function<String, String> envLookup,
+                         AuditService auditService,
+                         AuditActorResolver auditActorResolver) {
         this.appUserRepository = Objects.requireNonNull(appUserRepository);
         this.passwordEncoder = Objects.requireNonNull(passwordEncoder);
         this.envLookup = Objects.requireNonNull(envLookup);
+        this.auditService = Objects.requireNonNull(auditService);
+        this.auditActorResolver = Objects.requireNonNull(auditActorResolver);
     }
 
     @Override
@@ -61,7 +76,10 @@ public class AdminBootstrapRunner implements ApplicationRunner {
         AppUser bootstrapUser = new AppUser(
                 null, username, passwordEncoder.encode(password), GlobalRole.ADMIN, true, null, null);
         try {
-            appUserRepository.insert(bootstrapUser);
+            AppUser persisted = appUserRepository.insert(bootstrapUser);
+            auditService.record(auditActorResolver.system("bootstrap"), AuditAction.USER_CREATED,
+                AuditResourceType.USER, persisted.id().toString(), AuditOutcome.SUCCESS,
+                Map.of("username", persisted.username(), "role", persisted.role().name()));
             LOGGER.warn("Created bootstrap ADMIN user '{}'; rotate its password after first login", username);
         } catch (DuplicateKeyException exception) {
             if (appUserRepository.countByRole(GlobalRole.ADMIN) == 0) {

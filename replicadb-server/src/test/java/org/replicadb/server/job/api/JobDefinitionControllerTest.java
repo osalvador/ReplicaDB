@@ -5,6 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.replicadb.cli.ReplicationMode;
+import org.replicadb.server.audit.domain.AuditAction;
+import org.replicadb.server.audit.domain.AuditEvent;
+import org.replicadb.server.audit.domain.AuditResourceType;
+import org.replicadb.server.audit.persistence.AuditEventFilter;
+import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
@@ -29,6 +34,8 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -58,6 +65,9 @@ class JobDefinitionControllerTest {
     private JobPermissionRepository jobPermissionRepository;
 
     @Autowired
+    private AuditEventRepository auditEventRepository;
+
+    @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
     @Autowired
@@ -65,7 +75,7 @@ class JobDefinitionControllerTest {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE job_permission, run_trigger_idempotency, job_run, job_definition, app_user CASCADE",
+        jdbcTemplate.update("TRUNCATE TABLE audit_event, job_permission, run_trigger_idempotency, job_run, job_definition, app_user CASCADE",
             Map.of());
     }
 
@@ -82,6 +92,16 @@ class JobDefinitionControllerTest {
 
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
         assertTrue(body.get("id").isTextual());
+
+        UUID jobId = UUID.fromString(body.get("id").asText());
+        var events = jobEvents(AuditAction.JOB_CREATED, jobId);
+        assertEquals(1, events.size());
+        assertEquals("complete", events.get(0).detail().get("mode"));
+        assertEquals("1", events.get(0).detail().get("jobs"));
+        assertFalse(events.get(0).detail().keySet().stream()
+            .anyMatch(key -> key.matches("(?i).*password.*")));
+        assertFalse(events.get(0).detail().values().stream()
+            .anyMatch(value -> value.contains("${env:")));
     }
 
     @Test
@@ -92,6 +112,8 @@ class JobDefinitionControllerTest {
                         .content(jobJson("", "complete", 1)))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+
+            assertEquals(0, jobEvents(AuditAction.JOB_CREATED, null).size());
     }
 
     @Test
@@ -136,12 +158,15 @@ class JobDefinitionControllerTest {
                 .andExpect(jsonPath("$.jobs").value(3))
                 .andExpect(jsonPath("$.incrementalWatermarkColumn").value("updated_at"));
 
+            assertEquals(1, jobEvents(AuditAction.JOB_UPDATED, inserted.id()).size());
+
         mockMvc.perform(put("/api/v1/jobs/" + inserted.id())
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateJson("changed-name", "incremental")))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+            assertEquals(1, jobEvents(AuditAction.JOB_UPDATED, inserted.id()).size());
     }
 
     @Test
@@ -268,5 +293,11 @@ class JobDefinitionControllerTest {
                   "initialWatermarkValue": "100"
                 }
                 """.formatted(nameField, mode);
+    }
+
+    private java.util.List<AuditEvent> jobEvents(AuditAction action, UUID resourceId) {
+        return auditEventRepository.findPage(new AuditEventFilter(null, action,
+                AuditResourceType.JOB_DEFINITION,
+                resourceId == null ? null : resourceId.toString(), null, null), 0, 50);
     }
 }

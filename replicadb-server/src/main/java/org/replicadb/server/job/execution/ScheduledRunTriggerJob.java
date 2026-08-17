@@ -6,11 +6,18 @@ import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
+import org.replicadb.server.audit.AuditActorResolver;
+import org.replicadb.server.audit.AuditService;
+import org.replicadb.server.audit.domain.AuditAction;
+import org.replicadb.server.audit.domain.AuditOutcome;
+import org.replicadb.server.audit.domain.AuditResourceType;
+import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.persistence.JobRunRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.UUID;
+import java.util.Map;
 
 @DisallowConcurrentExecution
 public class ScheduledRunTriggerJob implements Job {
@@ -23,6 +30,12 @@ public class ScheduledRunTriggerJob implements Job {
 
     @Autowired
     private RunExecutionCoordinator runExecutionCoordinator;
+
+    @Autowired
+    private AuditService auditService;
+
+    @Autowired
+    private AuditActorResolver auditActorResolver;
 
     @Override
     public void execute(JobExecutionContext context) {
@@ -46,5 +59,8 @@ public class ScheduledRunTriggerJob implements Job {
         }
 
         runExecutionCoordinator.submit(pending.id(), "scheduler");
+    auditService.record(auditActorResolver.system("scheduler"), AuditAction.RUN_TRIGGERED,
+        AuditResourceType.JOB_RUN, pending.id().toString(), AuditOutcome.SUCCESS,
+        Map.of("jobDefinitionId", jobDefinitionId.toString(), "trigger", "schedule"));
     }
 }

@@ -15,7 +15,7 @@ class JobRunTest {
         assertDoesNotThrow(() -> new JobRun(
                 UUID.randomUUID(), UUID.randomUUID(), null, JobRunStatus.PENDING, 1,
                 null, null, null, Instant.now(), null, null,
-                null, null, null, null));
+                null, null, null, null, null));
     }
 
     @Test
@@ -23,6 +23,6 @@ class JobRunTest {
         assertThrows(IllegalArgumentException.class, () -> new JobRun(
                 UUID.randomUUID(), UUID.randomUUID(), null, JobRunStatus.PENDING, 0,
                 null, null, null, Instant.now(), null, null,
-                null, null, null, null));
+                null, null, null, null, null));
     }
 }
