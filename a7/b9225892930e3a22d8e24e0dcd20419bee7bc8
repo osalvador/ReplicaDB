@@ -1,0 +1,19 @@
+.ai/archive/phase-1c-3c-audit-events-and-cancellation-warning.plan.md
+  s_2265cb5e7a1465::t_71068f0a6d2b0a 1-347
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "a7b9225892930e3a22d8e24e0dcd20419bee7bc8",
+  "prompts": {},
+  "sessions": {
+    "s_2265cb5e7a1465": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "4a10290b-9a5b-4f04-b95c-fbba1586e3a4",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
