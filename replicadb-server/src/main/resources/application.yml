@@ -3,6 +3,11 @@ server:
 spring:
   application:
     name: replicadb-server
+  quartz:
+    job-store-type: memory
+    properties:
+      org.quartz.scheduler.instanceName: ReplicaDbScheduler
+      org.quartz.threadPool.threadCount: 2
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
 management:
