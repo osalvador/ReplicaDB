@@ -19,7 +19,8 @@ public record JobRun(
         Long rowsProcessed,
         Long durationMillis,
         String committedWatermark,
-        String errorMessage) {
+        String errorMessage,
+        String cancellationWarning) {
 
     public JobRun {
         Objects.requireNonNull(status, "status must not be null");

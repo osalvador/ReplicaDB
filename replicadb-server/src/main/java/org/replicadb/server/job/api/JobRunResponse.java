@@ -21,13 +21,14 @@ public record JobRunResponse(
         Long rowsProcessed,
         Long durationMillis,
         String committedWatermark,
-        String errorMessage) {
+        String errorMessage,
+        String cancellationWarning) {
 
     public static JobRunResponse from(JobRun run) {
         return new JobRunResponse(
                 run.id(), run.jobDefinitionId(), run.previousRunId(), run.status(), run.attempt(),
                 run.executorIdentity(), run.leaseUntil(), run.heartbeatAt(), run.createdAt(),
                 run.startedAt(), run.finishedAt(), run.rowsProcessed(), run.durationMillis(),
-                run.committedWatermark(), run.errorMessage());
+                run.committedWatermark(), run.errorMessage(), run.cancellationWarning());
     }
 }

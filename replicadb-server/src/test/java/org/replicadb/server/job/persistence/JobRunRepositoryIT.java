@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -156,7 +157,7 @@ class JobRunRepositoryIT {
 
         JobRun running = jobRunRepository.claimById(pending.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
         assertTrue(jobRunRepository.hasActiveRun(definition.id()));
-        jobRunRepository.markCancelRequested(running.id());
+        jobRunRepository.markCancelRequested(running.id(), "cancel warning");
         assertTrue(jobRunRepository.hasActiveRun(definition.id()));
         jobRunRepository.markCancelled(running.id(), 0, 0);
         assertTrue(!jobRunRepository.hasActiveRun(definition.id()));
@@ -202,8 +203,10 @@ class JobRunRepositoryIT {
         JobRun running = jobRunRepository.claimById(pending.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
         jobRunRepository.markSucceeded(running.id(), 0, 0, null);
 
-        jobRunRepository.markCancelRequested(running.id());
-        assertEquals(JobRunStatus.SUCCEEDED, jobRunRepository.findById(running.id()).orElseThrow().status());
+        jobRunRepository.markCancelRequested(running.id(), "ignored warning");
+        JobRun unchanged = jobRunRepository.findById(running.id()).orElseThrow();
+        assertEquals(JobRunStatus.SUCCEEDED, unchanged.status());
+        assertNull(unchanged.cancellationWarning());
     }
 
     @Test
@@ -211,11 +214,37 @@ class JobRunRepositoryIT {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
         JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
 
-        jobRunRepository.markPendingCancelled(pending.id());
+        jobRunRepository.markPendingCancelled(pending.id(), "pending warning");
 
         JobRun cancelled = jobRunRepository.findById(pending.id()).orElseThrow();
         assertEquals(JobRunStatus.CANCELLED, cancelled.status());
         assertEquals(0, cancelled.rowsProcessed());
+        assertEquals("pending warning", cancelled.cancellationWarning());
+    }
+
+    @Test
+    void preservesCancellationWarningWhenExecutorFinishesCancellation() {
+        JobDefinition definition = jobDefinitionRepository.insert(definition());
+        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun running = jobRunRepository.claimById(pending.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
+
+        jobRunRepository.markCancelRequested(running.id(), "indeterminate sink warning");
+        assertEquals("indeterminate sink warning",
+                jobRunRepository.findById(running.id()).orElseThrow().cancellationWarning());
+
+        jobRunRepository.markCancelled(running.id(), 0, 0);
+
+        JobRun cancelled = jobRunRepository.findById(running.id()).orElseThrow();
+        assertEquals(JobRunStatus.CANCELLED, cancelled.status());
+        assertEquals("indeterminate sink warning", cancelled.cancellationWarning());
+    }
+
+    @Test
+    void leavesCancellationWarningNullForUncancelledRun() {
+        JobDefinition definition = jobDefinitionRepository.insert(definition());
+        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+
+        assertNull(jobRunRepository.findById(pending.id()).orElseThrow().cancellationWarning());
     }
 
     @Test

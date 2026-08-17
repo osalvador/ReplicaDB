@@ -6,6 +6,13 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.server.audit.AuditActorResolver;
+import org.replicadb.server.audit.AuditService;
+import org.replicadb.server.audit.domain.AuditAction;
+import org.replicadb.server.audit.domain.AuditEvent;
+import org.replicadb.server.audit.domain.AuditResourceType;
+import org.replicadb.server.audit.persistence.AuditEventFilter;
+import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobRun;
@@ -55,6 +62,9 @@ class JobExecutionServiceIT {
     private JobRunRepository jobRunRepository;
 
     @Autowired
+    private AuditEventRepository auditEventRepository;
+
+    @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
     @TempDir
@@ -62,7 +72,7 @@ class JobExecutionServiceIT {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE job_run, job_definition CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE audit_event, job_run, job_definition CASCADE", Map.of());
     }
 
     @Test
@@ -84,6 +94,10 @@ class JobExecutionServiceIT {
         assertEquals("20", jobRunRepository.findLastCommittedWatermark(persistedDefinition.id()).orElseThrow());
         assertEquals(2, countRows(sinkDatabase, "orders_copy"));
         assertNotNull(persistedRun.finishedAt());
+        AuditEvent event = terminalEvent(AuditAction.RUN_SUCCEEDED, pending.id());
+        assertEquals(Long.toString(persistedRun.rowsProcessed()), event.detail().get("rowsProcessed"));
+        assertTrue(event.actor().username().startsWith("system:"));
+        assertFalse(event.actor().username().equals("integration-worker"));
     }
 
     @Test
@@ -106,6 +120,10 @@ class JobExecutionServiceIT {
         assertEquals(JobRunStatus.FAILED, persistedRun.status());
         assertFalse(persistedRun.errorMessage().isBlank());
         assertEquals("15", jobRunRepository.findLastCommittedWatermark(persistedDefinition.id()).orElseThrow());
+        AuditEvent event = terminalEvent(AuditAction.RUN_FAILED, pending.id());
+        assertEquals(persistedRun.errorMessage(), event.detail().get("errorMessage"));
+        assertFalse(event.detail().toString().contains("${env:"));
+        assertTrue(event.actor().username().startsWith("system:"));
     }
 
     @Test
@@ -132,7 +150,8 @@ class JobExecutionServiceIT {
         JobDefinitionRepository definitions = Mockito.mock(JobDefinitionRepository.class);
         when(repository.claimNextPending(anyString(), any())).thenReturn(Optional.empty());
         JobExecutionService service = new JobExecutionService(repository, definitions,
-                new JobDefinitionEnvResolver(), new ToolOptionsArgsBuilder());
+            new JobDefinitionEnvResolver(), new ToolOptionsArgsBuilder(),
+            Mockito.mock(AuditService.class), Mockito.mock(AuditActorResolver.class));
 
         assertTrue(service.executeNextPending("integration-worker").isEmpty());
         verify(repository, never()).markSucceeded(any(), any(Long.class), any(Long.class), any());
@@ -185,6 +204,11 @@ class JobExecutionServiceIT {
             resultSet.next();
             return resultSet.getLong(1);
         }
+    }
+
+    private AuditEvent terminalEvent(AuditAction action, UUID runId) {
+        return auditEventRepository.findPage(new AuditEventFilter(null, action,
+                AuditResourceType.JOB_RUN, runId.toString(), null, null), 0, 50).get(0);
     }
 
     private static JobDefinition jobDefinition(Path sourceDatabase, Path sinkDatabase,

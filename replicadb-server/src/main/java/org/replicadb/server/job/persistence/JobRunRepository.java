@@ -28,7 +28,7 @@ public class JobRunRepository {
     private static final String SELECT_COLUMNS = """
             id, job_definition_id, previous_run_id, status, attempt, executor_identity,
             lease_until, heartbeat_at, created_at, started_at, finished_at,
-            rows_processed, duration_millis, committed_watermark, error_message
+            rows_processed, duration_millis, committed_watermark, error_message, cancellation_warning
             """;
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
@@ -57,7 +57,7 @@ public class JobRunRepository {
                     "Job definition " + jobDefinitionId + " already has an active run", exception);
         }
         return new JobRun(id, jobDefinitionId, previousRunId, JobRunStatus.PENDING, attempt,
-                null, null, null, createdAt, null, null, null, null, null, null);
+            null, null, null, createdAt, null, null, null, null, null, null, null);
     }
 
     @Transactional
@@ -171,14 +171,16 @@ public class JobRunRepository {
         assertUpdated(runId, updated, JobRunStatus.FAILED);
     }
 
-    public void markCancelRequested(UUID runId) {
+    public void markCancelRequested(UUID runId, String cancellationWarning) {
         JobRunStateMachine.assertLegalTransition(JobRunStatus.RUNNING, JobRunStatus.CANCEL_REQUESTED);
         String sql = """
                 UPDATE job_run
-                SET status = 'CANCEL_REQUESTED'
+                SET status = 'CANCEL_REQUESTED', cancellation_warning = :cancellationWarning
                 WHERE id = :id AND status = 'RUNNING'
                 """;
-        int updated = jdbcTemplate.update(sql, Map.of("id", runId));
+            int updated = jdbcTemplate.update(sql, new MapSqlParameterSource()
+                .addValue("id", runId)
+                .addValue("cancellationWarning", cancellationWarning, Types.VARCHAR));
         if (updated == 0) {
             // The execution may have reached a terminal state between the API read and this update.
             return;
@@ -186,15 +188,18 @@ public class JobRunRepository {
         assertUpdated(runId, updated, JobRunStatus.CANCEL_REQUESTED);
     }
 
-    public void markPendingCancelled(UUID runId) {
+    public void markPendingCancelled(UUID runId, String cancellationWarning) {
         JobRunStateMachine.assertLegalTransition(JobRunStatus.PENDING, JobRunStatus.CANCELLED);
         String sql = """
                 UPDATE job_run
                 SET status = 'CANCELLED', finished_at = now(), rows_processed = 0,
-                    duration_millis = 0, error_message = NULL
+                    duration_millis = 0, error_message = NULL,
+                    cancellation_warning = :cancellationWarning
                 WHERE id = :id AND status = 'PENDING'
                 """;
-        int updated = jdbcTemplate.update(sql, Map.of("id", runId));
+        int updated = jdbcTemplate.update(sql, new MapSqlParameterSource()
+                .addValue("id", runId)
+                .addValue("cancellationWarning", cancellationWarning, Types.VARCHAR));
         assertUpdated(runId, updated, JobRunStatus.CANCELLED);
     }
 
@@ -322,7 +327,8 @@ public class JobRunRepository {
                     nullableLong(resultSet, "rows_processed"),
                     nullableLong(resultSet, "duration_millis"),
                     resultSet.getString("committed_watermark"),
-                    resultSet.getString("error_message"));
+                    resultSet.getString("error_message"),
+                    resultSet.getString("cancellation_warning"));
         }
     };
 

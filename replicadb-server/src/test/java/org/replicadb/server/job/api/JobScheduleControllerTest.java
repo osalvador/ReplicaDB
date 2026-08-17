@@ -5,6 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.replicadb.cli.ReplicationMode;
+import org.replicadb.server.audit.domain.AuditAction;
+import org.replicadb.server.audit.domain.AuditEvent;
+import org.replicadb.server.audit.domain.AuditResourceType;
+import org.replicadb.server.audit.persistence.AuditEventFilter;
+import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobSchedule;
@@ -31,6 +36,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -68,12 +74,15 @@ class JobScheduleControllerTest {
     @Autowired
     private QuartzScheduleService quartzScheduleService;
 
+        @Autowired
+        private AuditEventRepository auditEventRepository;
+
     @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE job_permission, job_schedule, run_trigger_idempotency, job_run, job_definition, app_user CASCADE",
+                jdbcTemplate.update("TRUNCATE TABLE audit_event, job_permission, job_schedule, run_trigger_idempotency, job_run, job_definition, app_user CASCADE",
                 Map.of());
     }
 
@@ -88,6 +97,11 @@ class JobScheduleControllerTest {
                 .andExpect(jsonPath("$.jobDefinitionId").value(definition.id().toString()))
                 .andExpect(jsonPath("$.timeZone").value("Europe/Madrid"))
                 .andExpect(jsonPath("$.nextFireTime").isNotEmpty());
+
+        var events = scheduleEvents(AuditAction.JOB_SCHEDULE_UPSERTED, definition.id());
+        assertEquals(1, events.size());
+        assertEquals("0 0 1 1 1 ?", events.get(0).detail().get("cronExpression"));
+        assertEquals("Europe/Madrid", events.get(0).detail().get("timeZone"));
     }
 
     @Test
@@ -99,6 +113,7 @@ class JobScheduleControllerTest {
                         .content(scheduleJson("not-a-cron", "UTC", true)))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+        assertTrue(scheduleEvents(AuditAction.JOB_SCHEDULE_UPSERTED, definition.id()).isEmpty());
     }
 
     @Test
@@ -115,6 +130,8 @@ class JobScheduleControllerTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.timeZone").value("UTC"));
+        assertEquals("UTC", scheduleEvents(AuditAction.JOB_SCHEDULE_UPSERTED, definition.id())
+                .get(0).detail().get("timeZone"));
     }
 
     @Test
@@ -172,10 +189,12 @@ class JobScheduleControllerTest {
 
         mockMvc.perform(delete(schedulePath(definition.id())).with(csrf()))
                 .andExpect(status().isNoContent());
+        assertEquals(1, scheduleEvents(AuditAction.JOB_SCHEDULE_DELETED, definition.id()).size());
         mockMvc.perform(get(schedulePath(definition.id())))
                 .andExpect(status().isNotFound());
         mockMvc.perform(delete(schedulePath(definition.id())).with(csrf()))
                 .andExpect(status().isNoContent());
+        assertEquals(2, scheduleEvents(AuditAction.JOB_SCHEDULE_DELETED, definition.id()).size());
     }
 
     @Test
@@ -184,6 +203,7 @@ class JobScheduleControllerTest {
 
         mockMvc.perform(delete(schedulePath(definition.id())).with(csrf()))
                 .andExpect(status().isNoContent());
+        assertEquals(1, scheduleEvents(AuditAction.JOB_SCHEDULE_DELETED, definition.id()).size());
     }
 
     @Test
@@ -252,4 +272,9 @@ class JobScheduleControllerTest {
                 }
                 """.formatted(cronExpression, timeZone, enabled);
     }
+
+        private java.util.List<AuditEvent> scheduleEvents(AuditAction action, UUID jobDefinitionId) {
+                return auditEventRepository.findPage(new AuditEventFilter(null, action,
+                                AuditResourceType.JOB_DEFINITION, jobDefinitionId.toString(), null, null), 0, 50);
+        }
 }

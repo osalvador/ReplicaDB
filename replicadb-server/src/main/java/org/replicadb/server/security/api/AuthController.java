@@ -4,7 +4,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
+import org.replicadb.server.audit.AuditActorResolver;
+import org.replicadb.server.audit.AuditService;
+import org.replicadb.server.audit.domain.AuditAction;
+import org.replicadb.server.audit.domain.AuditActor;
+import org.replicadb.server.audit.domain.AuditOutcome;
+import org.replicadb.server.audit.domain.AuditResourceType;
 import org.replicadb.server.security.auth.LoginAttemptService;
+import org.replicadb.server.security.auth.TooManyAttemptsException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -19,6 +26,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
@@ -26,13 +35,19 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final LoginAttemptService loginAttemptService;
     private final SecurityContextRepository securityContextRepository;
+    private final AuditService auditService;
+    private final AuditActorResolver auditActorResolver;
 
     public AuthController(AuthenticationManager authenticationManager,
                           LoginAttemptService loginAttemptService,
-                          SecurityContextRepository securityContextRepository) {
+                          SecurityContextRepository securityContextRepository,
+                          AuditService auditService,
+                          AuditActorResolver auditActorResolver) {
         this.authenticationManager = authenticationManager;
         this.loginAttemptService = loginAttemptService;
         this.securityContextRepository = securityContextRepository;
+        this.auditService = auditService;
+        this.auditActorResolver = auditActorResolver;
     }
 
     @PostMapping("/login")
@@ -40,7 +55,14 @@ public class AuthController {
                                       HttpServletRequest httpRequest,
                                       HttpServletResponse httpResponse) {
         String remoteAddress = httpRequest.getRemoteAddr();
-        loginAttemptService.checkAllowed(request.username(), remoteAddress);
+        try {
+            loginAttemptService.checkAllowed(request.username(), remoteAddress);
+        } catch (TooManyAttemptsException exception) {
+            auditService.record(auditActorResolver.forAttemptedLogin(request.username(), remoteAddress),
+                    AuditAction.LOGIN_FAILED, AuditResourceType.SESSION, request.username(),
+                    AuditOutcome.FAILURE, Map.of("reason", "THROTTLED"));
+            throw exception;
+        }
 
         Authentication authentication;
         try {
@@ -48,10 +70,16 @@ public class AuthController {
                     UsernamePasswordAuthenticationToken.unauthenticated(request.username(), request.password()));
         } catch (AuthenticationException exception) {
             loginAttemptService.recordFailure(request.username(), remoteAddress);
+            auditService.record(auditActorResolver.forAttemptedLogin(request.username(), remoteAddress),
+                    AuditAction.LOGIN_FAILED, AuditResourceType.SESSION, request.username(),
+                    AuditOutcome.FAILURE);
             throw exception;
         }
 
         loginAttemptService.recordSuccess(request.username(), remoteAddress);
+        AuditActor actor = auditActorResolver.resolve(authentication);
+        auditService.record(actor, AuditAction.LOGIN_SUCCEEDED, AuditResourceType.SESSION,
+                actor.username(), AuditOutcome.SUCCESS);
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);
@@ -60,12 +88,15 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletRequest request) {
+    public ResponseEntity<Void> logout(HttpServletRequest request, Authentication authentication) {
+        AuditActor actor = auditActorResolver.resolve(authentication);
         HttpSession session = request.getSession(false);
         if (session != null) {
             session.invalidate();
         }
         SecurityContextHolder.clearContext();
+        auditService.record(actor, AuditAction.LOGOUT, AuditResourceType.SESSION,
+                actor.username(), AuditOutcome.SUCCESS);
         return ResponseEntity.noContent().build();
     }
 

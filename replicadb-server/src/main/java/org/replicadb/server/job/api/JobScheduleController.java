@@ -1,6 +1,11 @@
 package org.replicadb.server.job.api;
 
 import jakarta.validation.Valid;
+import org.replicadb.server.audit.AuditActorResolver;
+import org.replicadb.server.audit.AuditService;
+import org.replicadb.server.audit.domain.AuditAction;
+import org.replicadb.server.audit.domain.AuditOutcome;
+import org.replicadb.server.audit.domain.AuditResourceType;
 import org.replicadb.server.job.domain.JobSchedule;
 import org.replicadb.server.job.execution.QuartzScheduleService;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
@@ -19,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.NoSuchElementException;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -30,15 +36,21 @@ public class JobScheduleController {
     private final JobScheduleRepository jobScheduleRepository;
     private final QuartzScheduleService quartzScheduleService;
     private final JobAccessService jobAccessService;
+    private final AuditService auditService;
+    private final AuditActorResolver auditActorResolver;
 
     public JobScheduleController(JobDefinitionRepository jobDefinitionRepository,
                                  JobScheduleRepository jobScheduleRepository,
                                  QuartzScheduleService quartzScheduleService,
-                                 JobAccessService jobAccessService) {
+                                 JobAccessService jobAccessService,
+                                 AuditService auditService,
+                                 AuditActorResolver auditActorResolver) {
         this.jobDefinitionRepository = jobDefinitionRepository;
         this.jobScheduleRepository = jobScheduleRepository;
         this.quartzScheduleService = quartzScheduleService;
         this.jobAccessService = jobAccessService;
+        this.auditService = auditService;
+        this.auditActorResolver = auditActorResolver;
     }
 
     @PutMapping
@@ -53,6 +65,10 @@ public class JobScheduleController {
                 jobDefinitionId, request.cronExpression(), timeZone, request.enabled(), null, null);
         JobSchedule persisted = jobScheduleRepository.upsert(schedule);
         quartzScheduleService.schedule(persisted);
+        auditService.record(auditActorResolver.resolve(authentication), AuditAction.JOB_SCHEDULE_UPSERTED,
+            AuditResourceType.JOB_DEFINITION, jobDefinitionId.toString(), AuditOutcome.SUCCESS,
+            Map.of("cronExpression", persisted.cronExpression(), "timeZone", persisted.timeZone(),
+                "enabled", Boolean.toString(persisted.enabled())));
         return response(persisted);
     }
 
@@ -70,6 +86,8 @@ public class JobScheduleController {
         jobAccessService.require(authentication, jobDefinitionId, JobPermissionType.EDIT);
         jobScheduleRepository.delete(jobDefinitionId);
         quartzScheduleService.unschedule(jobDefinitionId);
+        auditService.record(auditActorResolver.resolve(authentication), AuditAction.JOB_SCHEDULE_DELETED,
+            AuditResourceType.JOB_DEFINITION, jobDefinitionId.toString(), AuditOutcome.SUCCESS);
         return ResponseEntity.noContent().build();
     }
 

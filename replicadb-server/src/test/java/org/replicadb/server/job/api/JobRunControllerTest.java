@@ -4,6 +4,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.replicadb.cli.ReplicationMode;
+import org.replicadb.server.audit.domain.AuditAction;
+import org.replicadb.server.audit.domain.AuditEvent;
+import org.replicadb.server.audit.domain.AuditResourceType;
+import org.replicadb.server.audit.persistence.AuditEventFilter;
+import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobRun;
@@ -48,6 +53,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -72,6 +78,9 @@ class JobRunControllerTest {
     private JobPermissionRepository jobPermissionRepository;
 
     @Autowired
+    private AuditEventRepository auditEventRepository;
+
+    @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
     @Autowired
@@ -82,7 +91,7 @@ class JobRunControllerTest {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE job_permission, run_trigger_idempotency, job_run, job_definition, app_user CASCADE",
+        jdbcTemplate.update("TRUNCATE TABLE audit_event, job_permission, run_trigger_idempotency, job_run, job_definition, app_user CASCADE",
             Map.of());
     }
 
@@ -160,6 +169,7 @@ class JobRunControllerTest {
 
             org.junit.jupiter.api.Assertions.assertEquals(firstBody.get("id").asText(), replayBody.get("id").asText());
             assertEquals(1, countRuns(definition.id()));
+            assertEquals(1, runEvents(AuditAction.RUN_TRIGGERED, null).size());
             awaitTerminal(UUID.fromString(firstBody.get("id").asText()));
             }
 
@@ -195,6 +205,7 @@ class JobRunControllerTest {
                     .with(csrf()))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+            assertEquals(0, runEvents(AuditAction.RUN_TRIGGERED, null).size());
             }
 
             @Test
@@ -202,14 +213,23 @@ class JobRunControllerTest {
             JobDefinition definition = jobDefinitionRepository.insert(definition("pending-cancel"));
             JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
 
-            mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                MvcResult response = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                     .post("/api/v1/runs/" + pending.id() + "/cancel")
                     .with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.runId").value(pending.id().toString()))
                 .andExpect(jsonPath("$.status").value("CANCELLED"))
-                .andExpect(jsonPath("$.warning").isNotEmpty());
-            assertEquals(JobRunStatus.CANCELLED, jobRunRepository.findById(pending.id()).orElseThrow().status());
+                .andExpect(jsonPath("$.warning").isNotEmpty())
+                .andReturn();
+            JsonNode responseBody = objectMapper.readTree(response.getResponse().getContentAsString());
+            JobRun cancelled = jobRunRepository.findById(pending.id()).orElseThrow();
+            assertEquals(JobRunStatus.CANCELLED, cancelled.status());
+            assertEquals(responseBody.get("warning").asText(), cancelled.cancellationWarning());
+            mockMvc.perform(get("/api/v1/runs/" + pending.id()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cancellationWarning").value(responseBody.get("warning").asText()));
+            AuditEvent event = runEvents(AuditAction.RUN_CANCEL_REQUESTED, pending.id()).get(0);
+            assertEquals(responseBody.get("warning").asText(), event.detail().get("warning"));
             }
 
             @Test
@@ -222,6 +242,8 @@ class JobRunControllerTest {
                     .with(csrf()))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+            assertNull(jobRunRepository.findById(succeeded.id()).orElseThrow().cancellationWarning());
+            assertEquals(0, runEvents(AuditAction.RUN_CANCEL_REQUESTED, null).size());
             }
 
             @Test
@@ -231,8 +253,13 @@ class JobRunControllerTest {
                 null, "incremental-warning", "jdbc:source", null, null, "source_table", null,
                 "jdbc:sink", null, null, "sink_table", ReplicationMode.INCREMENTAL, 1,
                 "updated_at", "0", null, null));
+            JobDefinition atomic = jobDefinitionRepository.insert(new JobDefinition(
+                null, "atomic-warning", "jdbc:source", null, null, "source_table", null,
+                "jdbc:sink", null, null, "sink_table", ReplicationMode.COMPLETE_ATOMIC, 1,
+                null, null, null, null));
             JobRun completeRun = jobRunRepository.insertPending(complete.id(), null, 1);
             JobRun incrementalRun = jobRunRepository.insertPending(incremental.id(), null, 1);
+            JobRun atomicRun = jobRunRepository.insertPending(atomic.id(), null, 1);
 
             MvcResult completeResponse = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                     .post("/api/v1/runs/" + completeRun.id() + "/cancel")
@@ -244,11 +271,25 @@ class JobRunControllerTest {
                 .with(csrf()))
                 .andExpect(status().isOk())
                 .andReturn();
+            MvcResult atomicResponse = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                    .post("/api/v1/runs/" + atomicRun.id() + "/cancel")
+                .with(csrf()))
+                .andExpect(status().isOk())
+                .andReturn();
 
             JsonNode completeBody = objectMapper.readTree(completeResponse.getResponse().getContentAsString());
             JsonNode incrementalBody = objectMapper.readTree(incrementalResponse.getResponse().getContentAsString());
+            JsonNode atomicBody = objectMapper.readTree(atomicResponse.getResponse().getContentAsString());
             org.junit.jupiter.api.Assertions.assertNotEquals(completeBody.get("warning").asText(),
                 incrementalBody.get("warning").asText());
+            org.junit.jupiter.api.Assertions.assertNotEquals(completeBody.get("warning").asText(),
+                atomicBody.get("warning").asText());
+            assertEquals(completeBody.get("warning").asText(),
+                jobRunRepository.findById(completeRun.id()).orElseThrow().cancellationWarning());
+            assertEquals(incrementalBody.get("warning").asText(),
+                jobRunRepository.findById(incrementalRun.id()).orElseThrow().cancellationWarning());
+            assertEquals(atomicBody.get("warning").asText(),
+                jobRunRepository.findById(atomicRun.id()).orElseThrow().cancellationWarning());
             }
 
             @Test
@@ -270,6 +311,8 @@ class JobRunControllerTest {
 
             org.junit.jupiter.api.Assertions.assertNotEquals(failed.id().toString(), retryId.toString());
             assertEquals(failed.id().toString(), body.get("previousRunId").asText());
+            assertEquals(failed.id().toString(), runEvents(AuditAction.RUN_RETRIED, retryId)
+                .get(0).detail().get("previousRunId"));
             awaitTerminal(retryId);
             assertEquals(JobRunStatus.RETRY_SCHEDULED, jobRunRepository.findById(failed.id()).orElseThrow().status());
             }
@@ -284,6 +327,7 @@ class JobRunControllerTest {
                 .with(csrf()))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+            assertEquals(0, runEvents(AuditAction.RUN_RETRIED, null).size());
             }
 
             @Test
@@ -314,6 +358,7 @@ class JobRunControllerTest {
                     .post("/api/v1/runs/" + failed.id() + "/retry")
                     .with(csrf()))
                 .andExpect(status().isForbidden());
+            assertEquals(0, runEvents(AuditAction.RUN_CANCEL_REQUESTED, null).size());
             }
 
             @Test
@@ -400,6 +445,11 @@ class JobRunControllerTest {
         return jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM job_run WHERE job_definition_id = :id",
                 Map.of("id", jobDefinitionId), Long.class);
+    }
+
+    private java.util.List<AuditEvent> runEvents(AuditAction action, UUID resourceId) {
+        return auditEventRepository.findPage(new AuditEventFilter(null, action,
+                AuditResourceType.JOB_RUN, resourceId == null ? null : resourceId.toString(), null, null), 0, 50);
     }
 
     private JobRun awaitTerminal(UUID runId) throws Exception {

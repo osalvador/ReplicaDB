@@ -1,6 +1,11 @@
 package org.replicadb.server.job.api;
 
 import org.replicadb.cli.ReplicationMode;
+import org.replicadb.server.audit.AuditActorResolver;
+import org.replicadb.server.audit.AuditService;
+import org.replicadb.server.audit.domain.AuditAction;
+import org.replicadb.server.audit.domain.AuditOutcome;
+import org.replicadb.server.audit.domain.AuditResourceType;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
@@ -23,6 +28,7 @@ import org.springframework.security.core.Authentication;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Locale;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
@@ -37,17 +43,23 @@ public class JobRunController {
     private final RunTriggerIdempotencyRepository idempotencyRepository;
     private final RunExecutionCoordinator executionCoordinator;
     private final JobAccessService jobAccessService;
+    private final AuditService auditService;
+    private final AuditActorResolver auditActorResolver;
 
     public JobRunController(JobRunRepository jobRunRepository,
                             JobDefinitionRepository jobDefinitionRepository,
                             RunTriggerIdempotencyRepository idempotencyRepository,
                             RunExecutionCoordinator executionCoordinator,
-                            JobAccessService jobAccessService) {
+                            JobAccessService jobAccessService,
+                            AuditService auditService,
+                            AuditActorResolver auditActorResolver) {
         this.jobRunRepository = jobRunRepository;
         this.jobDefinitionRepository = jobDefinitionRepository;
         this.idempotencyRepository = idempotencyRepository;
         this.executionCoordinator = executionCoordinator;
         this.jobAccessService = jobAccessService;
+        this.auditService = auditService;
+        this.auditActorResolver = auditActorResolver;
     }
 
     @GetMapping("/jobs/{jobDefinitionId}/runs")
@@ -115,6 +127,9 @@ public class JobRunController {
         JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
         idempotencyRepository.upsert(idempotencyKey, definition.id(), pending.id());
         executionCoordinator.submit(pending.id(), "api");
+        auditService.record(auditActorResolver.resolve(authentication), AuditAction.RUN_TRIGGERED,
+            AuditResourceType.JOB_RUN, pending.id().toString(), AuditOutcome.SUCCESS,
+            Map.of("jobDefinitionId", definition.id().toString(), "trigger", "manual"));
         return accepted(pending);
     }
 
@@ -126,8 +141,8 @@ public class JobRunController {
         String warning = cancellationWarning(definition.mode());
 
         if (run.status() == JobRunStatus.PENDING) {
-            jobRunRepository.markPendingCancelled(id);
-            return new CancellationResponse(id, JobRunStatus.CANCELLED, warning);
+            jobRunRepository.markPendingCancelled(id, warning);
+            return auditedCancellation(id, authentication, warning, JobRunStatus.CANCELLED);
         }
         if (run.status() != JobRunStatus.RUNNING) {
             throw new IllegalStateException("JobRun is not cancellable: " + id);
@@ -139,12 +154,12 @@ public class JobRunController {
             }
             throw new IllegalStateException("JobRun is not registered for cancellation: " + id);
         }
-        jobRunRepository.markCancelRequested(id);
+        jobRunRepository.markCancelRequested(id, warning);
         JobRun current = findRun(id);
         if (current.status() == JobRunStatus.CANCELLED) {
-            return new CancellationResponse(id, JobRunStatus.CANCELLED, warning);
+            return auditedCancellation(id, authentication, warning, JobRunStatus.CANCELLED);
         }
-        return new CancellationResponse(id, JobRunStatus.CANCEL_REQUESTED, warning);
+        return auditedCancellation(id, authentication, warning, JobRunStatus.CANCEL_REQUESTED);
     }
 
     @PostMapping("/runs/{id}/retry")
@@ -156,8 +171,19 @@ public class JobRunController {
         }
         JobRun retry = jobRunRepository.scheduleRetry(id);
         executionCoordinator.submit(retry.id(), "api");
+        auditService.record(auditActorResolver.resolve(authentication), AuditAction.RUN_RETRIED,
+            AuditResourceType.JOB_RUN, retry.id().toString(), AuditOutcome.SUCCESS,
+            Map.of("previousRunId", id.toString()));
         return accepted(retry);
     }
+
+        private CancellationResponse auditedCancellation(UUID runId, Authentication authentication,
+                                 String warning, JobRunStatus resultingStatus) {
+        auditService.record(auditActorResolver.resolve(authentication), AuditAction.RUN_CANCEL_REQUESTED,
+            AuditResourceType.JOB_RUN, runId.toString(), AuditOutcome.SUCCESS,
+            Map.of("warning", warning, "resultingStatus", resultingStatus.name()));
+        return new CancellationResponse(runId, resultingStatus, warning);
+        }
 
     private ResponseEntity<JobRunResponse> accepted(JobRun run) {
         return ResponseEntity.accepted()
