@@ -229,8 +229,8 @@ Hand-written app types:
 ### Plan Accuracy
 
 - Tasks completed as planned: 23/23 (100%).
-- Tasks that required plan adjustment: 3/23 (13%).
-- Test loop iterations: 12 total (9 first-pass, 3 second-pass, 0 third-pass).
+- Tasks that required plan adjustment: 5/23 (22%).
+- Test loop iterations: 20 total (14 first-pass, 6 second-pass, 0 third-pass).
 
 ### Gaps Encountered
 
@@ -257,6 +257,22 @@ Hand-written app types:
 - **Reality**: the local certificate chain rejected Node/Playwright downloads.
 - **Resolution**: Kept reproducible downloads for CI, validated Maven packaging with the installed Node using official plugin skip flags, and defaulted local Playwright to installed Chrome while CI selects bundled Chromium.
 - **Learning**: Separate local certificate/tooling constraints from build configuration and provide an explicit system-browser fallback for local E2E work.
+
+#### Gap 4: CI resolved frontend packages through an inaccessible private registry (Plan-to-Implementation)
+
+- **Task**: 3.1 and 9.3.
+- **Plan assumed**: `npm ci` would resolve the committed lockfile in GitHub Actions using the repository's default npm configuration.
+- **Reality**: The lockfile contained Artifactory URLs from the development machine, and the GitHub runner received `403 Forbidden` while downloading `yargs-parser`.
+- **Resolution**: Rewrote lockfile URLs to `registry.npmjs.org`, added a project `.npmrc`, and aligned Maven/CI/local documentation on Node 22 and npm 10.
+- **Learning**: Never commit environment-specific package registry URLs; validate `npm ci` in a clean runner-like environment before wiring it into Maven.
+
+#### Gap 5: OpenAPI drift check was sensitive to framework-generated schema ordering (Plan-to-Implementation)
+
+- **Task**: 1.3, 4.1, and 9.3.
+- **Plan assumed**: The generated OpenAPI document would be byte-for-byte stable when the endpoint behavior was unchanged.
+- **Reality**: Springdoc exposed the framework `CsrfToken` parameter type and emitted its properties in different orders across environments, causing the CI `diff` to fail even though the Playwright smoke test passed.
+- **Resolution**: Added the explicit `CsrfTokenResponse` DTO with `@JsonPropertyOrder`, retrieved the token from the request attribute, and removed the framework token type from the generated schema.
+- **Learning**: Keep framework implementation types out of public OpenAPI contracts and enforce deterministic DTO serialization when generated artifacts are compared byte-for-byte.
 
 ### Patterns Discovered
 

@@ -18,6 +18,16 @@ New tests use JUnit Jupiter 6 annotations and assertions, with Surefire 3.5.3. `
 ## Modification Strategy
 When production models or signatures change, update the inline `ToolOptions` setup, the concrete manager test, the relevant container fixture, and the matching SQL/JSON resource. Add null, empty, single-row, type-boundary, mode-capability, and parallel partition coverage where the changed manager path warrants it.
 
+## Managed Server and Frontend Tests
+- Server controller tests use `@SpringBootTest`/`MockMvc` with `@WithMockReplicaDbUser`; real-port lifecycle tests use `TestRestTemplate` and explicit session/CSRF cookies. Repository ITs use the shared PostgreSQL service connection; SQLite files cover fast core execution.
+- Domain and service tests use Mockito for isolated behavior. Migration and repository tests must account for every forward-only migration and explicit PostgreSQL JDBC binding.
+- Frontend tests use Vitest and Testing Library with `MemoryRouter` and a fresh `QueryClient`; Playwright runs against built static assets and a real server.
+
+## Recent Learnings
+- [WARNING] Use explicit Surefire class names for focused validation when wildcard patterns select unrelated integration suites. Source: `phase-1a-artifact-split`.
+- [WARNING] A reused container being `Up` does not prove its database is healthy; check JDBC initialization and logs. Source: `issue-271-db2-rn-partition`.
+- [WARNING] Shared singleton fixtures should be tested read-only where possible; inserted rows can pollute later classes. Source: `phase-0b2-watermark-injection`.
+
 ## Reference Implementations
 - `src/test/java/org/replicadb/manager/SqlManagerStagingTableTest.java`
 - `src/test/java/org/replicadb/manager/PostgresqlManagerTest.java`

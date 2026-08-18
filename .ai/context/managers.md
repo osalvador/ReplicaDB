@@ -26,6 +26,12 @@ Manager implementations also own JDBC-to-native DDL mapping and vendor handling 
 ## Known Capability Boundaries
 The README capability matrix is the user-facing reference for supported source/sink/mode combinations. S3 and Kafka have no SQL staging DDL path, SQLite and MongoDB reject complete-atomic in their current managers, and the generic JDBC fallback has fewer mode guarantees than specialized SQL adapters.
 
+## Cross-Manager Rules
+- Keep dialect SQL, pagination binds, type conversion, and native bulk paths in the concrete manager. `SqlManager` supplies shared lifecycle and transaction behavior, not a universal partition algorithm.
+- Preserve `ResultSet.wasNull()` immediately after primitive getters; for object types, prefer direct null-safe getters where a driver does not implement `wasNull()` consistently.
+- Keep cancellation checks at each native operation boundary. PostgreSQL `COPY` and SQL Server `BulkCopy` are best-effort cancellation paths rather than ordinary `Statement` paths.
+- Preserve the user-facing capability matrix when adding a manager option; unsupported staging or mode combinations must fail explicitly.
+
 ## Reference Implementations
 - `src/main/java/org/replicadb/manager/ConnManager.java`
 - `src/main/java/org/replicadb/manager/SqlManager.java`
@@ -34,3 +40,7 @@ The README capability matrix is the user-facing reference for supported source/s
 - `src/main/java/org/replicadb/manager/SQLServerManager.java`
 - `src/main/java/org/replicadb/manager/OracleManager.java`
 - `src/main/java/org/replicadb/manager/MongoDBManager.java`
+
+## Recent Learnings
+- [WARNING] Verify each manager's actual bind shape before grouping watermark/pagination changes; MySQL and SQLite retain LIMIT/OFFSET binds. Source: `phase-0b2-watermark-injection`.
+- [WARNING] SQLite JDBC has a minimal LOB surface and date parsing differences; use driver-compatible `getBytes()`/`getString()` and explicit fallbacks where tests prove necessary. Source: `fix-sqlite-null-handling-test`.

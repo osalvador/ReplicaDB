@@ -1,5 +1,5 @@
 ---
-applyTo: '**/*.{java,properties,conf}'
+applyTo: '**/*.{java,properties,conf,yml,yaml}'
 ---
 
 # ReplicaDB Functional Rules
@@ -8,11 +8,14 @@ applyTo: '**/*.{java,properties,conf}'
 - Preserve the CLI and options-file contract when changing behavior. Add flags and properties compatibly; do not silently rename or remove existing options.
 - Keep ReplicaDB focused on point-to-point bulk transfer. Scheduling, complex transformations, CDC, and data quality belong to external tools unless the request explicitly changes scope.
 - Preserve source-to-sink data meaning, precision, nullability, and supported type behavior. Fail explicitly when a conversion or capability is not supported.
+- Keep the root CLI artifact free of Spring Boot dependencies; managed-server code must translate stored job definitions into `ToolOptions` instead of duplicating manager behavior.
+- A managed job targets one source/sink table pair. Multi-table options remain a CLI capability and must not be smuggled into the server state model.
 
 ## Mode Semantics
 - Treat `complete`, `incremental`, and `complete-atomic` as distinct user-visible contracts.
 - Complete loads the sink table; incremental and complete-atomic may use staging and manager-specific merge/cleanup behavior.
 - Require primary-key and staging assumptions only where the concrete sink manager needs them, and document unsupported combinations in the capability matrix.
+- Managed retries re-execute from the beginning. Commit an incremental watermark only after the sink merge succeeds; cancellation must not advance it.
 
 ## Capability Boundaries
 - Do not generalize one manager's behavior to every source or sink. Check `SupportedManagers`, `ManagerFactory`, the concrete manager, and the README matrix before changing a capability.
@@ -23,8 +26,13 @@ applyTo: '**/*.{java,properties,conf}'
 - Keep credentials in environment-expanded configuration and avoid exposing them in command history, logs, telemetry, tests, or generated documentation.
 - Preserve `ToolOptions` defaults and the options-file-to-command-line precedence when adding configuration.
 - Treat user-supplied table names, column expressions, filters, queries, and connection parameters as untrusted input at the manager boundary.
+- Store only `${env:VARIABLE}` credential references in managed job definitions and reject embedded credentials in connection strings.
+- Keep backend authorization authoritative for job ACLs; frontend visibility is not a security boundary.
 
 ## Anti-Patterns
 - Do not claim universal support from a single database test or manager implementation.
 - Do not make a Java-version change in only one of Maven, CI, launchers, container images, or written requirements.
 - Do not add application code while regenerating AI context or project instructions.
+
+## Baseline Check
+No shared baseline instruction files were found in this repository. These rules remain project-specific and were derived from the current codebase.

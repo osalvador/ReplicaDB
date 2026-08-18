@@ -25,3 +25,6 @@ The base row set supplies convenience getters, but primitive getters return Java
 - `src/main/java/org/replicadb/rowset/OrcCachedRowSetImpl.java`
 - `src/main/java/org/replicadb/rowset/MongoDBRowSetImpl.java`
 - `src/main/java/org/replicadb/manager/util/BandwidthThrottling.java`
+
+## Recent Learnings
+- [WARNING] Do not assume a standard JDBC getter behaves identically across drivers; null handling must be validated with the actual source driver and a focused fixture. Source: `fix-sqlite-null-handling-test`.

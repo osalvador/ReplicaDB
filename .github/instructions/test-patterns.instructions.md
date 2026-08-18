@@ -9,6 +9,7 @@ applyTo: '**/*Test.java,**/*IT.java'
 - Build manager tests with inline `ToolOptions` argument arrays unless a shared test helper already exists for the exact concern.
 - Use Mockito for isolated JDBC metadata, statement, and transaction behavior; use real databases for driver, dialect, cursor, type, and transaction integration.
 - Keep database fixtures under `src/test/resources` and load them through the existing container or script-runner setup.
+- For server controller tests, choose `MockMvc` with the repository security test annotations for isolated behavior, and use a real HTTP client plus explicit session/CSRF cookies for lifecycle authentication.
 
 ## Testcontainers and Fixtures
 - Follow the existing one-container-per-database-family singleton pattern when adding integration coverage. Keep initialization and fixture loading in the corresponding `Replicadb*Container` class.
@@ -19,8 +20,15 @@ applyTo: '**/*Test.java,**/*IT.java'
 - When a production option or signature changes, update every affected inline `ToolOptions` setup and the corresponding properties/SQL/JSON fixture. Do not duplicate a second builder or fixture convention.
 - For manager changes, cover complete, incremental, and complete-atomic behavior only where supported, plus null values, empty and single-row inputs, type boundaries, and parallel partitioning as applicable.
 - For Java 17 or dependency changes, run test compilation, the focused unit slice, packaged/runtime checks, and the relevant Testcontainers slice.
+- When server records, migrations, or REST DTOs change, update state-machine, migration-count, repository, controller, generated OpenAPI, and serialized-nullability assertions together.
+- Use a fresh TanStack Query client and router in frontend tests; keep generated API schema checks type-only and run Playwright against built assets.
 
 ## Anti-Patterns
 - Do not use a mocked database to claim JDBC dialect compatibility.
 - Do not copy `ReplicaDBTest.java`'s legacy JUnit 4 imports into new tests.
 - Do not leave shared container state, credentials, or real endpoints in test output or committed fixtures.
+- Do not use wildcard Surefire selectors until their repository-specific expansion is known; explicit class lists are safer for focused runs.
+- Do not mutate JVM-wide singleton database fixtures unless the test has an isolated schema or a proven cleanup boundary.
+
+## Baseline Check
+No shared baseline instruction files were found in this repository. These rules remain project-specific and were derived from the current codebase.

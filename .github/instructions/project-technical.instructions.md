@@ -9,6 +9,7 @@ applyTo: '**/*.java'
 - Put database-specific SQL, JDBC type mapping, partitioning, and native bulk behavior in the nearest manager subclass. Keep generic connection and SQL behavior in `ConnManager`/`SqlManager`.
 - Register new connection schemes through `SupportedManagers` and `ManagerFactory`. Use `FileManagerFactory` for file-format dispatch.
 - Keep the transfer boundary JDBC-shaped. Adapt non-JDBC inputs through row-set implementations instead of teaching the orchestrator about every source format.
+- Keep managed-server packages separated into `job.domain`, `job.persistence`, `job.api`, `job.execution`, `security`, and `audit`; do not make controllers call core managers directly.
 
 ## Manager and Transfer Patterns
 - Extend `SqlManager` for SQL/JDBC sources and sinks; extend `ConnManager` directly only when the source does not fit the generic SQL lifecycle.
@@ -21,6 +22,8 @@ applyTo: '**/*.java'
 - Source and sink connections are task-owned. Close statements, result sets, connections, SDK clients, and temporary resources through the existing lifecycle hooks.
 - Preserve the original cause and task context when propagating failures. Restore the interrupted flag after catching `InterruptedException`.
 - Do not assume the executor cancels sibling tasks when one `Future` fails; preserve cleanup behavior in the orchestrator.
+- In server repositories, use explicit JDBC representations for PostgreSQL temporal parameters and preserve state-machine checks around SQL updates.
+- Keep controller errors in RFC 7807 form and redact dynamic details before they cross API, audit, log, or telemetry boundaries.
 
 ## Domain Invariants and Type Mapping
 - Check `ResultSet.wasNull()` immediately after primitive getters and check object values for null before binding or serializing them.
@@ -32,8 +35,13 @@ applyTo: '**/*.java'
 - Use `TaskId-*` thread names and the existing Log4j2 levels for parallel operation correlation.
 - Never add passwords, DSNs, connection parameter maps, or credential-bearing URLs to logs, Sentry contexts, tags, exception messages, or test output.
 - Keep the Java 17 baseline and the ORC `java.nio` module-opening requirement aligned across Maven and packaged launchers.
+- Keep server logging on Log4j2 because the embedded core's Sentry setup expects that context; exclude the default Spring logging starter where the server POM already does so.
+- Treat PostgreSQL as the managed state store and Flyway as forward-only schema history; do not introduce an in-memory substitute for production state.
 
 ## Anti-Patterns
 - Do not put vendor branches in `ReplicaDB` or `SqlManager` when a manager override is the correct extension point.
 - Do not share mutable JDBC connections across tasks or introduce connection pooling as an incidental refactor.
 - Do not copy the legacy JUnit 4 style from `ReplicaDBTest.java` into new Java tests.
+
+## Baseline Check
+No shared baseline instruction files were found in this repository. These rules remain project-specific and were derived from the current codebase.

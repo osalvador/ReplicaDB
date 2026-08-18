@@ -1,46 +1,46 @@
 ## Service Description
-ReplicaDB is a Java command-line tool for bulk transfer between heterogeneous databases, files, object storage, and Kafka. DBAs and automation invoke one process with source, sink, mode, and parallelism options; the current repository is a CLI and library-style core, not a REST microservice.
+ReplicaDB is a Java bulk-replication engine that transfers data between heterogeneous databases, files, object storage, and Kafka. The repository preserves a standalone CLI while adding a sibling Spring Boot control plane for durable job definitions, scheduling, monitoring, authentication, and audit history, plus a React monitoring SPA.
 
 ## Tech Stack
-Java 17, Maven, Apache Commons CLI, JDBC plus vendor SDKs, Log4j2/Sentry, JUnit Jupiter 6 and Testcontainers. Deploy: standalone archive, shell/Windows launchers, Docker, or Podman.
+Java 17/Maven, JDBC and vendor SDKs, Spring Boot 3.3.5, PostgreSQL/Flyway, Quartz, React 18/TypeScript/Vite, Log4j2/Sentry, JUnit Jupiter 6, Vitest, Playwright, and Testcontainers. Deploy: CLI archive or managed server/container.
 
 ## Project Structure
 | Layer | Key Packages | Key Patterns |
 | --- | --- | --- |
-| Orchestration | `org.replicadb`, `cli.ReplicationMode` | fixed executor, per-task managers, pre/post hooks |
-| CLI and configuration | `org.replicadb.cli` | Commons CLI, properties file, `${ENV}` expansion |
-| Source/sink adapters | `org.replicadb.manager` and subpackages | `ConnManager` -> `SqlManager` -> manager subclasses, factory dispatch |
-| Data adaptation | `org.replicadb.rowset`, `manager.util`, `time` | JDBC-shaped row sets, metadata, type conversion, throttling |
-| Verification and delivery | `src/test`, `conf`, `bin`, Docker files, `docs`, workflows | Testcontainers fixtures, release profiles, Jekyll and Vite tooling |
+| Core execution | `org.replicadb`, `org.replicadb.execution` | per-run context, fixed task pool, cancellable futures |
+| CLI and adapters | `org.replicadb.cli`, `manager`, `rowset` | options boundary, manager factories, JDBC-shaped transfer |
+| Managed server | `replicadb-server/.../job`, `security`, `audit` | immutable records, JDBC repositories, REST, ACLs, Quartz |
+| Frontend | `replicadb-server/frontend/src` | React Router, TanStack Query, generated OpenAPI types |
+| Delivery and tests | `src/test`, server tests, workflows, Docker, `docs` | fixture containers, Maven/npm build, Jekyll/Vite tooling |
 
 ## Key Decisions
-- **Manager hierarchy**: isolate dialects, type mappings, and native bulk APIs so new data sources do not expand the orchestrator.
-- **JDBC-shaped pipeline**: adapt non-JDBC inputs to `ResultSet`/row-set contracts to reuse sink logic.
-- **Job-level parallelism**: `--jobs` creates a fixed pool and each task owns source and sink manager instances, avoiding a heavyweight runtime.
-- **Explicit replication modes**: complete, incremental, and complete-atomic control truncation, staging, and merge behavior.
+- **Two artifacts**: keep the CLI free of Spring Boot while the server translates stored jobs into core `ToolOptions`.
+- **JDBC-shaped transfer**: adapt files and documents to row-set contracts so sink behavior stays reusable.
+- **Explicit modes and no resume**: staging/merge semantics provide retry safety; a managed job is one table pair.
+- **PostgreSQL state**: the managed server stores jobs, runs, schedules, users, permissions, and audit events durably.
 
 ## Anti-Patterns
-- Do not put database-specific SQL, type mapping, or bulk behavior in `ReplicaDB` or the generic base manager.
-- Do not assume every manager supports every mode; capability differences are explicit and some sinks are unsupported for staging or incremental behavior.
-- Do not add unredacted passwords, DSNs, connection parameters, or full credential-bearing URLs to logs, telemetry, or generated context; current Sentry scope setup accepts connection parameters and connect tags.
+- Do not move vendor SQL, type mapping, or native bulk behavior into generic orchestration or server code.
+- Do not infer universal mode/capability support from one manager or test.
+- Do not persist, log, audit, or generate context containing passwords, DSNs, tokens, or resolved secret values.
 
 ## Key Conventions
-- Preserve the CLI/property option contract and use `ToolOptions` as the configuration boundary.
-- Use manager factory dispatch and `DataSourceType.SOURCE`/`SINK`; extend the nearest manager abstraction.
-- Keep source reads streaming where possible, honor `fetch-size`, and apply `BandwidthThrottling` inside row iteration.
-- Correlate parallel work with `TaskId-*` thread names and propagate failures to the orchestrator.
-- Use JUnit Jupiter 6 for new tests, Testcontainers for real database behavior, and repository fixtures under `src/test/resources`.
+- Preserve the CLI/options-file contract; `ToolOptions` remains the core configuration boundary.
+- Use manager and file factories, with `DataSourceType.SOURCE`/`SINK` and manager-specific partitioning.
+- Keep cancellation, watermarks, staging cleanup, and state transitions explicit at their owning boundary.
+- Use lower-case mode text at the REST boundary and RFC 7807 problem responses.
+- Use JUnit Jupiter 6/Testcontainers for Java, Vitest/Playwright for the SPA, and environment-managed credentials.
 
 ## Recent Changes
-- `d4f8816`: aligned Oracle XML and Snappy dependency versions (build).
-- `bbb5017` / `PR-242`: migrated tests and runtime tooling to Java 17 and JUnit 6 (build, CI, tests, packaging).
-- `70e58c0` / `#280`: stopped adding an XML declaration in SQL Server bulk records (SQL Server adapter).
-- `78d6bb7` / `#267`: updated Kafka clients (Kafka adapter, build).
-- `b1d6e7f` / `#274`: updated GitHub Actions checkout usage (CI).
+- `5abc156`: added Phase 2a React authentication and read-only monitoring.
+- `a7b9225` / `56f9243`: added persisted audit events, cancellation warnings, authentication, and ACLs.
+- `8d12cdc`: added durable Quartz scheduling and startup reconciliation.
+- `24bec4a` / `c897181`: added REST API and PostgreSQL-backed job/run state.
+- `2668d99` / `f6535af` / `472adb3`: stabilized OpenAPI schema and frontend CI packaging.
 
 ## Recent Learnings
-- WARNING [packaging]: validate runtime image manifests and user-management commands on every target architecture. Source: `PR-242`.
-- WARNING [Java 17]: exercise packaged ORC paths because reflective dependencies may require the existing module-opening flag. Source: `PR-242`.
-- WARNING [integration tests]: distinguish clean CI Docker assumptions from local reuse, architecture, socket, and memory constraints. Source: `PR-242`.
+- [WARNING] API: keep framework implementation types out of generated OpenAPI contracts and validate nullability against JSON.
+- [WARNING] Frontend: never commit environment-specific registry URLs; validate `npm ci` in a clean runner-like environment.
+- [WARNING] Runtime: exercise packaged ORC and image paths, and distinguish CI Docker health from local emulation/reuse limits.
 
--> Pointers: `.ai/context/domain.md`, `.ai/context/execution.md`, `.ai/context/cli.md`, `.ai/context/managers.md`, `.ai/context/rowsets.md`, `.ai/context/testing.md`, `.ai/context/operations.md`, `.ai/context/recent-changes.md`
+-> Pointers: `.ai/context/domain.md`, `.ai/context/execution.md`, `.ai/context/cli.md`, `.ai/context/managers.md`, `.ai/context/rowsets.md`, `.ai/context/infrastructure.md`, `.ai/context/api.md`, `.ai/context/frontend.md`, `.ai/context/testing.md`, `.ai/context/operations.md`, `.ai/context/recent-changes.md`
