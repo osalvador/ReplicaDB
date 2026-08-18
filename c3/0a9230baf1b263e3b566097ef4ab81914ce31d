@@ -1,0 +1,21 @@
+src/test/resources/mongo/t_source_data.json
+  s_a9ec65b5f3405d::t_c6c02754b28500 215,2243
+.ai/archive/phase-2a-frontend-auth-monitoring.plan.md
+  s_a9ec65b5f3405d::t_6f747136f17b3c 232-233,261-276
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "c30a9230baf1b263e3b566097ef4ab81914ce31d",
+  "prompts": {},
+  "sessions": {
+    "s_a9ec65b5f3405d": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "798ab8a0-fc3b-4719-9fe1-a42d31c1698d",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
