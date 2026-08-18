@@ -487,8 +487,13 @@ export interface components {
             totalElements?: number;
         };
         CsrfToken: {
-            parameterName?: string;
             headerName?: string;
+            parameterName?: string;
+            token?: string;
+        };
+        CsrfTokenResponse: {
+            headerName?: string;
+            parameterName?: string;
             token?: string;
         };
         AuditEventResponse: {
@@ -1123,7 +1128,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["CsrfToken"];
+                    "*/*": components["schemas"]["CsrfTokenResponse"];
                 };
             };
         };

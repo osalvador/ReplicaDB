@@ -1,5 +1,6 @@
 package org.replicadb.server.security.api;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -89,8 +90,8 @@ public class AuthController {
     }
 
     @GetMapping("/csrf")
-    public CsrfToken csrf(CsrfToken csrfToken) {
-        return csrfToken;
+    public CsrfTokenResponse csrf(CsrfToken csrfToken) {
+        return new CsrfTokenResponse(csrfToken.getHeaderName(), csrfToken.getParameterName(), csrfToken.getToken());
     }
 
     @PostMapping("/logout")
@@ -109,5 +110,9 @@ public class AuthController {
     @GetMapping("/me")
     public UserIdentityResponse me(Authentication authentication) {
         return UserIdentityResponse.from(authentication);
+    }
+
+    @JsonPropertyOrder({"headerName", "parameterName", "token"})
+    public record CsrfTokenResponse(String headerName, String parameterName, String token) {
     }
 }
