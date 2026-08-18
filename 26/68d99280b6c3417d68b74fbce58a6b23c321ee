@@ -1,0 +1,21 @@
+replicadb-server/frontend/src/api/schema.ts
+  s_6ec7769d2b2bf6::t_2cd92fe06ca816 1111
+replicadb-server/src/main/java/org/replicadb/server/security/api/AuthController.java
+  s_6ec7769d2b2bf6::t_997edb4039782c 93-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "2668d99280b6c3417d68b74fbce58a6b23c321ee",
+  "prompts": {},
+  "sessions": {
+    "s_6ec7769d2b2bf6": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "bc3b4f43-abef-4bbc-be12-d216a054a423",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
