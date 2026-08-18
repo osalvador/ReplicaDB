@@ -486,11 +486,6 @@ export interface components {
             /** Format: int64 */
             totalElements?: number;
         };
-        CsrfToken: {
-            headerName?: string;
-            parameterName?: string;
-            token?: string;
-        };
         CsrfTokenResponse: {
             headerName?: string;
             parameterName?: string;
@@ -1113,9 +1108,7 @@ export interface operations {
     };
     csrf: {
         parameters: {
-            query: {
-                csrfToken: components["schemas"]["CsrfToken"];
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
