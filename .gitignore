@@ -4,6 +4,7 @@ wizard/.idea/*
 lib/*
 target/*
 replicadb-server/target/*
+replicadb-server/src/main/resources/static/*
 test/*
 sourcetrail_dependencies/*
 ReplicaDB-*.jar

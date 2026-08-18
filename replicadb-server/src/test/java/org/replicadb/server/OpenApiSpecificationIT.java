@@ -1,0 +1,36 @@
+package org.replicadb.server;
+
+import org.junit.jupiter.api.Test;
+import org.replicadb.server.config.PostgresTestcontainersConfig;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("api")
+@Import(PostgresTestcontainersConfig.class)
+class OpenApiSpecificationIT {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void exposesApiPathsAsJson() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.paths['/api/v1/jobs']").exists());
+    }
+}

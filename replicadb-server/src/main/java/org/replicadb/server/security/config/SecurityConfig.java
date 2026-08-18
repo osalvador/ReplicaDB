@@ -25,13 +25,17 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http,
                                              ProblemDetailAuthenticationEntryPoint entryPoint) throws Exception {
         CsrfTokenRequestAttributeHandler csrfRequestHandler = new CsrfTokenRequestAttributeHandler();
+        CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        csrfTokenRepository.setHeaderName("X-XSRF-TOKEN");
         http
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .csrfTokenRepository(csrfTokenRepository)
                         .csrfTokenRequestHandler(csrfRequestHandler)
                         .ignoringRequestMatchers("/api/v1/auth/login"))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/v1/auth/login", "/actuator/health").permitAll()
+                        .requestMatchers("/", "/index.html", "/assets/**", "/favicon.ico",
+                                "/api/v1/auth/login", "/api/v1/auth/csrf", "/actuator/health",
+                                "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))

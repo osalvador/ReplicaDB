@@ -12,7 +12,7 @@ The control plane does not resume interrupted work. A run either completes or is
 
 **Date**: August 13, 2026
 **Last decision review**: August 14, 2026
-**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), and Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings) implemented; Phase 1c-4 (frontend) pending
+**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings), and Phase 2a (frontend authentication and read-only monitoring) implemented; Phase 2b/2c (frontend job actions and administration) pending; Phase 3 (distributed workers) not started
 **Owner**: Development Team
 
 ---
@@ -38,7 +38,7 @@ This preserves:
 - Existing CLI arguments, options files, launcher scripts, and exit codes.
 - A gradual migration path from standalone execution to managed jobs.
 
-The standalone `replicadb` CLI remains free of Spring Boot and control-plane dependencies, while the sibling `replicadb-server` module now provides the REST API and Quartz scheduler. Distributed workers and the frontend remain planned deployment capabilities.
+The standalone `replicadb` CLI remains free of Spring Boot and control-plane dependencies, while the sibling `replicadb-server` module now provides the REST API and Quartz scheduler. The frontend (Phase 2) and distributed workers (Phase 3) remain planned deployment capabilities.
 
 ```text
 Current:
@@ -142,7 +142,7 @@ Because runs are never resumed (Decision 3), the safety of a retry depends entir
 
 PostgreSQL is the mandatory state store for the managed `api` and `worker` profiles. It owns job definitions, runs, leases, watermarks, users, permissions, audit events, and scheduler coordination. In direct CLI mode the state store is not used at all. Sentry and application logs are telemetry, not the source of truth for job state. SQLite remains suitable for isolated CLI fixtures or unit tests, but it is not a supported control-plane deployment store.
 
-Phase 1b implements the job-definition and job-run portion of this store: Flyway-versioned `job_definition`/`job_run` tables accessed through Spring JDBC repositories. Leases and heartbeats carry simple single-instance values until Phase 2's distributed-worker rules apply; users and permissions are implemented in Phase 1c-3a+b, and audit events are implemented in Phase 1c-3c. Phase 1c-1 adds the partial-unique-indexed `job_run` constraint enforcing one active run per job definition and the `run_trigger_idempotency` table for the `Idempotency-Key` replay rule. Phase 1c-2 adds the `job_schedule` table as the product-level durable source of truth for recurring schedules, plus an index on `(job_definition_id, created_at DESC)` for job run history queries.
+Phase 1b implements the job-definition and job-run portion of this store: Flyway-versioned `job_definition`/`job_run` tables accessed through Spring JDBC repositories. Leases and heartbeats carry simple single-instance values until Phase 3's distributed-worker rules apply; users and permissions are implemented in Phase 1c-3a+b, and audit events are implemented in Phase 1c-3c. Phase 1c-1 adds the partial-unique-indexed `job_run` constraint enforcing one active run per job definition and the `run_trigger_idempotency` table for the `Idempotency-Key` replay rule. Phase 1c-2 adds the `job_schedule` table as the product-level durable source of truth for recurring schedules, plus an index on `(job_definition_id, created_at DESC)` for job run history queries.
 
 ### Decision 3: Durable State, No Resume, and Incremental Watermarks
 
@@ -294,9 +294,9 @@ This decision's core-side plumbing is implemented in Phase 0-b1 (commit `4dd4cb5
 
 ### Decision 6: PostgreSQL Worker Dispatch
 
-**Status**: APPROVED FOR PHASE 2
+**Status**: APPROVED FOR PHASE 3
 
-Distributed workers are introduced as a second phase when a single control-plane instance cannot provide the required concurrency or isolation. PostgreSQL is both the durable source of truth and the dispatch coordination point. `LISTEN/NOTIFY` wakes workers quickly, while periodic polling is the mandatory recovery path for missed notifications.
+Distributed workers are introduced as a third phase, after the monolithic control plane (Phase 1) and the frontend (Phase 2), when a single control-plane instance cannot provide the required concurrency or isolation. PostgreSQL is both the durable source of truth and the dispatch coordination point. `LISTEN/NOTIFY` wakes workers quickly, while periodic polling is the mandatory recovery path for missed notifications.
 
 ```text
                          +----------------------+
@@ -448,21 +448,21 @@ Delivered as the standalone `replicadb-server` sibling Maven project:
 - The server skeleton excludes inherited MongoDB auto-configuration until the metadata state layer exists, so startup does not require an external database.
 - CI builds and tests the server module after installing the CLI artifact; the release workflow uploads its unreleased `0.1.0-SNAPSHOT` jar as a separate build artifact rather than publishing it with the CLI release assets.
 
-The next slice, **Phase 1b: State layer**, is implemented below, followed by **Phase 1c-1: REST API core**, **Phase 1c-2: Quartz scheduler**, and **Phase 1c-3a+b+c: authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings**, also implemented below. The frontend (Phase 1c-4) remains pending.
+The next slice, **Phase 1b: State layer**, is implemented below, followed by **Phase 1c-1: REST API core**, **Phase 1c-2: Quartz scheduler**, and **Phase 1c-3a+b+c: authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings**, also implemented below. The frontend is elevated to its own top-level **Phase 2** (split into Phase 2a/2b/2c); Phase 2a is implemented and Phase 2b/2c remain pending. Distributed workers are renumbered to **Phase 3**.
 
 #### Phase 1b: State layer — IMPLEMENTED
 
 Delivered as additions to `replicadb-server` plus one small, additive core change, covered by focused JUnit unit tests and Testcontainers-backed PostgreSQL integration tests:
 
 - **Domain**: `JobDefinition` and `JobRun` Java records under `org.replicadb.server.job.domain`. `JobDefinition` reuses the existing public `org.replicadb.cli.ReplicationMode` enum instead of duplicating it, and its compact constructor enforces Decision 1's one-source/sink-table-pair rule, a positive `jobs` value, and Decision 4's credential-reference rule (`sourcePassword`/`sinkPassword` must be `null` or `${env:VARIABLE}`, and connection strings may not embed credentials). `JobRunStatus` is the 7-value enum from Decision 3, with `isTerminal()` and `fromReplicaExitCode(int)` mapping `ReplicaDB.processReplica`'s `0`/`1`/`2` to `SUCCEEDED`/`FAILED`/`CANCELLED`. `JobRunStateMachine.assertLegalTransition(from, to)` enforces the transition table from Decision 3.
-- **Persistence**: Forward-only Flyway migrations `V1__create_job_definition.sql` and `V2__create_job_run.sql` create the metadata schema, including `job_run`'s `executor_identity`/`lease_until`/`heartbeat_at` columns (populated with simple single-instance values now, ready for Phase 2's lease rules without a later `ALTER TABLE`). `JobDefinitionRepository` and `JobRunRepository` use `NamedParameterJdbcTemplate` (Spring JDBC, not JPA). `JobRunRepository.claimNextPending(executorIdentity, leaseDuration)` runs a `SELECT ... FOR UPDATE SKIP LOCKED` followed by a conditional `UPDATE` in one transaction — real PostgreSQL row locking, not application-level optimistic locking. `scheduleRetry(failedRunId)` implements Decision 3's "no resume" rule as described above. `findLastCommittedWatermark(jobDefinitionId)` returns the last `SUCCEEDED` run's watermark, falling back to the job definition's `initialWatermarkValue`.
+- **Persistence**: Forward-only Flyway migrations `V1__create_job_definition.sql` and `V2__create_job_run.sql` create the metadata schema, including `job_run`'s `executor_identity`/`lease_until`/`heartbeat_at` columns (populated with simple single-instance values now, ready for Phase 3's lease rules without a later `ALTER TABLE`). `JobDefinitionRepository` and `JobRunRepository` use `NamedParameterJdbcTemplate` (Spring JDBC, not JPA). `JobRunRepository.claimNextPending(executorIdentity, leaseDuration)` runs a `SELECT ... FOR UPDATE SKIP LOCKED` followed by a conditional `UPDATE` in one transaction — real PostgreSQL row locking, not application-level optimistic locking. `scheduleRetry(failedRunId)` implements Decision 3's "no resume" rule as described above. `findLastCommittedWatermark(jobDefinitionId)` returns the last `SUCCEEDED` run's watermark, falling back to the job definition's `initialWatermarkValue`.
 - **Execution service**: `JobDefinitionEnvResolver` resolves `${env:VARIABLE}` references (rejecting `${secret:...}` explicitly, per Decision 4) immediately before `ToolOptionsArgsBuilder` converts the resolved `JobDefinition` into the `String[]` CLI-style args that `ToolOptions`'s only public constructor accepts — this is the concrete mechanism behind "converts a job definition into `ToolOptions`". `JobExecutionService.executeNextPending(executorIdentity)` claims a run, builds `ToolOptions`, calls the unchanged `ReplicaDB.processReplica(options)`, maps the exit code via `JobRunStatus.fromReplicaExitCode(...)`, and persists `rowsProcessed`/`durationMillis` for every outcome and `committedWatermark` only on success. It never logs the resolved connect strings, passwords, or the built args array.
 - **Core widening**: `ReplicationExecutionContext` gained `rowsProcessed`/`durationMillis` accessors, populated unconditionally by `ReplicaDB.executeSingleReplication` right after the parallel tasks finish — unlike the watermark candidate, which stays conditional on `executePostTasks()` succeeding. This is what lets `JobExecutionService` persist row counters and timings for a `FAILED`/`CANCELLED` run, not only a `SUCCEEDED` one.
 - **Runtime alignment**: `replicadb-server` now depends on `spring-boot-starter-log4j2` instead of Spring Boot's default logging bridge, because ReplicaDB core's Sentry initialization requires a Log4j2 `LoggerContext`; without this, `ReplicaDB.processReplica(...)` fails immediately when invoked from the managed runtime.
 - **Testing**: Testcontainers PostgreSQL via Spring Boot's `@ServiceConnection` backs the full-context and repository tests (including the two Phase 1a context tests, updated to boot with the now-mandatory `DataSource`); a dependency-light `FlywayMigrationTest` validates the migrations with a raw `PostgreSQLContainer` before any Spring wiring exists; `JobExecutionServiceIT` exercises a real end-to-end `incremental` run against SQLite source/sink fixture files, asserting the persisted `committedWatermark` and that a failed run leaves the prior committed value unchanged.
 - **CI**: The `server` job in `CT_Push.yml` now sets the same `TESTCONTAINERS_CONFIG_FILE`/`DOCKER_HOST`/`TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE` env and `docker info` check as the `integration`/`non_integration` jobs, since its tests now require Docker.
 
-Known limitations, accepted for this phase and not yet addressed: `JobRun.errorMessage` on `FAILED` is a generic message, since `processReplica(ToolOptions)` does not expose the underlying exception (except when `ToolOptions` construction itself throws); audit events and their retention purge were delivered in Phase 1c-3c, while shared multi-instance login throttling remains Phase 2 work; `executor_identity`/`lease_until`/`heartbeat_at` use simple single-instance values until Phase 2's distributed-worker lease rules apply; no `mode_warning` column exists yet for Decision 2's `complete`-mode API warning, since no API exists to surface it **(Phase 1c-1 computes it dynamically in the API response instead of adding that column — see below)**. See `.ai/archive/phase-1b-state-layer.plan.md` for the full implementation plan and execution retrospective.
+Known limitations, accepted for this phase and not yet addressed: `JobRun.errorMessage` on `FAILED` is a generic message, since `processReplica(ToolOptions)` does not expose the underlying exception (except when `ToolOptions` construction itself throws); audit events and their retention purge were delivered in Phase 1c-3c, while shared multi-instance login throttling remains Phase 3 work; `executor_identity`/`lease_until`/`heartbeat_at` use simple single-instance values until Phase 3's distributed-worker lease rules apply; no `mode_warning` column exists yet for Decision 2's `complete`-mode API warning, since no API exists to surface it **(Phase 1c-1 computes it dynamically in the API response instead of adding that column — see below)**. See `.ai/archive/phase-1b-state-layer.plan.md` for the full implementation plan and execution retrospective.
 
 #### Phase 1c-1: REST API core (job definitions and runs, no auth) — IMPLEMENTED
 
@@ -475,7 +475,7 @@ Delivered as additions to `replicadb-server`, covered by focused JUnit unit test
 - **Errors and pagination**: `GlobalExceptionHandler` builds RFC 7807 `ProblemDetail` responses (400/404/409/500), passing every detail through the existing `CredentialRedactor` before it reaches a client. `PageRequestParams` enforces Decision 4's `page`/`size` defaults and 200-row maximum on every collection endpoint.
 - **Cancellation warning**: the cancel response body (`{"runId", "status", "warning"}`) always includes Decision 5's per-mode warning text, computed from the job definition's `mode` at request time — the API cannot observe whether cancellation landed before or during a merge, so it returns the worst-case warning for that mode.
 
-Known limitations, accepted for this slice and not yet addressed: `GET /api/v1/runs/{id}/log` returns only the persisted `error_message` as a stub excerpt, not the full 256 KB captured run log described in the Operational Defaults table; the cancellation warning is returned in the HTTP response and persisted on the `job_run` row; two simultaneous `PUT /api/v1/jobs/{id}` requests are last-write-wins with no optimistic-locking `version` column; a JVM crash while a run is `RUNNING` (cancellation-related or not) leaves that `job_run` row stuck in a non-terminal status, since there is no lease-expiry reconciliation until Phase 2; Spring Security/users/roles/ACLs and the frontend remain later Phase 1c slices. See `.ai/archive/phase-1c-1-rest-api-core.plan.md` for the full implementation plan and execution retrospective.
+Known limitations, accepted for this slice and not yet addressed: `GET /api/v1/runs/{id}/log` returns only the persisted `error_message` as a stub excerpt, not the full 256 KB captured run log described in the Operational Defaults table; the cancellation warning is returned in the HTTP response and persisted on the `job_run` row; two simultaneous `PUT /api/v1/jobs/{id}` requests are last-write-wins with no optimistic-locking `version` column; a JVM crash while a run is `RUNNING` (cancellation-related or not) leaves that `job_run` row stuck in a non-terminal status, since there is no lease-expiry reconciliation until Phase 3; Spring Security/users/roles/ACLs were later Phase 1c slices, and the frontend is now its own Phase 2. See `.ai/archive/phase-1c-1-rest-api-core.plan.md` for the full implementation plan and execution retrospective.
 
 #### Phase 1c-2: Scheduler — IMPLEMENTED
 
@@ -486,7 +486,7 @@ Delivered in commit `8d12cdc` and covered by focused unit tests, Testcontainers-
 - **Execution path**: `ScheduledRunTriggerJob` reads the job definition identifier from Quartz job data, performs the same active-run pre-check and pending-row insertion as the manual trigger, and submits through `RunExecutionCoordinator` with executor identity `scheduler`. `@DisallowConcurrentExecution` is defense-in-depth; the PostgreSQL partial unique index remains the authoritative non-overlap guarantee.
 - **Startup durability**: `ScheduleReconciler` loads every enabled `job_schedule` row on application startup and registers it in Quartz. Cron triggers use the job's validated IANA timezone, skip misfires rather than catching up, and use stable per-job Quartz keys so reconciliation and API upserts converge safely.
 - **API surface**: `PUT`, `GET`, and idempotent `DELETE /api/v1/jobs/{id}/schedule` manage recurring schedules. The API defaults a missing or blank timezone to `UTC`, returns the computed `nextFireTime`, and removes disabled schedules from Quartz.
-- **Known limitations**: RAMJobStore does not persist Quartz-native trigger bookkeeping, missed fires are deliberately not replayed, and there is no metrics/alert signal for silent misfires yet. Audit events and persistence of the cancellation warning were delivered in Phase 1c-3c; the frontend remains pending in Phase 1c-4.
+- **Known limitations**: RAMJobStore does not persist Quartz-native trigger bookkeeping, missed fires are deliberately not replayed, and there is no metrics/alert signal for silent misfires yet. Audit events and persistence of the cancellation warning were delivered in Phase 1c-3c; the frontend remains pending in Phase 2.
 
 #### Phase 1c-3: Security — 1c-3a+b+c IMPLEMENTED
 
@@ -507,11 +507,7 @@ Known limitations accepted for this phase:
 - Audit history is ADMIN-only and is not filtered by per-job ACL. Read operations, including run logs and job definitions, are not audited.
 - Audit rows retain `actor_username` after user deletion while the foreign-key `actor_user_id` is set to `NULL`.
 
-#### Phase 1c-4: Frontend — PENDING
-
-Not started. Planned scope for the next plan targeting this phase:
-
-- A planning/monitoring frontend shipped inside the `replicadb-server` package, consuming the `/api/v1` surface to create, schedule (Phase 1c-2), execute, and monitor jobs, and to surface the Phase 1c-3 roles/ACLs in the UI.
+The frontend, originally scoped as a Phase 1c-4 sub-slice, has since been elevated to its own top-level **Phase 2** (see below), given the amount of distinct screen, stack, and build-integration work it carries; distributed workers are renumbered to **Phase 3**.
 
 #### Spring Boot modules
 
@@ -525,7 +521,7 @@ The planned runtime would use the following components:
 - `spring-boot-starter-quartz` for durable schedules, misfire handling, and non-overlapping triggers.
 - `spring-boot-starter-actuator` and Micrometer for health, counters, and operational metrics.
 - The existing Log4j2 and Sentry integration for logs and error reporting, with credential redaction preserved.
-- An OpenAPI generator or documentation library can be added once the endpoint contract is stable.
+- `springdoc-openapi`, added in Phase 2a to generate the OpenAPI specification the frontend's TypeScript types are generated from.
 
 These dependencies belong exclusively to the `replicadb-server` artifact. The `replicadb` CLI assembly is built from the same sources without them, as decided in Decision 1.
 
@@ -596,37 +592,9 @@ DELETE /api/v1/jobs/{id}/schedule  Remove the recurring schedule
 
 The API returns a run identifier quickly. Clients poll `GET /api/v1/runs/{id}` initially; server-sent events or WebSocket monitoring can be considered later without changing the execution contract.
 
-#### Frontend, users, and permissions
+#### Identity model already backing the frontend
 
-The frontend is a separate web package from `docs/markdown/`, which remains an unrelated Markdown tool. A small React/TypeScript/Vite application is compiled to static assets and served by the `replicadb-server` process under the `api` profile, keeping the first deployment to one public application.
-
-```text
-Browser
-  |
-  +-- Login session cookie (HttpOnly, Secure, SameSite)
-  |
-  +-- Frontend static assets served by api
-  |
-  +-- REST API
-        |
-        +-- Spring Security authentication
-        +-- role checks
-        +-- job ACL checks
-        +-- JobDefinition / JobRun services
-```
-
-The initial screens are:
-
-- Login and session management.
-- Dashboard of jobs visible to the current user.
-- Job editor for the source/sink table pair, mode, parallelism, watermark column, and schedule.
-- Run history and run detail with status, counters, log excerpt, and errors.
-- Job permission editor for authorized users.
-- User and role administration for `ADMIN` users.
-
-The initial persistence model should include `app_user`, `app_role`, `app_user_role`, `job_permission`, `user_session`, and `audit_event`. Passwords are stored only as Argon2id hashes. The first administrator must be bootstrapped through a deployment-controlled setup flow; no default password may exist.
-
-Every job endpoint must authorize the requested operation in the backend. A typical rule is that `ADMIN` bypasses job ACLs, while `OPERATOR` and `VIEWER` can access only jobs for which their user has the corresponding permission. Login attempts, user changes, permission changes, job changes, and execution actions should be auditable without recording passwords or connection secrets.
+The `app_user`/`app_role`/`app_user_role`/`job_permission`/`user_session`/`audit_event` persistence model, Argon2id password hashing, fail-closed `ADMIN` bootstrap, and per-job ACL enforcement described in Decision 4 are already implemented as of Phase 1c-3a+b+c. Phase 2 (below) only adds screens on top of this existing backend; it introduces no new identity or permission tables.
 
 #### How the API deployment starts
 
@@ -655,10 +623,62 @@ At startup, Spring Boot loads the `api` profile configuration, connects to the m
 - Network access from the API process to the configured source and sink databases.
 - CPU and memory reserved for the executor's concurrent ReplicaDB runs.
 - Environment variables or a secret manager for credentials and connection references.
-- Frontend Node/Vite build tooling, with compiled assets packaged into the `replicadb-server` image.
 - Docker or Podman for packaging; Testcontainers for API, metadata, security, and database integration tests.
 
-### Phase 2: Distributed Workers
+### Phase 2: Frontend
+
+Phase 2a is implemented. Phase 2b and Phase 2c remain pending. Elevated from a Phase 1c-4 sub-slice to its own top-level phase: it has a distinct stack, a distinct build pipeline (`frontend-maven-plugin`), and a three-slice scope large enough to warrant the same weight as Phase 1 and Phase 3. It consumes the `/api/v1` surface and the identity/permission model already implemented through Phase 1c-3a+b+c. Phase 2a adds the OpenAPI specification dependency and CSRF bootstrap endpoint required by the SPA, but no new persistence.
+
+```text
+Browser
+  |
+  +-- Login session cookie (HttpOnly, Secure, SameSite)
+  |
+  +-- Frontend static assets served by api
+  |
+  +-- REST API
+        |
+        +-- Spring Security authentication
+        +-- role checks
+        +-- job ACL checks
+        +-- JobDefinition / JobRun services
+```
+
+Split into three slices, mirroring how Phase 1c-3 was split into 3a/3b/3c, so no single plan tries to cover login, monitoring, editing, scheduling, and administration at once:
+
+#### Phase 2a: Authentication and read-only monitoring — IMPLEMENTED
+
+Implemented with login/logout, CSRF bootstrap via `GET /api/v1/auth/csrf`, session bootstrap via the existing `GET /api/v1/auth/me`, a dashboard listing jobs visible to the current user, read-only job detail (including `JobDefinitionResponse.modeWarning`), run history, and run detail with status, counters, timings, and the log excerpt. No create, edit, trigger, cancel, or schedule actions were added.
+
+#### Phase 2b: Job editor and run actions — PENDING
+
+Create/update job definitions (source/sink table pair, mode, parallelism, watermark column), schedule management against the Phase 1c-2 endpoints, and the mutating run actions: trigger (with `Idempotency-Key`), cancel, and retry.
+
+#### Phase 2c: Administration — PENDING
+
+Job permission editor and user/role administration for `ADMIN` users.
+
+#### Frontend technical shape
+
+Decided technical shape, applying to all three sub-phases:
+
+- **Stack**: React, TypeScript, and Vite, compiled to static assets served by the `replicadb-server` process under the `api` profile.
+- **Styling**: MUI v6 themed with Material 3 design tokens. MUI's M3 support is community-driven rather than an officially on-spec implementation; this is an accepted trade-off in exchange for React-native component ergonomics over Google's `@material/web` custom elements, which would require manual event wiring and value binding in React/TypeScript.
+- **Data fetching and state**: TanStack Query, driving both response caching and polling of `GET /api/v1/runs/{id}` while a run is non-terminal.
+- **Routing**: React Router.
+- **API types**: generated from an OpenAPI specification rather than hand-written, so DTO types stay in sync as the API evolves. `springdoc-openapi` was added to `replicadb-server` in Phase 2a, together with the committed schema generation and CI drift check.
+- **HTTP client**: `axios`, chosen because its default XSRF cookie/header names (`XSRF-TOKEN` cookie, `X-XSRF-TOKEN` header) match the `CookieCsrfTokenRepository` defaults already configured in `SecurityConfig`, removing the need for hand-written CSRF cookie-to-header plumbing.
+- **Build integration**: `frontend-maven-plugin`, wired into `replicadb-server`'s `mvn package` lifecycle so one Maven build installs Node/npm, runs the Vite build, and copies the output into `src/main/resources/static`. No separate CI build step and no committed build artifacts.
+- **Local development**: a Vite dev-server proxy for `/api/v1`, since the SPA dev server and the Spring Boot process run on different ports locally; the production build has no such concern since it is served from the same origin.
+- **Testing**: Playwright end-to-end tests.
+
+#### Phase 2 resources
+
+- Frontend Node/Vite build tooling, with compiled assets packaged into the `replicadb-server` image.
+- Playwright browser binaries in CI.
+- No new database, credentials, or deployment topology beyond what Phase 1 already provides.
+
+### Phase 3: Distributed Workers
 
 This phase separates the Spring Boot API/scheduler from replication execution. It is only justified when one API process cannot provide enough isolation or concurrency.
 
@@ -767,7 +787,7 @@ The same worker profile can run as either:
 
 The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral tasks are useful on Cloud Run Jobs, Azure Container Apps Jobs, ECS tasks, or Kubernetes Jobs when the platform starts them with a `runId`; those tasks still claim the run from PostgreSQL and do not rely on a notification remaining available.
 
-#### Phase 2 resources
+#### Phase 3 resources
 
 - At least one API instance and one worker instance.
 - Managed PostgreSQL with private connectivity from API and workers.
@@ -802,11 +822,16 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 - [x] **Phase 1c-3a+b.** Add local-user authentication with Spring Security and PostgreSQL sessions.
 - [x] **Phase 1c-3a+b.** Add global roles `ADMIN`, `OPERATOR`, and `VIEWER`.
 - [x] **Phase 1c-3a+b.** Add per-job ACLs for `VIEW`, `EDIT`, `EXECUTE`, and `CANCEL`.
-- [ ] **Phase 1c-4.** Add the planning and monitoring frontend to the `replicadb-server` package.
 - [x] **Phase 1c-3c.** Add audit events and the 365-day audit retention purge. **Implemented** with `audit_event`, `AuditService`, the ADMIN-only audit history endpoint, and `AuditRetentionTask`.
 - [x] Keep credentials outside persisted job payloads. **Enforced in Phase 1b**: `JobDefinition`'s compact constructor rejects a `sourcePassword`/`sinkPassword` that is not `null` or an `${env:VARIABLE}` reference, and rejects connection strings with embedded credentials, so `job_definition` never holds a literal secret.
 
-### Priority 3: Optional Distributed Deployment
+### Priority 3: Frontend Rollout
+
+- [x] **Phase 2a.** Add authentication and read-only monitoring screens (login, dashboard, job detail, run history/detail) to the `replicadb-server` package.
+- [ ] **Phase 2b.** Add the job editor, schedule management, and mutating run actions (trigger/cancel/retry) to the frontend.
+- [ ] **Phase 2c.** Add the job permission editor and user/role administration screens to the frontend.
+
+### Priority 4: Optional Distributed Deployment
 
 - [ ] Define the PostgreSQL worker dispatcher and state schema.
 - [ ] Implement atomic run claims, leases, heartbeats, and retry scheduling using PostgreSQL `now()`.
@@ -832,15 +857,22 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 - CLI invocation, exit codes, and existing configuration remain compatible, verified by the existing CLI test suite with zero modifications.
 - The `replicadb` artifact contains no Spring Boot classes. **Met** — verified by `NoSpringBootOnClasspathTest`.
 - A failed or cancelled run never advances its incremental watermark. **Met at the state layer since Phase 1b** — `JobRunRepository.findLastCommittedWatermark(...)` returns the prior `SUCCEEDED` run's value after a `FAILED`/`CANCELLED` run.
-- Restarting the control plane does not lose persisted run state. **Met since Phase 1b** for the persisted `JobDefinition`/`JobRun` rows themselves; a process restart mid-execution still leaves that one run `RUNNING` until Phase 2's lease-expiry recovery reclaims it.
+- Restarting the control plane does not lose persisted run state. **Met since Phase 1b** for the persisted `JobDefinition`/`JobRun` rows themselves; a process restart mid-execution still leaves that one run `RUNNING` until Phase 3's lease-expiry recovery reclaims it.
 - Monitoring exposes status, counters, timestamps, and failure details. **Met since Phase 1c-1** via `GET /api/v1/runs`/`GET /api/v1/runs/{id}` (log excerpt is a stub, see above).
 - Unauthorized users cannot view, edit, execute, or cancel jobs. **Met for Phase 1c-3a+b** — Spring Security requires authentication for `/api/v1`, ADMIN bypasses ACLs, and OPERATOR/VIEWER operations are checked against the per-job permission table in backend services and controllers.
 - Administrators can manage users, roles, job permissions, and audit history. **Met in Phase 1c-3c** — state-changing authentication, user, job, permission, schedule, and run actions are recorded, retained for 365 days by default, and readable through ADMIN-only `GET /api/v1/audit`.
-- The frontend can create, schedule, execute, and monitor jobs through the API. **Partially met**: the API can create, schedule, trigger, and monitor jobs since Phase 1c-2; the frontend itself remains pending in Phase 1c-4.
+- The backend API can create, schedule, trigger, and monitor jobs through `/api/v1`. **Met since Phase 1c-2**; the frontend UI that exposes this to users is Phase 2, not yet started.
 - Credentials are absent from job payloads, state records, API responses, and logs. **Met for state records since Phase 1b, and for API responses since Phase 1c-1** — `JobDefinitionResponse` never includes a literal password (only a boolean "configured" flag) and redacts connection strings via `CredentialRedactor`; log absence for the managed runtime is unchanged from the CLI's existing redaction behavior.
 - A replayed `Idempotency-Key` never produces a second run. **Met since Phase 1c-1** — `RunTriggerIdempotencyRepository` returns the original run for a key replayed within 24 hours.
 
 ### Phase 2
+
+- **Met:** Authenticated users can log in, view the dashboard, and inspect job/run detail with no create/edit/trigger/cancel/schedule affordance present in Phase 2a.
+- The job editor, schedule management, and trigger/cancel/retry actions in Phase 2b operate against the same backend contract validated since Phase 1c-1/1c-2, with no API changes required.
+- The permission editor and user/role administration in Phase 2c enforce the same backend ACLs from Phase 1c-3a+b; the frontend never becomes a second source of authorization truth.
+- Generated TypeScript types stay in sync with `/api/v1` through the OpenAPI specification, with no hand-maintained DTO duplicating the Java response records.
+
+### Phase 3
 
 - Worker loss does not lose a persisted run; the run reappears as claimable within one lease period.
 - Duplicate notifications and duplicate database polling do not advance a watermark twice.
@@ -954,6 +986,6 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 
 ---
 
-**Document Version**: 2.7
-**Last Updated**: August 17, 2026
-**Next Review**: Before implementation of Phase 1c-4 (frontend)
+**Document Version**: 3.0
+**Last Updated**: August 18, 2026
+**Next Review**: Before implementation of Phase 2b (frontend: job editor, scheduling, and run actions)
