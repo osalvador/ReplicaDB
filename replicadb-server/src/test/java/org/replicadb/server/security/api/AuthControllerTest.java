@@ -85,6 +85,13 @@ class AuthControllerTest {
     }
 
     @Test
+    void csrfEndpointReturnsTokenAndCookieWithoutAuthentication() throws Exception {
+        mockMvc.perform(get("/api/v1/auth/csrf"))
+                .andExpect(status().isOk())
+            .andExpect(jsonPath("$.token").isNotEmpty());
+    }
+
+    @Test
     void wrongPasswordReturnsGenericUnauthorizedProblem() throws Exception {
         String username = uniqueUsername();
         createUser(username, "correct-password", GlobalRole.VIEWER, true);
