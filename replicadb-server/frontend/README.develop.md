@@ -25,7 +25,7 @@ El servidor Vite sirve la interfaz y reenvía las llamadas al API local. Las mig
 ## Requisitos
 
 - Java 17.
-- Node.js 20 o superior y npm.
+- Node.js 22 o superior y npm 10.
 - Docker o Podman para ejecutar PostgreSQL localmente.
 - El repositorio clonado y situado en la raíz de ReplicaDB.
 
