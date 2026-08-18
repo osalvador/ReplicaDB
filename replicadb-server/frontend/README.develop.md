@@ -174,6 +174,13 @@ Con el API arrancado en `http://localhost:8080`, regenera el schema TypeScript c
 npm run generate:api-types
 ```
 
+Si el API usa otro puerto durante una comprobación local, define
+`OPENAPI_SCHEMA_URL`, por ejemplo:
+
+```bash
+OPENAPI_SCHEMA_URL='http://localhost:8082/v3/api-docs' npm run generate:api-types
+```
+
 El comando actualiza `src/api/schema.ts`. Para comprobar el schema sin sobrescribir el archivo versionado:
 
 ```bash
