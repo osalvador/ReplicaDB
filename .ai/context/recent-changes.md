@@ -1,40 +1,40 @@
-## Recent Master History
-The latest history contains direct commits rather than a recent run of JIRA-keyed merge commits.
-
-| Commit / PR | Description | Layers Affected | Date | Key Decision |
-| --- | --- | --- | --- | --- |
-| `d4f8816` | Align Oracle XML and Snappy versions | build | 2026-08-11 | Keep related runtime artifacts on compatible versions |
-| `bbb5017` / `PR-242` | Migrate tests to JUnit 6 and Java 17 | build, CI, tests, packaging | 2026-08-11 | Java 17 is the runtime/build baseline |
-| `70e58c0` / `#280` | Remove the extra XML declaration from SQL Server bulk records | SQL Server manager | 2026-08-11 | Preserve source XML representation for SQL Server |
-| `78d6bb7` / `#267` | Bump Kafka clients | Kafka manager, build | 2026-08-11 | Keep the producer dependency current |
-| `2ea79b5` / `#273` | Bump docs concurrent-ruby | docs | 2026-08-11 | Maintain the Jekyll dependency set |
-| `b1d6e7f` / `#274` | Bump Actions checkout | CI | 2026-08-11 | Keep workflow actions current |
-| `bf112a1` / `#278` | Bump Jackson databind | Kafka/Mongo-related serialization, build | 2026-08-11 | Apply dependency security/update maintenance |
-| `8c85227` / `#277` | Bump PostgreSQL JDBC | PostgreSQL manager, build | 2026-08-11 | Keep the JDBC driver current |
-| `44c760d` / `#279` | Bump docs json | docs | 2026-08-11 | Maintain frontend/documentation dependencies |
-| `0f7087d` | Update Markup Forge docs tooling | docs/markdown | 2026-06-02 | Continue the browser-tool migration |
+## Last 10 Master Changes
+| Commit | Description | Layers | Date |
+| --- | --- | --- | --- |
+| `2668d99` | Remove CSRF schema drift | API/frontend | 2026-08-18 |
+| `f6535af` | Stabilize frontend schema CI | frontend/CI | 2026-08-18 |
+| `472adb3` | Use public npm registry in CI | frontend/build | 2026-08-18 |
+| `5abc156` | Add Phase 2a frontend auth/monitoring | frontend/server | 2026-08-18 |
+| `a7b9225` | Persist audit events and cancellation warnings | server state/audit | 2026-08-17 |
+| `56f9243` | Add authentication and per-job ACLs | server security/API | 2026-08-17 |
+| `8d12cdc` | Add Quartz job scheduling | server execution | 2026-08-17 |
+| `b2f66ca` | Index job-run history queries | server persistence | 2026-08-17 |
+| `24bec4a` | Add REST API core | server API | 2026-08-16 |
+| `c897181` | Add PostgreSQL-backed state layer | server persistence/domain | 2026-08-16 |
 
 ## Structural Changes
-- Java 17, JUnit Jupiter 6, Surefire 3.5.3, and the ORC module-opening flag are now part of the build/runtime contract.
-- SQL Server bulk serialization changed without changing the manager boundary.
-- The repository contains a separate Vite-based Markdown tool alongside the Java product and Jekyll docs.
+- The repository now has a sibling `replicadb-server` artifact around the unchanged CLI core.
+- The server owns PostgreSQL/Flyway state, Quartz reconciliation, session security, ACLs, audit retention, and a static Vite SPA.
+- OpenAPI is a generated protocol surface; TypeScript schema output is committed and checked in CI.
 
 ## Patterns Introduced
-- Package/runtime migration checks must include compiled tests, packaged launchers, both container image families, and architecture-specific Docker behavior.
-- Native manager optimizations remain localized: SQL Server bulk records, PostgreSQL COPY, Kafka producer, and vendor type mapping stay outside generic orchestration.
+- Server-to-core execution is translated through `JobDefinitionEnvResolver` and `ToolOptionsArgsBuilder`.
+- State transitions, active-run uniqueness, idempotency, and cancellation warnings are persisted rather than inferred from logs.
+- Frontend server state uses TanStack Query; non-terminal run polling mirrors backend terminal semantics.
 
 ## Recent Learnings
-- WARNING **Packaging**: check image manifests and user/group commands on every supported architecture before choosing a base tag. Source: `PR-242`.
-- WARNING **Java runtime**: exercise packaged ORC flows; compile-only validation misses reflective access requirements. Source: `PR-242`.
-- WARNING **Integration**: separate CI Docker assumptions from local reuse, emulation, socket, and memory constraints. Source: `PR-242`.
+- [WARNING] **API contract**: compare generated OpenAPI output to deterministic DTO serialization and real JSON nullability. Source: `phase-2a-frontend-auth-monitoring`.
+- [WARNING] **Frontend build**: never commit machine-specific package registry URLs; test `npm ci` in a clean environment. Source: `phase-2a-frontend-auth-monitoring`.
+- [WARNING] **Security tests**: real-port session flows need explicit cookies/CSRF; MockMvc annotations are not equivalent. Source: `phase-1c-3-security`.
+- [WARNING] **Persistence**: state-index constraints must be checked against transitions that update and insert rows in one transaction. Source: `phase-1b-state-layer`.
 
 ## Known Tech Debt
 | Source | Description | Impact |
 | --- | --- | --- |
-| `README.md` | Prerequisites still mention Java 11 while the system requirements and build use Java 17 | deployment guidance can conflict |
-| `config/Sentry.java` | Connection parameter maps and full connect strings are attached to telemetry | possible secret disclosure |
-| `ReplicaDBTest.java` | A legacy JUnit 4 test remains beside the Jupiter suite | inconsistent test discovery/style |
-| `S3Manager.java`, `KafkaManager.java` | SQL staging/DDL lifecycle hooks are intentionally incomplete for non-SQL sinks | mode behavior differs by adapter |
+| `src/main/java/org/replicadb/config/Sentry.java` | Telemetry integration remains a sensitive redaction boundary | future fields must not reintroduce connection secrets |
+| `src/test/java/org/replicadb/ReplicaDBTest.java` | Legacy JUnit 4 residue remains beside Jupiter tests | inconsistent discovery/style |
+| `S3Manager.java`, `KafkaManager.java` | SQL staging/DDL hooks do not apply to non-SQL sinks | mode capability differs by adapter |
+| `replicadb-server/.../JobRunRepository.java` | Lease and heartbeat values are set at claim time but are not renewed or recovered by distributed workers | managed execution remains single-instance until the planned worker phase |
 
 ## Gap Recurrence Candidates
-None. Only one archived plan contains an execution retrospective, so recurrence cannot yet be established.
+None identified. The recurring-looking topics are each represented in only one or two archived retrospectives, below the 3-plan promotion threshold.

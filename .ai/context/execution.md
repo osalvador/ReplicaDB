@@ -1,31 +1,34 @@
-## Orchestration
+## Core Orchestration
 | Component | Responsibility | Contract |
 | --- | --- | --- |
-| `ReplicaDB` | Parse-independent run orchestration, logging, Sentry transaction, cleanup | `processReplica(ToolOptions)` returns `0` or `1` |
-| `ReplicaTask` | One callable source-to-sink transfer | Creates one source and one sink manager per task and returns its task id |
-| `ManagerFactory` | Select managers from source/sink connection schemes | Falls back to `StandardJDBCManager` for unknown JDBC schemes |
-| `ReplicationMode` | Names `complete`, `incremental`, and `complete-atomic` | Mode text is part of the CLI/property contract |
+| `ReplicaDB` | Run lifecycle, telemetry, task submission, result aggregation, cleanup | `processReplica(ToolOptions)` returns success, failure, or cancellation exit code |
+| `ReplicaTask` | One source-to-sink callable | owns one source/sink manager pair and returns `ReplicaTaskResult` |
+| `ReplicationExecutionContext` | Per-run id, cancellation, active statements, temp files, counters, watermark candidate | shared by tasks from one `ToolOptions`; isolated across runs/tables |
+| `ManagerFactory` | Scheme-to-manager dispatch | specialized manager first, standard JDBC fallback where applicable |
 
-## Execution Flow
-`ToolOptions` is constructed first. `ReplicaDB` then resets file temp state, initializes telemetry, creates source and sink managers, runs source pre-tasks and asynchronous sink pre-tasks, submits `jobs` `ReplicaTask` instances to a fixed pool, waits for completion, runs post-tasks, and closes managers and executors in `finally` cleanup.
+`ToolOptions` is created first. The core creates managers, executes source/sink hooks, submits a fixed pool of `jobs` tasks, waits on individually cancellable futures, runs post-hooks, and releases resources in cleanup. Task threads use `TaskId-N`; connections are never shared between tasks.
 
-Each task sets its thread name to `TaskId-N`, opens its own source and sink connections, reads a `ResultSet`, inserts it, and closes both managers. The orchestrator observes `Future` failures and returns a non-zero result; cleanup is attempted even after an exception. The code does not explicitly cancel sibling futures, so new changes must not assume fail-fast cancellation.
+## Modes and Cancellation
+- `complete` truncates/direct-loads and is destructive when interrupted.
+- `incremental` stages, merges by sink keys, and commits the watermark only after merge success.
+- `complete-atomic` stages and swaps where the manager supports it.
+- Cancellation combines a per-run token, active JDBC statement cancellation, loop checks, and normalized driver failures. Cleanup is still required; sibling futures are not assumed to fail-fast cancel.
 
-## Modes and State
-- **Complete** targets the sink table directly and normally truncates it before loading.
-- **Incremental** writes to a staging table and merges into the sink; the sink primary key is required by SQL managers.
-- **Complete-atomic** uses staging and a merge/rename path where the manager supports it.
-- Staging names can be user supplied or generated. The staging cleanup specification requires generated tables to be droppable while user-defined staging tables are preserved.
+## Managed Execution
+`RunExecutionCoordinator` claims one pending PostgreSQL row, registers the live `ToolOptions` in an in-flight map, and delegates to `JobExecutionService`. The service resolves environment references, builds core arguments, maps exit codes to `JobRunStatus`, persists counters/watermarks, and redacts failure text. Quartz triggers claim-and-submit work; it does not execute replication on scheduler threads. `ScheduleReconciler` rebuilds Quartz state from the durable schedule table at startup.
 
 ## Invariants
-- The core moves data; it is not a transformation or scheduler layer.
-- Source and sink lifecycle hooks belong to `ConnManager` implementations.
-- A task must not share a JDBC connection with another task.
-- Any new mode capability or limitation must be implemented and documented in the relevant manager, not inferred globally.
+- The core moves data; scheduling, persistence, authorization, and audit stay outside it.
+- Resource ownership must close locally on failure before a resource-returning method can transfer ownership.
+- A managed retry is a new run, never a reset of the failed row; a cancelled run never advances its watermark.
 
 ## Reference Implementations
 - `src/main/java/org/replicadb/ReplicaDB.java`
 - `src/main/java/org/replicadb/ReplicaTask.java`
-- `src/main/java/org/replicadb/cli/ReplicationMode.java`
-- `src/main/java/org/replicadb/manager/ConnManager.java`
-- `openspec/specs/staging-table-cleanup/spec.md`
+- `src/main/java/org/replicadb/execution/ReplicationExecutionContext.java`
+- `replicadb-server/src/main/java/org/replicadb/server/job/execution/JobExecutionService.java`
+- `replicadb-server/src/main/java/org/replicadb/server/job/execution/RunExecutionCoordinator.java`
+
+## Recent Learnings
+- [WARNING] Cancellation classification must use both the cooperative token and the thrown exception because JDBC drivers differ after `Statement.cancel()`. Source: `phase-0b1-cancellation-plumbing`.
+- [WARNING] A resource returned to the caller still needs local cleanup on exceptions before the return point. Source: `phase-0b1-cancellation-plumbing`.

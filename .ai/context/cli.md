@@ -15,9 +15,16 @@ An options file is loaded before command-line values are assigned, so command-li
 - Prefer `${ENV_NAME}` references in configuration examples; generated context and instructions must never contain real values.
 - Keep mode and manager capability checks explicit. A flag accepted by `ToolOptions` may still be unsupported by a concrete source or sink.
 
+## Managed Translation
+`JobDefinitionEnvResolver` resolves only approved `${env:VARIABLE}` references immediately before `ToolOptions` construction. `ToolOptionsArgsBuilder` is the server-to-core translation boundary; do not duplicate option parsing in controllers or managers. Managed jobs reject multi-table option catalogs and target one source/sink table pair.
+
 ## Reference Implementations
 - `src/main/java/org/replicadb/cli/ToolOptions.java`
 - `src/main/java/org/replicadb/cli/OptionsFile.java`
 - `src/main/java/org/replicadb/cli/EnvironmentVariableEvaluator.java`
 - `src/main/java/org/replicadb/cli/ReplicationMode.java`
 - `conf/_replicadb.conf`
+
+## Recent Learnings
+- [WARNING] Adding a CLI option requires the matching options-file property path and precedence test; the two paths are separate. Source: `phase-0b2-watermark-injection`.
+- [WARNING] Apply safety invariants to both typed configuration and advanced pass-through connection properties. Source: `azure-sql-authentication`.
