@@ -1,0 +1,27 @@
+replicadb-server/frontend/src/api/schema.ts
+  s_6ec7769d2b2bf6::t_ded32e938ccaae 490,492-494,496,1131
+.github/workflows/CT_Push.yml
+  s_6ec7769d2b2bf6::t_2519c2d5355983 190
+replicadb-server/frontend/README.develop.md
+  s_6ec7769d2b2bf6::t_8b040ce052eaf0 177-183
+replicadb-server/frontend/scripts/generate-api-types.mjs
+  s_6ec7769d2b2bf6::t_848e7459b2032b 5,7
+replicadb-server/src/main/java/org/replicadb/server/security/api/AuthController.java
+  s_6ec7769d2b2bf6::t_e6230f458aeeae 3,93-94,114-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "f6535af06dc5a75d18ab524ecbb492098d72e56a",
+  "prompts": {},
+  "sessions": {
+    "s_6ec7769d2b2bf6": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "bc3b4f43-abef-4bbc-be12-d216a054a423",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
