@@ -12,6 +12,7 @@ import org.replicadb.server.audit.persistence.AuditEventFilter;
 import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobSchedule;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobScheduleRepository;
@@ -244,11 +245,11 @@ class JobScheduleControllerTest {
     }
 
     private JobDefinition insertDefinition() {
-        return jobDefinitionRepository.insert(new JobDefinition(
-                null, "schedule-api-job-" + UUID.randomUUID(), "jdbc:source", null,
-                "${env:SOURCE_PASSWORD}", "source_table", null, "jdbc:sink", null,
-                "${env:SINK_PASSWORD}", "sink_table", ReplicationMode.COMPLETE, 1,
-                null, null, null, null));
+        return jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
+                .withName("schedule-api-job-" + UUID.randomUUID())
+                .withSourcePassword("${env:SOURCE_PASSWORD}")
+                .withSinkPassword("${env:SINK_PASSWORD}")
+                .build());
     }
 
     private MvcResult putSchedule(UUID jobDefinitionId, String content) throws Exception {

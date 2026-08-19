@@ -8,6 +8,7 @@ import org.mockito.Mockito;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
@@ -165,9 +166,13 @@ class RunExecutionCoordinatorTest {
     }
 
     private static JobDefinition jobDefinition(Path sourceDatabase, Path sinkDatabase, ReplicationMode mode) {
-        return new JobDefinition(
-                null, "job-" + UUID.randomUUID(), "jdbc:sqlite:" + sourceDatabase, null, null,
-                "orders", null, "jdbc:sqlite:" + sinkDatabase, null, null, "orders_copy", mode, 1,
-                null, null, null, null);
+        return JobDefinitionTestFixtures.aJobDefinition()
+            .withName("job-" + UUID.randomUUID())
+            .withSourceConnect("jdbc:sqlite:" + sourceDatabase)
+            .withSourceTable("orders")
+            .withSinkConnect("jdbc:sqlite:" + sinkDatabase)
+            .withSinkTable("orders_copy")
+            .withMode(mode)
+            .build();
     }
 }

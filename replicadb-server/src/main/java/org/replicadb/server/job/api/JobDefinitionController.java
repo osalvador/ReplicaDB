@@ -104,7 +104,7 @@ public class JobDefinitionController {
             throw new IllegalArgumentException("name cannot be changed");
         }
         JobDefinition replacement = mapper.toDefinition(request, existing.id(), existing.name(),
-                existing.createdAt(), existing.updatedAt());
+            existing.createdAt(), existing.updatedAt(), existing.sourcePassword(), existing.sinkPassword());
         JobDefinition persisted = repository.update(replacement);
         auditService.record(auditActorResolver.resolve(authentication), AuditAction.JOB_UPDATED,
             AuditResourceType.JOB_DEFINITION, persisted.id().toString(), AuditOutcome.SUCCESS,
@@ -122,7 +122,7 @@ public class JobDefinitionController {
                 "name", definition.name(),
                 "mode", definition.mode().getModeText(),
                 "jobs", Integer.toString(definition.jobs()),
-                "sourceTable", definition.sourceTable(),
+                "sourceTable", definition.sourceTable() == null ? "<query>" : definition.sourceTable(),
                 "sinkTable", definition.sinkTable());
     }
 }

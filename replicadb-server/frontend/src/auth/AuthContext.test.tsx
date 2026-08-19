@@ -17,7 +17,7 @@ const mockedAuthApi = vi.mocked(authApi);
 
 function SessionStatus() {
   const { status, user } = useAuth();
-  return <output data-testid="session-status">{status}:{user?.username ?? ''}</output>;
+  return <output aria-label="Session status">{status}:{user?.username ?? ''}</output>;
 }
 
 function renderProvider() {
@@ -46,7 +46,7 @@ describe('AuthProvider', () => {
 
     renderProvider();
 
-    await waitFor(() => expect(screen.getByTestId('session-status')).toHaveTextContent('authenticated:operator'));
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Session status' })).toHaveTextContent('authenticated:operator'));
   });
 
   it.each([401, 403])('treats %s from /auth/me as anonymous', async status => {
@@ -54,6 +54,6 @@ describe('AuthProvider', () => {
 
     renderProvider();
 
-    await waitFor(() => expect(screen.getByTestId('session-status')).toHaveTextContent('anonymous:'));
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Session status' })).toHaveTextContent('anonymous:'));
   });
 });

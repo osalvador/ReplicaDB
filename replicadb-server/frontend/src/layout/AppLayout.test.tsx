@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from '@mui/material';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as authApi from '../api/authApi';
 import { AuthProvider } from '../auth/AuthContext';
+import { theme } from '../theme/theme';
 import AppLayout from './AppLayout';
 
 vi.mock('../api/authApi', () => ({
@@ -25,11 +27,13 @@ function renderLayout(queryClient: QueryClient) {
   ], { initialEntries: ['/'] });
 
   return render(
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider theme={theme}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 
@@ -47,6 +51,9 @@ describe('AppLayout', () => {
     renderLayout(queryClient);
 
     await waitFor(() => expect(screen.getByText('operator')).toBeInTheDocument());
+    expect(screen.getByRole('link', { name: 'ReplicaDB' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('group', { name: 'Signed-in identity' })).toHaveTextContent('OPERATOR');
+    expect(screen.getByRole('main')).toHaveTextContent('Dashboard content');
     fireEvent.click(await screen.findByRole('button', { name: 'Logout' }));
 
     await waitFor(() => expect(screen.getByText('Login destination')).toBeInTheDocument());

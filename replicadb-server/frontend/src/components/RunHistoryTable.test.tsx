@@ -1,9 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from '@mui/material';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as runsApi from '../api/runsApi';
-import RunHistoryTable, { statusChipColors } from './RunHistoryTable';
+import RunHistoryTable from './RunHistoryTable';
+import { statusChipColors } from './StatusChip';
+import { theme } from '../theme/theme';
 
 vi.mock('../api/runsApi', () => ({
   listJobRuns: vi.fn()
@@ -49,11 +52,13 @@ function renderHistory(status: typeof statuses[number]) {
   });
 
   return render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <RunHistoryTable jobId="job-1" />
-      </MemoryRouter>
-    </QueryClientProvider>
+    <ThemeProvider theme={theme}>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <RunHistoryTable jobId="job-1" />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 
@@ -66,11 +71,12 @@ describe('RunHistoryTable', () => {
     renderHistory(status);
 
     const chipLabel = await screen.findByText(status);
-    const chip = chipLabel.closest('.MuiChip-root');
+    const chip = screen.getByRole('status', { name: `Run status: ${status}` });
     const color = statusChipColors[status];
-    const colorClass = `MuiChip-color${color[0].toUpperCase()}${color.slice(1)}`;
 
-    expect(chip).toHaveClass(colorClass);
+    expect(chip).toHaveTextContent(status);
+    expect(chip).toHaveAttribute('data-status-color', color);
+    expect(screen.getByRole('heading', { level: 2, name: 'Run history' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View run' })).toHaveAttribute('href', '/runs/run-1');
   });
 });

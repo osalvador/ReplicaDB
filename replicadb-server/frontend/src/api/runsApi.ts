@@ -40,3 +40,22 @@ export async function getRunLog(id: string): Promise<RunLogResponse> {
   const response = await apiClient.get<RunLogResponse>(`/runs/${id}/log`);
   return response.data;
 }
+
+export async function triggerRun(jobId: string): Promise<JobRunResponse> {
+  const response = await apiClient.post<JobRunResponse>(
+    `/jobs/${jobId}/runs`,
+    undefined,
+    { headers: { 'Idempotency-Key': crypto.randomUUID() } }
+  );
+  return response.data;
+}
+
+export async function cancelRun(id: string): Promise<components['schemas']['CancellationResponse']> {
+  const response = await apiClient.post<components['schemas']['CancellationResponse']>(`/runs/${id}/cancel`);
+  return response.data;
+}
+
+export async function retryRun(id: string): Promise<JobRunResponse> {
+  const response = await apiClient.post<JobRunResponse>(`/runs/${id}/retry`);
+  return response.data;
+}

@@ -6,7 +6,7 @@ applyTo: 'replicadb-server/frontend/**/*.{ts,tsx,mts,js,mjs}'
 ## Architecture and State
 - Keep endpoint calls in `src/api`, authentication state in `src/auth`, route protection in `src/router`, reusable views in `src/components`, and page composition in `src/pages`.
 - Use TanStack Query for server state and a fresh query client in tests; do not copy server state into ad hoc React state without a clear UI-only reason.
-- Keep the Phase 2a surface read-only. Add mutating controls only with the corresponding backend contract, permission check, CSRF coverage, and planned product slice.
+- Phase 2b ships the job editor, schedule management, and trigger/cancel/retry controls. Require the corresponding backend contract, permission check, CSRF coverage, and planned product slice for any future mutating controls.
 
 ## API Contract
 - Treat `src/api/schema.ts` as generated output from the server OpenAPI document; do not hand-maintain duplicate Java response interfaces.

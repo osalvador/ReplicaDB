@@ -12,6 +12,7 @@ import org.replicadb.server.audit.persistence.AuditEventFilter;
 import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.security.WithMockReplicaDbUser;
 import org.replicadb.server.security.domain.AppUser;
@@ -169,6 +170,41 @@ class JobDefinitionControllerTest {
             assertEquals(1, jobEvents(AuditAction.JOB_UPDATED, inserted.id()).size());
     }
 
+            @Test
+            void preservesExistingPasswordsWhenUpdateLeavesEitherBlank() throws Exception {
+            JobDefinition inserted = repository.insert(definition("password-update-job"));
+
+            mockMvc.perform(put("/api/v1/jobs/" + inserted.id())
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(updateJson(null, "incremental", "", "${env:NEW_SINK_PASSWORD}")))
+                .andExpect(status().isOk());
+
+            JobDefinition afterSinkUpdate = repository.findById(inserted.id()).orElseThrow();
+            assertEquals("${env:SOURCE_PASSWORD}", afterSinkUpdate.sourcePassword());
+            assertEquals("${env:NEW_SINK_PASSWORD}", afterSinkUpdate.sinkPassword());
+
+            mockMvc.perform(put("/api/v1/jobs/" + inserted.id())
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(updateJson(null, "incremental", "${env:NEW_SOURCE_PASSWORD}", "")))
+                .andExpect(status().isOk());
+
+            JobDefinition afterSourceUpdate = repository.findById(inserted.id()).orElseThrow();
+            assertEquals("${env:NEW_SOURCE_PASSWORD}", afterSourceUpdate.sourcePassword());
+            assertEquals("${env:NEW_SINK_PASSWORD}", afterSourceUpdate.sinkPassword());
+
+            mockMvc.perform(put("/api/v1/jobs/" + inserted.id())
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(updateJson(null, "incremental", "", "")))
+                .andExpect(status().isOk());
+
+            JobDefinition afterBlankUpdate = repository.findById(inserted.id()).orElseThrow();
+            assertEquals("${env:NEW_SOURCE_PASSWORD}", afterBlankUpdate.sourcePassword());
+            assertEquals("${env:NEW_SINK_PASSWORD}", afterBlankUpdate.sinkPassword());
+            }
+
     @Test
     void exposesCompleteModeWarning() throws Exception {
         mockMvc.perform(post("/api/v1/jobs")
@@ -178,6 +214,47 @@ class JobDefinitionControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.modeWarning").isNotEmpty());
     }
+
+            @Test
+            void createsAndUpdatesQueryOnlyDefinitionWithAdvancedFields() throws Exception {
+            MvcResult result = mockMvc.perform(post("/api/v1/jobs")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(queryOnlyJobJson("query-job", "select id, name from source_table")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.sourceTable").doesNotExist())
+                .andExpect(jsonPath("$.sourceQuery").value("select id, name from source_table"))
+                .andExpect(jsonPath("$.sourceColumns").value("id, name"))
+                .andExpect(jsonPath("$.sourceAuthMode").value("ActiveDirectoryDefault"))
+                .andExpect(jsonPath("$.sourceConnectionParams.clientId").value("[REDACTED]"))
+                .andExpect(jsonPath("$.sinkStagingSchema").value("staging"))
+                .andExpect(jsonPath("$.sinkStagingTable").value("sink_stage"))
+                .andExpect(jsonPath("$.fetchSize").value(250))
+                .andExpect(jsonPath("$.bandwidthThrottling").value(512))
+                .andExpect(jsonPath("$.verbose").value(true))
+                .andReturn();
+
+            UUID jobId = UUID.fromString(objectMapper.readTree(result.getResponse().getContentAsString())
+                .get("id").asText());
+            mockMvc.perform(put("/api/v1/jobs/" + jobId)
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(queryOnlyJobJson("query-job", "select id from source_table where id > 10")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sourceQuery").value("select id from source_table where id > 10"))
+                .andExpect(jsonPath("$.fetchSize").value(250));
+            }
+
+            @Test
+            void rejectsDefinitionWithoutSourceTableOrQuery() throws Exception {
+            mockMvc.perform(post("/api/v1/jobs")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(queryOnlyJobJson("invalid-source", null)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("source table or query must be configured"));
+            }
 
             @Test
             @WithMockUser(roles = "VIEWER")
@@ -250,10 +327,13 @@ class JobDefinitionControllerTest {
             }
 
     private static JobDefinition definition(String name) {
-        return new JobDefinition(
-                null, name, "jdbc:source", "source-user", "${env:SOURCE_PASSWORD}", "source_table", null,
-                "jdbc:sink", "sink-user", "${env:SINK_PASSWORD}", "sink_table", ReplicationMode.COMPLETE,
-                1, null, null, null, null);
+        return JobDefinitionTestFixtures.aJobDefinition()
+            .withName(name)
+            .withSourceUser("source-user")
+            .withSourcePassword("${env:SOURCE_PASSWORD}")
+            .withSinkUser("sink-user")
+            .withSinkPassword("${env:SINK_PASSWORD}")
+            .build();
     }
 
     private static String jobJson(String name, String mode, int jobs) {
@@ -275,25 +355,61 @@ class JobDefinitionControllerTest {
     }
 
     private static String updateJson(String name, String mode) {
+                return updateJson(name, mode, "${env:UPDATED_SOURCE_PASSWORD}", "${env:UPDATED_SINK_PASSWORD}");
+        }
+
+        private static String updateJson(String name, String mode, String sourcePassword, String sinkPassword) {
         String nameField = name == null ? "" : "\"name\": \"" + name + "\",\n  ";
         return """
                 {
                   %s"sourceConnect": "jdbc:updated-source",
                   "sourceUser": "updated-source-user",
-                  "sourcePassword": "${env:UPDATED_SOURCE_PASSWORD}",
+                                    "sourcePassword": "%s",
                   "sourceTable": "updated_source_table",
                   "sourceWhere": "id > 10",
                   "sinkConnect": "jdbc:updated-sink",
                   "sinkUser": "updated-sink-user",
-                  "sinkPassword": "${env:UPDATED_SINK_PASSWORD}",
+                                    "sinkPassword": "%s",
                   "sinkTable": "updated_sink_table",
                   "mode": "%s",
                   "jobs": 3,
                   "incrementalWatermarkColumn": "updated_at",
                   "initialWatermarkValue": "100"
                 }
-                """.formatted(nameField, mode);
+                                """.formatted(nameField, sourcePassword, sinkPassword, mode);
     }
+
+        private static String queryOnlyJobJson(String name, String query) {
+                String queryField = query == null ? "" : "\"sourceQuery\": \"" + query + "\",\n  ";
+                return """
+                                {
+                                    "name": "%s",
+                                    "sourceConnect": "jdbc:source",
+                                    "sourceUser": "source-user",
+                                    "sourcePassword": "${env:SOURCE_PASSWORD}",
+                                    %s"sourceColumns": "id, name",
+                                    "sourceAuthMode": "ActiveDirectoryDefault",
+                                    "sourceAuthPrincipalId": "source-client",
+                                    "sourceConnectionParams": {"clientId": "source-client"},
+                                    "sinkConnect": "jdbc:sink",
+                                    "sinkUser": "sink-user",
+                                    "sinkPassword": "${env:SINK_PASSWORD}",
+                                    "sinkTable": "sink_table",
+                                    "sinkColumns": "id, name",
+                                    "sinkStagingSchema": "staging",
+                                    "sinkStagingTable": "sink_stage",
+                                    "sinkDisableEscape": true,
+                                    "sinkDisableTruncate": true,
+                                    "mode": "incremental",
+                                    "jobs": 3,
+                                    "incrementalWatermarkColumn": "updated_at",
+                                    "initialWatermarkValue": "0",
+                                    "fetchSize": 250,
+                                    "bandwidthThrottling": 512,
+                                    "verbose": true
+                                }
+                                """.formatted(name, queryField);
+        }
 
     private java.util.List<AuditEvent> jobEvents(AuditAction action, UUID resourceId) {
         return auditEventRepository.findPage(new AuditEventFilter(null, action,

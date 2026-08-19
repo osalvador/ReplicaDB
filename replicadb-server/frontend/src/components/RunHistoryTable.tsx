@@ -1,45 +1,34 @@
 import {
   Alert,
-  Chip,
-  CircularProgress,
   Link,
-  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TablePagination,
-  TableRow,
-  Typography
+  TableRow
 } from '@mui/material';
 import { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { listJobRuns, type JobRunResponse, type JobRunStatus } from '../api/runsApi';
+import { listJobRuns, type JobRunResponse } from '../api/runsApi';
+import EmptyState from './EmptyState';
+import LoadingState from './LoadingState';
+import StatusChip, { statusChipColors } from './StatusChip';
+import SurfaceSection from './SurfaceSection';
 
-export const statusChipColors: Record<JobRunStatus, 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning'> = {
-  PENDING: 'info',
-  RUNNING: 'primary',
-  SUCCEEDED: 'success',
-  FAILED: 'error',
-  CANCEL_REQUESTED: 'warning',
-  CANCELLED: 'default',
-  RETRY_SCHEDULED: 'secondary'
-};
+export { statusChipColors } from './StatusChip';
 
 function formatInstant(value: string | null | undefined): string {
   return value ?? 'Not started';
 }
 
 function RunRow({ run }: { run: JobRunResponse }) {
-  const status = run.status;
-  const color = status ? statusChipColors[status] : 'default';
-
   return (
     <TableRow hover>
       <TableCell>
-        <Chip label={status ?? 'UNKNOWN'} color={color} size="small" />
+        <StatusChip status={run.status} />
       </TableCell>
       <TableCell>{run.attempt ?? '—'}</TableCell>
       <TableCell>{formatInstant(run.startedAt)}</TableCell>
@@ -63,7 +52,7 @@ export default function RunHistoryTable({ jobId }: { jobId: string }) {
   });
 
   if (runsQuery.isPending) {
-    return <CircularProgress aria-label="Loading run history" />;
+    return <LoadingState label="Loading run history" />;
   }
 
   if (runsQuery.isError || !runsQuery.data) {
@@ -75,12 +64,9 @@ export default function RunHistoryTable({ jobId }: { jobId: string }) {
   const paginationCount = runs.length < size ? page * size + runs.length : totalElements;
 
   return (
-    <Paper variant="outlined" elevation={0}>
-      <Typography component="h2" variant="h5" sx={{ p: 3, pb: 0 }}>
-        Run history
-      </Typography>
-      <TableContainer>
-        <Table aria-label="Run history">
+    <SurfaceSection title="Run history">
+      <TableContainer sx={{ overflowX: 'auto' }}>
+        <Table aria-label="Run history" sx={{ minWidth: 640 }}>
           <TableHead>
             <TableRow>
               <TableCell>Status</TableCell>
@@ -95,7 +81,7 @@ export default function RunHistoryTable({ jobId }: { jobId: string }) {
             {runs.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5}>
-                  <Typography color="text.secondary">No runs recorded.</Typography>
+                  <EmptyState title="No runs recorded." />
                 </TableCell>
               </TableRow>
             )}
@@ -110,6 +96,6 @@ export default function RunHistoryTable({ jobId }: { jobId: string }) {
         rowsPerPageOptions={[size]}
         onPageChange={(_event, nextPage) => setPage(nextPage)}
       />
-    </Paper>
+    </SurfaceSection>
   );
 }

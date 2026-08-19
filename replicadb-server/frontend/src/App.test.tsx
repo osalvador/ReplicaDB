@@ -2,9 +2,9 @@ import { render, screen } from '@testing-library/react';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
+import { QueryClient } from '@tanstack/react-query';
 import App from './App';
 import * as jobsApi from './api/jobsApi';
-import { queryClient } from './api/queryClient';
 import { AuthContext } from './auth/AuthContext';
 import { theme } from './theme/theme';
 
@@ -15,6 +15,10 @@ vi.mock('./api/jobsApi', () => ({
 const mockedJobsApi = vi.mocked(jobsApi);
 
 function renderApp() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } }
+  });
+
   return render(
     <ThemeProvider theme={theme}>
       <CssBaseline />

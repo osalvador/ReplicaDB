@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -329,10 +330,14 @@ class JobRunRepositoryIT {
     }
 
     private static JobDefinition definition() {
-        return new JobDefinition(
-                null, "job-" + UUID.randomUUID(), "jdbc:source", null, "${env:SOURCE_PASSWORD}",
-                "source_table", null, "jdbc:sink", null, "${env:SINK_PASSWORD}", "sink_table",
-                ReplicationMode.INCREMENTAL, 1, "updated_at", "0", null, null);
+        return JobDefinitionTestFixtures.aJobDefinition()
+            .withName("job-" + UUID.randomUUID())
+            .withSourcePassword("${env:SOURCE_PASSWORD}")
+            .withSinkPassword("${env:SINK_PASSWORD}")
+            .withMode(ReplicationMode.INCREMENTAL)
+            .withIncrementalWatermarkColumn("updated_at")
+            .withInitialWatermarkValue("0")
+            .build();
     }
 
     private void insertAfter(java.util.concurrent.CountDownLatch start, UUID definitionId) {

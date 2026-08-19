@@ -10,6 +10,7 @@ import org.replicadb.server.audit.persistence.AuditEventFilter;
 import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.security.WithMockReplicaDbUser;
 import org.replicadb.server.security.domain.AppUser;
@@ -175,9 +176,6 @@ class JobPermissionControllerTest {
     }
 
     private static JobDefinition definition(String name) {
-        return new JobDefinition(
-                null, name, "jdbc:source", null, null, "source_table", null,
-                "jdbc:sink", null, null, "sink_table", ReplicationMode.COMPLETE, 1,
-                null, null, null, null);
+                return JobDefinitionTestFixtures.aJobDefinition().withName(name).build();
     }
 }

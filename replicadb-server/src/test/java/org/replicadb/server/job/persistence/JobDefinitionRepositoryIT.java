@@ -3,7 +3,12 @@ package org.replicadb.server.job.persistence;
 import org.junit.jupiter.api.Test;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
+import org.replicadb.server.job.domain.AzureAuthentication;
+import org.replicadb.server.job.domain.ConnectionCredentials;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
+import org.replicadb.server.job.domain.SinkEndpoint;
+import org.replicadb.server.job.domain.SourceEndpoint;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -109,12 +114,25 @@ class JobDefinitionRepositoryIT {
         jdbcTemplate.update("UPDATE job_definition SET updated_at = now() - interval '1 second' WHERE id = :id",
             Map.of("id", inserted.id()));
         JobDefinition stale = repository.findById(inserted.id()).orElseThrow();
-        JobDefinition replacement = new JobDefinition(
-            inserted.id(), inserted.name(), "jdbc:updated-source", "updated-source-user",
-            "${env:UPDATED_SOURCE_PASSWORD}", "updated_source_table", "id > 10",
-            "jdbc:updated-sink", "updated-sink-user", "${env:UPDATED_SINK_PASSWORD}",
-            "updated_sink_table", ReplicationMode.INCREMENTAL, 4, "updated_at", "100",
-            stale.createdAt(), stale.updatedAt());
+        JobDefinition replacement = JobDefinitionTestFixtures.aJobDefinition()
+            .withId(inserted.id())
+            .withName(inserted.name())
+            .withSourceConnect("jdbc:updated-source")
+            .withSourceUser("updated-source-user")
+            .withSourcePassword("${env:UPDATED_SOURCE_PASSWORD}")
+            .withSourceTable("updated_source_table")
+            .withSourceWhere("id > 10")
+            .withSinkConnect("jdbc:updated-sink")
+            .withSinkUser("updated-sink-user")
+            .withSinkPassword("${env:UPDATED_SINK_PASSWORD}")
+            .withSinkTable("updated_sink_table")
+            .withMode(ReplicationMode.INCREMENTAL)
+            .withJobs(4)
+            .withIncrementalWatermarkColumn("updated_at")
+            .withInitialWatermarkValue("100")
+            .withCreatedAt(stale.createdAt())
+            .withUpdatedAt(stale.updatedAt())
+            .build();
 
         JobDefinition updated = repository.update(replacement);
 
@@ -139,19 +157,72 @@ class JobDefinitionRepositoryIT {
         @Test
         void rejectsUpdateForUnknownDefinition() {
             JobDefinition template = definition("unknown-update");
-            JobDefinition unknown = new JobDefinition(UUID.randomUUID(), template.name(), template.sourceConnect(),
-                template.sourceUser(), template.sourcePassword(), template.sourceTable(), template.sourceWhere(),
-                template.sinkConnect(), template.sinkUser(), template.sinkPassword(), template.sinkTable(),
-                template.mode(), template.jobs(), template.incrementalWatermarkColumn(),
-                template.initialWatermarkValue(), Instant.now(), Instant.now());
+            JobDefinition unknown = JobDefinitionTestFixtures.aJobDefinition()
+                .withId(UUID.randomUUID())
+                .withName(template.name())
+                .withSourceConnect(template.sourceConnect())
+                .withSourceUser(template.sourceUser())
+                .withSourcePassword(template.sourcePassword())
+                .withSourceTable(template.sourceTable())
+                .withSourceWhere(template.sourceWhere())
+                .withSinkConnect(template.sinkConnect())
+                .withSinkUser(template.sinkUser())
+                .withSinkPassword(template.sinkPassword())
+                .withSinkTable(template.sinkTable())
+                .withMode(template.mode())
+                .withJobs(template.jobs())
+                .withIncrementalWatermarkColumn(template.incrementalWatermarkColumn())
+                .withInitialWatermarkValue(template.initialWatermarkValue())
+                .withCreatedAt(Instant.now())
+                .withUpdatedAt(Instant.now())
+                .build();
 
         assertThrows(NoSuchElementException.class, () -> repository.update(unknown));
         }
 
+        @Test
+        void roundTripsAdvancedOptions() {
+        JobDefinition original = new JobDefinition(
+            null, "advanced-" + UUID.randomUUID(),
+            new SourceEndpoint(
+                new ConnectionCredentials("jdbc:source", "source-user", "${env:SOURCE_PASSWORD}",
+                    new AzureAuthentication("ActiveDirectoryDefault", "source-client", "source-login",
+                        "source-cert", "source-key"),
+                    Map.of("ApplicationName", "ReplicaDB", "sslmode", "require")),
+                null, "id, name", "id > 10", "select id, name from source_table"),
+            new SinkEndpoint(
+                new ConnectionCredentials("jdbc:sink", "sink-user", null,
+                    new AzureAuthentication("ActiveDirectoryManagedIdentity", "sink-client", null,
+                        null, null),
+                    Map.of("batch.size", "100")),
+                "sink_table", "id, name", new org.replicadb.server.job.domain.StagingOptions(
+                    "staging", "sink_stage"), true, true),
+            ReplicationMode.INCREMENTAL, 3, "updated_at", "0", null, null, 250, 512, true);
+
+        JobDefinition inserted = repository.insert(original);
+        JobDefinition found = repository.findById(inserted.id()).orElseThrow();
+
+        assertEquals(inserted, found);
+        assertEquals("select id, name from source_table", found.sourceQuery());
+        assertEquals(Map.of("ApplicationName", "ReplicaDB", "sslmode", "require"),
+            found.sourceConnectionParams());
+        assertEquals("staging", found.sinkStagingSchema());
+        assertEquals("sink_stage", found.sinkStagingTable());
+        assertTrue(found.sinkDisableEscape());
+        assertTrue(found.sinkDisableTruncate());
+        assertEquals(250, found.fetchSize());
+        assertEquals(512, found.bandwidthThrottling());
+        assertTrue(found.verbose());
+        }
+
     private static JobDefinition definition(String name) {
-        return new JobDefinition(
-                null, name, "jdbc:source", "source-user", "${env:SOURCE_PASSWORD}", "source_table", null,
-                "jdbc:sink", "sink-user", "${env:SINK_PASSWORD}", "sink_table", ReplicationMode.COMPLETE,
-                2, null, null, null, null);
+        return JobDefinitionTestFixtures.aJobDefinition()
+            .withName(name)
+            .withSourceUser("source-user")
+            .withSourcePassword("${env:SOURCE_PASSWORD}")
+            .withSinkUser("sink-user")
+            .withSinkPassword("${env:SINK_PASSWORD}")
+            .withJobs(2)
+            .build();
     }
 }

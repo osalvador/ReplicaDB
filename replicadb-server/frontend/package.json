@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:seed": "node --test scripts/seed-local-jobs.test.mjs",
     "test:e2e": "playwright test",
     "generate:api-types": "node scripts/generate-api-types.mjs"
   },
