@@ -1,0 +1,209 @@
+.ai/archive/phase-2c-frontend-administration.plan.md
+  s_ef630a3c30a2e0::t_3019839d46691a 1-210
+.ai/index.md
+  s_ef630a3c30a2e0::t_68273a41f5a08a 1-55
+.ai/interfaces/cli-options.md
+  s_ef630a3c30a2e0::t_3b599382464d73 1-25
+.ai/interfaces/jobs-api.md
+  s_ef630a3c30a2e0::t_3fbe490072a8c6 1-27
+.ai/interfaces/openapi-frontend.md
+  s_ef630a3c30a2e0::t_9be119fc2f22d6 1-23
+.ai/interfaces/protocol-inventory.md
+  s_ef630a3c30a2e0::t_daae699b8b21ff 1-21
+.ai/interfaces/runs-api.md
+  s_ef630a3c30a2e0::t_0408c5217ed1a3 1-25
+.ai/interfaces/security-admin-api.md
+  s_ef630a3c30a2e0::t_10e67baf1269cb 1-25
+.ai/learnings/fix-sqlite-date-fallback.md
+  s_ef630a3c30a2e0::t_cd7b76cd433e25 1-11
+.ai/learnings/fix-sqlite-lob-api.md
+  s_ef630a3c30a2e0::t_036cdc1fa2c750 1-11
+.ai/learnings/fix-sqlite-null-object.md
+  s_ef630a3c30a2e0::t_1663407a6336c7 1-11
+.ai/learnings/issue271-db2-health.md
+  s_ef630a3c30a2e0::t_9945aeed16abac 1-11
+.ai/learnings/multi-table-oracle-architecture.md
+  s_ef630a3c30a2e0::t_cc7b02af7fbabf 1-11
+.ai/learnings/new-job-compatibility-bridge.md
+  s_ef630a3c30a2e0::t_d26473db081c0e 1-11
+.ai/learnings/new-job-e2e-credentials.md
+  s_ef630a3c30a2e0::t_897838fd504050 1-11
+.ai/learnings/new-job-nullable-boundaries.md
+  s_ef630a3c30a2e0::t_0a4cf270028e15 1-11
+.ai/learnings/new-job-postgres-identifiers.md
+  s_ef630a3c30a2e0::t_3a4ad1c5828616 1-11
+.ai/learnings/new-job-schema-alternative.md
+  s_ef630a3c30a2e0::t_8592a4c8983ecd 1-11
+.ai/learnings/phase0a-result-accumulator-scope.md
+  s_ef630a3c30a2e0::t_5a57d3a0cc1495 1-11
+.ai/learnings/phase0b1-cancelled-sql-exception.md
+  s_ef630a3c30a2e0::t_5a3e2735051513 1-11
+.ai/learnings/phase0b1-resource-ownership.md
+  s_ef630a3c30a2e0::t_fdb99976e233fc 1-11
+.ai/learnings/phase0b1-test-package.md
+  s_ef630a3c30a2e0::t_b8452ceb181a97 1-11
+.ai/learnings/phase0b2-manager-bind-shapes.md
+  s_ef630a3c30a2e0::t_a67a0e377befd9 1-11
+.ai/learnings/phase0b2-options-file.md
+  s_ef630a3c30a2e0::t_e0fb72fad7b16d 1-11
+.ai/learnings/phase0b2-shared-fixture.md
+  s_ef630a3c30a2e0::t_93fe548797d917 1-11
+.ai/learnings/phase1c3-bootstrap-test-profile.md
+  s_ef630a3c30a2e0::t_068788c2c9ada6 1-11
+.ai/learnings/phase1c3-real-http-auth.md
+  s_ef630a3c30a2e0::t_f924699b267a1a 1-11
+.ai/learnings/phase1c3-security-api-resolution.md
+  s_ef630a3c30a2e0::t_1f929105539cee 1-11
+.ai/learnings/phase1c3-security-test-dependency.md
+  s_ef630a3c30a2e0::t_968a47a05d892e 1-11
+.ai/learnings/phase1c3-session-serialization.md
+  s_ef630a3c30a2e0::t_61027505d5fc29 1-11
+.ai/learnings/phase1c3c-empty-permissions.md
+  s_ef630a3c30a2e0::t_c21b92b93804f0 1-11
+.ai/learnings/phase1c3c-isolated-contexts.md
+  s_ef630a3c30a2e0::t_550bdd8efc9022 1-11
+.ai/learnings/phase2a-csrf-cookie.md
+  s_ef630a3c30a2e0::t_e06ade8cfe306b 1-11
+.ai/learnings/phase2a-local-tooling.md
+  s_ef630a3c30a2e0::t_30b7d50f67628a 1-11
+.ai/learnings/phase2a-openapi-nullability.md
+  s_ef630a3c30a2e0::t_1342f6b841ff63 1-11
+.ai/learnings/phase2a-openapi-order.md
+  s_ef630a3c30a2e0::t_9428ea81137a6e 1-11
+.ai/learnings/phase2a-registry-neutrality.md
+  s_ef630a3c30a2e0::t_4919b6c0f763ef 1-11
+.ai/patterns/jdbc-shaped-transfer.md
+  s_ef630a3c30a2e0::t_be57b8d5d25740 1-21
+.ai/patterns/manager-factory.md
+  s_ef630a3c30a2e0::t_a52a237cd309f9 1-21
+.ai/architecture/cli-execution.md
+  s_12747da635f38f::t_36e94813bd1469 1-23
+.ai/architecture/deployment-and-operations.md
+  s_12747da635f38f::t_8090b6aacc5cb0 1-29
+.ai/architecture/frontend-application.md
+  s_12747da635f38f::t_3c050ee594f4e5 1-19,21,23,25,27
+.ai/architecture/managed-execution.md
+  s_12747da635f38f::t_b2ed30ea30449b 1-25
+.ai/architecture/managed-job-domain.md
+  s_12747da635f38f::t_ed72280877021a 1-25
+.ai/architecture/managed-run-domain.md
+  s_12747da635f38f::t_79b76805dad361 1-23
+.ai/architecture/manager-adapters.md
+  s_12747da635f38f::t_94a4c63ddae8f3 1-25
+.ai/architecture/persistence-state.md
+  s_12747da635f38f::t_9bb45fa1f313d6 1-17,19,21,23,25
+.ai/architecture/rowset-transfer.md
+  s_12747da635f38f::t_a0208f1d6779f1 1-23
+.ai/architecture/security-and-audit.md
+  s_12747da635f38f::t_cf773bd84872a5 1-25
+.ai/architecture/system-overview.md
+  s_12747da635f38f::t_88fb3d3b1cf9fb 1-25
+.ai/decisions/frontend-admin-boundary.md
+  s_12747da635f38f::t_054530cd2a139c 1-21
+.ai/decisions/generated-api-contract.md
+  s_12747da635f38f::t_79daaed4a2b9dd 1-21
+.ai/decisions/immediate-cancellation.md
+  s_12747da635f38f::t_041717aa1d2a2a 1-21
+.ai/decisions/monolithic-control-plane.md
+  s_12747da635f38f::t_9f947777685144 1-21
+.ai/decisions/no-resume-watermarks.md
+  s_12747da635f38f::t_8b9fc832a38079 1-21
+.ai/decisions/postgresql-state.md
+  s_12747da635f38f::t_2088a3e50a6d4f 1-21
+.ai/decisions/two-artifacts.md
+  s_12747da635f38f::t_27d32cec49f2a3 1-21
+.ai/learnings/azure-archive-integrity.md
+  s_12747da635f38f::t_1f81b5db00ac66 1-11
+.ai/learnings/azure-launcher-platform.md
+  s_12747da635f38f::t_b26dba2fd57a7b 1-11
+.ai/learnings/azure-prefixed-redaction.md
+  s_12747da635f38f::t_e8af25ec488e59 1-11
+.ai/learnings/azure-raw-interactive-safety.md
+  s_12747da635f38f::t_b9448523b3f07b 1-11
+.ai/learnings/material-doc-security-scan.md
+  s_12747da635f38f::t_d2383320832e77 1-11
+.ai/learnings/material-production-build.md
+  s_12747da635f38f::t_3ec5012e453b77 1-11
+.ai/learnings/material-test-extension.md
+  s_12747da635f38f::t_cb62a066666ada 1-11
+.ai/learnings/material-theme-test-wrapper.md
+  s_12747da635f38f::t_d7bdf33cfefe84 1-11
+.ai/learnings/phase1a-autoconfig-boundary.md
+  s_12747da635f38f::t_f185845e1fba8e 1-11
+.ai/learnings/phase1a-focused-surefire.md
+  s_12747da635f38f::t_86a0f7b7cc54ff 1-11
+.ai/learnings/phase1b-connection-secret-validation.md
+  s_12747da635f38f::t_b5caf0c61ee5e4 1-11
+.ai/learnings/phase1b-container-port.md
+  s_12747da635f38f::t_b9c0a4dae0db6f 1-11
+.ai/learnings/phase1b-jdbc-time.md
+  s_12747da635f38f::t_f95a6d8bfdacd0 1-11
+.ai/learnings/phase1b-log4j-alignment.md
+  s_12747da635f38f::t_090f21cf1b500c 1-11
+.ai/learnings/phase1c1-active-run-index.md
+  s_12747da635f38f::t_cb2cef0a528fda 1-11
+.ai/learnings/phase1c1-framework-404.md
+  s_12747da635f38f::t_bbff0a217c1838 1-11
+.ai/learnings/phase1c1-migration-count.md
+  s_12747da635f38f::t_4c1d8525862813 1-11
+.ai/learnings/phase1c1-rest-enum-case.md
+  s_12747da635f38f::t_65960838baeafd 1-11
+.ai/learnings/phase1c2-fixture-transaction.md
+  s_12747da635f38f::t_bd93dae962d85a 1-11
+.ai/learnings/phase1c2-quartz-dependency-order.md
+  s_12747da635f38f::t_8c512fbc7ed7bb 1-11
+.ai/learnings/pr242-ci-vs-local-containers.md
+  s_12747da635f38f::t_2cb599c95eac0a 1-11
+.ai/learnings/pr242-image-architectures.md
+  s_12747da635f38f::t_4754418a3d8da2 1-11
+.ai/learnings/pr242-reflective-jdk-flags.md
+  s_12747da635f38f::t_b70c569138d087 1-11
+.ai/log.md
+  s_12747da635f38f::t_413d98b489cec4 1-22
+.ai/patterns/anti-patterns.md
+  s_12747da635f38f::t_dc6a3263740dc9 1-23
+.ai/patterns/api-mapping-errors.md
+  s_12747da635f38f::t_f233304217b297 1-21
+.ai/patterns/execution-context-cancellation.md
+  s_12747da635f38f::t_f926763a00c3fa 1-21
+.ai/patterns/frontend-query-state.md
+  s_12747da635f38f::t_66e1b2e862e38e 1-23
+.ai/patterns/security-redaction.md
+  s_12747da635f38f::t_bf850a9da82bdc 1-17,19,21,23
+.ai/patterns/staging-watermark.md
+  s_12747da635f38f::t_dd61f48dd0c7b5 1-21
+.ai/patterns/state-idempotency.md
+  s_12747da635f38f::t_f153e9b5103730 1-21
+.github/copilot-instructions.md
+  s_12747da635f38f::t_f328e3ebb9f06c 8,11,21,24,27
+.github/instructions/project-functional.instructions.md
+  s_12747da635f38f::t_4240d6fd590842 8-11,13-17,20-23,26-28,30-31
+.github/instructions/project-technical.instructions.md
+  s_12747da635f38f::t_4e91264508b215 8-33,36-37,39-40
+.github/instructions/test-patterns.instructions.md
+  s_12747da635f38f::t_f48787f04ccdd3 2,8-11,14-18,21-24,26-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "9e1cf7c0380312d3f88b6f50c2c30575fb8481c7",
+  "prompts": {},
+  "sessions": {
+    "s_12747da635f38f": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "c9260d20-416a-4790-b7a0-7f0fb24c1c1e",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    },
+    "s_ef630a3c30a2e0": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "b234080c-d5e5-42b4-8252-57ff9f896dea",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
