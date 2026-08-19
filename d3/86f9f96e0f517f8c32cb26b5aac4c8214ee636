@@ -1,0 +1,14 @@
+.ai/context/frontend.md
+  h_feb0db10da3b67 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d386f9f96e0f517f8c32cb26b5aac4c8214ee636",
+  "prompts": {},
+  "humans": {
+    "h_feb0db10da3b67": {
+      "author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
