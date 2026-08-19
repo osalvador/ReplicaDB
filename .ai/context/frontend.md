@@ -24,3 +24,4 @@ Phase 2a is read-only after authentication: users can log in, view ACL-filtered 
 - [WARNING] Validate generated types against serialized null values, not only endpoint names. Source: `phase-2a-frontend-auth-monitoring`.
 - [WARNING] Keep lockfiles and npm configuration free of machine-specific registries; validate `npm ci` in a clean runner-like environment. Source: `phase-2a-frontend-auth-monitoring`.
 - [WARNING] Separate local certificate/browser limitations from reproducible CI build configuration. Source: `phase-2a-frontend-auth-monitoring`.
+- [WARNING] Tabbed form state is persistent: `DataFilteringTabs` and `StagingOptionsTabs` must only switch the visible panel; their tab handlers must not call `onChange` with empty values for the hidden panel. Test switching away and back to confirm every value remains until the user edits or deletes it.

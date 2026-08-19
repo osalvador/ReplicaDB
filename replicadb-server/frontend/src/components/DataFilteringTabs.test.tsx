@@ -25,7 +25,7 @@ function Harness({ sourceType = 'postgres', tableError }: { sourceType?: 'postgr
 }
 
 describe('DataFilteringTabs', () => {
-  it('clears table options when switching to query mode and back', () => {
+  it('preserves values when switching between filtering modes', () => {
     render(<Harness />);
     expect(screen.getByRole('tab', { name: 'Options' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', expect.stringContaining('options-tab'));
@@ -37,9 +37,11 @@ describe('DataFilteringTabs', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'Query' }), { target: { value: 'select * from orders' } });
     fireEvent.click(screen.getByRole('tab', { name: 'Options' }));
 
-    expect(screen.getByLabelText('Table')).toHaveValue('');
-    expect(screen.getByLabelText('Columns')).toHaveValue('');
-    expect(screen.getByLabelText('Where')).toHaveValue('');
+    expect(screen.getByLabelText('Table')).toHaveValue('orders');
+    expect(screen.getByLabelText('Columns')).toHaveValue('id, payload');
+    expect(screen.getByLabelText('Where')).toHaveValue('id > 10');
+    fireEvent.click(screen.getByRole('tab', { name: 'Query' }));
+    expect(screen.getByRole('textbox', { name: 'Query' })).toHaveValue('select * from orders');
   });
 
   it('associates table validation text with the table field', () => {
