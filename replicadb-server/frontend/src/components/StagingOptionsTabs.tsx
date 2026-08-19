@@ -13,7 +13,6 @@ export default function StagingOptionsTabs({ schema, table, onChange }: StagingO
 
   const changeTab = (nextTab: 'schema' | 'table') => {
     setTab(nextTab);
-    onChange(nextTab === 'schema' ? 'table' : 'schema', '');
   };
 
   return (

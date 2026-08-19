@@ -14,7 +14,7 @@ function Harness() {
 }
 
 describe('StagingOptionsTabs', () => {
-  it('clears schema when switching to a fixed staging table', () => {
+  it('preserves schema and table values when switching modes', () => {
     render(<Harness />);
     expect(screen.getByRole('tab', { name: 'Schema' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', expect.stringContaining('schema-tab'));
@@ -26,6 +26,8 @@ describe('StagingOptionsTabs', () => {
     fireEvent.change(screen.getByLabelText('Staging table'), { target: { value: 'staging.orders' } });
     fireEvent.click(screen.getByRole('tab', { name: 'Schema' }));
 
-    expect(screen.getByLabelText('Staging schema')).toHaveValue('');
+    expect(screen.getByLabelText('Staging schema')).toHaveValue('staging');
+    fireEvent.click(screen.getByRole('tab', { name: 'Table' }));
+    expect(screen.getByLabelText('Staging table')).toHaveValue('staging.orders');
   });
 });

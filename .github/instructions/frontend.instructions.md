@@ -21,6 +21,7 @@ applyTo: 'replicadb-server/frontend/**/*.{ts,tsx,mts,js,mjs}'
 ## Polling and Interaction
 - Keep run polling aligned with the backend terminal definition: only `SUCCEEDED`, `CANCELLED`, and `RETRY_SCHEDULED` stop polling; `FAILED` remains eligible for retry state changes.
 - Preserve stable loading, empty, error, and pagination states without layout-dependent text assumptions.
+- Treat tabs in forms as view switches, not destructive mode switches: changing tabs must never clear fields from the hidden tab. Only an explicit user edit or deletion may change those values. Cover tab round-trips in component tests.
 
 ## Build and Testing
 - Keep `npm ci` reproducible with registry-neutral lockfiles and project configuration; never commit machine-specific registry URLs.

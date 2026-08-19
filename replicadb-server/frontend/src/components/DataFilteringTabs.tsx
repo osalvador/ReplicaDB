@@ -172,13 +172,6 @@ export default function DataFilteringTabs({
 
   const changeTab = (nextTab: 'options' | 'query') => {
     setTab(nextTab);
-    if (nextTab === 'query') {
-      onChange('table', '');
-      onChange('columns', '');
-      onChange('where', '');
-    } else {
-      onChange('query', '');
-    }
   };
 
   return (
