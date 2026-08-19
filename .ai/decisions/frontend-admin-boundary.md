@@ -2,10 +2,10 @@
 type: Decision
 description: Frontend administration consumes existing backend user and ACL contracts and adds only an ADMIN UX boundary.
 sources:
-  - id: plan
-    resource: implementation_plan.md
   - id: routes
     resource: replicadb-server/frontend/src/router/routes.tsx
+  - id: admin-page
+    resource: replicadb-server/frontend/src/pages/JobPermissionsPage.tsx
   - id: access
     resource: replicadb-server/src/main/java/org/replicadb/server/security/JobAccessService.java
   - id: e2e
