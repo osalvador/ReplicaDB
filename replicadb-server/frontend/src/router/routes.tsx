@@ -3,9 +3,12 @@ import AppLayout from '../layout/AppLayout';
 import DashboardPage from '../pages/DashboardPage';
 import JobDetailPage from '../pages/JobDetailPage';
 import JobFormPage from '../pages/JobFormPage';
+import JobPermissionsPage from '../pages/JobPermissionsPage';
 import LoginPage from '../pages/LoginPage';
+import UsersPage from '../pages/UsersPage';
 import RunDetailPage from '../pages/RunDetailPage';
 import ProtectedRoute from './ProtectedRoute';
+import RequireRole from './RequireRole';
 
 export const routeObjects: RouteObject[] = [
   {
@@ -23,7 +26,14 @@ export const routeObjects: RouteObject[] = [
           { path: 'jobs/new', element: <JobFormPage /> },
           { path: 'jobs/:id/edit', element: <JobFormPage /> },
           { path: 'jobs/:id', element: <JobDetailPage /> },
-          { path: 'runs/:id', element: <RunDetailPage /> }
+          { path: 'runs/:id', element: <RunDetailPage /> },
+          {
+            element: <RequireRole role="ADMIN" />,
+            children: [
+              { path: 'users', element: <UsersPage /> },
+              { path: 'jobs/:id/permissions', element: <JobPermissionsPage /> }
+            ]
+          }
         ]
       }
     ]

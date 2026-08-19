@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
+import { useAuth } from '../auth/useAuth';
 import { getJob } from '../api/jobsApi';
 import LoadingState from '../components/LoadingState';
 import JobScheduleCard from '../components/JobScheduleCard';
@@ -30,6 +31,7 @@ function DefinitionRows({ details }: { details: Array<[string, string | number |
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [triggerError, setTriggerError] = useState<string>();
   const jobQuery = useQuery({
@@ -112,6 +114,11 @@ export default function JobDetailPage() {
             <Button component={RouterLink} to={`/jobs/${id}/edit`} variant="outlined">
               Edit
             </Button>
+            {user?.role === 'ADMIN' && (
+              <Button component={RouterLink} to={`/jobs/${id}/permissions`} variant="outlined">
+                Manage permissions
+              </Button>
+            )}
           </>
         }
       />

@@ -12,7 +12,7 @@ The control plane does not resume interrupted work. A run either completes or is
 
 **Date**: August 13, 2026
 **Last decision review**: August 14, 2026
-**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings), and Phase 2a/2b (frontend authentication, monitoring, job actions, and scheduling) implemented; Phase 2c (frontend administration) pending; Phase 3 (distributed workers) not started
+**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings), and Phase 2a/2b/2c (frontend authentication, monitoring, job actions, scheduling, user administration, and job permissions) implemented; Phase 3 (distributed workers) not started
 **Owner**: Development Team
 
 ---
@@ -448,7 +448,7 @@ Delivered as the standalone `replicadb-server` sibling Maven project:
 - The server skeleton excludes inherited MongoDB auto-configuration until the metadata state layer exists, so startup does not require an external database.
 - CI builds and tests the server module after installing the CLI artifact; the release workflow uploads its unreleased `0.1.0-SNAPSHOT` jar as a separate build artifact rather than publishing it with the CLI release assets.
 
-The next slice, **Phase 1b: State layer**, is implemented below, followed by **Phase 1c-1: REST API core**, **Phase 1c-2: Quartz scheduler**, and **Phase 1c-3a+b+c: authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings**, also implemented below. The frontend is elevated to its own top-level **Phase 2** (split into Phase 2a/2b/2c); Phase 2a and Phase 2b are implemented and Phase 2c remains pending. Distributed workers are renumbered to **Phase 3**.
+The next slice, **Phase 1b: State layer**, is implemented below, followed by **Phase 1c-1: REST API core**, **Phase 1c-2: Quartz scheduler**, and **Phase 1c-3a+b+c: authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings**, also implemented below. The frontend is elevated to its own top-level **Phase 2** (split into Phase 2a/2b/2c); all three frontend slices are implemented. Distributed workers are renumbered to **Phase 3**.
 
 #### Phase 1b: State layer — IMPLEMENTED
 
@@ -627,7 +627,7 @@ At startup, Spring Boot loads the `api` profile configuration, connects to the m
 
 ### Phase 2: Frontend
 
-Phase 2a and Phase 2b are implemented. Phase 2c remains pending. Elevated from a Phase 1c-4 sub-slice to its own top-level phase: it has a distinct stack, a distinct build pipeline (`frontend-maven-plugin`), and a three-slice scope large enough to warrant the same weight as Phase 1 and Phase 3. It consumes the `/api/v1` surface and the identity/permission model already implemented through Phase 1c-3a+b+c. Phase 2a adds the OpenAPI specification dependency and CSRF bootstrap endpoint required by the SPA, but no new persistence.
+Phase 2a, Phase 2b, and Phase 2c are implemented. Elevated from a Phase 1c-4 sub-slice to its own top-level phase: it has a distinct stack, a distinct build pipeline (`frontend-maven-plugin`), and a three-slice scope large enough to warrant the same weight as Phase 1 and Phase 3. It consumes the `/api/v1` surface and the identity/permission model already implemented through Phase 1c-3a+b+c. Phase 2a adds the OpenAPI specification dependency and CSRF bootstrap endpoint required by the SPA, but no new persistence.
 
 ```text
 Browser
@@ -654,9 +654,9 @@ Implemented with login/logout, CSRF bootstrap via `GET /api/v1/auth/csrf`, sessi
 
 Implemented with create/update job definitions (source/sink table pair, mode, parallelism, and watermark column), schedule management against the Phase 1c-2 endpoints, and mutating run actions: trigger (with `Idempotency-Key`), cancel, and retry. The frontend uses the existing `/api/v1` contract without backend API changes.
 
-#### Phase 2c: Administration — PENDING
+#### Phase 2c: Administration — IMPLEMENTED
 
-Job permission editor and user/role administration for `ADMIN` users.
+Implemented with ADMIN-only user administration (list, create, role/enabled updates, and password reset), per-job permission management for `VIEW`/`EDIT`/`EXECUTE`/`CANCEL`, protected routes, and the frontend navigation/action gates. It consumes the existing `/api/v1/users` and `/api/v1/jobs/{id}/permissions` contracts without backend changes.
 
 #### Frontend technical shape
 
@@ -829,7 +829,7 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 
 - [x] **Phase 2a.** Add authentication and read-only monitoring screens (login, dashboard, job detail, run history/detail) to the `replicadb-server` package.
 - [x] **Phase 2b.** Add the job editor, schedule management, and mutating run actions (trigger/cancel/retry) to the frontend.
-- [ ] **Phase 2c.** Add the job permission editor and user/role administration screens to the frontend.
+- [x] **Phase 2c.** Add the job permission editor and user/role administration screens to the frontend.
 
 ### Priority 4: Optional Distributed Deployment
 
@@ -869,7 +869,7 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 
 - **Met:** Authenticated users can log in, view the dashboard, and inspect job/run detail with no create/edit/trigger/cancel/schedule affordance present in Phase 2a.
 - **Met:** The job editor, schedule management, and trigger/cancel/retry actions in Phase 2b operate against the same backend contract validated since Phase 1c-1/1c-2, with no API changes required.
-- The permission editor and user/role administration in Phase 2c enforce the same backend ACLs from Phase 1c-3a+b; the frontend never becomes a second source of authorization truth.
+- **Met:** The permission editor and user/role administration in Phase 2c use the existing backend ACLs from Phase 1c-3a+b; the frontend never becomes a second source of authorization truth.
 - Generated TypeScript types stay in sync with `/api/v1` through the OpenAPI specification, with no hand-maintained DTO duplicating the Java response records.
 
 ### Phase 3

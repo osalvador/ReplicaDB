@@ -60,4 +60,19 @@ describe('AppLayout', () => {
     expect(mockedAuthApi.logout).toHaveBeenCalledOnce();
     expect(queryClient.getQueryData(['jobs'])).toBeUndefined();
   });
+
+  it('shows the users link for an admin', async () => {
+    mockedAuthApi.getMe.mockResolvedValue({ id: 'admin-id', username: 'admin', role: 'ADMIN' });
+    renderLayout(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+
+    expect(await screen.findByRole('link', { name: 'Users' })).toHaveAttribute('href', '/users');
+  });
+
+  it.each(['OPERATOR', 'VIEWER'] as const)('hides the users link for a %s user', async role => {
+    mockedAuthApi.getMe.mockResolvedValue({ id: 'user-id', username: role.toLowerCase(), role });
+    renderLayout(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
+
+    await screen.findByText(role.toLowerCase());
+    expect(screen.queryByRole('link', { name: 'Users' })).not.toBeInTheDocument();
+  });
 });

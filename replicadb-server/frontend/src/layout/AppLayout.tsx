@@ -43,6 +43,11 @@ export default function AppLayout() {
           >
             ReplicaDB
           </Typography>
+          {user?.role === 'ADMIN' && (
+            <Button component={RouterLink} to="/users" variant="text" size="small">
+              Users
+            </Button>
+          )}
           <Stack
             role="group"
             aria-label="Signed-in identity"

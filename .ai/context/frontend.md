@@ -2,7 +2,7 @@
 The `replicadb-server/frontend` SPA uses React 18, TypeScript, Vite, React Router, MUI, Axios, and TanStack Query. `src/api` owns the configured client and endpoint modules; `src/auth` owns session bootstrap; `src/router` owns the protected shell; `src/pages` owns login/dashboard/job/run screens; `src/components` owns reusable tables; `src/theme` owns tokens.
 
 ## Current Product Slice
-Phase 2a is read-only after authentication: users can log in, view ACL-filtered jobs, inspect a job definition, browse run history, and inspect a run/log. There are no create, edit, trigger, cancel, or scheduling controls yet. `ProtectedRoute` redirects anonymous users, while `AuthContext` treats 401/403 from `/auth/me` as an anonymous session.
+Phase 2a/2b/2c are implemented: users can log in, view ACL-filtered jobs, inspect job/run details, edit jobs, manage schedules and run actions, while ADMIN users can administer local users and per-job permissions. `ProtectedRoute` redirects anonymous users, `RequireRole` presents a friendly unauthorized page for non-ADMIN admin routes, and `AuthContext` treats 401/403 from `/auth/me` as an anonymous session.
 
 ## Data and Security Rules
 - Use the generated `src/api/schema.ts` types; do not duplicate Java DTOs as hand-maintained interfaces.
