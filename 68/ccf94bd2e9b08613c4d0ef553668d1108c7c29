@@ -1,0 +1,23 @@
+.ai/decisions/frontend-admin-boundary.md
+  s_12747da635f38f::t_a7fcee7f001a3d 7-8
+.ai/learnings/tech-debt.md
+  s_12747da635f38f::t_44a3999099ec6a 7-8,21
+.ai/patterns/anti-patterns.md
+  s_12747da635f38f::t_3b3957b29b1c15 13-14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "68ccf94bd2e9b08613c4d0ef553668d1108c7c29",
+  "prompts": {},
+  "sessions": {
+    "s_12747da635f38f": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "c9260d20-416a-4790-b7a0-7f0fb24c1c1e",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
