@@ -10,8 +10,8 @@ sources:
     resource: .github/instructions/frontend.instructions.md
   - id: decisions
     resource: ARCHITECTURE_DECISIONS.md
-  - id: plan
-    resource: implementation_plan.md
+  - id: admin-page
+    resource: replicadb-server/frontend/src/pages/JobPermissionsPage.tsx
 generated: { by: itx-init/2.1, at: "2026-08-19T14:26:22Z" }
 status: stable
 ---
