@@ -364,17 +364,45 @@ export interface components {
             sourceConnect: string;
             sourceUser?: string;
             sourcePassword?: string;
-            sourceTable: string;
+            sourceTable?: string;
             sourceWhere?: string;
+            sourceAuthMode?: string;
+            sourceAuthPrincipalId?: string;
+            sourceAuthLoginHint?: string;
+            sourceAuthClientCertificate?: string;
+            sourceAuthClientKey?: string;
+            sourceConnectionParams?: {
+                [key: string]: string;
+            };
+            sourceColumns?: string;
+            sourceQuery?: string;
             sinkConnect: string;
             sinkUser?: string;
             sinkPassword?: string;
             sinkTable: string;
+            sinkAuthMode?: string;
+            sinkAuthPrincipalId?: string;
+            sinkAuthLoginHint?: string;
+            sinkAuthClientCertificate?: string;
+            sinkAuthClientKey?: string;
+            sinkConnectionParams?: {
+                [key: string]: string;
+            };
+            sinkColumns?: string;
+            sinkStagingSchema?: string;
+            sinkStagingTable?: string;
+            sinkDisableEscape?: boolean;
+            sinkDisableTruncate?: boolean;
             mode: string;
             /** Format: int32 */
             jobs?: number;
             incrementalWatermarkColumn?: string;
             initialWatermarkValue?: string;
+            /** Format: int32 */
+            fetchSize?: number;
+            /** Format: int32 */
+            bandwidthThrottling?: number;
+            verbose?: boolean;
         };
         JobDefinitionResponse: {
             /** Format: uuid */
@@ -384,9 +412,32 @@ export interface components {
             sourceUser?: string;
             sourceTable?: string;
             sourceWhere?: string;
+            sourceAuthMode?: string;
+            sourceAuthPrincipalId?: string;
+            sourceAuthLoginHint?: string;
+            sourceAuthClientCertificate?: string;
+            sourceAuthClientKey?: string;
+            sourceConnectionParams?: {
+                [key: string]: string;
+            };
+            sourceColumns?: string;
+            sourceQuery?: string;
             sinkConnect?: string;
             sinkUser?: string;
             sinkTable?: string;
+            sinkAuthMode?: string;
+            sinkAuthPrincipalId?: string;
+            sinkAuthLoginHint?: string;
+            sinkAuthClientCertificate?: string;
+            sinkAuthClientKey?: string;
+            sinkConnectionParams?: {
+                [key: string]: string;
+            };
+            sinkColumns?: string;
+            sinkStagingSchema?: string;
+            sinkStagingTable?: string;
+            sinkDisableEscape?: boolean;
+            sinkDisableTruncate?: boolean;
             mode?: string;
             /** Format: int32 */
             jobs?: number;
@@ -396,6 +447,11 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
+            /** Format: int32 */
+            fetchSize?: number;
+            /** Format: int32 */
+            bandwidthThrottling?: number;
+            verbose?: boolean;
             sourcePasswordConfigured?: boolean;
             sinkPasswordConfigured?: boolean;
             modeWarning?: string;

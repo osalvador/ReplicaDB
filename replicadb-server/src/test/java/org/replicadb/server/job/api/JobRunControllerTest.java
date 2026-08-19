@@ -11,6 +11,7 @@ import org.replicadb.server.audit.persistence.AuditEventFilter;
 import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
@@ -249,14 +250,16 @@ class JobRunControllerTest {
             @Test
             void returnsDifferentCancellationWarningsForCompleteAndIncrementalModes() throws Exception {
             JobDefinition complete = jobDefinitionRepository.insert(definition("complete-warning"));
-            JobDefinition incremental = jobDefinitionRepository.insert(new JobDefinition(
-                null, "incremental-warning", "jdbc:source", null, null, "source_table", null,
-                "jdbc:sink", null, null, "sink_table", ReplicationMode.INCREMENTAL, 1,
-                "updated_at", "0", null, null));
-            JobDefinition atomic = jobDefinitionRepository.insert(new JobDefinition(
-                null, "atomic-warning", "jdbc:source", null, null, "source_table", null,
-                "jdbc:sink", null, null, "sink_table", ReplicationMode.COMPLETE_ATOMIC, 1,
-                null, null, null, null));
+            JobDefinition incremental = jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
+                .withName("incremental-warning")
+                .withMode(ReplicationMode.INCREMENTAL)
+                .withIncrementalWatermarkColumn("updated_at")
+                .withInitialWatermarkValue("0")
+                .build());
+            JobDefinition atomic = jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
+                .withName("atomic-warning")
+                .withMode(ReplicationMode.COMPLETE_ATOMIC)
+                .build());
             JobRun completeRun = jobRunRepository.insertPending(complete.id(), null, 1);
             JobRun incrementalRun = jobRunRepository.insertPending(incremental.id(), null, 1);
             JobRun atomicRun = jobRunRepository.insertPending(atomic.id(), null, 1);
@@ -417,19 +420,20 @@ class JobRunControllerTest {
     }
 
     private static JobDefinition definition(String name) {
-        return new JobDefinition(
-                null, name, "jdbc:source", null, null, "source_table", null,
-                "jdbc:sink", null, null, "sink_table", ReplicationMode.COMPLETE, 1,
-                null, null, null, null);
+        return JobDefinitionTestFixtures.aJobDefinition().withName(name).build();
     }
 
     private JobDefinition runtimeDefinition(String name, ReplicationMode mode, int rowCount) throws SQLException {
         Path source = createDatabase(name + "-source.db", rowCount);
         Path sink = createDatabase(name + "-sink.db", 0);
-        return jobDefinitionRepository.insert(new JobDefinition(
-                null, name, "jdbc:sqlite:" + source, null, null, "orders", null,
-                "jdbc:sqlite:" + sink, null, null, "orders_copy", mode, 1,
-                null, null, null, null));
+        return jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
+            .withName(name)
+            .withSourceConnect("jdbc:sqlite:" + source)
+            .withSourceTable("orders")
+            .withSinkConnect("jdbc:sqlite:" + sink)
+            .withSinkTable("orders_copy")
+            .withMode(mode)
+            .build());
     }
 
     private MvcResult trigger(UUID jobDefinitionId, String idempotencyKey) throws Exception {

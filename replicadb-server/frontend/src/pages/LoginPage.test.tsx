@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from '@mui/material';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../api/client';
 import * as authApi from '../api/authApi';
 import { AuthProvider } from '../auth/AuthContext';
+import { theme } from '../theme/theme';
 import LoginPage from './LoginPage';
 
 vi.mock('../api/authApi', () => ({
@@ -25,11 +27,13 @@ function renderLogin() {
   ], { initialEntries: ['/login'] });
 
   return render(
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider theme={theme}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <RouterProvider router={router} />
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 
@@ -42,6 +46,9 @@ describe('LoginPage', () => {
     mockedAuthApi.login.mockResolvedValue({ id: 'user-id', username: 'operator', role: 'OPERATOR' });
 
     renderLogin();
+    expect(screen.getByRole('link', { name: 'ReplicaDB' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('form', { name: 'Sign-in form' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Sign in' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'operator' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -59,7 +66,7 @@ describe('LoginPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Invalid credentials');
-    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Sign in' })).toBeInTheDocument();
   });
 
   it('keeps submit disabled until both fields contain values', () => {

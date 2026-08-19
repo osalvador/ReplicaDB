@@ -1,8 +1,10 @@
-import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
 import { FormEvent, useState } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/useAuth';
+import SurfaceSection from '../components/SurfaceSection';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -28,43 +30,70 @@ export default function LoginPage() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', p: 3 }}>
-      <Paper component="form" onSubmit={submit} elevation={2} sx={{ width: 'min(100%, 420px)', p: 4 }}>
-        <Stack spacing={3}>
-          <Box>
-            <Typography component="p" color="primary" fontWeight={700} letterSpacing="0.08em" textTransform="uppercase">
-              ReplicaDB
-            </Typography>
-            <Typography component="h1" variant="h4" sx={{ mt: 1 }}>
-              Sign in
-            </Typography>
-          </Box>
-          {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
-          <TextField
-            label="Username"
-            value={username}
-            onChange={event => setUsername(event.target.value)}
-            autoComplete="username"
-            fullWidth
-          />
-          <TextField
-            label="Password"
-            type="password"
-            value={password}
-            onChange={event => setPassword(event.target.value)}
-            autoComplete="current-password"
-            fullWidth
-          />
-          <Button
-            type="submit"
-            variant="contained"
-            size="large"
-            disabled={submitting || !username.trim() || !password}
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        backgroundColor: 'background.default',
+        p: { xs: 2, sm: 3 }
+      }}
+    >
+      <Box sx={{ width: 'min(100%, 440px)' }}>
+        <Typography
+          component={RouterLink}
+          to="/"
+          variant="h5"
+          color="primary"
+          fontWeight={700}
+          sx={{
+            display: 'inline-block',
+            borderRadius: 1,
+            px: 1,
+            py: 0.5,
+            textDecoration: 'none',
+            '&:hover': { backgroundColor: 'rgba(11, 110, 105, 0.08)' }
+          }}
+        >
+          ReplicaDB
+        </Typography>
+        <Box component="form" aria-label="Sign-in form" onSubmit={submit} sx={{ mt: 2 }}>
+          <SurfaceSection
+            title="Sign in"
+            description="Access your database replication control plane."
+            headingLevel={1}
           >
-            {submitting ? 'Signing in...' : 'Sign in'}
-          </Button>
-        </Stack>
-      </Paper>
+            <Stack spacing={2.5}>
+              {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
+              <TextField
+                label="Username"
+                value={username}
+                onChange={event => setUsername(event.target.value)}
+                autoComplete="username"
+                fullWidth
+                autoFocus
+              />
+              <TextField
+                label="Password"
+                type="password"
+                value={password}
+                onChange={event => setPassword(event.target.value)}
+                autoComplete="current-password"
+                fullWidth
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                size="large"
+                fullWidth
+                disabled={submitting || !username.trim() || !password}
+              >
+                {submitting ? 'Signing in...' : 'Sign in'}
+              </Button>
+            </Stack>
+          </SurfaceSection>
+        </Box>
+      </Box>
     </Box>
   );
 }

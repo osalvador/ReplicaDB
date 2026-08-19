@@ -109,6 +109,51 @@ class JobLifecycleIT {
         assertEquals(JobRunStatus.CANCELLED, cancelled.status());
     }
 
+        @Test
+        void supportsQueryOnlySourcesAndRejectsCredentialLikeParameters() throws Exception {
+        login();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("name", "query-only-lifecycle");
+        body.put("sourceConnect", "jdbc:source");
+        body.put("sourceQuery", "select id from source_table");
+        body.put("sinkConnect", "jdbc:sink");
+        body.put("sinkTable", "sink_table");
+        body.put("mode", "complete");
+        body.put("jobs", 1);
+
+        ResponseEntity<String> created = restTemplate.postForEntity(
+            "/api/v1/jobs", new HttpEntity<>(body, authenticatedHeaders(true)), String.class);
+        assertEquals(HttpStatus.CREATED, created.getStatusCode(), created.getBody());
+        JobDefinitionResponse createdDefinition = objectMapper.readValue(created.getBody(), JobDefinitionResponse.class);
+        assertEquals("select id from source_table", createdDefinition.sourceQuery());
+        assertEquals(null, createdDefinition.sourceTable());
+
+        body.remove("name");
+        body.put("sourceQuery", "select id from source_table where id > 10");
+        ResponseEntity<String> updated = restTemplate.exchange(
+            "/api/v1/jobs/" + createdDefinition.id(), HttpMethod.PUT,
+            new HttpEntity<>(body, authenticatedHeaders(true)), String.class);
+        assertEquals(HttpStatus.OK, updated.getStatusCode(), updated.getBody());
+        JobDefinitionResponse updatedDefinition = objectMapper.readValue(updated.getBody(), JobDefinitionResponse.class);
+        assertEquals("select id from source_table where id > 10", updatedDefinition.sourceQuery());
+
+        Map<String, Object> credentialLike = new LinkedHashMap<>(body);
+        credentialLike.put("name", "credential-like-parameter");
+        credentialLike.put("sourceConnectionParams", Map.of("password", "not-a-secret"));
+        ResponseEntity<String> rejectedParams = restTemplate.postForEntity(
+            "/api/v1/jobs", new HttpEntity<>(credentialLike, authenticatedHeaders(true)), String.class);
+        assertEquals(HttpStatus.BAD_REQUEST, rejectedParams.getStatusCode());
+
+        Map<String, Object> missingSource = new LinkedHashMap<>(body);
+        missingSource.put("name", "missing-source-selection");
+        missingSource.remove("sourceQuery");
+        ResponseEntity<String> rejectedSource = restTemplate.postForEntity(
+            "/api/v1/jobs", new HttpEntity<>(missingSource, authenticatedHeaders(true)), String.class);
+        assertEquals(HttpStatus.BAD_REQUEST, rejectedSource.getStatusCode());
+        assertTrue(rejectedSource.getBody() != null
+            && rejectedSource.getBody().contains("source table or query must be configured"));
+        }
+
     private JobDefinitionResponse createDefinition(String name, Path source, Path sink) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", name);

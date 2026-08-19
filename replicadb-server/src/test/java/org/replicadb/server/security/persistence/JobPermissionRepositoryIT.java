@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.security.domain.AppUser;
 import org.replicadb.server.security.domain.GlobalRole;
 import org.replicadb.server.security.domain.JobPermission;
@@ -126,9 +127,13 @@ class JobPermissionRepositoryIT {
     }
 
     private static JobDefinition definition(String name) {
-        return new JobDefinition(
-                null, name, "jdbc:source", "source-user", "${env:SOURCE_PASSWORD}", "source_table", null,
-                "jdbc:sink", "sink-user", "${env:SINK_PASSWORD}", "sink_table", ReplicationMode.COMPLETE,
-                2, null, null, null, null);
+        return JobDefinitionTestFixtures.aJobDefinition()
+            .withName(name)
+            .withSourceUser("source-user")
+            .withSourcePassword("${env:SOURCE_PASSWORD}")
+            .withSinkUser("sink-user")
+            .withSinkPassword("${env:SINK_PASSWORD}")
+            .withJobs(2)
+            .build();
     }
 }

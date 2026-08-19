@@ -6,9 +6,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 SERVER_DIR="$ROOT_DIR/replicadb-server"
 FRONTEND_DIR="$SERVER_DIR/frontend"
 POSTGRES_CONTAINER="replicadb-dev-postgres"
-POSTGRES_PORT="5432"
-API_PORT="8080"
-FRONTEND_PORT="5173"
+POSTGRES_PORT="${REPLICADB_POSTGRES_PORT:-5432}"
+API_PORT="${REPLICADB_API_PORT:-8080}"
+FRONTEND_PORT="${REPLICADB_FRONTEND_PORT:-5173}"
 CONTAINER_ENGINE="${CONTAINER_ENGINE:-docker}"
 ADMIN_USERNAME="${REPLICADB_BOOTSTRAP_ADMIN_USERNAME:-admin}"
 
@@ -18,7 +18,7 @@ if [[ -z "${REPLICADB_BOOTSTRAP_ADMIN_PASSWORD:-}" ]]; then
 fi
 export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD
 
-for command_name in mvn npm curl "$CONTAINER_ENGINE"; do
+for command_name in mvn npm node curl lsof "$CONTAINER_ENGINE"; do
     if ! command -v "$command_name" >/dev/null 2>&1; then
         printf 'Required command not found: %s\n' "$command_name" >&2
         exit 1
@@ -36,20 +36,25 @@ if [[ -z "${JAVA_HOME:-}" || ! -x "$JAVA_HOME/bin/java" ]]; then
 fi
 export PATH="$JAVA_HOME/bin:$PATH"
 
-if [[ "$API_PORT" != "8080" || "$FRONTEND_PORT" != "5173" ]]; then
-    printf '%s\n' 'The local Vite proxy currently requires API port 8080 and frontend port 5173.' >&2
-    exit 1
-fi
+find_available_port() {
+    local requested_port="$1"
+    local service_name="$2"
+    local selected_port="$requested_port"
 
-if lsof -nP -iTCP:"$API_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
-    printf 'Port %s is already in use. Stop that process before continuing.\n' "$API_PORT" >&2
-    exit 1
-fi
+    while lsof -nP -iTCP:"$selected_port" -sTCP:LISTEN >/dev/null 2>&1; do
+        selected_port=$((selected_port + 1))
+    done
 
-if lsof -nP -iTCP:"$FRONTEND_PORT" -sTCP:LISTEN >/dev/null 2>&1; then
-    printf 'Port %s is already in use. Stop that process before continuing.\n' "$FRONTEND_PORT" >&2
-    exit 1
-fi
+    if [[ "$selected_port" != "$requested_port" ]]; then
+        printf '%s port %s is occupied; using port %s instead.\n' \
+            "$service_name" "$requested_port" "$selected_port" >&2
+    fi
+    printf '%s\n' "$selected_port"
+}
+
+POSTGRES_PORT="$(find_available_port "$POSTGRES_PORT" 'PostgreSQL')"
+API_PORT="$(find_available_port "$API_PORT" 'API')"
+FRONTEND_PORT="$(find_available_port "$FRONTEND_PORT" 'Frontend')"
 
 RUN_DIR="$(mktemp -d "${TMPDIR:-/tmp}/replicadb-frontend-local.XXXXXX")"
 SERVER_LOG="$RUN_DIR/server.log"
@@ -104,7 +109,7 @@ done
 printf '%s\n' 'Installing the CLI artifact in the local Maven repository...'
 mvn -B -DskipTests install --file "$ROOT_DIR/pom.xml"
 
-printf '%s\n' 'Starting Spring Boot API on http://localhost:8080...'
+printf 'Starting Spring Boot API on http://localhost:%s...\n' "$API_PORT"
 (
     export DB_URL="jdbc:postgresql://localhost:$POSTGRES_PORT/replicadb"
     export DB_USERNAME=postgres
@@ -112,6 +117,7 @@ printf '%s\n' 'Starting Spring Boot API on http://localhost:8080...'
     export REPLICADB_BOOTSTRAP_ADMIN_USERNAME="$ADMIN_USERNAME"
     mvn -B -f "$SERVER_DIR/pom.xml" spring-boot:run \
         -Dspring-boot.run.profiles=api \
+        -Dspring-boot.run.arguments="--server.port=$API_PORT" \
         -Dskip.installnodenpm=true \
         -Dskip.npm=true
 ) >"$SERVER_LOG" 2>&1 &
@@ -134,13 +140,20 @@ for attempt in $(seq 1 120); do
     sleep 1
 done
 
+printf '%s\n' 'Seeding local job fixtures...'
+REPLICADB_API_URL="http://localhost:$API_PORT" \
+REPLICADB_BOOTSTRAP_ADMIN_USERNAME="$ADMIN_USERNAME" \
+REPLICADB_POSTGRES_PORT="$POSTGRES_PORT" \
+node "$FRONTEND_DIR/scripts/seed-local-jobs.mjs"
+
 printf '%s\n' 'Installing frontend dependencies...'
 (cd "$FRONTEND_DIR" && npm ci)
 
-printf '%s\n' 'Starting Vite on http://localhost:5173...'
+printf 'Starting Vite on http://localhost:%s...\n' "$FRONTEND_PORT"
 (
     cd "$FRONTEND_DIR"
-    npm run dev -- --host 127.0.0.1
+    export REPLICADB_API_PROXY_TARGET="http://localhost:$API_PORT"
+    npm run dev -- --host 127.0.0.1 --port "$FRONTEND_PORT"
 ) >"$FRONTEND_LOG" 2>&1 &
 FRONTEND_PID=$!
 

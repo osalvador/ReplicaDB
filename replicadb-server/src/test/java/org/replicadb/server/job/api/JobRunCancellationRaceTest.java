@@ -10,6 +10,7 @@ import org.replicadb.server.audit.persistence.AuditEventFilter;
 import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
@@ -68,10 +69,8 @@ class JobRunCancellationRaceTest {
 
     @Test
     void auditsCancellationWhenRunTerminatesBeforeCancelUpdate() throws Exception {
-        JobDefinition definition = jobDefinitionRepository.insert(new JobDefinition(
-                null, "cancel-race-job", "jdbc:source", null, null, "source_table", null,
-                "jdbc:sink", null, null, "sink_table", ReplicationMode.COMPLETE, 1,
-                null, null, null, null));
+        JobDefinition definition = jobDefinitionRepository.insert(
+                JobDefinitionTestFixtures.aJobDefinition().withName("cancel-race-job").build());
         JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
         JobRun running = jobRunRepository.claimById(pending.id(), "race-worker", Duration.ofMinutes(5))
                 .orElseThrow();

@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
+const apiProxyTarget = process.env.REPLICADB_API_PROXY_TARGET ?? 'http://localhost:8080';
+
 export default defineConfig({
   plugins: [react()],
   build: {
@@ -10,11 +12,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api/v1': {
-        target: 'http://localhost:8080',
+        target: apiProxyTarget,
         changeOrigin: true
       },
       '/v3/api-docs': {
-        target: 'http://localhost:8080',
+        target: apiProxyTarget,
         changeOrigin: true
       }
     }

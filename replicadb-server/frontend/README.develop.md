@@ -22,6 +22,14 @@ Browser :5173
 
 El servidor Vite sirve la interfaz y reenvía las llamadas al API local. Las migraciones Flyway crean las tablas de metadata al arrancar el perfil `api`.
 
+## Sistema visual
+
+El control plane usa una **teal/rust identity** de ReplicaDB sobre **neutral surfaces**: el teal es la acción primaria y el rust la acción secundaria, con superficies elevadas y secciones enmarcadas para separar el trabajo operativo. Los estados semánticos, el foco visible, la escala tipográfica, la elevación y el ritmo de espaciado pertenecen al tema MUI compartido; los radios son contenidos y las tablas mantienen una densidad adecuada para escanear definiciones y ejecuciones.
+
+La navegación de escritorio conserva el AppBar superior y el enlace de marca a `/`. No hay un **bottom navigation** por defecto: ReplicaDB es un control plane desktop-first y las acciones permanecen junto al contexto de cada pantalla. Esta es la **no-bottom-navigation decision** del producto. El layout sigue siendo usable en móvil mediante wrapping, grids responsivos y overflow local para tablas y logs.
+
+El sistema adaptado M3 usa **restrained radius**, semantic states, foco visible y una escala tipográfica estable; no carga fuentes remotas ni introduce una paleta violeta.
+
 ## Requisitos
 
 - Java 17.
@@ -56,6 +64,9 @@ Cuando el script termine de arrancar:
 
 - Frontend: `http://localhost:5173`
 - API: `http://localhost:8080`
+- El script crea jobs de prueba para Oracle, MySQL, MariaDB, PostgreSQL, DB2 LUW,
+  DB2 for i, SQLite, SQL Server, Denodo y File. Los fixtures cubren los modos
+  `complete`, `complete-atomic` e `incremental`; no ejecutan ninguna replicación.
 
 Pulsa `Ctrl+C` para detener API y Vite y eliminar el contenedor PostgreSQL.
 El script requiere libres los puertos `5432`, `8080` y `5173`; no detiene
@@ -97,7 +108,7 @@ Si ese comando ya se ejecutó y el artefacto local está actualizado, puedes con
 Abre un terminal nuevo en la raíz del repositorio y define las variables de desarrollo. No guardes la contraseña en el repositorio.
 
 ```bash
-export DB_URL='jdbc:postgresql://localhost:5432/replicadb'
+export DB_URL='<metadata-jdbc-url>'
 export DB_USERNAME='postgres'
 export DB_PASSWORD=''
 export REPLICADB_BOOTSTRAP_ADMIN_USERNAME='frontend-admin'
@@ -132,6 +143,8 @@ cd replicadb-server/frontend
 npm ci
 npm run dev
 ```
+
+`npm run dev` inicia Vite con **Vite HMR**, que actualiza los cambios del frontend en el navegador sin reiniciar el API Spring Boot ni PostgreSQL. Las ediciones limitadas a `replicadb-server/frontend` no requieren reiniciar el stack de API o metadata. Mantén el API en `http://localhost:8080` y el frontend en `http://localhost:5173`; el proxy de Vite conserva las rutas `/api/v1` y `/v3/api-docs`.
 
 Abre:
 

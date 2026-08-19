@@ -1,9 +1,8 @@
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import {
   Alert,
-  CircularProgress,
-  IconButton,
-  Paper,
+  Button,
+  Chip,
+  Link,
   Table,
   TableBody,
   TableCell,
@@ -11,13 +10,15 @@ import {
   TableHead,
   TablePagination,
   TableRow,
-  Tooltip,
-  Typography
 } from '@mui/material';
 import { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { listJobs } from '../api/jobsApi';
+import EmptyState from '../components/EmptyState';
+import LoadingState from '../components/LoadingState';
+import PageHeader from '../components/PageHeader';
+import SurfaceSection from '../components/SurfaceSection';
 
 export default function DashboardPage() {
   const [page, setPage] = useState(0);
@@ -28,7 +29,7 @@ export default function DashboardPage() {
   });
 
   if (jobsQuery.isPending) {
-    return <CircularProgress aria-label="Loading jobs" />;
+    return <LoadingState label="Loading jobs" />;
   }
 
   if (jobsQuery.isError) {
@@ -41,50 +42,45 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Typography component="h1" variant="h3" gutterBottom>
-        Dashboard
-      </Typography>
-      <Typography color="text.secondary" sx={{ mb: 3 }}>
-        Jobs available to your account
-      </Typography>
-      <Paper elevation={0} variant="outlined">
-        <TableContainer>
-          <Table aria-label="Jobs">
+      <PageHeader
+        title="Dashboard"
+        description="Jobs available to your account"
+        actions={
+          <Button component={RouterLink} to="/jobs/new" variant="contained">
+            New job
+          </Button>
+        }
+      />
+      <SurfaceSection title="Jobs">
+        <TableContainer sx={{ overflowX: 'auto' }}>
+          <Table aria-label="Jobs" sx={{ minWidth: 640 }}>
             <TableHead>
               <TableRow>
                 <TableCell>Name</TableCell>
                 <TableCell>Source</TableCell>
                 <TableCell>Sink</TableCell>
                 <TableCell>Mode</TableCell>
-                <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {jobs.map(job => (
                 <TableRow key={job.id} hover>
                   <TableCell>
-                    <Typography component={RouterLink} to={`/jobs/${job.id}`} color="primary" sx={{ fontWeight: 700 }}>
+                    <Link component={RouterLink} to={`/jobs/${job.id}`} color="primary" underline="hover" sx={{ fontWeight: 700 }}>
                       {job.name}
-                    </Typography>
+                    </Link>
                   </TableCell>
                   <TableCell>{job.sourceTable}</TableCell>
                   <TableCell>{job.sinkTable}</TableCell>
-                  <TableCell>{job.mode}</TableCell>
-                  <TableCell align="right">
-                    {job.modeWarning && (
-                      <Tooltip title={job.modeWarning}>
-                        <IconButton aria-label={`Job warning: ${job.modeWarning}`} size="small" color="warning">
-                          <WarningAmberIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    )}
+                  <TableCell>
+                    <Chip label={job.mode ?? 'Unknown'} variant="outlined" size="small" />
                   </TableCell>
                 </TableRow>
               ))}
               {jobs.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5}>
-                    <Typography color="text.secondary">No jobs available.</Typography>
+                  <TableCell colSpan={4}>
+                    <EmptyState title="No jobs available." />
                   </TableCell>
                 </TableRow>
               )}
@@ -99,7 +95,7 @@ export default function DashboardPage() {
           rowsPerPageOptions={[size]}
           onPageChange={(_event, nextPage) => setPage(nextPage)}
         />
-      </Paper>
+      </SurfaceSection>
     </>
   );
 }

@@ -8,6 +8,7 @@ import org.quartz.TriggerKey;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobSchedule;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobScheduleRepository;
@@ -99,11 +100,11 @@ class ScheduleReconcilerTest {
     }
 
     private static JobDefinition jobDefinition() {
-        return new JobDefinition(
-                null, "reconciler-job-" + UUID.randomUUID(), "jdbc:source", null,
-                "${env:SOURCE_PASSWORD}", "source_table", null, "jdbc:sink", null,
-                "${env:SINK_PASSWORD}", "sink_table", ReplicationMode.COMPLETE, 1,
-                null, null, null, null);
+        return JobDefinitionTestFixtures.aJobDefinition()
+            .withName("reconciler-job-" + UUID.randomUUID())
+            .withSourcePassword("${env:SOURCE_PASSWORD}")
+            .withSinkPassword("${env:SINK_PASSWORD}")
+            .build();
     }
 
     private static JobSchedule schedule(UUID jobDefinitionId) {

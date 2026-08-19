@@ -39,6 +39,16 @@ class JobDefinitionTest {
                 null, null, null, null));
     }
 
+        @Test
+        void rejectsNonPositiveFetchSize() {
+                assertThrows(IllegalArgumentException.class, () -> definitionWithExecution(0, 0));
+        }
+
+        @Test
+        void rejectsNegativeBandwidthThrottling() {
+                assertThrows(IllegalArgumentException.class, () -> definitionWithExecution(100, -1));
+        }
+
     @Test
     void rejectsWatermarkColumnOutsideIncrementalMode() {
         assertThrows(IllegalArgumentException.class,
@@ -90,4 +100,15 @@ class JobDefinitionTest {
                 "jdbc:sink", null, sinkPassword, "sink_table", mode, 2,
                 watermarkColumn, null, Instant.now(), Instant.now());
     }
+
+        private static JobDefinition definitionWithExecution(int fetchSize, int bandwidthThrottling) {
+                ConnectionCredentials sourceConnection = new ConnectionCredentials("jdbc:source", null, null, null, null);
+                ConnectionCredentials sinkConnection = new ConnectionCredentials("jdbc:sink", null, null, null, null);
+                return new JobDefinition(
+                                null, "job",
+                                new SourceEndpoint(sourceConnection, "source_table", null, null, null),
+                                new SinkEndpoint(sinkConnection, "sink_table", null, null, false, false),
+                                ReplicationMode.COMPLETE, 1, null, null, Instant.now(), Instant.now(),
+                                fetchSize, bandwidthThrottling, false);
+        }
 }

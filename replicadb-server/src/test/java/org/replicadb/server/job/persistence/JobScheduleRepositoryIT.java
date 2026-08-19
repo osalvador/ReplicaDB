@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobSchedule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -86,10 +87,11 @@ class JobScheduleRepositoryIT {
     }
 
     private static JobDefinition definition() {
-        return new JobDefinition(
-                null, "schedule-job-" + UUID.randomUUID(), "jdbc:source", null, "${env:SOURCE_PASSWORD}",
-                "source_table", null, "jdbc:sink", null, "${env:SINK_PASSWORD}", "sink_table",
-                ReplicationMode.COMPLETE, 1, null, null, null, null);
+        return JobDefinitionTestFixtures.aJobDefinition()
+            .withName("schedule-job-" + UUID.randomUUID())
+            .withSourcePassword("${env:SOURCE_PASSWORD}")
+            .withSinkPassword("${env:SINK_PASSWORD}")
+            .build();
     }
 
     private static JobSchedule schedule(UUID jobDefinitionId, String timeZone, boolean enabled) {

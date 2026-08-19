@@ -1,8 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from '@mui/material';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as jobsApi from '../api/jobsApi';
+import { theme } from '../theme/theme';
 import DashboardPage from './DashboardPage';
 
 vi.mock('../api/jobsApi', () => ({
@@ -18,7 +20,7 @@ const jobs = [
     sourceTable: 'orders',
     sinkTable: 'warehouse_orders',
     mode: 'complete',
-    modeWarning: 'An interrupted or retried complete run leaves the sink truncated or partially loaded.'
+    modeWarning: 'Complete mode clears the sink before loading. If the run is interrupted or retried, the sink may be empty or partially populated. Use complete-atomic for an all-or-nothing load when supported.'
   },
   {
     id: 'job-2',
@@ -43,11 +45,13 @@ function renderDashboard(response = { content: jobs, page: 0, size: 50, totalEle
   mockedJobsApi.listJobs.mockResolvedValue(response);
 
   return render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <DashboardPage />
-      </MemoryRouter>
-    </QueryClientProvider>
+    <ThemeProvider theme={theme}>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <DashboardPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 
@@ -60,18 +64,22 @@ describe('DashboardPage', () => {
     renderDashboard();
 
     expect(await screen.findByText('Orders replication')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Jobs' })).toBeInTheDocument();
     expect(screen.getByText('orders')).toBeInTheDocument();
     expect(screen.getByText('warehouse_orders')).toBeInTheDocument();
     expect(screen.getByText('complete')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'New job' })).toHaveAttribute('href', '/jobs/new');
+    expect(screen.getByRole('link', { name: 'Orders replication' })).toHaveAttribute('href', '/jobs/job-1');
   });
 
-  it('shows a warning indicator only for jobs with modeWarning', async () => {
+  it('does not show job warnings in the general list', async () => {
     renderDashboard();
 
     await screen.findByText('Orders replication');
 
-    expect(screen.getByLabelText(/Job warning:/)).toBeInTheDocument();
-    expect(screen.queryByLabelText('Job warning: null')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Job warning:/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Complete mode clears the sink/)).not.toBeInTheDocument();
   });
 
   it('requests the next page when pagination advances', async () => {
