@@ -1,0 +1,21 @@
+replicadb-server/frontend/src/components/DataFilteringTabs.test.tsx
+  s_ef630a3c30a2e0::t_f1986a89f8ff0e 28,40-44
+replicadb-server/frontend/src/components/StagingOptionsTabs.test.tsx
+  s_ef630a3c30a2e0::t_a6759402a66f1e 17,29-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "31356a5d3ea9febed56ff334bb48a0c09d486719",
+  "prompts": {},
+  "sessions": {
+    "s_ef630a3c30a2e0": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "b234080c-d5e5-42b4-8252-57ff9f896dea",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
