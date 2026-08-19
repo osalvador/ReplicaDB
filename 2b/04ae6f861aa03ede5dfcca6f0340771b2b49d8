@@ -1,0 +1,31 @@
+.ai/archive/new-job-wizard-parity.plan.md
+  s_71999c168e94a3::t_cb36d6f8b02aa5 1-300
+.ai/archive/phase-2b-job-editor-run-actions.plan.md
+  s_c86b10c93d37e4::t_29c72f0171a616 1-163
+replicadb-server/frontend/src/api/schema.ts
+  s_71999c168e94a3::t_f708c5ae2f2c82 367,369-378,383-395,401-405,415-424,428-440,450-454
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "2b04ae6f861aa03ede5dfcca6f0340771b2b49d8",
+  "prompts": {},
+  "sessions": {
+    "s_71999c168e94a3": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "27acbce5-9152-4b80-a49a-046699d4f9e4",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    },
+    "s_c86b10c93d37e4": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "a338e712-d846-49d9-933b-b141cb5ceb27",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
