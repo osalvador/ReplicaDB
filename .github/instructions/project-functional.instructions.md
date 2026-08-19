@@ -5,34 +5,27 @@ applyTo: '**/*.{java,properties,conf,yml,yaml}'
 # ReplicaDB Functional Rules
 
 ## Replication Contract
-- Preserve the CLI and options-file contract when changing behavior. Add flags and properties compatibly; do not silently rename or remove existing options.
-- Keep ReplicaDB focused on point-to-point bulk transfer. Scheduling, complex transformations, CDC, and data quality belong to external tools unless the request explicitly changes scope.
-- Preserve source-to-sink data meaning, precision, nullability, and supported type behavior. Fail explicitly when a conversion or capability is not supported.
-- Keep the root CLI artifact free of Spring Boot dependencies; managed-server code must translate stored job definitions into `ToolOptions` instead of duplicating manager behavior.
-- A managed job targets one source/sink table pair. Multi-table options remain a CLI capability and must not be smuggled into the server state model.
+- Preserve existing CLI arguments, options-file keys, defaults, precedence, exit codes, and multi-table behavior when changing the core.
+- Keep the product focused on point-to-point batch transfer. CDC, complex transformations, and data quality remain outside the current managed scope unless explicitly added.
+- Preserve source-to-sink meaning, precision, nullability, and unsupported-conversion failures.
+- Keep the root CLI artifact free of Spring Boot dependencies. The managed server translates a stored single-table job into `ToolOptions`.
 
-## Mode Semantics
-- Treat `complete`, `incremental`, and `complete-atomic` as distinct user-visible contracts.
-- Complete loads the sink table; incremental and complete-atomic may use staging and manager-specific merge/cleanup behavior.
-- Require primary-key and staging assumptions only where the concrete sink manager needs them, and document unsupported combinations in the capability matrix.
-- Managed retries re-execute from the beginning. Commit an incremental watermark only after the sink merge succeeds; cancellation must not advance it.
-
-## Capability Boundaries
-- Do not generalize one manager's behavior to every source or sink. Check `SupportedManagers`, `ManagerFactory`, the concrete manager, and the README matrix before changing a capability.
-- Keep file, MongoDB, S3, and Kafka semantics explicit because they do not share SQL table or staging behavior.
-- Treat `ARCHITECTURE_DECISIONS.md` as future evolution guidance. Do not describe Spring Boot, REST, WebSocket, Quartz, Redis, or Kubernetes as implemented unless source code and tests support it.
+## Mode and Capability Semantics
+- Treat `complete`, `incremental`, and `complete-atomic` as separate user-visible contracts with manager-specific staging and merge behavior.
+- Managed retries re-execute from the beginning. Commit an incremental watermark only after a successful sink merge, and do not advance it on failure or cancellation.
+- Check `SupportedManagers`, `ManagerFactory`, the concrete manager, and maintained capability documentation before generalizing support.
+- Keep file, MongoDB, S3, Kafka, and SQL semantics explicit; they do not share the same table or staging guarantees.
 
 ## Configuration and Security
-- Keep credentials in environment-expanded configuration and avoid exposing them in command history, logs, telemetry, tests, or generated documentation.
-- Preserve `ToolOptions` defaults and the options-file-to-command-line precedence when adding configuration.
-- Treat user-supplied table names, column expressions, filters, queries, and connection parameters as untrusted input at the manager boundary.
-- Store only `${env:VARIABLE}` credential references in managed job definitions and reject embedded credentials in connection strings.
-- Keep backend authorization authoritative for job ACLs; frontend visibility is not a security boundary.
+- Preserve `ToolOptions` defaults and options-file precedence when adding configuration.
+- Treat table names, expressions, filters, queries, and connection parameters as untrusted manager inputs.
+- Store configuration references such as `${env:VARIABLE}` in managed definitions and reject embedded credentials in connection strings.
+- Keep backend ACLs authoritative. Frontend visibility is a usability aid, not authorization.
 
 ## Anti-Patterns
-- Do not claim universal support from a single database test or manager implementation.
-- Do not make a Java-version change in only one of Maven, CI, launchers, container images, or written requirements.
-- Do not add application code while regenerating AI context or project instructions.
+- Do not infer universal support from one manager or one database test.
+- Do not change the Java baseline in only one build, launcher, image, CI, or documentation surface.
+- Do not add application code while regenerating context or project instructions.
 
-## Baseline Check
-No shared baseline instruction files were found in this repository. These rules remain project-specific and were derived from the current codebase.
+## Contradiction Check
+⚠️ Baseline unavailable: `inditex.instructions.md` and `amiga-*.instructions.md` were not present, and the AMIGA documentation search was unavailable. No project override was recorded; copy the baseline files before the next context regeneration.

@@ -5,43 +5,36 @@ applyTo: '**/*.java'
 # ReplicaDB Java Rules
 
 ## Architecture and Package Structure
-- Keep orchestration in `org.replicadb.ReplicaDB` and `ReplicaTask`; keep CLI parsing in `org.replicadb.cli`.
-- Put database-specific SQL, JDBC type mapping, partitioning, and native bulk behavior in the nearest manager subclass. Keep generic connection and SQL behavior in `ConnManager`/`SqlManager`.
-- Register new connection schemes through `SupportedManagers` and `ManagerFactory`. Use `FileManagerFactory` for file-format dispatch.
-- Keep the transfer boundary JDBC-shaped. Adapt non-JDBC inputs through row-set implementations instead of teaching the orchestrator about every source format.
-- Keep managed-server packages separated into `job.domain`, `job.persistence`, `job.api`, `job.execution`, `security`, and `audit`; do not make controllers call core managers directly.
+- Keep CLI parsing in `org.replicadb.cli`, core orchestration in `org.replicadb`, and managed-server responsibilities in their existing `job`, `security`, and `audit` packages.
+- Put vendor SQL, type mapping, partitioning, and native bulk behavior in the nearest manager subclass. Keep shared lifecycle behavior in `ConnManager` or `SqlManager`.
+- Register new schemes through `SupportedManagers` and `ManagerFactory`; use `FileManagerFactory` for file formats.
+- Keep controllers and server services translating into `ToolOptions`; they must not reimplement manager behavior.
 
-## Manager and Transfer Patterns
-- Extend `SqlManager` for SQL/JDBC sources and sinks; extend `ConnManager` directly only when the source does not fit the generic SQL lifecycle.
-- Preserve the manager hooks for pre-source, pre-sink, post-source, post-sink, cleanup, and release operations.
-- Prefer an existing native path when one exists: PostgreSQL `COPY`, MySQL/MariaDB `LOAD DATA`, SQL Server `SQLServerBulkCopy`, MongoDB unordered bulk writes, or the generic JDBC batch fallback.
-- Keep partition expressions manager-specific. The `jobs` value controls task count, but no single hash, offset, or cursor strategy is universal.
+## Base Patterns and Abstractions
+- Preserve manager lifecycle hooks for pre-source, pre-sink, post-source, post-sink, cleanup, and release operations.
+- Adapt non-JDBC sources through row-set implementations so sink code can keep its JDBC-shaped contract.
+- Prefer an existing native path for a supported manager before adding a generic fallback or a new abstraction.
 
-## Transactions and Error Handling
-- SQL managers use explicit transactions with auto-commit disabled. Commit only after a successful batch or native bulk operation; roll back on failure.
-- Source and sink connections are task-owned. Close statements, result sets, connections, SDK clients, and temporary resources through the existing lifecycle hooks.
-- Preserve the original cause and task context when propagating failures. Restore the interrupted flag after catching `InterruptedException`.
-- Do not assume the executor cancels sibling tasks when one `Future` fails; preserve cleanup behavior in the orchestrator.
-- In server repositories, use explicit JDBC representations for PostgreSQL temporal parameters and preserve state-machine checks around SQL updates.
-- Keep controller errors in RFC 7807 form and redact dynamic details before they cross API, audit, log, or telemetry boundaries.
+## Error Handling and Invariants
+- Keep source and sink resources task-owned and close them through existing lifecycle paths, including executor failure paths.
+- Preserve causes and task context when propagating failures; restore the interrupted flag after `InterruptedException`.
+- Validate null handling, precision, temporal values, LOBs, and staging ownership at the manager boundary. Do not drop user-defined staging resources.
+- Keep server errors in RFC 7807 form and redact dynamic details before API, audit, log, or telemetry output.
 
-## Domain Invariants and Type Mapping
-- Check `ResultSet.wasNull()` immediately after primitive getters and check object values for null before binding or serializing them.
-- Preserve numeric precision, temporal semantics, LOB handling, and source metadata. Add manager-specific mappings rather than weakening the generic type contract.
-- Protect user-defined staging tables from automatic cleanup. Only generated staging resources may be dropped by cleanup logic.
+## Configuration and Observability
+- Read runtime behavior from `ToolOptions`; do not duplicate parsing or environment expansion inside managers.
+- Keep Log4j2 alignment, Java 17, ORC module-opening flags, and packaged launchers in sync when changing runtime configuration.
+- Treat PostgreSQL and Flyway as the managed state-store boundary; do not substitute in-memory production state.
+- Never put passwords, DSNs, connection parameter maps, or resolved credential values in logs, Sentry context, exceptions, or test output.
 
-## Configuration, Logging, and Observability
-- Read runtime behavior from `ToolOptions`; do not duplicate parsing or environment expansion in managers.
-- Use `TaskId-*` thread names and the existing Log4j2 levels for parallel operation correlation.
-- Never add passwords, DSNs, connection parameter maps, or credential-bearing URLs to logs, Sentry contexts, tags, exception messages, or test output.
-- Keep the Java 17 baseline and the ORC `java.nio` module-opening requirement aligned across Maven and packaged launchers.
-- Keep server logging on Log4j2 because the embedded core's Sentry setup expects that context; exclude the default Spring logging starter where the server POM already does so.
-- Treat PostgreSQL as the managed state store and Flyway as forward-only schema history; do not introduce an in-memory substitute for production state.
+## Concurrency and Resilience
+- Give each run a `ReplicationExecutionContext`; do not share mutable JDBC connections or manager state across tasks.
+- Preserve cooperative cancellation and active-statement cancellation; classify driver SQL exceptions as cancellation when the run token is set.
+- Keep manager-specific partition and retry behavior explicit. Do not generalize a hash, offset, cursor, or bulk strategy from one manager.
 
 ## Anti-Patterns
-- Do not put vendor branches in `ReplicaDB` or `SqlManager` when a manager override is the correct extension point.
-- Do not share mutable JDBC connections across tasks or introduce connection pooling as an incidental refactor.
-- Do not copy the legacy JUnit 4 style from `ReplicaDBTest.java` into new Java tests.
+- Do not add vendor branches to `ReplicaDB` or `SqlManager` when a manager override is the extension point.
+- Do not copy legacy JUnit 4 patterns into new Java tests.
 
-## Baseline Check
-No shared baseline instruction files were found in this repository. These rules remain project-specific and were derived from the current codebase.
+## Contradiction Check
+⚠️ Baseline unavailable: `inditex.instructions.md` and `amiga-*.instructions.md` were not present, and the AMIGA documentation search was unavailable. No project override was recorded; copy the baseline files before the next context regeneration.

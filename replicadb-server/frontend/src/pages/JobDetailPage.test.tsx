@@ -8,6 +8,7 @@ import * as jobsApi from '../api/jobsApi';
 import type { JobDefinitionResponse } from '../api/jobsApi';
 import * as runsApi from '../api/runsApi';
 import type { JobRunResponse } from '../api/runsApi';
+import { AuthContext } from '../auth/AuthContext';
 import { theme } from '../theme/theme';
 import JobDetailPage from './JobDetailPage';
 
@@ -49,7 +50,7 @@ const baseJob: JobDefinitionResponse = {
   modeWarning: null
 };
 
-function renderDetail(job: JobDefinitionResponse = baseJob) {
+function renderDetail(job: JobDefinitionResponse = baseJob, role: 'ADMIN' | 'OPERATOR' | 'VIEWER' = 'OPERATOR') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } }
   });
@@ -59,12 +60,19 @@ function renderDetail(job: JobDefinitionResponse = baseJob) {
   const view = render(
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/jobs/job-1']}>
-          <Routes>
-            <Route path="/jobs/:id" element={<JobDetailPage />} />
-            <Route path="/runs/:id" element={<div>Run destination</div>} />
-          </Routes>
-        </MemoryRouter>
+        <AuthContext.Provider value={{
+          status: 'authenticated',
+          user: { id: 'user-id', username: role.toLowerCase(), role },
+          login: vi.fn().mockResolvedValue(undefined),
+          logout: vi.fn().mockResolvedValue(undefined)
+        }}>
+          <MemoryRouter initialEntries={['/jobs/job-1']}>
+            <Routes>
+              <Route path="/jobs/:id" element={<JobDetailPage />} />
+              <Route path="/runs/:id" element={<div>Run destination</div>} />
+            </Routes>
+          </MemoryRouter>
+        </AuthContext.Provider>
       </QueryClientProvider>
     </ThemeProvider>
   );
@@ -95,6 +103,7 @@ describe('JobDetailPage', () => {
     expect(screen.getByRole('link', { name: 'Back to jobs' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('button', { name: 'Trigger run' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', '/jobs/job-1/edit');
+    expect(screen.queryByRole('link', { name: 'Manage permissions' })).not.toBeInTheDocument();
   });
 
   it('shows the warning for complete mode', async () => {
@@ -181,5 +190,14 @@ describe('JobDetailPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('This job already has an active run.');
     expect(screen.queryByText('Run destination')).not.toBeInTheDocument();
+  });
+
+  it('shows the permissions action for admins', async () => {
+    renderDetail(baseJob, 'ADMIN');
+
+    expect(await screen.findByRole('link', { name: 'Manage permissions' })).toHaveAttribute(
+      'href',
+      '/jobs/job-1/permissions'
+    );
   });
 });

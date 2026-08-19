@@ -1,34 +1,27 @@
 ---
-applyTo: '**/*Test.java,**/*IT.java'
+applyTo: '**/*Test.java,**/*IT.java,replicadb-server/frontend/**/*.{test,spec}.{ts,tsx}'
 ---
 
 # ReplicaDB Testing Rules
 
 ## Conventions
-- Use JUnit Jupiter 6 annotations and assertions with the repository's Surefire 3.5.3 configuration. Do not add new JUnit 4 tests.
-- Build manager tests with inline `ToolOptions` argument arrays unless a shared test helper already exists for the exact concern.
-- Use Mockito for isolated JDBC metadata, statement, and transaction behavior; use real databases for driver, dialect, cursor, type, and transaction integration.
-- Keep database fixtures under `src/test/resources` and load them through the existing container or script-runner setup.
-- For server controller tests, choose `MockMvc` with the repository security test annotations for isolated behavior, and use a real HTTP client plus explicit session/CSRF cookies for lifecycle authentication.
-
-## Testcontainers and Fixtures
-- Follow the existing one-container-per-database-family singleton pattern when adding integration coverage. Keep initialization and fixture loading in the corresponding `Replicadb*Container` class.
-- Reset reused collections/tables or disable reuse for CI so tests do not depend on order or retained state.
-- Select the smallest relevant database package or test class before running a full integration matrix. Docker architecture, socket, reuse, and memory failures must be distinguished from assertion failures.
+- Use JUnit Jupiter 6 for new Java tests and keep legacy JUnit 4 code isolated. Use Mockito for narrow JDBC or lifecycle seams and real databases for dialect, driver, cursor, type, and transaction behavior.
+- Keep fixtures under the existing test-resource and `Replicadb*Container` conventions. Follow the nearest package and fixture family rather than inventing a database-labelled test path.
+- Use MockMvc plus security test support for isolated server behavior; use a real HTTP client with session and CSRF cookies for lifecycle authentication.
+- Use Vitest and Testing Library for SPA behavior, a fresh TanStack Query client per test, matching React Router routes for parameterized pages, and Playwright for real cookie/session flows.
 
 ## Modification Strategy
-- When a production option or signature changes, update every affected inline `ToolOptions` setup and the corresponding properties/SQL/JSON fixture. Do not duplicate a second builder or fixture convention.
-- For manager changes, cover complete, incremental, and complete-atomic behavior only where supported, plus null values, empty and single-row inputs, type boundaries, and parallel partitioning as applicable.
-- For Java 17 or dependency changes, run test compilation, the focused unit slice, packaged/runtime checks, and the relevant Testcontainers slice.
-- When server records, migrations, or REST DTOs change, update state-machine, migration-count, repository, controller, generated OpenAPI, and serialized-nullability assertions together.
-- Use a fresh TanStack Query client and router in frontend tests; keep generated API schema checks type-only and run Playwright against built assets.
+- When options or signatures change, update inline `ToolOptions` setups, options-file properties, migrations, DTOs, generated OpenAPI assertions, and serialized-nullability tests together.
+- For manager changes, cover supported mode semantics, nulls, type boundaries, and partitioning without claiming compatibility from mocks alone.
+- For migrations and state transitions, update exact migration-count and constraint assertions, including multi-row retry transitions.
+- Prefer read-only assertions against JVM-wide singleton fixtures. Use explicit transactions for large fixture setup and wait for externally reachable container ports.
+- Keep authenticated E2E credentials environment-managed; report missing configuration separately from product failures.
 
 ## Anti-Patterns
-- Do not use a mocked database to claim JDBC dialect compatibility.
-- Do not copy `ReplicaDBTest.java`'s legacy JUnit 4 imports into new tests.
-- Do not leave shared container state, credentials, or real endpoints in test output or committed fixtures.
-- Do not use wildcard Surefire selectors until their repository-specific expansion is known; explicit class lists are safer for focused runs.
-- Do not mutate JVM-wide singleton database fixtures unless the test has an isolated schema or a proven cleanup boundary.
+- Do not use mocked databases to claim dialect compatibility.
+- Do not use broad Surefire wildcards before their expansion is known; select explicit classes for focused validation.
+- Do not mutate shared Testcontainers state without an isolated schema or cleanup boundary.
+- Do not put credentials, real endpoints, or resolved secrets in fixtures or test output.
 
-## Baseline Check
-No shared baseline instruction files were found in this repository. These rules remain project-specific and were derived from the current codebase.
+## Contradiction Check
+⚠️ Baseline unavailable: `inditex.instructions.md` and `amiga-*.instructions.md` were not present, and the AMIGA documentation search was unavailable. No project override was recorded; copy the baseline files before the next context regeneration.

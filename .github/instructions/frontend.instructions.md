@@ -5,32 +5,31 @@ applyTo: 'replicadb-server/frontend/**/*.{ts,tsx,mts,js,mjs}'
 
 ## Architecture and State
 - Keep endpoint calls in `src/api`, authentication state in `src/auth`, route protection in `src/router`, reusable views in `src/components`, and page composition in `src/pages`.
-- Use TanStack Query for server state and a fresh query client in tests; do not copy server state into ad hoc React state without a clear UI-only reason.
-- Phase 2b ships the job editor, schedule management, and trigger/cancel/retry controls. Require the corresponding backend contract, permission check, CSRF coverage, and planned product slice for any future mutating controls.
+- Use TanStack Query for server state and local React state only for UI or form state. Invalidate the owning query after successful mutations.
+- Keep admin navigation and route guards inside `ProtectedRoute`, while backend ACLs remain the authorization boundary for job and user operations.
 
 ## API Contract
-- Treat `src/api/schema.ts` as generated output from the server OpenAPI document; do not hand-maintain duplicate Java response interfaces.
-- Keep `apiClient` credentials-enabled at `/api/v1`, preserve RFC 7807 error mapping, and use endpoint modules rather than direct Axios calls in pages.
-- Validate generated types against real serialized JSON, including nullable fields and stable schema ordering, before changing adapters.
+- Treat `src/api/schema.ts` as generated output from the server OpenAPI document. Use endpoint modules and the configured `apiClient`; do not hand-copy Java DTOs or call Axios directly from pages.
+- Preserve the `/api/v1` credentialed client and RFC 7807 error mapping. Validate generated types against serialized JSON, including nullable fields and deterministic schema output.
 
 ## Authentication and Authorization
-- Bootstrap CSRF before login and preserve the browser `XSRF-TOKEN`/`X-XSRF-TOKEN` contract for logout and future mutations.
-- Treat `/auth/me` 401/403 as an anonymous session and redirect through `ProtectedRoute`; never expose protected data while auth status is unresolved.
-- Backend ACLs are authoritative. A hidden or disabled frontend control is not authorization, and secrets must never enter client state, fixtures, or logs.
+- Bootstrap CSRF before login and preserve the browser `XSRF-TOKEN`/`X-XSRF-TOKEN` contract for state-changing requests.
+- Treat `/auth/me` 401/403 as anonymous and keep protected content behind `ProtectedRoute` while auth is unresolved.
+- Frontend visibility is UX only. Never place backend credentials, connection strings, resolved secrets, or password values in client state, fixtures, logs, or generated artifacts.
 
 ## Polling and Interaction
-- Keep run polling aligned with the backend terminal definition: only `SUCCEEDED`, `CANCELLED`, and `RETRY_SCHEDULED` stop polling; `FAILED` remains eligible for retry state changes.
-- Preserve stable loading, empty, error, and pagination states without layout-dependent text assumptions.
-- Treat tabs in forms as view switches, not destructive mode switches: changing tabs must never clear fields from the hidden tab. Only an explicit user edit or deletion may change those values. Cover tab round-trips in component tests.
+- Stop run polling for `SUCCEEDED`, `CANCELLED`, and `RETRY_SCHEDULED`; keep `FAILED` available for retry-oriented state changes.
+- Preserve loading, empty, error, and pagination states. Form tabs switch visible panels without clearing values from hidden panels.
+- Keep custom inline validation explicit when native browser validation would prevent the intended testable submit path.
 
 ## Build and Testing
-- Keep `npm ci` reproducible with registry-neutral lockfiles and project configuration; never commit machine-specific registry URLs.
-- Use Vitest/Testing Library for components and hooks, and Playwright for real cookie/session flows against built static assets. Local browser or certificate workarounds must not weaken CI reproducibility.
+- Keep `npm ci` reproducible with registry-neutral lockfiles and project configuration.
+- Use Vitest and Testing Library with fresh query clients and matching route context; use Playwright for real cookie/session flows against built static assets.
 
 ## Anti-Patterns
 - Do not hand-copy OpenAPI DTOs, bypass the API client, or infer authorization from route visibility.
-- Do not stop polling `FAILED` runs merely because they display an error; this differs from the backend's terminal contract.
-- Do not put backend credentials, connection strings, or resolved environment values into frontend code or generated artifacts.
+- Do not stop polling `FAILED` runs merely because the UI displays an error.
+- Do not introduce a generic shared table abstraction when the current resource shapes and call sites do not justify it.
 
-## Baseline Check
-No shared baseline instruction files were found in this repository. These rules remain project-specific and were derived from the current codebase.
+## Contradiction Check
+⚠️ Baseline unavailable: `inditex.instructions.md` and `amiga-*.instructions.md` were not present, and the AMIGA documentation search was unavailable. No project override was recorded; copy the baseline files before the next context regeneration.

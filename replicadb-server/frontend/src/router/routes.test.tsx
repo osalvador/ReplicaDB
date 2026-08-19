@@ -4,6 +4,8 @@ import { render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import * as jobsApi from '../api/jobsApi';
+import * as jobPermissionsApi from '../api/jobPermissionsApi';
+import * as usersApi from '../api/usersApi';
 import { AuthContext } from '../auth/AuthContext';
 import { theme } from '../theme/theme';
 import { routeObjects } from './routes';
@@ -15,9 +17,19 @@ vi.mock('../api/jobsApi', () => ({
   updateJob: vi.fn()
 }));
 
-const mockedJobsApi = vi.mocked(jobsApi);
+vi.mock('../api/jobPermissionsApi', () => ({
+  listJobPermissions: vi.fn()
+}));
 
-function renderAt(path: string) {
+vi.mock('../api/usersApi', () => ({
+  listUsers: vi.fn()
+}));
+
+const mockedJobsApi = vi.mocked(jobsApi);
+const mockedJobPermissionsApi = vi.mocked(jobPermissionsApi);
+const mockedUsersApi = vi.mocked(usersApi);
+
+function renderAt(path: string, role: 'ADMIN' | 'OPERATOR' | 'VIEWER' = 'OPERATOR') {
   const memoryRouter = createMemoryRouter(routeObjects, {
     initialEntries: [path]
   });
@@ -28,6 +40,7 @@ function renderAt(path: string) {
       <QueryClientProvider client={queryClient}>
         <AuthContext.Provider value={{
           status: 'authenticated',
+          user: { id: 'user-id', username: role.toLowerCase(), role },
           login: vi.fn().mockResolvedValue(undefined),
           logout: vi.fn().mockResolvedValue(undefined)
         }}>
@@ -63,5 +76,26 @@ describe('route shell', () => {
     renderAt('/jobs/job-1/edit');
 
     expect(await screen.findByRole('heading', { name: 'Edit job' })).toBeInTheDocument();
+  });
+
+  it('renders the users administration route for admins', async () => {
+    mockedUsersApi.listUsers.mockResolvedValue({ content: [], page: 0, size: 50, totalElements: 0 });
+    renderAt('/users', 'ADMIN');
+
+    expect(await screen.findByRole('heading', { name: 'Users' })).toBeInTheDocument();
+  });
+
+  it('renders the job permissions route for admins', async () => {
+    mockedJobsApi.getJob.mockResolvedValue({ id: 'job-1', name: 'Orders replication' });
+    mockedJobPermissionsApi.listJobPermissions.mockResolvedValue([]);
+    renderAt('/jobs/job-1/permissions', 'ADMIN');
+
+    expect(await screen.findByRole('heading', { name: 'Orders replication permissions' })).toBeInTheDocument();
+  });
+
+  it.each(['/users', '/jobs/job-1/permissions'])('blocks %s for non-admin users', path => {
+    renderAt(path, 'OPERATOR');
+
+    expect(screen.getByRole('heading', { name: 'Not authorized' })).toBeInTheDocument();
   });
 });
