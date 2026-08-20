@@ -1,0 +1,19 @@
+src/main/java/org/replicadb/manager/S3Manager.java
+  s_dc04ffa67f4889::t_757ea629d4a074 191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "2652f1aa313a95ce528b942a60349ae5cd20081b",
+  "prompts": {},
+  "sessions": {
+    "s_dc04ffa67f4889": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "3ffd9b65-963a-4b30-8305-db9139923b5b",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
