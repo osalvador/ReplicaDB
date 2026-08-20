@@ -58,7 +58,7 @@ jobs:
       run: mvn -B package --file replicadb-server/pom.xml
 
     - name: Upload server artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: replicadb-server-jar
         path: replicadb-server/target/replicadb-server-*.jar

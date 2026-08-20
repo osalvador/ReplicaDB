@@ -241,7 +241,7 @@ jobs:
         diff -u src/api/schema.ts "$RUNNER_TEMP/schema.ts"
     - name: Upload Playwright diagnostics
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: frontend-playwright-report
         path: |
