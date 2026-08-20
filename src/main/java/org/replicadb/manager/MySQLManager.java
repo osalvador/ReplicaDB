@@ -4,7 +4,6 @@ import com.google.common.io.CharSource;
 import com.mysql.cj.jdbc.JdbcPreparedStatement;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.input.ReaderInputStream;
-import org.mariadb.jdbc.MariaDbStatement;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -73,9 +72,9 @@ public class MySQLManager extends SqlManager {
 
          try {
          JdbcPreparedStatement mysqlStatement = null;
-         MariaDbStatement mariadbStatement = null;
-         if (statement.isWrapperFor(MariaDbStatement.class)) {
-            mariadbStatement = statement.unwrap(MariaDbStatement.class);
+         org.mariadb.jdbc.Statement mariadbStatement = null;
+         if (statement.isWrapperFor(org.mariadb.jdbc.Statement.class)) {
+            mariadbStatement = statement.unwrap(org.mariadb.jdbc.Statement.class);
          } else {
             mysqlStatement = statement.unwrap(JdbcPreparedStatement.class);
          }
@@ -176,7 +175,7 @@ public class MySQLManager extends SqlManager {
     * @param row StringBuilder guaranteed non-null by insertDataToTable contract
     */
    @SuppressWarnings("null") // row parameter is guaranteed non-null by calling contract in insertDataToTable
-   private void copyData (String loadDataSql, StringBuilder row, MariaDbStatement mariadbStatement, JdbcPreparedStatement mysqlStatement) throws IOException, SQLException {
+   private void copyData (String loadDataSql, StringBuilder row, org.mariadb.jdbc.Statement mariadbStatement, JdbcPreparedStatement mysqlStatement) throws IOException, SQLException {
       if (mysqlStatement != null) {
          InputStream inputStream = ReaderInputStream.builder()
             .setReader(CharSource.wrap(row).openStream())

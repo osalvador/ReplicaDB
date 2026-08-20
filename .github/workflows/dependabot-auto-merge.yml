@@ -1,11 +1,7 @@
 name: Dependabot Auto-Merge
 
 on:
-  pull_request_target:
-    types: [opened, synchronize, reopened]
   workflow_run:
-    # IMPORTANT: This references the "Only CI/CT" workflow name from CT_Push.yml
-    # If that workflow is renamed, update this reference as well
     workflows: ["Only CI/CT"]
     types: [completed]
 
@@ -15,6 +11,7 @@ permissions:
 
 jobs:
   auto-merge:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
 
     steps:
@@ -23,38 +20,28 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
-            let pullRequest;
+            const workflowRun = context.payload.workflow_run;
+            const headOwner = workflowRun.head_repository?.owner?.login;
 
-            // Handle pull_request_target event
-            if (context.payload.pull_request) {
-              pullRequest = context.payload.pull_request;
-            }
-            // Handle workflow_run event
-            else if (context.payload.workflow_run) {
-              const workflowRun = context.payload.workflow_run;
-
-              // Get PRs associated with this workflow run
-              const { data: prs } = await github.rest.pulls.list({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                state: 'open',
-                head: `${workflowRun.head_repository.owner.login}:${workflowRun.head_branch}`
-              });
-
-              if (prs.length === 0) {
-                console.log('No open PR found for this workflow run');
-                return null;
-              }
-
-              pullRequest = prs[0];
-            } else {
-              console.log('Unknown event type');
+            if (!headOwner) {
+              console.log('Workflow run has no source repository owner');
+              core.setOutput('is_dependabot', 'false');
               return null;
             }
 
-            // Check if PR is from Dependabot
-            if (pullRequest.user.login !== 'dependabot[bot]') {
-              console.log(`PR is not from Dependabot (user: ${pullRequest.user.login})`);
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${headOwner}:${workflowRun.head_branch}`
+            });
+
+            const pullRequest = prs.find(pr =>
+              pr.user.login === 'dependabot[bot]' && pr.head.sha === workflowRun.head_sha
+            );
+
+            if (!pullRequest) {
+              console.log(`No open Dependabot PR found for SHA ${workflowRun.head_sha}`);
               core.setOutput('is_dependabot', 'false');
               return null;
             }
@@ -76,24 +63,10 @@ jobs:
             const pr_number = ${{ steps.pr.outputs.pr_number }};
             const head_sha = '${{ steps.pr.outputs.head_sha }}';
 
-            // Wait for status to be updated after workflow_run event
-            // GitHub may need a few seconds to update the check status after completion
-            const STATUS_UPDATE_DELAY_MS = 5000;
-            if (context.eventName === 'workflow_run') {
-              await new Promise(resolve => setTimeout(resolve, STATUS_UPDATE_DELAY_MS));
-            }
-
             const { data: pullRequest } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: pr_number
-            });
-
-            // Get the combined status for the PR
-            const { data: status } = await github.rest.repos.getCombinedStatusForRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: head_sha
             });
 
             // Get check runs for the PR
@@ -103,50 +76,20 @@ jobs:
               ref: head_sha
             });
 
-            console.log('Combined status:', status.state);
-            console.log('Check runs:', checkRuns.check_runs.length);
-
-            // Check if all status checks have passed
-            // Note: status.total_count === 0 is allowed because GitHub Actions
-            // uses check runs (not status checks) for validation
-            const allStatusPassed = status.state === 'success' || status.total_count === 0;
-
-            // Check if all check runs have completed successfully
-            // Note: We require at least one check run OR explicit success state
-            // to prevent merging PRs without any validation
-            const allChecksPassed = checkRuns.check_runs.length === 0 ||
-              checkRuns.check_runs.every(check =>
-                check.status === 'completed' &&
-                (check.conclusion === 'success' || check.conclusion === 'skipped')
-              );
-
             const hasFailedChecks = checkRuns.check_runs.some(check =>
               check.status === 'completed' &&
               (check.conclusion === 'failure' || check.conclusion === 'cancelled')
             );
+            const headMatches = pullRequest.state === 'open' && pullRequest.head.sha === head_sha;
+            const workflowPassed = context.payload.workflow_run.conclusion === 'success';
+            const ready_to_merge = headMatches && workflowPassed && !hasFailedChecks;
 
-            console.log('All status passed:', allStatusPassed);
-            console.log('All checks passed:', allChecksPassed);
+            console.log('Workflow passed:', workflowPassed);
+            console.log('PR head matches workflow:', headMatches);
             console.log('Has failed checks:', hasFailedChecks);
 
-            // Check runs details
-            for (const check of checkRuns.check_runs) {
-              console.log(`Check: ${check.name}, Status: ${check.status}, Conclusion: ${check.conclusion}`);
-            }
-
-            // Safety check: Ensure we have some form of validation
-            // Either check runs exist OR we're in pull_request_target where checks may not be ready
-            const hasValidation = checkRuns.check_runs.length > 0 ||
-                                status.total_count > 0 ||
-                                context.eventName === 'pull_request_target';
-
-            if (!hasValidation) {
-              console.log('Warning: No validation checks found. Will wait for checks to appear.');
-            }
-
-            const ready_to_merge = allStatusPassed && allChecksPassed && !hasFailedChecks && hasValidation;
             core.setOutput('ready_to_merge', ready_to_merge);
-            core.setOutput('status_state', status.state);
+            core.setOutput('status_state', context.payload.workflow_run.conclusion);
             core.setOutput('checks_count', checkRuns.check_runs.length);
             core.setOutput('has_failed_checks', hasFailedChecks);
 
@@ -263,10 +206,12 @@ jobs:
       - name: Summary
         if: always() && steps.pr.outputs.is_dependabot == 'true'
         run: |
-          echo "### Dependabot Auto-Merge Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- PR Number: #${{ steps.pr.outputs.pr_number }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Ready to Merge: ${{ steps.check_status.outputs.ready_to_merge }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Has Failed Checks: ${{ steps.check_status.outputs.has_failed_checks }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Status State: ${{ steps.check_status.outputs.status_state }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Check Runs: ${{ steps.check_status.outputs.checks_count }}" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "### Dependabot Auto-Merge Summary"
+            echo ""
+            echo "- PR Number: #${{ steps.pr.outputs.pr_number }}"
+            echo "- Ready to Merge: ${{ steps.check_status.outputs.ready_to_merge }}"
+            echo "- Has Failed Checks: ${{ steps.check_status.outputs.has_failed_checks }}"
+            echo "- Status State: ${{ steps.check_status.outputs.status_state }}"
+            echo "- Check Runs: ${{ steps.check_status.outputs.checks_count }}"
+          } >> "$GITHUB_STEP_SUMMARY"
