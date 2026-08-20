@@ -1,0 +1,27 @@
+.ai/index.md
+  s_bd7b7e0f4fa185::t_2f325bfe000ea8 57-59
+.ai/learnings/dependency-ci-gates.md
+  s_bd7b7e0f4fa185::t_69be1593e0af06 1-17
+.ai/learnings/dependency-upgrade-compatibility.md
+  s_bd7b7e0f4fa185::t_be2b113d71e05f 1-19
+.ai/learnings/frontend-e2e-fixture-isolation.md
+  s_bd7b7e0f4fa185::t_0d51acd7b82635 1-19
+.ai/log.md
+  s_bd7b7e0f4fa185::t_2062bd66337bb6 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "28768ed8501312bc528c7eb192738463d89c1ec8",
+  "prompts": {},
+  "sessions": {
+    "s_bd7b7e0f4fa185": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "2881a264-55cb-48cd-b6b5-9e9065e4e181",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
