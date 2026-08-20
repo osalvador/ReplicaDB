@@ -20,4 +20,4 @@ Do not place vendor branches in generic orchestration, share mutable JDBC connec
 
 Do not introduce a generic resource-table abstraction for incompatible one-off screens, add application code during context generation, commit resolved credentials or machine-specific registries, or use broad test selectors and shared fixture mutation without a proven boundary. Do not let workers write run state without the current lease token, compare application timestamps with PostgreSQL eligibility time, or remove a deprecated repository bridge before all production callers have moved to the port.
 
-These are project-specific prohibitions; the missing organization/AMIGA baseline has not been compared in this session.
+These are project-specific prohibitions; no organization baseline was available for comparison in this session.

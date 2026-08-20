@@ -22,4 +22,4 @@ The archive contains repeated gaps in four families: framework/dependency assump
 
 ## Gap Recurrence
 
-Candidate for promotion to organization-level instructions: require resolved dependency/API inspection, explicit Flyway targets for staged migrations, database-time consistency checks, migration-bridge callers, documentation path searches, exact-assertion impact searches, explicit MockMvc versus real-port classification, clean-runner package configuration, and an executable focused check before broad validation. This is a proposal only because the AMIGA baseline was unavailable for comparison.
+Candidate for promotion to organization-level instructions: require resolved dependency/API inspection, explicit Flyway targets for staged migrations, database-time consistency checks, migration-bridge callers, documentation path searches, exact-assertion impact searches, explicit MockMvc versus real-port classification, clean-runner package configuration, and an executable focused check before broad validation. This is a proposal only because no organization baseline was available for comparison.

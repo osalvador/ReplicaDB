@@ -15,6 +15,7 @@ async function assertNoPageOverflow(page: Page) {
 }
 
 async function assertInsideViewport(page: Page, locator: Locator) {
+  await locator.scrollIntoViewIfNeeded();
   const box = await locator.boundingBox();
   expect(box, 'the inspected element must be visible').not.toBeNull();
   const viewport = page.viewportSize();
@@ -58,7 +59,8 @@ for (const viewport of viewports) {
       expect(username, 'REPLICADB_BOOTSTRAP_ADMIN_USERNAME must be set').toBeTruthy();
       expect(password, 'REPLICADB_BOOTSTRAP_ADMIN_PASSWORD must be set').toBeTruthy();
 
-      await page.goto('/login');
+      await page.goto('/');
+      await expect(page).toHaveURL(/\/login$/);
       await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
       await assertNoPageOverflow(page);
       await assertInsideViewport(page, page.getByRole('form', { name: 'Sign-in form' }));
