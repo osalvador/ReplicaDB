@@ -1,5 +1,6 @@
 package org.replicadb.server.job.api;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -49,6 +51,7 @@ class JobLifecycleIT {
     @DynamicPropertySource
     static void securityProperties(DynamicPropertyRegistry registry) {
         registry.add("replicadb.security.bootstrap.enabled", () -> "true");
+        registry.add("replicadb.server.local-seeding.enabled", () -> "true");
         registry.add("REPLICADB_BOOTSTRAP_ADMIN_USERNAME", () -> BOOTSTRAP_USERNAME);
         registry.add("REPLICADB_BOOTSTRAP_ADMIN_PASSWORD", () -> BOOTSTRAP_PASSWORD);
     }
@@ -107,6 +110,35 @@ class JobLifecycleIT {
         assertTrue(cancellation.getBody().warning() != null && !cancellation.getBody().warning().isBlank());
         JobRunResponse cancelled = awaitStatus(cancellableRun.id(), JobRunStatus.CANCELLED);
         assertEquals(JobRunStatus.CANCELLED, cancelled.status());
+    }
+
+    @Test
+    void seedsTerminalHistoryWithoutStartingCoreExecution() throws Exception {
+        login();
+        Path source = createDatabase("http-local-seed-source.db", 0);
+        Path sink = createDatabase("http-local-seed-sink.db", 0);
+        JobDefinitionResponse definition = createDefinition("http-local-seed", source, sink);
+
+        for (int index = 0; index < 5; index += 1) {
+            HttpHeaders headers = authenticatedHeaders(true);
+            headers.set("Idempotency-Key", "http-local-seed-" + index);
+            headers.set("X-ReplicaDB-Local-Seed", "true");
+
+            ResponseEntity<JobRunResponse> response = restTemplate.postForEntity(
+                "/api/v1/jobs/" + definition.id() + "/runs",
+                new HttpEntity<>(headers), JobRunResponse.class);
+
+            assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
+            assertNotNull(response.getBody());
+            assertEquals(JobRunStatus.CANCELLED, response.getBody().status());
+            assertNull(response.getBody().startedAt());
+            assertNull(response.getBody().executorIdentity());
+            assertNotNull(response.getBody().finishedAt());
+        }
+
+        JsonNode history = objectMapper.readTree(
+            getAuthenticated("/api/v1/jobs/" + definition.id() + "/runs?size=100"));
+        assertEquals(5, history.get("totalElements").asInt());
     }
 
         @Test

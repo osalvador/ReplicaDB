@@ -117,7 +117,7 @@ printf 'Starting Spring Boot API on http://localhost:%s...\n' "$API_PORT"
     export REPLICADB_BOOTSTRAP_ADMIN_USERNAME="$ADMIN_USERNAME"
     mvn -B -f "$SERVER_DIR/pom.xml" spring-boot:run \
         -Dspring-boot.run.profiles=api \
-        -Dspring-boot.run.arguments="--server.port=$API_PORT" \
+        -Dspring-boot.run.arguments="--server.port=$API_PORT --replicadb.server.local-seeding.enabled=true" \
         -Dskip.installnodenpm=true \
         -Dskip.npm=true
 ) >"$SERVER_LOG" 2>&1 &
