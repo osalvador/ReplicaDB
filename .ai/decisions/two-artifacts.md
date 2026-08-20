@@ -10,12 +10,12 @@ sources:
     resource: replicadb-server/pom.xml
   - id: guard
     resource: src/test/java/org/replicadb/NoSpringBootOnClasspathTest.java
-generated: { by: itx-init/2.1, at: "2026-08-19T14:26:22Z" }
+generated: { by: itx-init/2.1, at: "2026-08-20T11:00:36Z" }
 status: stable
 ---
 
 Driving forces: preserve the existing CLI footprint, startup, options-file contract, exit codes, and ability to run without a metadata database while adding managed scheduling and monitoring.
 
-Decision: keep one codebase with a root CLI artifact and sibling `replicadb-server`. The server translates stored jobs to `ToolOptions` and reuses the core manager implementation. Spring Boot is not introduced into the CLI classpath.
+Decision: keep one codebase with a root CLI artifact and sibling `replicadb-server`. The server translates stored jobs to `ToolOptions` and reuses the core manager implementation. Phase 3.1 adds retry/lease/fencing state inside the server boundary without moving Spring, PostgreSQL, or control-plane APIs into the CLI. Spring Boot is not introduced into the CLI classpath.
 
 Trade-off: there are two build/version surfaces and the server must install or resolve the core artifact before compilation. The boundary avoids duplicating replication behavior and keeps CLI compatibility testable.

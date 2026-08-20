@@ -10,7 +10,7 @@ sources:
     resource: replicadb-server/frontend/e2e/admin-management.spec.ts
   - id: config
     resource: replicadb-server/src/main/resources/application.yml
-generated: { by: itx-init/2.1, at: "2026-08-19T14:26:22Z" }
+generated: { by: itx-init/2.1, at: "2026-08-20T11:00:36Z" }
 status: stable
 ---
 
@@ -22,3 +22,6 @@ status: stable
 | Application configuration | Quartz currently uses an in-memory runtime store and relies on schedule reconciliation. | Runtime trigger bookkeeping and missed-fire behavior need explicit operational coverage. |
 | Frontend E2E | Admin browser coverage is credential-gated by environment variables. | Missing bootstrap configuration produces a skipped flow rather than product evidence. |
 | Architecture documentation | Some lower sections still contain pre-Phase-2c wording while earlier sections say Phase 2c is implemented. | Resolve documentation status drift before treating the document as a single current source. |
+| Phase 3.1 plan | Deprecated un-fenced repository wrappers remain for older tests and callers. | Remove the bridge after the worker/shared execution boundary migrates to `JobRunStore` exclusively. |
+| Phase 3.1 plan | Expired-run recovery is implemented as a contract but no current runtime schedules recovery or renews long leases. | Phase 3.2 must add worker polling, heartbeat, and remote cancellation before claiming distributed execution. |
+| Phase 3.1 validation | The root CLI integration run was not completed to a final result on the emulated ARM64 environment. | Rerun the full CLI integration suite on a runner with the required database containers before release claims. |

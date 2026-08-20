@@ -14,12 +14,12 @@ sources:
     resource: .ai/archive/phase-2a-frontend-auth-monitoring.plan.md
   - id: phase2c
     resource: .ai/archive/phase-2c-frontend-administration.plan.md
-generated: { by: itx-init/2.1, at: "2026-08-19T14:26:22Z" }
+generated: { by: itx-init/2.1, at: "2026-08-20T11:00:36Z" }
 status: draft
 ---
 
-The archive contains repeated gaps in four families: framework/dependency assumptions, database or container readiness, wire-contract/nullability checks, and test-harness/client mismatch. These recurrences span more than three plans.
+The archive contains repeated gaps in four families: framework/dependency assumptions, database or container readiness, wire-contract/nullability checks, and test-harness/client mismatch. These recurrences span more than three plans. Phase 3.1 added one-off but actionable gaps around resolved Flyway APIs, database-owned time in compatibility paths, staged repository-contract migration, and documentation-path discovery.
 
 ## Gap Recurrence
 
-Candidate for promotion to organization-level instructions: require resolved dependency/API inspection, migration and exact-assertion impact searches, explicit MockMvc versus real-port classification, clean-runner package configuration, and an executable focused check before broad validation. This is a proposal only because the AMIGA baseline was unavailable for comparison.
+Candidate for promotion to organization-level instructions: require resolved dependency/API inspection, explicit Flyway targets for staged migrations, database-time consistency checks, migration-bridge callers, documentation path searches, exact-assertion impact searches, explicit MockMvc versus real-port classification, clean-runner package configuration, and an executable focused check before broad validation. This is a proposal only because the AMIGA baseline was unavailable for comparison.

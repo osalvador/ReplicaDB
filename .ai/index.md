@@ -50,6 +50,7 @@ Java 17/Maven, JDBC and vendor SDKs, Spring Boot 3.3.5, PostgreSQL/Flyway, Quart
 
 # Recent Learnings
 * [Gap recurrence](/learnings/gap-recurrence.md) - Repeated planning risks suitable for shared rules.
+* [Distributed state contract](/learnings/phase31-compatibility-bridge.md) - Lease fencing, database time, staged migrations, and compatibility bridges.
 * [Frontend administration gaps](/learnings/phase2c-custom-form-validation.md) - Validation and route-context lessons from the current admin slice.
 * [API contract gaps](/learnings/phase2a-openapi-nullability.md) - Serialize and validate the actual wire format.
 * [Technical debt](/learnings/tech-debt.md) - Known limitations and deferred capabilities.
