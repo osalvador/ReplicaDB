@@ -6,6 +6,7 @@ import org.replicadb.cli.ReplicationMode;
 import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class JobDefinitionTest {
@@ -20,6 +21,37 @@ class JobDefinitionTest {
         assertDoesNotThrow(() -> definition(ReplicationMode.COMPLETE,
                 null, "${env:SOURCE_PASSWORD}", "${env:SINK_PASSWORD}"));
     }
+
+        @Test
+        void appliesModeSpecificRetryDefaults() {
+                JobDefinition complete = definition(ReplicationMode.COMPLETE, null, null, null);
+                JobDefinition atomic = definition(ReplicationMode.COMPLETE_ATOMIC, null, null, null);
+                JobDefinition incremental = definition(ReplicationMode.INCREMENTAL, "updated_at", null, null);
+
+                assertEquals(3, complete.maxAttempts());
+                assertEquals(60, complete.retryBackoffSeconds());
+                assertEquals(false, complete.automaticRetryEnabled());
+                assertEquals(true, atomic.automaticRetryEnabled());
+                assertEquals(true, incremental.automaticRetryEnabled());
+        }
+
+        @Test
+        void acceptsExplicitCompleteModeRetryOptIn() {
+                JobDefinition definition = JobDefinitionTestFixtures.aJobDefinition()
+                                .withMode(ReplicationMode.COMPLETE)
+                                .withRetryPolicy(new RetryPolicy(5, 120, true))
+                                .build();
+
+                assertEquals(5, definition.maxAttempts());
+                assertEquals(120, definition.retryBackoffSeconds());
+                assertEquals(true, definition.automaticRetryEnabled());
+        }
+
+        @Test
+        void rejectsNullRetryPolicy() {
+                assertThrows(NullPointerException.class,
+                                () -> definitionWithExecution(100, 0, null));
+        }
 
     @Test
     void rejectsBlankRequiredFields() {
@@ -102,6 +134,12 @@ class JobDefinitionTest {
     }
 
         private static JobDefinition definitionWithExecution(int fetchSize, int bandwidthThrottling) {
+                return definitionWithExecution(fetchSize, bandwidthThrottling,
+                        RetryPolicy.defaultsFor(ReplicationMode.COMPLETE));
+        }
+
+        private static JobDefinition definitionWithExecution(int fetchSize, int bandwidthThrottling,
+                                                             RetryPolicy retryPolicy) {
                 ConnectionCredentials sourceConnection = new ConnectionCredentials("jdbc:source", null, null, null, null);
                 ConnectionCredentials sinkConnection = new ConnectionCredentials("jdbc:sink", null, null, null, null);
                 return new JobDefinition(
@@ -109,6 +147,6 @@ class JobDefinitionTest {
                                 new SourceEndpoint(sourceConnection, "source_table", null, null, null),
                                 new SinkEndpoint(sinkConnection, "sink_table", null, null, false, false),
                                 ReplicationMode.COMPLETE, 1, null, null, Instant.now(), Instant.now(),
-                                fetchSize, bandwidthThrottling, false);
+                                fetchSize, bandwidthThrottling, false, retryPolicy);
         }
 }

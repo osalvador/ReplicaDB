@@ -44,6 +44,9 @@ public record JobDefinitionResponse(
         boolean verbose,
         boolean sourcePasswordConfigured,
         boolean sinkPasswordConfigured,
+        int maxAttempts,
+        long retryBackoffSeconds,
+        boolean automaticRetryEnabled,
         String modeWarning) {
 
     public JobDefinitionResponse(UUID id, String name, String sourceConnect, String sourceUser,
@@ -57,6 +60,7 @@ public record JobDefinitionResponse(
                 sinkConnect, sinkUser, sinkTable,
                 null, null, null, null, null, Map.of(), null, null, null, false, false,
                 mode, jobs, incrementalWatermarkColumn, initialWatermarkValue, createdAt, updatedAt,
-                100, 0, false, sourcePasswordConfigured, sinkPasswordConfigured, modeWarning);
+                100, 0, false, sourcePasswordConfigured, sinkPasswordConfigured,
+                3, 60, false, modeWarning);
     }
 }

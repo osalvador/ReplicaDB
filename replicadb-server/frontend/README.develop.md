@@ -201,6 +201,18 @@ OPENAPI_SCHEMA_OUTPUT=/tmp/replicadb-schema.ts npm run generate:api-types
 diff -u src/api/schema.ts /tmp/replicadb-schema.ts
 ```
 
+## Contrato de estado distribuido Phase 3.1
+
+El perfil `api` persiste la política de recuperación de cada job:
+
+- `maxAttempts` incluye el intento inicial y por defecto es `3`.
+- `retryBackoffSeconds` es el retraso directo antes de que un retry sea elegible y por defecto es `60`.
+- `automaticRetryEnabled` es verdadero por defecto para `incremental` y `complete-atomic`, y falso para `complete`. Un job `complete` puede activarlo explícitamente, pero conserva su advertencia destructiva.
+
+Los runs elegibles usan `availableAt`, evaluado con el reloj PostgreSQL. Cada claim genera un lease token opaco; el token se usa solo dentro del estado y nunca aparece en respuestas REST, tipos TypeScript, logs o UI. Las renovaciones y escrituras terminales de un worker obsoleto son rechazadas por fencing. Una expiración conserva el run original y crea una nueva tentativa desde el principio cuando la política lo permite; no existe resume.
+
+La cancelación se persiste antes de intentar la señal local. Esto permite que una futura instancia worker observe `CANCEL_REQUESTED` aunque la petición HTTP haya sido atendida por otra instancia. `LISTEN/NOTIFY`, polling distribuido, el perfil `worker`, el heartbeat durante merge/swap y Quartz JDBC clustering pertenecen a Phase 3.2 y 3.3; no forman parte del runtime actual.
+
 ## Ejecutar el smoke test E2E
 
 El test necesita un API arrancado, PostgreSQL disponible y las mismas variables de bootstrap:

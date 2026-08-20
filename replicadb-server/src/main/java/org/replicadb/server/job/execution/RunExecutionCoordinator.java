@@ -4,8 +4,10 @@ import jakarta.annotation.PreDestroy;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
+import org.replicadb.server.job.application.RunLeaseService;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.persistence.JobRunRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -26,18 +28,19 @@ public class RunExecutionCoordinator {
 
     private static final Logger LOG = LogManager.getLogger(RunExecutionCoordinator.class);
 
-    private final JobRunRepository jobRunRepository;
+    private final RunLeaseService runLeaseService;
     private final JobExecutionService jobExecutionService;
     private final ExecutorService executor;
     private final ConcurrentMap<UUID, ToolOptions> inFlight = new ConcurrentHashMap<>();
 
-    public RunExecutionCoordinator(JobRunRepository jobRunRepository,
+    @Autowired
+    public RunExecutionCoordinator(RunLeaseService runLeaseService,
                                    JobExecutionService jobExecutionService,
                                    @Value("${replicadb.server.execution.pool-size:4}") int poolSize) {
         if (poolSize < 1) {
             throw new IllegalArgumentException("poolSize must be positive");
         }
-        this.jobRunRepository = jobRunRepository;
+        this.runLeaseService = runLeaseService;
         this.jobExecutionService = jobExecutionService;
         this.executor = new ThreadPoolExecutor(
                 poolSize,
@@ -48,10 +51,15 @@ public class RunExecutionCoordinator {
                 new RunThreadFactory());
     }
 
+    public RunExecutionCoordinator(JobRunRepository jobRunRepository,
+                                   JobExecutionService jobExecutionService, int poolSize) {
+        this(new RunLeaseService(jobRunRepository), jobExecutionService, poolSize);
+    }
+
     public void submit(UUID runId, String executorIdentity) {
         executor.submit(() -> {
             try {
-                Optional<JobRun> claimed = jobRunRepository.claimById(
+                Optional<JobRun> claimed = runLeaseService.claimRequested(
                         runId, executorIdentity, Duration.ofMinutes(5));
                 claimed.ifPresent(run -> jobExecutionService.executeClaimedRun(run,
                         options -> inFlight.put(runId, options)));

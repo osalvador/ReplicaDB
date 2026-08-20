@@ -112,7 +112,7 @@ class RunExecutionCoordinatorTest {
         JobRunRepository repository = Mockito.mock(JobRunRepository.class);
         JobExecutionService executionService = Mockito.mock(JobExecutionService.class);
         CountDownLatch taskStarted = new CountDownLatch(1);
-        when(repository.claimById(any(), anyString(), any(Duration.class))).thenAnswer(invocation -> {
+        when(repository.claimNextEligible(any(), anyString(), any(Duration.class))).thenAnswer(invocation -> {
             taskStarted.countDown();
             return Optional.empty();
         });

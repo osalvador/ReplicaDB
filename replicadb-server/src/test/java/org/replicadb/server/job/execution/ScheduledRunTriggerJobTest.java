@@ -13,8 +13,9 @@ import org.replicadb.server.audit.domain.AuditOutcome;
 import org.replicadb.server.audit.domain.AuditResourceType;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
-import org.replicadb.server.job.persistence.JobRunRepository;
+import org.replicadb.server.job.port.JobRunStore;
 
+import java.time.Instant;
 import java.util.UUID;
 import java.util.Map;
 
@@ -25,7 +26,7 @@ import static org.mockito.Mockito.when;
 
 class ScheduledRunTriggerJobTest {
 
-    private JobRunRepository jobRunRepository;
+    private JobRunStore jobRunStore;
     private RunExecutionCoordinator runExecutionCoordinator;
     private AuditService auditService;
     private AuditActorResolver auditActorResolver;
@@ -33,12 +34,12 @@ class ScheduledRunTriggerJobTest {
 
     @BeforeEach
     void setUp() {
-        jobRunRepository = Mockito.mock(JobRunRepository.class);
+        jobRunStore = Mockito.mock(JobRunStore.class);
         runExecutionCoordinator = Mockito.mock(RunExecutionCoordinator.class);
         auditService = Mockito.mock(AuditService.class);
         auditActorResolver = Mockito.mock(AuditActorResolver.class);
         job = new ScheduledRunTriggerJob();
-        org.springframework.test.util.ReflectionTestUtils.setField(job, "jobRunRepository", jobRunRepository);
+        org.springframework.test.util.ReflectionTestUtils.setField(job, "jobRunStore", jobRunStore);
         org.springframework.test.util.ReflectionTestUtils.setField(
                 job, "runExecutionCoordinator", runExecutionCoordinator);
             org.springframework.test.util.ReflectionTestUtils.setField(job, "auditService", auditService);
@@ -48,11 +49,12 @@ class ScheduledRunTriggerJobTest {
     @Test
     void skipsWhenAJobAlreadyHasAnActiveRun() throws Exception {
         UUID jobDefinitionId = UUID.randomUUID();
-        when(jobRunRepository.hasActiveRun(jobDefinitionId)).thenReturn(true);
+        when(jobRunStore.hasActiveRun(jobDefinitionId)).thenReturn(true);
 
         job.execute(context(jobDefinitionId));
 
-        verify(jobRunRepository, never()).insertPending(jobDefinitionId, null, 1);
+        verify(jobRunStore, never()).insertPending(Mockito.eq(jobDefinitionId), Mockito.isNull(),
+            Mockito.eq(1), Mockito.any(Instant.class));
         verify(runExecutionCoordinator, never()).submit(Mockito.any(), Mockito.anyString());
         verify(auditService, never()).record(Mockito.any(), Mockito.any(), Mockito.any(),
             Mockito.any(), Mockito.any(), Mockito.any());
@@ -62,14 +64,16 @@ class ScheduledRunTriggerJobTest {
     void insertsAndSubmitsWhenNoRunIsActive() throws Exception {
         UUID jobDefinitionId = UUID.randomUUID();
         JobRun pending = pendingRun(jobDefinitionId);
-        when(jobRunRepository.hasActiveRun(jobDefinitionId)).thenReturn(false);
-        when(jobRunRepository.insertPending(jobDefinitionId, null, 1)).thenReturn(pending);
+        when(jobRunStore.hasActiveRun(jobDefinitionId)).thenReturn(false);
+        when(jobRunStore.insertPending(Mockito.eq(jobDefinitionId), Mockito.isNull(), Mockito.eq(1),
+            Mockito.any(Instant.class))).thenReturn(pending);
         AuditActor actor = AuditActor.system("scheduler");
         when(auditActorResolver.system("scheduler")).thenReturn(actor);
 
         job.execute(context(jobDefinitionId));
 
-        verify(jobRunRepository).insertPending(jobDefinitionId, null, 1);
+        verify(jobRunStore).insertPending(Mockito.eq(jobDefinitionId), Mockito.isNull(), Mockito.eq(1),
+            Mockito.any(Instant.class));
         verify(runExecutionCoordinator).submit(pending.id(), "scheduler");
         verify(auditService).record(actor, AuditAction.RUN_TRIGGERED, AuditResourceType.JOB_RUN,
             pending.id().toString(), AuditOutcome.SUCCESS,
@@ -79,8 +83,9 @@ class ScheduledRunTriggerJobTest {
     @Test
     void ignoresAConcurrentInsertRace() throws Exception {
         UUID jobDefinitionId = UUID.randomUUID();
-        when(jobRunRepository.hasActiveRun(jobDefinitionId)).thenReturn(false);
-        when(jobRunRepository.insertPending(jobDefinitionId, null, 1))
+        when(jobRunStore.hasActiveRun(jobDefinitionId)).thenReturn(false);
+        when(jobRunStore.insertPending(Mockito.eq(jobDefinitionId), Mockito.isNull(), Mockito.eq(1),
+            Mockito.any(Instant.class)))
                 .thenThrow(new IllegalStateException("active run"));
 
         assertDoesNotThrow(() -> job.execute(context(jobDefinitionId)));
@@ -100,6 +105,6 @@ class ScheduledRunTriggerJobTest {
 
     private static JobRun pendingRun(UUID jobDefinitionId) {
         return new JobRun(UUID.randomUUID(), jobDefinitionId, null, JobRunStatus.PENDING, 1,
-            null, null, null, null, null, null, null, null, null, null, null);
+            null, null, null, Instant.now(), null, null, null, null, null, null, null);
     }
 }

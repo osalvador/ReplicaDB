@@ -44,11 +44,14 @@ type StringField = Exclude<keyof JobDefinitionFormInput,
   | 'fetchSize'
   | 'bandwidthThrottling'
   | 'verbose'
+  | 'maxAttempts'
+  | 'retryBackoffSeconds'
+  | 'automaticRetryEnabled'
   | 'sourceConnectionParams'
   | 'sinkConnectionParams'
   | 'sinkDisableEscape'
   | 'sinkDisableTruncate'>;
-type FormErrors = Partial<Record<StringField | 'jobs', string>>;
+type FormErrors = Partial<Record<StringField | 'jobs' | 'maxAttempts' | 'retryBackoffSeconds', string>>;
 
 const emptyForm: JobDefinitionFormInput = {
   name: '',
@@ -86,11 +89,18 @@ const emptyForm: JobDefinitionFormInput = {
   initialWatermarkValue: '',
   fetchSize: 100,
   bandwidthThrottling: 0,
-  verbose: false
+  verbose: false,
+  maxAttempts: 3,
+  retryBackoffSeconds: 60,
+  automaticRetryEnabled: false
 };
 
 function isReplicationMode(value: string | undefined): value is ReplicationMode {
   return value === 'complete' || value === 'complete-atomic' || value === 'incremental';
+}
+
+function defaultAutomaticRetry(mode: ReplicationMode): boolean {
+  return mode !== 'complete';
 }
 
 function formFromJob(job: JobDefinitionResponse): JobDefinitionFormInput {
@@ -130,7 +140,12 @@ function formFromJob(job: JobDefinitionResponse): JobDefinitionFormInput {
     initialWatermarkValue: job.initialWatermarkValue ?? '',
     fetchSize: job.fetchSize ?? 100,
     bandwidthThrottling: job.bandwidthThrottling ?? 0,
-    verbose: job.verbose ?? false
+    verbose: job.verbose ?? false,
+    maxAttempts: job.maxAttempts ?? 3,
+    retryBackoffSeconds: job.retryBackoffSeconds ?? 60,
+    automaticRetryEnabled: job.automaticRetryEnabled ?? defaultAutomaticRetry(
+      isReplicationMode(job.mode) ? job.mode : 'complete'
+    )
   };
 }
 
@@ -153,6 +168,12 @@ function validateForm(form: JobDefinitionFormInput, editMode: boolean): FormErro
   }
   if (form.jobs < 1) {
     errors.jobs = 'Parallelism must be at least 1.';
+  }
+  if (!Number.isFinite(form.maxAttempts) || form.maxAttempts < 1) {
+    errors.maxAttempts = 'Maximum attempts must be at least 1.';
+  }
+  if (!Number.isFinite(form.retryBackoffSeconds) || form.retryBackoffSeconds < 0) {
+    errors.retryBackoffSeconds = 'Retry backoff cannot be negative.';
   }
   return errors;
 }
@@ -261,6 +282,7 @@ export default function JobFormPage() {
   const [sinkDraft, setSinkDraft] = useState<ConnectionDraft>(emptyConnectionDraft);
   const [errors, setErrors] = useState<FormErrors>({});
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [retryPolicyTouched, setRetryPolicyTouched] = useState(false);
 
   const jobQuery = useQuery({
     queryKey: ['jobs', id],
@@ -271,6 +293,7 @@ export default function JobFormPage() {
   useEffect(() => {
     if (jobQuery.data) {
       setForm(formFromJob(jobQuery.data));
+      setRetryPolicyTouched(false);
       setSourceDraft(connectionDraftFromJob(
         jobQuery.data.sourceConnect ?? '', jobQuery.data.sourceConnectionParams ?? {}));
       setSinkDraft(connectionDraftFromJob(
@@ -398,7 +421,16 @@ export default function JobFormPage() {
                   select
                   label="Mode"
                   value={form.mode}
-                  onChange={event => setForm(current => ({ ...current, mode: event.target.value as ReplicationMode }))}
+                  onChange={event => setForm(current => {
+                    const mode = event.target.value as ReplicationMode;
+                    return {
+                      ...current,
+                      mode,
+                      automaticRetryEnabled: retryPolicyTouched
+                        ? current.automaticRetryEnabled
+                        : defaultAutomaticRetry(mode)
+                    };
+                  })}
                   fullWidth
                 >
                   <MenuItem value="complete">complete</MenuItem>
@@ -562,6 +594,52 @@ export default function JobFormPage() {
                   onChange={event => setForm(current => ({ ...current, verbose: event.target.checked }))}
                 />}
                 label="Verbose"
+              />
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                <TextField
+                  label="Maximum automatic attempts"
+                  type="number"
+                  value={form.maxAttempts}
+                  onChange={event => {
+                    setRetryPolicyTouched(true);
+                    setForm(current => ({
+                      ...current,
+                      maxAttempts: event.target.value === '' ? 0 : Number(event.target.value)
+                    }));
+                  }}
+                  inputProps={{ min: 1 }}
+                  required
+                  error={Boolean(errors.maxAttempts)}
+                  helperText={errors.maxAttempts ?? 'Includes the initial attempt'}
+                  fullWidth
+                />
+                <TextField
+                  label="Retry backoff (seconds)"
+                  type="number"
+                  value={form.retryBackoffSeconds}
+                  onChange={event => {
+                    setRetryPolicyTouched(true);
+                    setForm(current => ({
+                      ...current,
+                      retryBackoffSeconds: event.target.value === '' ? 0 : Number(event.target.value)
+                    }));
+                  }}
+                  inputProps={{ min: 0 }}
+                  required
+                  error={Boolean(errors.retryBackoffSeconds)}
+                  helperText={errors.retryBackoffSeconds ?? 'Delay before lease recovery retry'}
+                  fullWidth
+                />
+              </Box>
+              <FormControlLabel
+                control={<Checkbox
+                  checked={form.automaticRetryEnabled}
+                  onChange={event => {
+                    setRetryPolicyTouched(true);
+                    setForm(current => ({ ...current, automaticRetryEnabled: event.target.checked }));
+                  }}
+                />}
+                label="Automatic retry after lease expiry"
               />
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                 <TextField

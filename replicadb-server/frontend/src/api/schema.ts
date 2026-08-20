@@ -403,6 +403,11 @@ export interface components {
             /** Format: int32 */
             bandwidthThrottling?: number;
             verbose?: boolean;
+            /** Format: int32 */
+            maxAttempts?: number;
+            /** Format: int64 */
+            retryBackoffSeconds?: number;
+            automaticRetryEnabled?: boolean;
         };
         JobDefinitionResponse: {
             /** Format: uuid */
@@ -454,6 +459,11 @@ export interface components {
             verbose?: boolean;
             sourcePasswordConfigured?: boolean;
             sinkPasswordConfigured?: boolean;
+            /** Format: int32 */
+            maxAttempts?: number;
+            /** Format: int64 */
+            retryBackoffSeconds?: number;
+            automaticRetryEnabled?: boolean;
             modeWarning?: string;
         };
         UserRequest: {
@@ -480,6 +490,8 @@ export interface components {
             heartbeatAt?: string;
             /** Format: date-time */
             createdAt?: string;
+            /** Format: date-time */
+            availableAt?: string;
             /** Format: date-time */
             startedAt?: string;
             /** Format: date-time */

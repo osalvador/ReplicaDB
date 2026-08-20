@@ -31,6 +31,7 @@ function RunRow({ run }: { run: JobRunResponse }) {
         <StatusChip status={run.status} />
       </TableCell>
       <TableCell>{run.attempt ?? '—'}</TableCell>
+      <TableCell>{formatInstant(run.availableAt)}</TableCell>
       <TableCell>{formatInstant(run.startedAt)}</TableCell>
       <TableCell>{formatInstant(run.finishedAt)}</TableCell>
       <TableCell align="right">
@@ -66,11 +67,12 @@ export default function RunHistoryTable({ jobId }: { jobId: string }) {
   return (
     <SurfaceSection title="Run history">
       <TableContainer sx={{ overflowX: 'auto' }}>
-        <Table aria-label="Run history" sx={{ minWidth: 640 }}>
+        <Table aria-label="Run history" sx={{ minWidth: 760 }}>
           <TableHead>
             <TableRow>
               <TableCell>Status</TableCell>
               <TableCell>Attempt</TableCell>
+              <TableCell>Available</TableCell>
               <TableCell>Started</TableCell>
               <TableCell>Finished</TableCell>
               <TableCell align="right">Details</TableCell>
@@ -80,7 +82,7 @@ export default function RunHistoryTable({ jobId }: { jobId: string }) {
             {runs.map(run => <RunRow key={run.id} run={run} />)}
             {runs.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5}>
+                <TableCell colSpan={6}>
                   <EmptyState title="No runs recorded." />
                 </TableCell>
               </TableRow>

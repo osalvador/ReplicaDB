@@ -13,8 +13,14 @@ import org.replicadb.server.audit.domain.AuditResourceType;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
+import org.replicadb.server.job.domain.LeaseToken;
+import org.replicadb.server.job.application.RunFinalizationService;
+import org.replicadb.server.job.application.RunLeaseService;
+import org.replicadb.server.job.port.JobDefinitionStore;
+import org.replicadb.server.job.port.JobRunStore;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -29,12 +35,33 @@ public class JobExecutionService {
 
     private static final Logger LOG = LogManager.getLogger(JobExecutionService.class);
 
-    private final JobRunRepository jobRunRepository;
-    private final JobDefinitionRepository jobDefinitionRepository;
+    private final JobRunStore jobRunStore;
+    private final JobDefinitionStore jobDefinitionStore;
+    private final RunLeaseService runLeaseService;
+    private final RunFinalizationService runFinalizationService;
     private final JobDefinitionEnvResolver environmentResolver;
     private final JobDefinitionOptionsFileWriter optionsFileWriter;
     private final AuditService auditService;
     private final AuditActorResolver auditActorResolver;
+
+    @Autowired
+    public JobExecutionService(JobRunStore jobRunStore,
+                               JobDefinitionStore jobDefinitionStore,
+                               RunLeaseService runLeaseService,
+                               RunFinalizationService runFinalizationService,
+                               JobDefinitionEnvResolver environmentResolver,
+                               JobDefinitionOptionsFileWriter optionsFileWriter,
+                               AuditService auditService,
+                               AuditActorResolver auditActorResolver) {
+        this.jobRunStore = jobRunStore;
+        this.jobDefinitionStore = jobDefinitionStore;
+        this.runLeaseService = runLeaseService;
+        this.runFinalizationService = runFinalizationService;
+        this.environmentResolver = environmentResolver;
+        this.optionsFileWriter = optionsFileWriter;
+        this.auditService = auditService;
+        this.auditActorResolver = auditActorResolver;
+    }
 
     public JobExecutionService(JobRunRepository jobRunRepository,
                                JobDefinitionRepository jobDefinitionRepository,
@@ -42,16 +69,13 @@ public class JobExecutionService {
                                JobDefinitionOptionsFileWriter optionsFileWriter,
                                AuditService auditService,
                                AuditActorResolver auditActorResolver) {
-        this.jobRunRepository = jobRunRepository;
-        this.jobDefinitionRepository = jobDefinitionRepository;
-        this.environmentResolver = environmentResolver;
-        this.optionsFileWriter = optionsFileWriter;
-        this.auditService = auditService;
-        this.auditActorResolver = auditActorResolver;
+        this(jobRunRepository, jobDefinitionRepository,
+                new RunLeaseService(jobRunRepository), new RunFinalizationService(jobRunRepository),
+                environmentResolver, optionsFileWriter, auditService, auditActorResolver);
     }
 
     public Optional<JobRunOutcome> executeNextPending(String executorIdentity) {
-        Optional<JobRun> claimed = jobRunRepository.claimNextPending(executorIdentity,
+        Optional<JobRun> claimed = runLeaseService.claimNextEligible(executorIdentity,
                 java.time.Duration.ofMinutes(5));
         return claimed.map(run -> executeClaimedRun(run, options -> { }));
     }
@@ -60,10 +84,10 @@ public class JobExecutionService {
         ToolOptions options = null;
         Path optionsFile = null;
         try {
-            JobDefinition definition = jobDefinitionRepository.findById(run.jobDefinitionId())
+                JobDefinition definition = jobDefinitionStore.findById(run.jobDefinitionId())
                     .orElseThrow(() -> new IllegalStateException(
                             "JobDefinition not found for JobRun " + run.id()));
-            String previousWatermark = jobRunRepository.findLastCommittedWatermark(definition.id())
+                String previousWatermark = jobRunStore.findLastCommittedWatermark(definition.id())
                     .orElse(definition.initialWatermarkValue());
                 optionsFile = optionsFileWriter.write(definition, previousWatermark, environmentResolver::resolve);
                 options = new ToolOptions(new String[]{"--options-file", optionsFile.toString()});
@@ -73,17 +97,20 @@ public class JobExecutionService {
             JobRunStatus status = JobRunStatus.fromReplicaExitCode(exitCode);
             long rowsProcessed = options.getExecutionContext().getRowsProcessed();
             long durationMillis = options.getExecutionContext().getDurationMillis();
+            LeaseToken leaseToken = requireLeaseToken(run);
             if (status == JobRunStatus.SUCCEEDED) {
-                jobRunRepository.markSucceeded(run.id(), rowsProcessed, durationMillis,
-                        options.getExecutionContext().getWatermarkCandidate());
-                recordTerminalOutcome(run, status, rowsProcessed, durationMillis, null);
+                JobRunStore.FencedUpdateResult result = runFinalizationService.markSucceeded(run.id(), leaseToken,
+                        rowsProcessed, durationMillis, options.getExecutionContext().getWatermarkCandidate());
+                recordIfUpdated(result, run, status, rowsProcessed, durationMillis, null);
             } else if (status == JobRunStatus.CANCELLED) {
-                jobRunRepository.markCancelled(run.id(), rowsProcessed, durationMillis);
-                recordTerminalOutcome(run, status, rowsProcessed, durationMillis, null);
+                JobRunStore.FencedUpdateResult result = runFinalizationService.markCancelled(
+                        run.id(), leaseToken, rowsProcessed, durationMillis);
+                recordIfUpdated(result, run, status, rowsProcessed, durationMillis, null);
             } else {
                 String errorMessage = redactedFailureMessage("ReplicaDB execution failed for run " + run.id());
-                jobRunRepository.markFailed(run.id(), rowsProcessed, durationMillis, errorMessage);
-                recordTerminalOutcome(run, JobRunStatus.FAILED, rowsProcessed, durationMillis, errorMessage);
+                JobRunStore.FencedUpdateResult result = runFinalizationService.markFailed(
+                        run.id(), leaseToken, rowsProcessed, durationMillis, errorMessage);
+                recordIfUpdated(result, run, JobRunStatus.FAILED, rowsProcessed, durationMillis, errorMessage);
             }
             return new JobRunOutcome(run.id(), status, rowsProcessed, durationMillis);
         } catch (Exception exception) {
@@ -93,8 +120,9 @@ public class JobExecutionService {
             if (message == null || message.isBlank()) {
                 message = exception.getClass().getSimpleName();
             }
-            jobRunRepository.markFailed(run.id(), rowsProcessed, durationMillis, message);
-            recordTerminalOutcome(run, JobRunStatus.FAILED, rowsProcessed, durationMillis, message);
+                JobRunStore.FencedUpdateResult result = runFinalizationService.markFailed(
+                    run.id(), requireLeaseToken(run), rowsProcessed, durationMillis, message);
+                recordIfUpdated(result, run, JobRunStatus.FAILED, rowsProcessed, durationMillis, message);
             return new JobRunOutcome(run.id(), JobRunStatus.FAILED, rowsProcessed, durationMillis);
         } finally {
             deleteOptionsFile(optionsFile);
@@ -127,6 +155,22 @@ public class JobExecutionService {
                 "durationMillis", Long.toString(durationMillis), "errorMessage", errorMessage);
         auditService.record(auditActorResolver.system(run.executorIdentity()), action,
                 AuditResourceType.JOB_RUN, run.id().toString(), outcome, detail);
+    }
+
+    private void recordIfUpdated(JobRunStore.FencedUpdateResult result, JobRun run, JobRunStatus status,
+                                 long rowsProcessed, long durationMillis, String errorMessage) {
+        if (result == JobRunStore.FencedUpdateResult.UPDATED) {
+            recordTerminalOutcome(run, status, rowsProcessed, durationMillis, errorMessage);
+            return;
+        }
+        LOG.warn("Ignoring stale finalization for JobRun {} with result {}", run.id(), result);
+    }
+
+    private static LeaseToken requireLeaseToken(JobRun run) {
+        if (run.leaseToken() == null) {
+            throw new IllegalStateException("JobRun " + run.id() + " has no lease token");
+        }
+        return run.leaseToken();
     }
 
     private static String redactedFailureMessage(String message) {

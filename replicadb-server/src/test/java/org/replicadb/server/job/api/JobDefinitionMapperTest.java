@@ -29,6 +29,9 @@ class JobDefinitionMapperTest {
         assertEquals(request.sourceWhere(), definition.sourceWhere());
         assertEquals(request.mode(), response.mode());
         assertEquals(request.jobs(), response.jobs());
+        assertEquals(3, definition.maxAttempts());
+        assertEquals(60, definition.retryBackoffSeconds());
+        assertFalse(definition.automaticRetryEnabled());
         assertTrue(response.sourcePasswordConfigured());
         assertTrue(response.sinkPasswordConfigured());
         assertNotNull(response.modeWarning());
@@ -111,6 +114,21 @@ class JobDefinitionMapperTest {
         assertTrue(response.verbose());
     }
 
+    @Test
+    void mapsExplicitRetryPolicyFieldsToDefinitionAndResponse() {
+        JobDefinitionRequest request = requestWithRetryPolicy(5, 90L, true);
+        JobDefinition definition = mapper.toDefinition(request, UUID.randomUUID(), request.name(), null, null);
+        JobDefinitionResponse response = mapper.toResponse(definition);
+
+        assertEquals(5, definition.maxAttempts());
+        assertEquals(90, definition.retryBackoffSeconds());
+        assertTrue(definition.automaticRetryEnabled());
+        assertEquals(5, response.maxAttempts());
+        assertEquals(90, response.retryBackoffSeconds());
+        assertTrue(response.automaticRetryEnabled());
+        assertFalse(response.toString().contains("leaseToken"));
+    }
+
     private static JobDefinitionRequest request(String mode) {
         return new JobDefinitionRequest(
                 "job-name", "jdbc:source", "source-user", "${env:SOURCE_PASSWORD}", "source_table", "id > 0",
@@ -133,6 +151,18 @@ class JobDefinitionMapperTest {
                 "jdbc:sink", "sink-user", "${env:SINK_PASSWORD}", "sink_table",
                 "ActiveDirectoryManagedIdentity", "sink-client", null, null, null,
                 Map.of("ApplicationName", "ReplicaDB"), "id, name", "staging", "sink_stage", true, true,
-                "incremental", 3, "updated_at", "0", 250, 512, true);
+                "incremental", 3, "updated_at", "0", 250, 512, true, null, null, null);
+    }
+
+    private static JobDefinitionRequest requestWithRetryPolicy(int maxAttempts,
+                                                               Long retryBackoffSeconds,
+                                                               boolean automaticRetryEnabled) {
+        return new JobDefinitionRequest(
+                "retry-job", "jdbc:source", "source-user", "${env:SOURCE_PASSWORD}", "source_table", null,
+                null, null, null, null, null, Map.of(), null, null,
+                "jdbc:sink", "sink-user", "${env:SINK_PASSWORD}", "sink_table",
+                null, null, null, null, null, Map.of(), null, null, null, null, null,
+                "complete", 1, null, null, null, null, null,
+                maxAttempts, retryBackoffSeconds, automaticRetryEnabled);
     }
 }

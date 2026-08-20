@@ -104,7 +104,9 @@ public class JobDefinitionController {
             throw new IllegalArgumentException("name cannot be changed");
         }
         JobDefinition replacement = mapper.toDefinition(request, existing.id(), existing.name(),
-            existing.createdAt(), existing.updatedAt(), existing.sourcePassword(), existing.sinkPassword());
+            existing.createdAt(), existing.updatedAt(), existing.sourcePassword(), existing.sinkPassword(),
+            new org.replicadb.server.job.domain.RetryPolicy(existing.maxAttempts(),
+                existing.retryBackoffSeconds(), existing.automaticRetryEnabled()), existing.mode());
         JobDefinition persisted = repository.update(replacement);
         auditService.record(auditActorResolver.resolve(authentication), AuditAction.JOB_UPDATED,
             AuditResourceType.JOB_DEFINITION, persisted.id().toString(), AuditOutcome.SUCCESS,

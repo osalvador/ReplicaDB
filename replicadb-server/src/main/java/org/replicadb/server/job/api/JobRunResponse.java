@@ -16,6 +16,7 @@ public record JobRunResponse(
         Instant leaseUntil,
         Instant heartbeatAt,
         Instant createdAt,
+        Instant availableAt,
         Instant startedAt,
         Instant finishedAt,
         Long rowsProcessed,
@@ -28,7 +29,7 @@ public record JobRunResponse(
         return new JobRunResponse(
                 run.id(), run.jobDefinitionId(), run.previousRunId(), run.status(), run.attempt(),
                 run.executorIdentity(), run.leaseUntil(), run.heartbeatAt(), run.createdAt(),
-                run.startedAt(), run.finishedAt(), run.rowsProcessed(), run.durationMillis(),
+                run.availableAt(), run.startedAt(), run.finishedAt(), run.rowsProcessed(), run.durationMillis(),
                 run.committedWatermark(), run.errorMessage(), run.cancellationWarning());
     }
 }

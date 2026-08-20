@@ -5,6 +5,7 @@ import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.job.domain.AzureAuthentication;
 import org.replicadb.server.job.domain.ConnectionCredentials;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.RetryPolicy;
 import org.replicadb.server.job.domain.SinkEndpoint;
 import org.replicadb.server.job.domain.SourceEndpoint;
 import org.replicadb.server.job.domain.StagingOptions;
@@ -26,24 +27,36 @@ public class JobDefinitionMapper {
     public JobDefinition toDefinition(JobDefinitionRequest request, UUID id, String existingName,
                                       Instant createdAt, Instant updatedAt) {
         return buildDefinition(request, id, existingName, createdAt, updatedAt,
-            request.sourcePassword(), request.sinkPassword());
+            request.sourcePassword(), request.sinkPassword(), null, null);
         }
 
         public JobDefinition toDefinition(JobDefinitionRequest request, UUID id, String existingName,
                           Instant createdAt, Instant updatedAt,
                           String existingSourcePassword, String existingSinkPassword) {
+        return toDefinition(request, id, existingName, createdAt, updatedAt,
+            existingSourcePassword, existingSinkPassword, null, null);
+        }
+
+        public JobDefinition toDefinition(JobDefinitionRequest request, UUID id, String existingName,
+                          Instant createdAt, Instant updatedAt,
+                          String existingSourcePassword, String existingSinkPassword,
+                          RetryPolicy existingRetryPolicy, ReplicationMode existingMode) {
         String sourcePassword = resolvePassword(request.sourcePassword(), existingSourcePassword);
         String sinkPassword = resolvePassword(request.sinkPassword(), existingSinkPassword);
-        return buildDefinition(request, id, existingName, createdAt, updatedAt, sourcePassword, sinkPassword);
+        return buildDefinition(request, id, existingName, createdAt, updatedAt,
+            sourcePassword, sinkPassword, existingRetryPolicy, existingMode);
         }
 
         private JobDefinition buildDefinition(JobDefinitionRequest request, UUID id, String existingName,
                            Instant createdAt, Instant updatedAt,
-                           String sourcePassword, String sinkPassword) {
+                           String sourcePassword, String sinkPassword,
+                           RetryPolicy existingRetryPolicy, ReplicationMode existingMode) {
         String name = request.name() == null ? existingName : request.name();
         int fetchSize = request.fetchSize() == null ? 100 : request.fetchSize();
         int bandwidthThrottling = request.bandwidthThrottling() == null ? 0 : request.bandwidthThrottling();
         boolean verbose = Boolean.TRUE.equals(request.verbose());
+        ReplicationMode mode = parseMode(request.mode());
+        RetryPolicy retryPolicy = retryPolicy(request, mode, existingRetryPolicy, existingMode);
         return new JobDefinition(
             id, name,
             new SourceEndpoint(
@@ -62,11 +75,29 @@ public class JobDefinitionMapper {
                 request.sinkTable(), request.sinkColumns(), stagingOptions(request.sinkStagingSchema(),
                     request.sinkStagingTable()), Boolean.TRUE.equals(request.sinkDisableEscape()),
                 Boolean.TRUE.equals(request.sinkDisableTruncate())),
-            parseMode(request.mode()), request.jobs(), request.incrementalWatermarkColumn(),
-            request.initialWatermarkValue(), createdAt, updatedAt, fetchSize, bandwidthThrottling, verbose);
+            mode, request.jobs(), request.incrementalWatermarkColumn(), request.initialWatermarkValue(),
+            createdAt, updatedAt, fetchSize, bandwidthThrottling, verbose, retryPolicy);
     }
 
-    private static String resolvePassword(String requestedPassword, String existingPassword) {
+        private static RetryPolicy retryPolicy(JobDefinitionRequest request, ReplicationMode mode,
+                           RetryPolicy existingRetryPolicy, ReplicationMode existingMode) {
+        boolean noPolicyFields = request.maxAttempts() == null
+            && request.retryBackoffSeconds() == null
+            && request.automaticRetryEnabled() == null;
+        if (noPolicyFields && existingRetryPolicy != null && mode == existingMode) {
+            return existingRetryPolicy;
+        }
+        RetryPolicy base = existingRetryPolicy != null && mode == existingMode
+            ? existingRetryPolicy : RetryPolicy.defaultsFor(mode);
+        return new RetryPolicy(
+            request.maxAttempts() == null ? base.maxAttempts() : request.maxAttempts(),
+            request.retryBackoffSeconds() == null
+                ? base.retryBackoffSeconds() : request.retryBackoffSeconds(),
+            request.automaticRetryEnabled() == null
+                ? base.automaticRetryEnabled() : request.automaticRetryEnabled());
+        }
+
+        private static String resolvePassword(String requestedPassword, String existingPassword) {
         return requestedPassword == null || requestedPassword.isBlank() ? existingPassword : requestedPassword;
     }
 
@@ -89,7 +120,9 @@ public class JobDefinitionMapper {
                 definition.jobs(), definition.incrementalWatermarkColumn(), definition.initialWatermarkValue(),
                 definition.createdAt(), definition.updatedAt(), definition.fetchSize(), definition.bandwidthThrottling(),
                 definition.verbose(),
-                definition.sourcePassword() != null, definition.sinkPassword() != null, modeWarning);
+                definition.sourcePassword() != null, definition.sinkPassword() != null,
+                definition.maxAttempts(), definition.retryBackoffSeconds(), definition.automaticRetryEnabled(),
+                modeWarning);
     }
 
     public static String completeModeWarning() {

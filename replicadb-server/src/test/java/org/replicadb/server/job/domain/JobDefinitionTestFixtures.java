@@ -47,6 +47,7 @@ public final class JobDefinitionTestFixtures {
         private int fetchSize = 100;
         private int bandwidthThrottling;
         private boolean verbose;
+        private RetryPolicy retryPolicy;
 
         public Builder withId(UUID value) {
             id = value;
@@ -198,6 +199,11 @@ public final class JobDefinitionTestFixtures {
             return this;
         }
 
+        public Builder withRetryPolicy(RetryPolicy value) {
+            retryPolicy = value;
+            return this;
+        }
+
         public JobDefinition build() {
             return new JobDefinition(
                     id, name,
@@ -208,7 +214,8 @@ public final class JobDefinitionTestFixtures {
                             sinkAuthentication, sinkConnectionParams), sinkTable, sinkColumns, staging,
                             sinkDisableEscape, sinkDisableTruncate),
                     mode, jobs, incrementalWatermarkColumn, initialWatermarkValue, createdAt, updatedAt,
-                    fetchSize, bandwidthThrottling, verbose);
+                        fetchSize, bandwidthThrottling, verbose,
+                        retryPolicy == null ? RetryPolicy.defaultsFor(mode) : retryPolicy);
         }
     }
 }

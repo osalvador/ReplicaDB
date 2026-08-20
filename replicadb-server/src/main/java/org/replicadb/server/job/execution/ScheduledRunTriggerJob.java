@@ -13,7 +13,7 @@ import org.replicadb.server.audit.domain.AuditOutcome;
 import org.replicadb.server.audit.domain.AuditResourceType;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobRun;
-import org.replicadb.server.job.persistence.JobRunRepository;
+import org.replicadb.server.job.port.JobRunStore;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.UUID;
@@ -26,7 +26,7 @@ public class ScheduledRunTriggerJob implements Job {
     private static final String JOB_DEFINITION_ID = "jobDefinitionId";
 
     @Autowired
-    private JobRunRepository jobRunRepository;
+    private JobRunStore jobRunStore;
 
     @Autowired
     private RunExecutionCoordinator runExecutionCoordinator;
@@ -43,7 +43,7 @@ public class ScheduledRunTriggerJob implements Job {
         UUID jobDefinitionId = UUID.fromString(jobData.getString(JOB_DEFINITION_ID));
         LOG.info("Scheduled trigger fired for job definition {}", jobDefinitionId);
 
-        if (jobRunRepository.hasActiveRun(jobDefinitionId)) {
+        if (jobRunStore.hasActiveRun(jobDefinitionId)) {
             LOG.info("Scheduled trigger skipped for job definition {} because a run is already active",
                     jobDefinitionId);
             return;
@@ -51,7 +51,8 @@ public class ScheduledRunTriggerJob implements Job {
 
         JobRun pending;
         try {
-            pending = jobRunRepository.insertPending(jobDefinitionId, null, 1);
+                pending = jobRunStore.insertPending(jobDefinitionId, null, 1,
+                    java.time.Instant.now().minusSeconds(5));
         } catch (IllegalStateException exception) {
             LOG.info("Scheduled trigger skipped for job definition {} because another run became active",
                     jobDefinitionId);

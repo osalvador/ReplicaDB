@@ -30,6 +30,7 @@ const baseRun: JobRunResponse = {
   leaseUntil: null,
   heartbeatAt: null,
   createdAt: '2026-08-18T10:00:00Z',
+  availableAt: '2026-08-18T09:59:30Z',
   startedAt: '2026-08-18T10:00:01Z',
   finishedAt: null,
   rowsProcessed: 10,
@@ -86,6 +87,7 @@ describe('RunDetailPage', () => {
     expect(screen.getByText('10')).toBeInTheDocument();
     expect(screen.getByText('1000 ms')).toBeInTheDocument();
     expect(screen.getByText('2026-08-18T09:59:00Z')).toBeInTheDocument();
+    expect(screen.getByText('2026-08-18T09:59:30Z')).toBeInTheDocument();
     expect(await screen.findByText('run log excerpt')).toBeInTheDocument();
   });
 

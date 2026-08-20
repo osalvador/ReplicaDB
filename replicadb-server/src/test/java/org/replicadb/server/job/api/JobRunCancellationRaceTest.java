@@ -76,7 +76,7 @@ class JobRunCancellationRaceTest {
                 .orElseThrow();
 
         when(executionCoordinator.requestCancellation(running.id())).thenAnswer(invocation -> {
-            jobRunRepository.markCancelled(running.id(), 0, 0);
+                        jobRunRepository.markCancelled(running.id(), running.leaseToken(), 0, 0);
             return true;
         });
 

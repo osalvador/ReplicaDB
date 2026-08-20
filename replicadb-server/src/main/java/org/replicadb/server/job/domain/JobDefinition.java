@@ -19,13 +19,15 @@ public record JobDefinition(
         Instant updatedAt,
         int fetchSize,
         int bandwidthThrottling,
-        boolean verbose) {
+        boolean verbose,
+        RetryPolicy retryPolicy) {
 
     public JobDefinition {
         requireNonBlank("name", name);
         Objects.requireNonNull(source, "source must not be null");
         Objects.requireNonNull(sink, "sink must not be null");
         Objects.requireNonNull(mode, "mode must not be null");
+        Objects.requireNonNull(retryPolicy, "retryPolicy must not be null");
         if (jobs < 1) {
             throw new IllegalArgumentException("jobs must be at least 1");
         }
@@ -54,6 +56,15 @@ public record JobDefinition(
                         sinkTable, null, null, false, false),
                 mode, jobs, incrementalWatermarkColumn, initialWatermarkValue,
                 createdAt, updatedAt, 100, 0, false);
+            }
+
+            public JobDefinition(UUID id, String name, SourceEndpoint source, SinkEndpoint sink,
+                     ReplicationMode mode, int jobs, String incrementalWatermarkColumn,
+                     String initialWatermarkValue, Instant createdAt, Instant updatedAt,
+                     int fetchSize, int bandwidthThrottling, boolean verbose) {
+            this(id, name, source, sink, mode, jobs, incrementalWatermarkColumn, initialWatermarkValue,
+                createdAt, updatedAt, fetchSize, bandwidthThrottling, verbose,
+                RetryPolicy.defaultsFor(mode));
     }
 
     private static void requireNonBlank(String fieldName, String value) {
@@ -140,5 +151,17 @@ public record JobDefinition(
 
     public boolean sinkDisableTruncate() {
         return sink.disableTruncate();
+    }
+
+    public int maxAttempts() {
+        return retryPolicy.maxAttempts();
+    }
+
+    public long retryBackoffSeconds() {
+        return retryPolicy.retryBackoffSeconds();
+    }
+
+    public boolean automaticRetryEnabled() {
+        return retryPolicy.automaticRetryEnabled();
     }
 }
