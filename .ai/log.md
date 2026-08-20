@@ -1,6 +1,7 @@
 # Directory Update Log
 
 ## 2026-08-20
+* **Update**: Added OKF learnings from dependency compatibility analysis and CI/browser validation (`c6f4a91`, `a4b9e43`, `be7009d`) (build dependencies, automation, frontend tests).
 * **Update**: Dependency automation and MariaDB driver handling were hardened (`be7009d`) (build dependencies, Dependabot, CI workflows).
 * **Update**: Phase 3.1 distributed state contract implemented (`0759fec`): retry policy, PostgreSQL-owned eligibility, lease claims, expiry recovery, token fencing, durable cancellation, and API/frontend contract updates (domain, persistence, execution, interfaces, tests).
 * **Update**: Local run seeding was stabilized (`04ed238`) for frontend development fixtures and managed run API tests (server API, frontend tooling, tests).

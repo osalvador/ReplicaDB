@@ -54,3 +54,6 @@ Java 17/Maven, JDBC and vendor SDKs, Spring Boot 3.3.5, PostgreSQL/Flyway, Quart
 * [Frontend administration gaps](/learnings/phase2c-custom-form-validation.md) - Validation and route-context lessons from the current admin slice.
 * [API contract gaps](/learnings/phase2a-openapi-nullability.md) - Serialize and validate the actual wire format.
 * [Technical debt](/learnings/tech-debt.md) - Known limitations and deferred capabilities.
+* [Dependency upgrade compatibility](/learnings/dependency-upgrade-compatibility.md) - Validate APIs, bytecode, and coordinated dependency families before major bumps.
+* [Dependency CI gates](/learnings/dependency-ci-gates.md) - Merge automation requires successful CI for the exact current PR head.
+* [Frontend E2E fixture isolation](/learnings/frontend-e2e-fixture-isolation.md) - Keep browser fixtures environment-aware and safe under parallel workers.
