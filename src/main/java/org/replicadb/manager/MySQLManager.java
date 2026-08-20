@@ -137,7 +137,7 @@ public class MySQLManager extends SqlManager {
 
                // Copy data to mysql
                if (++rowCounts % batchSize == 0) {
-                  copyData(loadDataSql, row, mariadbStatement, mysqlStatement);
+                  copyData(loadDataSql, row, mariadbStatement, mysqlStatement, statement);
 
                   // Clear StringBuilders
                   row.setLength(0); // set length of buffer to 0
@@ -154,7 +154,7 @@ public class MySQLManager extends SqlManager {
 
          // insert remaining records
          if (rowCounts != 0) {
-            copyData(loadDataSql, row, mariadbStatement, mysqlStatement);
+            copyData(loadDataSql, row, mariadbStatement, mysqlStatement, statement);
          }
          } finally {
             unregisterActiveStatement(statement);
@@ -175,7 +175,7 @@ public class MySQLManager extends SqlManager {
     * @param row StringBuilder guaranteed non-null by insertDataToTable contract
     */
    @SuppressWarnings("null") // row parameter is guaranteed non-null by calling contract in insertDataToTable
-   private void copyData (String loadDataSql, StringBuilder row, org.mariadb.jdbc.Statement mariadbStatement, JdbcPreparedStatement mysqlStatement) throws IOException, SQLException {
+   private void copyData (String loadDataSql, StringBuilder row, org.mariadb.jdbc.Statement mariadbStatement, JdbcPreparedStatement mysqlStatement, PreparedStatement preparedStatement) throws IOException, SQLException {
       if (mysqlStatement != null) {
          InputStream inputStream = ReaderInputStream.builder()
             .setReader(CharSource.wrap(row).openStream())
@@ -190,7 +190,7 @@ public class MySQLManager extends SqlManager {
             .setCharset(StandardCharsets.UTF_8)
             .get();
          mariadbStatement.setLocalInfileInputStream(inputStream);
-         mariadbStatement.executeUpdate(loadDataSql);
+         preparedStatement.executeUpdate();
       }
    }
 
