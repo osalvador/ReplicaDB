@@ -51,6 +51,22 @@ async function signIn(page: Page) {
   await expect(page).toHaveURL(/\/$/);
 }
 
+async function enableLocalRunSeeding(page: Page) {
+  await page.route('**/api/v1/jobs/*/runs**', async route => {
+    if (route.request().method() !== 'POST') {
+      await route.continue();
+      return;
+    }
+
+    await route.continue({
+      headers: {
+        ...route.request().headers(),
+        'x-replicadb-local-seed': 'true'
+      }
+    });
+  });
+}
+
 for (const viewport of viewports) {
   test.describe(`${viewport.name} control-plane layout`, () => {
     test.use({ viewport: { width: viewport.width, height: viewport.height } });
@@ -68,6 +84,7 @@ for (const viewport of viewports) {
     });
 
     test('keeps authenticated operational screens contained', async ({ page }) => {
+      await enableLocalRunSeeding(page);
       await signIn(page);
 
       await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
@@ -97,10 +114,8 @@ for (const viewport of viewports) {
       await page.goto('/');
       const seededJob = page.getByRole('link', { name: seededJobName });
       await expect(seededJob, `the seeded job ${seededJobName} must exist`).toBeVisible();
-      const jobHref = await seededJob.getAttribute('href');
-      expect(jobHref).toBeTruthy();
-
-      await page.goto(jobHref!);
+      await seededJob.click();
+      await expect(page).toHaveURL(/\/jobs\/[^/]+$/);
       await expect(page.getByRole('heading', { name: seededJobName })).toBeVisible();
       await assertNoPageOverflow(page);
       await assertInsideViewport(page, page.getByRole('heading', { name: seededJobName }));
@@ -114,7 +129,9 @@ for (const viewport of viewports) {
       await assertInsideViewport(page, page.getByRole('heading', { name: 'Edit job' }));
       await assertInsideViewport(page, page.getByRole('button', { name: 'Save changes' }));
 
-      await page.goto(jobHref!);
+      await page.goto('/');
+      await page.getByRole('link', { name: seededJobName }).click();
+      await expect(page).toHaveURL(/\/jobs\/[^/]+$/);
       await page.getByRole('button', { name: 'Trigger run' }).click();
       await page.waitForURL(/\/runs\/[^/]+$/);
       await expect(page.getByRole('heading', { name: 'Run detail' })).toBeVisible();

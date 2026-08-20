@@ -21,6 +21,22 @@ async function signIn(page: Page) {
   await expect(page).toHaveURL(/\/$/);
 }
 
+async function enableLocalRunSeeding(page: Page) {
+  await page.route('**/api/v1/jobs/*/runs**', async route => {
+    if (route.request().method() !== 'POST') {
+      await route.continue();
+      return;
+    }
+
+    await route.continue({
+      headers: {
+        ...route.request().headers(),
+        'x-replicadb-local-seed': 'true'
+      }
+    });
+  });
+}
+
 async function expectContained(page: Page) {
   const viewport = page.viewportSize();
   const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -32,6 +48,7 @@ for (const viewport of viewports) {
     test.use({ viewport: { width: viewport.width, height: viewport.height } });
 
     test('covers the seeded operational flow', async ({ page }) => {
+      await enableLocalRunSeeding(page);
       await signIn(page);
 
       await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
@@ -51,8 +68,6 @@ for (const viewport of viewports) {
       await page.goto('/');
       const seededJob = page.getByRole('link', { name: seededJobName });
       await expect(seededJob, `the seeded job ${seededJobName} must exist`).toBeVisible();
-      const jobHref = await seededJob.getAttribute('href');
-      expect(jobHref).toBeTruthy();
       await seededJob.click();
 
       await expect(page).toHaveURL(/\/jobs\/[^/]+$/);
@@ -70,7 +85,9 @@ for (const viewport of viewports) {
       await expect(page.getByRole('button', { name: 'Save changes' })).toBeVisible();
       await expectContained(page);
 
-      await page.goto(jobHref!);
+      await page.goto('/');
+      await page.getByRole('link', { name: seededJobName }).click();
+      await expect(page).toHaveURL(/\/jobs\/[^/]+$/);
       await page.getByRole('button', { name: 'Trigger run' }).click();
       await page.waitForURL(/\/runs\/[^/]+$/);
       await expect(page.getByRole('heading', { name: 'Run detail' })).toBeVisible();

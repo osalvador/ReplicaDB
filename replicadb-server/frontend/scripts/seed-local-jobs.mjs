@@ -31,7 +31,7 @@ export const SOURCE_FIXTURES = [
   {
     key: 'postgres',
     label: 'PostgreSQL',
-    connect: 'jdbc:postgresql://localhost:5432/replicadb',
+    connect: `jdbc:postgresql://localhost:${DEFAULT_POSTGRES_PORT}/replicadb`,
     mode: 'complete'
   },
   {
