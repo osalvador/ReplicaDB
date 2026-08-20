@@ -188,7 +188,7 @@ public class S3Manager extends SqlManager {
         LOG.debug("Using serviceEndpoint: " + serviceEndpoint);
 
         // Get Bucket name
-        String bucketName = s3Uri.getPath().replaceAll("/$", "");
+        String bucketName = s3Uri.getPath().replaceFirst("^/", "").replaceAll("/$", "");
         if (keyFileName == null) {
             this.keyFileName = bucketName.substring(bucketName.lastIndexOf("/") + 1);
             bucketName = bucketName.replace(keyFileName,"").replaceAll("/$", "");
@@ -200,7 +200,6 @@ public class S3Manager extends SqlManager {
         AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
         AmazonS3 s3Client = AmazonS3ClientBuilder
                 .standard()
-                .withRegion("")
                 .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(serviceEndpoint, null))
                 .withPathStyleAccessEnabled(true)
                 .withCredentials(new AWSStaticCredentialsProvider(credentials))
