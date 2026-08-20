@@ -1,0 +1,35 @@
+pom.xml
+  s_a63b04c9fe277d::t_b6798eb278bcf4 236
+src/main/java/org/replicadb/manager/MySQLManager.java
+  s_a63b04c9fe277d::t_5ea08de83a5407 75-77,178
+.github/dependabot.yml
+  s_bd7b7e0f4fa185::t_0dfac45ceb9b9a 9-11
+.github/workflows/dependabot-auto-merge.yml
+  s_bd7b7e0f4fa185::t_d5fefb76f450f2 14,23-24,26-29,32-37,39-41,43-44,83-85,87-88,92,209-217
+.github/workflows/rebase-dependabot-prs.yml
+  s_bd7b7e0f4fa185::t_cc4f8a59987240 19-25,27,30-31,36,39-40,42,44,47,49,52-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "be7009d3c7d72222eda983a4fe50ded340370f6f",
+  "prompts": {},
+  "sessions": {
+    "s_a63b04c9fe277d": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "d7b8d0c2-2bee-4ef5-88da-bd460c4e112b",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    },
+    "s_bd7b7e0f4fa185": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "2881a264-55cb-48cd-b6b5-9e9065e4e181",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
