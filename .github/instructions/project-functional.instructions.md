@@ -13,6 +13,8 @@ applyTo: '**/*.{java,properties,conf,yml,yaml}'
 ## Mode and Capability Semantics
 - Treat `complete`, `incremental`, and `complete-atomic` as separate user-visible contracts with manager-specific staging and merge behavior.
 - Managed retries re-execute from the beginning. Commit an incremental watermark only after a successful sink merge, and do not advance it on failure or cancellation.
+- A managed retry policy counts the initial attempt: default to `maxAttempts=3` and `retryBackoffSeconds=60`; automatic lease-expiry retry defaults on for `complete-atomic` and `incremental`, and off for `complete` unless explicitly enabled.
+- Lease-expiry recovery changes the abandoned run to history and creates a new pending attempt with `previousRunId`; it is never resume semantics. Eligibility and backoff use PostgreSQL time, and stale workers cannot write through a different lease token.
 - Check `SupportedManagers`, `ManagerFactory`, the concrete manager, and maintained capability documentation before generalizing support.
 - Keep file, MongoDB, S3, Kafka, and SQL semantics explicit; they do not share the same table or staging guarantees.
 
@@ -21,11 +23,13 @@ applyTo: '**/*.{java,properties,conf,yml,yaml}'
 - Treat table names, expressions, filters, queries, and connection parameters as untrusted manager inputs.
 - Store configuration references such as `${env:VARIABLE}` in managed definitions and reject embedded credentials in connection strings.
 - Keep backend ACLs authoritative. Frontend visibility is a usability aid, not authorization.
+- Keep cancellation warnings mode-specific and durable; local in-memory cancellation delivery is only an optimization.
 
 ## Anti-Patterns
 - Do not infer universal support from one manager or one database test.
 - Do not change the Java baseline in only one build, launcher, image, CI, or documentation surface.
 - Do not add application code while regenerating context or project instructions.
+- Do not describe the Phase 3.1 contract as a deployed worker runtime: `worker`, `LISTEN/NOTIFY`, polling dispatch, heartbeat renewal, and Quartz clustering remain deferred.
 
 ## Contradiction Check
 ⚠️ Baseline unavailable: `inditex.instructions.md` and `amiga-*.instructions.md` were not present, and the AMIGA documentation search was unavailable. No project override was recorded; copy the baseline files before the next context regeneration.

@@ -4,7 +4,7 @@ description: Flyway migration tests must use the resolved FluentConfiguration AP
 sources:
   - id: plan
     resource: .ai/archive/phase-3-1-distributed-state-contract.plan.md
-generated: { by: itx-code/1.0, at: "2026-08-20T10:14:01Z" }
+generated: { by: itx-init/2.1, at: "2026-08-20T11:00:36Z" }
 status: stable
 ---
 

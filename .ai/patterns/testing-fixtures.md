@@ -12,12 +12,16 @@ sources:
     resource: replicadb-server/frontend/e2e
   - id: config
     resource: replicadb-server/src/test/java/org/replicadb/server/config/PostgresTestcontainersConfig.java
-generated: { by: itx-init/2.1, at: "2026-08-19T14:26:22Z" }
+  - id: distributed-state
+    resource: replicadb-server/src/test/java/org/replicadb/server/job/persistence/JobRunRepositoryIT.java
+  - id: migration-staging
+    resource: replicadb-server/src/test/java/org/replicadb/server/job/persistence/FlywayMigrationTest.java
+generated: { by: itx-init/2.1, at: "2026-08-20T11:00:36Z" }
 status: stable
 ---
 
 Core tests use inline options and manager seams, Mockito for narrow JDBC behavior, and Testcontainers for driver/dialect integration. Server tests mix domain/unit tests, MockMvc controller tests, Spring JDBC repository integration, Flyway assertions, and real-port session/CSRF lifecycle tests. Frontend tests use Vitest, Testing Library, Axios mocks, fresh query clients, and route context; Playwright covers built-asset browser flows.
 
-Shared container scope, architecture emulation, port readiness, fixture mutation, and environment-managed browser credentials are treated as separate validation concerns. Focused test class lists are preferred when broad selectors expand into unrelated integration suites.
+Shared container scope, architecture emulation, port readiness, fixture mutation, and environment-managed browser credentials are treated as separate validation concerns. Distributed-state tests use real PostgreSQL connections for `SKIP LOCKED`, PostgreSQL time, recovery backoff, lease fencing, and migration indexes; Flyway staging targets explicit versions. Focused test class lists are preferred when broad selectors expand into unrelated integration suites.
 
 Reference implementations: `src/test/java/org/replicadb`, `replicadb-server/src/test/java/org/replicadb/server`, and `replicadb-server/frontend/e2e`.

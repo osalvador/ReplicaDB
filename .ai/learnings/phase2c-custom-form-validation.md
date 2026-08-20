@@ -4,7 +4,7 @@ description: Disable native form validation when a custom inline validation path
 sources:
   - id: plan
     resource: .ai/archive/phase-2c-frontend-administration.plan.md
-generated: { by: itx-init/2.1, at: "2026-08-19T14:26:22Z" }
+generated: { by: itx-init/2.1, at: "2026-08-20T11:00:36Z" }
 status: stable
 ---
 
