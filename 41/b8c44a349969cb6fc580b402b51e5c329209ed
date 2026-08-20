@@ -1,0 +1,93 @@
+.ai/architecture/deployment-and-operations.md
+  s_a63b04c9fe277d::t_b73e4f68253a7c 17-18,21,25,29-30
+.ai/architecture/frontend-application.md
+  s_a63b04c9fe277d::t_61790edd960e87 15-20,23,27,31,33
+.ai/architecture/managed-execution.md
+  s_a63b04c9fe277d::t_65447ea88e0ab0 13-18,21,25,29,31
+.ai/architecture/managed-job-domain.md
+  s_a63b04c9fe277d::t_44eac6df9832b5 13-14,17,23
+.ai/architecture/managed-run-domain.md
+  s_a63b04c9fe277d::t_5d10b4ede042e4 7-8,13-14,19,23,25-27
+.ai/architecture/persistence-state.md
+  s_a63b04c9fe277d::t_d921bc4f413047 11-12,17,21,23,25
+.ai/architecture/system-overview.md
+  s_a63b04c9fe277d::t_fc6bc7e457d7f8 13,20,23
+.ai/decisions/frontend-admin-boundary.md
+  s_a63b04c9fe277d::t_44aaccef4ccecd 13,19
+.ai/decisions/generated-api-contract.md
+  s_a63b04c9fe277d::t_7fbd6bf86fae6e 13,19
+.ai/decisions/immediate-cancellation.md
+  s_a63b04c9fe277d::t_38335c95fa3e2a 9-10,15,21,23
+.ai/decisions/monolithic-control-plane.md
+  s_a63b04c9fe277d::t_9a977202608c6a 13,19,21
+.ai/decisions/no-resume-watermarks.md
+  s_a63b04c9fe277d::t_3c15354b2e5d49 11-14,17,23,25
+.ai/decisions/postgresql-state.md
+  s_a63b04c9fe277d::t_8edcb24b8d418a 13,19,21
+.ai/decisions/two-artifacts.md
+  s_a63b04c9fe277d::t_a171cd99eaa3d2 13,19
+.ai/index.md
+  s_a63b04c9fe277d::t_ab38055aaff91b 53
+.ai/interfaces/jobs-api.md
+  s_a63b04c9fe277d::t_4a71f5abd397d9 15,21-23
+.ai/interfaces/openapi-frontend.md
+  s_a63b04c9fe277d::t_8c4f3847c574a7 15,21
+.ai/interfaces/protocol-inventory.md
+  s_a63b04c9fe277d::t_93ddaa12bdff74 13,19
+.ai/interfaces/runs-api.md
+  s_a63b04c9fe277d::t_fa19d4743befe7 15,19,21
+.ai/learnings/gap-recurrence.md
+  s_a63b04c9fe277d::t_c2291ee5400ec5 17,21,25
+.ai/learnings/phase2c-custom-form-validation.md
+  s_a63b04c9fe277d::t_213f3ed6050b4e 7
+.ai/learnings/phase2c-router-test-context.md
+  s_a63b04c9fe277d::t_0961c41345da1d 7
+.ai/learnings/phase31-compatibility-bridge.md
+  s_a63b04c9fe277d::t_2591f35560c615 7
+.ai/learnings/phase31-documentation-path.md
+  s_a63b04c9fe277d::t_233ae99ead9cea 7
+.ai/learnings/phase31-flyway-staged-migrations.md
+  s_a63b04c9fe277d::t_579463de721fdf 7
+.ai/learnings/phase31-postgres-time-authority.md
+  s_a63b04c9fe277d::t_e0911b4d84b0b9 7
+.ai/learnings/tech-debt.md
+  s_a63b04c9fe277d::t_f3ed05f08d7b37 13,25-27
+.ai/log.md
+  s_a63b04c9fe277d::t_2d244ad13970d5 3-7
+.ai/patterns/anti-patterns.md
+  s_a63b04c9fe277d::t_2d8cfedab55b16 15,21
+.ai/patterns/api-mapping-errors.md
+  s_a63b04c9fe277d::t_126121994fbf05 13,17
+.ai/patterns/frontend-query-state.md
+  s_a63b04c9fe277d::t_14b3a6bf1c679f 15,21
+.ai/patterns/staging-watermark.md
+  s_a63b04c9fe277d::t_4094adcb7da9af 13,19
+.ai/patterns/state-idempotency.md
+  s_a63b04c9fe277d::t_4f5b1e2a529668 13-15,21
+.ai/patterns/testing-fixtures.md
+  s_a63b04c9fe277d::t_d711d7e5a0512b 15-19,25
+.github/instructions/frontend.instructions.md
+  s_a63b04c9fe277d::t_61ec8ec6d60457 14,25,30,36
+.github/instructions/project-functional.instructions.md
+  s_a63b04c9fe277d::t_e45f657a203725 16-17,26,32
+.github/instructions/project-technical.instructions.md
+  s_a63b04c9fe277d::t_2ee60b45e4a54f 9,18-19,26-27,33,40,45
+.github/instructions/test-patterns.instructions.md
+  s_a63b04c9fe277d::t_e80b2c453d83f0 12-13,17,28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "41b8c44a349969cb6fc580b402b51e5c329209ed",
+  "prompts": {},
+  "sessions": {
+    "s_a63b04c9fe277d": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "d7b8d0c2-2bee-4ef5-88da-bd460c4e112b",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
