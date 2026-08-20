@@ -1,0 +1,37 @@
+.ai/learnings/gap-recurrence.md
+  s_bd7b7e0f4fa185::t_25b55a4b962309 25
+.ai/patterns/anti-patterns.md
+  s_bd7b7e0f4fa185::t_20e3bae5466da5 23
+.github/instructions/frontend.instructions.md
+  s_bd7b7e0f4fa185::t_c9986e357d1d54 39
+.github/instructions/project-functional.instructions.md
+  s_bd7b7e0f4fa185::t_430f826640c11f 35
+.github/instructions/project-technical.instructions.md
+  s_bd7b7e0f4fa185::t_bc9e8da783a588 48
+.github/instructions/test-patterns.instructions.md
+  s_bd7b7e0f4fa185::t_3f6265e462c77e 31
+.github/workflows/CT_Push.yml
+  s_bd7b7e0f4fa185::t_25b8f2560e48a9 57-60,109-112,227,230,239-243,292-295
+replicadb-server/frontend/e2e/accessibility.spec.ts
+  s_bd7b7e0f4fa185::t_74c232f44bd8c3 72
+replicadb-server/frontend/e2e/responsive-layout.spec.ts
+  s_bd7b7e0f4fa185::t_c2d682eb76f4c3 18,62-63
+replicadb-server/frontend/e2e/visual-control-plane.spec.ts
+  s_bd7b7e0f4fa185::t_a1bcfe3e7561a3 46-47,60-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "c725071903794718e4e02ce360ffbb1954d262e1",
+  "prompts": {},
+  "sessions": {
+    "s_bd7b7e0f4fa185": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "2881a264-55cb-48cd-b6b5-9e9065e4e181",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
