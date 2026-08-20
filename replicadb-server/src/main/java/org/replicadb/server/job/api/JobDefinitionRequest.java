@@ -42,7 +42,10 @@ public record JobDefinitionRequest(
         String initialWatermarkValue,
         @Min(1) Integer fetchSize,
         @Min(0) Integer bandwidthThrottling,
-        Boolean verbose) {
+        Boolean verbose,
+        @Min(1) Integer maxAttempts,
+        @Min(0) Long retryBackoffSeconds,
+        Boolean automaticRetryEnabled) {
 
     public JobDefinitionRequest(String name, String sourceConnect, String sourceUser, String sourcePassword,
                                  String sourceTable, String sourceWhere, String sinkConnect, String sinkUser,
@@ -53,7 +56,7 @@ public record JobDefinitionRequest(
                 sinkConnect, sinkUser, sinkPassword, sinkTable,
                 null, null, null, null, null, Map.of(), null, null, null, null, null,
                 mode, jobs, incrementalWatermarkColumn, initialWatermarkValue,
-                null, null, null);
+                null, null, null, null, null, null);
     }
 
     public interface Create {

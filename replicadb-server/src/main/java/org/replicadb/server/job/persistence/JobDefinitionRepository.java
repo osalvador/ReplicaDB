@@ -3,24 +3,17 @@ package org.replicadb.server.job.persistence;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.job.domain.AzureAuthentication;
-import org.replicadb.server.job.domain.ConnectionCredentials;
 import org.replicadb.server.job.domain.JobDefinition;
-import org.replicadb.server.job.domain.SinkEndpoint;
-import org.replicadb.server.job.domain.SourceEndpoint;
-import org.replicadb.server.job.domain.StagingOptions;
+import org.replicadb.server.job.port.JobDefinitionStore;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -29,7 +22,7 @@ import java.util.UUID;
 import java.sql.Types;
 
 @Repository
-public class JobDefinitionRepository {
+public class JobDefinitionRepository implements JobDefinitionStore {
 
     private static final String INSERT_SQL = """
             INSERT INTO job_definition (
@@ -43,7 +36,8 @@ public class JobDefinitionRepository {
                 sink_columns, sink_staging_schema, sink_staging_table,
                 sink_disable_escape, sink_disable_truncate, mode, jobs,
                 incremental_watermark_column, initial_watermark_value, created_at, updated_at,
-                fetch_size, bandwidth_throttling, "verbose"
+                fetch_size, bandwidth_throttling, "verbose",
+                max_attempts, retry_backoff_seconds, automatic_retry_enabled
             ) VALUES (
                 :id, :name, :sourceConnect, :sourceUser, :sourcePassword, :sourceTable, :sourceWhere,
                 :sourceAuthMode, :sourceAuthPrincipalId, :sourceAuthLoginHint,
@@ -55,7 +49,8 @@ public class JobDefinitionRepository {
                 :sinkColumns, :sinkStagingSchema, :sinkStagingTable,
                 :sinkDisableEscape, :sinkDisableTruncate, :mode, :jobs,
                 :incrementalWatermarkColumn, :initialWatermarkValue, :createdAt, :updatedAt,
-                :fetchSize, :bandwidthThrottling, :verbose
+                :fetchSize, :bandwidthThrottling, :verbose,
+                :maxAttempts, :retryBackoffSeconds, :automaticRetryEnabled
             )
             """;
 
@@ -70,15 +65,18 @@ public class JobDefinitionRepository {
             sink_columns, sink_staging_schema, sink_staging_table,
             sink_disable_escape, sink_disable_truncate, mode, jobs,
             incremental_watermark_column, initial_watermark_value, created_at, updated_at,
-            fetch_size, bandwidth_throttling, "verbose"
+            fetch_size, bandwidth_throttling, "verbose",
+            max_attempts, retry_backoff_seconds, automatic_retry_enabled
             """;
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final ObjectMapper objectMapper;
+    private final JobDefinitionRowMapper rowMapper;
 
     public JobDefinitionRepository(NamedParameterJdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
         this.jdbcTemplate = jdbcTemplate;
         this.objectMapper = objectMapper;
+        this.rowMapper = new JobDefinitionRowMapper(objectMapper);
     }
 
     public JobDefinition insert(JobDefinition definition) {
@@ -161,7 +159,10 @@ public class JobDefinitionRepository {
                     incremental_watermark_column = :incrementalWatermarkColumn,
                     initial_watermark_value = :initialWatermarkValue, updated_at = now(),
                     fetch_size = :fetchSize, bandwidth_throttling = :bandwidthThrottling,
-                    "verbose" = :verbose
+                    "verbose" = :verbose,
+                    max_attempts = :maxAttempts,
+                    retry_backoff_seconds = :retryBackoffSeconds,
+                    automatic_retry_enabled = :automaticRetryEnabled
                 WHERE id = :id
                 """;
         int updated = jdbcTemplate.update(sql, parameters(definition));
@@ -226,7 +227,10 @@ public class JobDefinitionRepository {
                 .addValue("updatedAt", Timestamp.from(definition.updatedAt()))
                 .addValue("fetchSize", definition.fetchSize())
                 .addValue("bandwidthThrottling", definition.bandwidthThrottling())
-                .addValue("verbose", definition.verbose());
+                .addValue("verbose", definition.verbose())
+                .addValue("maxAttempts", definition.maxAttempts())
+                .addValue("retryBackoffSeconds", definition.retryBackoffSeconds())
+                .addValue("automaticRetryEnabled", definition.automaticRetryEnabled());
     }
 
     private static JobDefinition withPersistenceFields(JobDefinition definition, UUID id,
@@ -234,60 +238,9 @@ public class JobDefinitionRepository {
         return new JobDefinition(
                 id, definition.name(), definition.source(), definition.sink(), definition.mode(), definition.jobs(),
                 definition.incrementalWatermarkColumn(), definition.initialWatermarkValue(), createdAt, updatedAt,
-                definition.fetchSize(), definition.bandwidthThrottling(), definition.verbose());
-    }
-
-    private final RowMapper<JobDefinition> rowMapper = new RowMapper<>() {
-        @Override
-        public JobDefinition mapRow(ResultSet resultSet, int rowNum) throws SQLException {
-            return new JobDefinition(
-                    resultSet.getObject("id", UUID.class),
-                    resultSet.getString("name"),
-                    new SourceEndpoint(
-                            new ConnectionCredentials(
-                                    resultSet.getString("source_connect"),
-                                    resultSet.getString("source_user"),
-                                    resultSet.getString("source_password"),
-                                    new AzureAuthentication(
-                                            resultSet.getString("source_auth_mode"),
-                                            resultSet.getString("source_auth_principal_id"),
-                                            resultSet.getString("source_auth_login_hint"),
-                                            resultSet.getString("source_auth_client_certificate"),
-                                            resultSet.getString("source_auth_client_key")),
-                                    deserializeConnectionParams(resultSet.getString("source_connection_params"))),
-                            resultSet.getString("source_table"),
-                            resultSet.getString("source_columns"),
-                            resultSet.getString("source_where"),
-                            resultSet.getString("source_query")),
-                    new SinkEndpoint(
-                            new ConnectionCredentials(
-                                    resultSet.getString("sink_connect"),
-                                    resultSet.getString("sink_user"),
-                                    resultSet.getString("sink_password"),
-                                    new AzureAuthentication(
-                                            resultSet.getString("sink_auth_mode"),
-                                            resultSet.getString("sink_auth_principal_id"),
-                                            resultSet.getString("sink_auth_login_hint"),
-                                            resultSet.getString("sink_auth_client_certificate"),
-                                            resultSet.getString("sink_auth_client_key")),
-                                    deserializeConnectionParams(resultSet.getString("sink_connection_params"))),
-                            resultSet.getString("sink_table"),
-                            resultSet.getString("sink_columns"),
-                            stagingOptions(resultSet.getString("sink_staging_schema"),
-                                    resultSet.getString("sink_staging_table")),
-                            resultSet.getBoolean("sink_disable_escape"),
-                            resultSet.getBoolean("sink_disable_truncate")),
-                    parseMode(resultSet.getString("mode")),
-                    resultSet.getInt("jobs"),
-                    resultSet.getString("incremental_watermark_column"),
-                    resultSet.getString("initial_watermark_value"),
-                    resultSet.getTimestamp("created_at").toInstant(),
-                    resultSet.getTimestamp("updated_at").toInstant(),
-                    integerOrDefault(resultSet, "fetch_size", 100),
-                    integerOrDefault(resultSet, "bandwidth_throttling", 0),
-                    resultSet.getBoolean("verbose"));
-        }
-    };
+                definition.fetchSize(), definition.bandwidthThrottling(), definition.verbose(),
+                definition.retryPolicy());
+            }
 
     private String serializeConnectionParams(Map<String, String> connectionParams) {
         try {
@@ -297,34 +250,4 @@ public class JobDefinitionRepository {
         }
     }
 
-    private Map<String, String> deserializeConnectionParams(String connectionParams) {
-        if (connectionParams == null || connectionParams.isBlank()) {
-            return Map.of();
-        }
-        try {
-            Map<String, String> result = objectMapper.readValue(
-                    connectionParams, new TypeReference<Map<String, String>>() { });
-            return result == null ? Map.of() : result;
-        } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("Could not deserialize connection parameters", exception);
-        }
-    }
-
-    private static StagingOptions stagingOptions(String schema, String table) {
-        return schema == null && table == null ? null : new StagingOptions(schema, table);
-    }
-
-    private static int integerOrDefault(ResultSet resultSet, String column, int defaultValue) throws SQLException {
-        int value = resultSet.getInt(column);
-        return resultSet.wasNull() ? defaultValue : value;
-    }
-
-    private static ReplicationMode parseMode(String modeText) {
-        for (ReplicationMode mode : ReplicationMode.values()) {
-            if (mode.getModeText().equals(modeText.toLowerCase(Locale.ROOT))) {
-                return mode;
-            }
-        }
-        throw new IllegalStateException("Unknown replication mode: " + modeText);
-    }
 }

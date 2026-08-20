@@ -11,8 +11,8 @@ ReplicaDB is not being extended into a CDC, ETL, schema-migration, or universal 
 The control plane does not resume interrupted work. A run either completes or is executed again from the beginning. Safety comes from the staging-based replication modes, not from progress checkpoints.
 
 **Date**: August 13, 2026
-**Last decision review**: August 14, 2026
-**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings), and Phase 2a/2b/2c (frontend authentication, monitoring, job actions, scheduling, user administration, and job permissions) implemented; Phase 3 (distributed workers) not started
+**Last decision review**: August 20, 2026
+**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings), Phase 2a/2b/2c (frontend authentication, monitoring, job actions, scheduling, user administration, and job permissions), and Phase 3.1 (distributed state contract, leases, retries, and fencing) implemented; Phase 3.2/3.3 remain not started
 **Owner**: Development Team
 
 ---
@@ -38,7 +38,7 @@ This preserves:
 - Existing CLI arguments, options files, launcher scripts, and exit codes.
 - A gradual migration path from standalone execution to managed jobs.
 
-The standalone `replicadb` CLI remains free of Spring Boot and control-plane dependencies, while the sibling `replicadb-server` module now provides the REST API and Quartz scheduler. The frontend (Phase 2) and distributed workers (Phase 3) remain planned deployment capabilities.
+The standalone `replicadb` CLI remains free of Spring Boot and control-plane dependencies, while the sibling `replicadb-server` module now provides the REST API, Quartz scheduler, and frontend under the `api` profile. Distributed workers and the `worker` profile are the Phase 3 deployment capabilities.
 
 ```text
 Current:
@@ -98,15 +98,15 @@ The API initially manages configuration and execution state. A future frontend c
                              |
                              v
                     +------------------+          +---------------+
-                    | Job Executor     +--------->+ State store   |
-                    +--------+---------+          | Monitoring    |
-                             |                    +---------------+
-                             v
-                    +------------------+
-                    | ReplicaDB Core   |
-                    +--------+---------+
-                             |
-                       Source and sink
+                                                  | Job Executor     +--------->+ State store   |
+                                                  +--------+---------+          | Monitoring    |
+                                                                       |                    +---------------+
+                                                                       v
+                                                  +------------------+
+                                                  | ReplicaDB Core   |
+                                                  +--------+---------+
+                                                                       |
+                                                        Source and sink
 ```
 
 The monitoring transport is an implementation detail. REST polling is sufficient for the first version; a push channel can be added later if operational requirements justify it.
@@ -116,15 +116,15 @@ The monitoring transport is an implementation detail. REST polling is sufficient
 Before Phase 0-a, the core kept process-global mutable state. `ConnManager.randomSinkStagingTableName` and `FileManager.tempFilesPath` were `static` and were reset at the start of every replication in `ReplicaDB.executeSingleReplication`. Two replications running concurrently in the same JVM could overwrite each other's staging table name and temporary file map, silently corrupting data or dropping another run's staging table.
 
 ```text
-  Before Phase 0-a:
-  JobRun A --+                     +-- reset global state --+
-          +---- same JVM ------+                       +--> collision
-  JobRun B --+                     +-- reset global state --+
+     Before Phase 0-a:
+     JobRun A --+                     +-- reset global state --+
+                         +---- same JVM ------+                       +--> collision
+     JobRun B --+                     +-- reset global state --+
 ```
 
 Phase 0-a, delivered in commit `c228ddc`, removes this static state and replaces it with a `ReplicationExecutionContext` owned by each `ToolOptions` instance. All managers and tasks created from one options instance share that context, while `ToolOptions.forReplicationTable(...)` creates a fresh context for each table. Generated staging names and temporary-file paths are therefore isolated across runs and remain shared within the parallel tasks of one run.
 
-The context also provides a run identifier and a concurrent temporary-file map. Generated staging-name creation is synchronized per context, so parallel managers cannot initialize different names for the same run. The static-state reason for forcing managed execution concurrency to one is resolved by Phase 0-a. The managed profile must still wait for the remaining Phase 0 cancellation and watermark work before exposing the complete execution contract.
+The context also provides a run identifier and a concurrent temporary-file map. Generated staging-name creation is synchronized per context, so parallel managers cannot initialize different names for the same run. The static-state reason for forcing managed execution concurrency to one is resolved by Phase 0-a, and the cancellation and watermark work required by the managed execution contract is implemented in Phase 0-b1 and Phase 0-b2.
 
 #### Replication mode guidance for managed jobs
 
@@ -142,7 +142,7 @@ Because runs are never resumed (Decision 3), the safety of a retry depends entir
 
 PostgreSQL is the mandatory state store for the managed `api` and `worker` profiles. It owns job definitions, runs, leases, watermarks, users, permissions, audit events, and scheduler coordination. In direct CLI mode the state store is not used at all. Sentry and application logs are telemetry, not the source of truth for job state. SQLite remains suitable for isolated CLI fixtures or unit tests, but it is not a supported control-plane deployment store.
 
-Phase 1b implements the job-definition and job-run portion of this store: Flyway-versioned `job_definition`/`job_run` tables accessed through Spring JDBC repositories. Leases and heartbeats carry simple single-instance values until Phase 3's distributed-worker rules apply; users and permissions are implemented in Phase 1c-3a+b, and audit events are implemented in Phase 1c-3c. Phase 1c-1 adds the partial-unique-indexed `job_run` constraint enforcing one active run per job definition and the `run_trigger_idempotency` table for the `Idempotency-Key` replay rule. Phase 1c-2 adds the `job_schedule` table as the product-level durable source of truth for recurring schedules, plus an index on `(job_definition_id, created_at DESC)` for job run history queries.
+Phase 1b implements the job-definition and job-run portion of this store: Flyway-versioned `job_definition`/`job_run` tables accessed through Spring JDBC repositories. Leases and heartbeats carry simple single-instance values until Phase 3's distributed-worker rules apply; users and permissions are implemented in Phase 1c-3a+b, and audit events are implemented in Phase 1c-3c. Phase 1c-1 adds the partial-unique-indexed `job_run` constraint enforcing one active run per job definition and the `run_trigger_idempotency` table for the `Idempotency-Key` replay rule. Phase 1c-2 adds the `job_schedule` table as the product-level durable source of truth for recurring schedules, plus an index on `(job_definition_id, created_at DESC)` for job run history queries. Phase 3 adds forward-only migrations for retry policy fields on `job_definition` and eligibility/fencing fields on `job_run`, and changes the API and scheduler dispatches to publish durable run identifiers transactionally.
 
 ### Decision 3: Durable State, No Resume, and Incremental Watermarks
 
@@ -152,13 +152,13 @@ The control plane distinguishes a reusable job definition from an individual exe
 
 ```text
 JobDefinition
-  configuration reference, schedule, mode,
-  one source/sink table pair, optional watermark column
-        |
-        v
+     configuration reference, schedule, mode,
+     one source/sink table pair, optional watermark column
+                    |
+                    v
 JobRun
-  status, attempt, timestamps, row counters, error,
-  executor identity, lease, heartbeat, committed watermark
+     status, attempt, timestamps, row counters, error,
+     executor identity, lease, heartbeat, committed watermark
 ```
 
 A `Checkpoint` entity was considered and removed from the model. See "No resume" below.
@@ -177,7 +177,7 @@ The initial state model supports:
 
 Retries and cancellation requests are state transitions. They must not be inferred from log messages.
 
-Implemented in Phase 1b as the `JobRunStatus` enum, with `JobRunStateMachine` enforcing the legal transitions between them (for example `FAILED → RETRY_SCHEDULED`, never a transition back to `RUNNING` on the same row).
+Implemented in Phase 1b as the `JobRunStatus` enum, with `JobRunStateMachine` enforcing the transition table from Decision 3 (for example `FAILED -> RETRY_SCHEDULED`, never a transition back to `RUNNING` on the same row).
 
 #### No resume
 
@@ -189,11 +189,11 @@ This follows from how the engine partitions work, not from a wish to simplify sc
 
 ```text
 PostgreSQL   SELECT * FROM (source-query) as T1 OFFSET ? LIMIT ?
-             no ORDER BY, so the row-to-task assignment may differ
-             between executions even over identical data
+                               no ORDER BY, so the row-to-task assignment may differ
+                               between executions even over identical data
 
 Oracle       ... WHERE ora_hash(rowid, jobs-1) = ?
-             reproducible only while rowids remain stable
+                               reproducible only while rowids remain stable
 ```
 
 Skipping "already completed" partitions on a second execution would therefore drop rows silently on at least one supported source, with no error and no log entry. Correctness comes from the replication mode instead (see the mode table in Decision 2): `complete-atomic` and `incremental` leave the sink untouched until `postSinkTasks()`, so a full re-execution is safe.
@@ -201,6 +201,19 @@ Skipping "already completed" partitions on a second execution would therefore dr
 The control plane persists row counters and timings for observability. It must never present them as resumable progress, and no API field may imply that a retry continues where a previous attempt stopped.
 
 Phase 1b's `JobRunRepository.scheduleRetry(...)` implements this precisely: it transitions the failed row to `RETRY_SCHEDULED` and inserts a brand-new `PENDING` row referencing the failed run as `previousRunId` with `attempt` incremented — it never resets the original row back to `RUNNING`.
+
+#### Lease recovery and automatic retries
+
+Phase 3 applies the same no-resume rule to worker loss. A lease expiration never reopens the abandoned `JobRun` for execution. Recovery runs in one PostgreSQL transaction:
+
+1. Lock an expired `RUNNING` row with `FOR UPDATE SKIP LOCKED` and verify that its lease is still expired using PostgreSQL `now()`.
+2. Transition the abandoned row to `RETRY_SCHEDULED` and retain it as immutable history.
+3. If the job's retry policy permits another attempt, insert a new `PENDING` row with `previousRunId`, an incremented `attempt`, and an `available_at` computed from the job's backoff policy.
+4. If the attempt limit is exhausted, transition the abandoned row to `FAILED` and create no replacement run.
+
+`JobDefinition` owns the automatic recovery policy: `maxAttempts`, `retryBackoffSeconds`, and `automaticRetryEnabled`. `maxAttempts` includes the initial attempt. Automatic recovery is enabled by default for `complete-atomic` and `incremental`, and disabled by default for `complete` because a full re-execution can truncate or partially rebuild the sink. A `complete` job may opt in explicitly, but its existing destructive-mode warning must remain visible in the API and frontend. These settings govern lease-expiry recovery; the existing manual retry endpoint remains available for ordinary `FAILED` runs.
+
+Every claim creates a fresh opaque `leaseToken` and stores it on the `JobRun`. Heartbeat, cancellation, terminal-state, and watermark updates must include both the run identifier and the lease token in their conditional `UPDATE`. A worker that lost its lease may finish locally, but its late result must not change state, counters, errors, or watermarks. This fencing rule is required because PostgreSQL state and sink operations are at-least-once rather than exactly-once.
 
 #### Incremental watermarks
 
@@ -263,6 +276,8 @@ Implemented in Phase 1b at the domain model: `JobDefinition`'s validation reject
 
 The first identity model uses local users stored in PostgreSQL. `ADMIN`, `OPERATOR`, and `VIEWER` are global roles, while job-level ACLs grant `VIEW`, `EDIT`, `EXECUTE`, and `CANCEL` permissions. The backend is the authority for these permissions; hiding a button in the frontend is not a security control.
 
+Phase 3 makes login throttling shared across API instances by persisting the account/source-address failure window in PostgreSQL. No authentication decision may depend on an API instance's local heap when the API is deployed as a cluster.
+
 ### Decision 5: Immediate Cancellation
 
 **Status**: APPROVED
@@ -291,6 +306,8 @@ After cancellation the engine runs its normal cleanup path and drops the staging
 A cancelled run never advances the watermark and terminates in `CANCELLED`, never in `FAILED`.
 
 This decision's core-side plumbing is implemented in Phase 0-b1 (commit `4dd4cb5`). The `/api/v1/runs/{id}/cancel` endpoint itself is implemented in Phase 1c-1: it delivers the cancellation signal to the running `ReplicationExecutionContext` synchronously before persisting any state change, and its response always carries the per-mode warning text described above. Phase 1c-3c also persists the same warning on the `job_run` row atomically with the cancellation request, preserving it through the executor's terminal transition. SQL Server `BulkCopy` and PostgreSQL `COPY` cancellation remain best-effort rather than immediate.
+
+In Phase 3, cancellation is no longer dependent on the API instance that accepted the request. The API persists `CANCEL_REQUESTED` and publishes a run-control notification; the owning worker listens for it and requests cancellation on its local execution context. Polling of persisted state remains the recovery path if that notification is missed. The same fencing rule applies to the worker's terminal `CANCELLED` update.
 
 ### Decision 6: PostgreSQL Worker Dispatch
 
@@ -325,12 +342,15 @@ Distributed workers are introduced as a third phase, after the monolithic contro
 
 The distributed contract is:
 
-- The API inserts the `JobRun` and issues `pg_notify` in the same PostgreSQL transaction.
+- Multiple API instances share PostgreSQL as the only source of truth; no API-local run registry is authoritative.
+- The API or Quartz inserts the `JobRun` and issues `pg_notify('replicadb_runs', run_id)` in the same PostgreSQL transaction.
 - The notification payload contains only the durable `JobRun` identifier; never credentials or a complete configuration.
 - Every worker receives the signal, but workers compete to claim work using PostgreSQL row locking.
 - Workers load the job definition and last committed watermark from PostgreSQL.
 - A worker claims one run at a time by default.
 - Worker loss is recovered through leases, heartbeats, and polling of expired or retryable runs.
+- A worker profile exposes no public API, frontend, Spring Security session, or Quartz scheduler. It starts only the shared repositories, dispatch coordinator, execution service, and core engine.
+- The `api` profile uses Quartz JDBC clustering so multiple API instances do not create duplicate schedule firings.
 - Duplicate notifications and duplicate polling must be safe under the claim, sink idempotency, and watermark commit rules.
 - The API reads status only from PostgreSQL.
 
@@ -341,7 +361,15 @@ The distributed contract is:
 - Every lease and heartbeat timestamp is computed with PostgreSQL `now()`, never with a worker's local clock. Workers do not need synchronized clocks and clock skew cannot expire a healthy lease.
 - The default heartbeat interval is 30 seconds and the default lease duration is 5 minutes, so a lease survives several missed heartbeats.
 - The heartbeat keeps running during `mergeStagingTable()` and `atomicInsertStagingTable()`. Those are server-side operations that can take minutes, and a lapsed lease during a merge would let a second worker start a duplicate run.
-- A run whose `lease_until` has elapsed returns to `RETRY_SCHEDULED` and becomes claimable again.
+- A run whose `lease_until` has elapsed is recovered as a new attempt according to the lease-recovery policy in Decision 3; the expired row itself is never claimed again.
+
+#### Lease fencing and recovery invariants
+
+- `job_run.available_at` determines when a `PENDING` retry is eligible. It is evaluated with PostgreSQL `now()` and is not based on a worker clock.
+- `job_run.lease_token` is generated on every claim. All lease renewal and terminal updates include `WHERE id = :id AND lease_token = :leaseToken`.
+- Lease recovery and replacement-run creation are atomic. A duplicate recovery scan can affect at most one row because of row locking and the expired-lease predicate.
+- A stale worker cannot advance a watermark, mark a replacement run terminal, or overwrite counters after a new worker has claimed the replacement.
+- The listener is a wake-up mechanism only. Startup polling, reconnect polling, and periodic polling must discover work and control requests even when notifications are lost.
 
 ### Decision 7: Explicitly Out of Scope
 
@@ -376,7 +404,7 @@ Delivered in commit `c228ddc` and covered by focused JUnit tests, concurrency te
 - Added run-level aggregation for total rows, task count, and longest task duration without changing the `processReplica(ToolOptions)` exit-code contract.
 - Removed obsolete static reset calls and updated file-manager and multi-table tests.
 
-The Phase 0-a exit criterion is met: two concurrent runs use independent staging names and temporary-file maps, verified across 100 repetitions. Phase 0-a did not add cancellation or watermark extraction/injection; cancellation plumbing is implemented in Phase 0-b1 below, while watermark extraction/injection remains pending.
+The Phase 0-a exit criterion is met: two concurrent runs use independent staging names and temporary-file maps, verified across 100 repetitions. Phase 0-a did not add cancellation or watermark extraction/injection; cancellation plumbing was implemented in Phase 0-b1 and watermark extraction/injection was implemented in Phase 0-b2 below.
 
 #### Phase 0-b1: Cancellation plumbing — IMPLEMENTED
 
@@ -462,7 +490,7 @@ Delivered as additions to `replicadb-server` plus one small, additive core chang
 - **Testing**: Testcontainers PostgreSQL via Spring Boot's `@ServiceConnection` backs the full-context and repository tests (including the two Phase 1a context tests, updated to boot with the now-mandatory `DataSource`); a dependency-light `FlywayMigrationTest` validates the migrations with a raw `PostgreSQLContainer` before any Spring wiring exists; `JobExecutionServiceIT` exercises a real end-to-end `incremental` run against SQLite source/sink fixture files, asserting the persisted `committedWatermark` and that a failed run leaves the prior committed value unchanged.
 - **CI**: The `server` job in `CT_Push.yml` now sets the same `TESTCONTAINERS_CONFIG_FILE`/`DOCKER_HOST`/`TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE` env and `docker info` check as the `integration`/`non_integration` jobs, since its tests now require Docker.
 
-Known limitations, accepted for this phase and not yet addressed: `JobRun.errorMessage` on `FAILED` is a generic message, since `processReplica(ToolOptions)` does not expose the underlying exception (except when `ToolOptions` construction itself throws); audit events and their retention purge were delivered in Phase 1c-3c, while shared multi-instance login throttling remains Phase 3 work; `executor_identity`/`lease_until`/`heartbeat_at` use simple single-instance values until Phase 3's distributed-worker lease rules apply; no `mode_warning` column exists yet for Decision 2's `complete`-mode API warning, since no API exists to surface it **(Phase 1c-1 computes it dynamically in the API response instead of adding that column — see below)**. See `.ai/archive/phase-1b-state-layer.plan.md` for the full implementation plan and execution retrospective.
+Known limitations, accepted for this phase and not yet addressed: `JobRun.errorMessage` on `FAILED` is a generic message, since `processReplica(ToolOptions)` does not expose the underlying exception (except when `ToolOptions` construction itself throws); audit events and their retention purge were delivered in Phase 1c-3c, while shared multi-instance login throttling and distributed lease fencing are Phase 3 work; `executor_identity`/`lease_until`/`heartbeat_at` use simple single-instance values until Phase 3's distributed-worker lease rules apply; no `mode_warning` column exists yet for Decision 2's `complete`-mode API warning, since no API exists to surface it **(Phase 1c-1 computes it dynamically in the API response instead of adding that column — see below)**. See `.ai/archive/phase-1b-state-layer.plan.md` for the full implementation plan and execution retrospective.
 
 #### Phase 1c-1: REST API core (job definitions and runs, no auth) — IMPLEMENTED
 
@@ -486,7 +514,7 @@ Delivered in commit `8d12cdc` and covered by focused unit tests, Testcontainers-
 - **Execution path**: `ScheduledRunTriggerJob` reads the job definition identifier from Quartz job data, performs the same active-run pre-check and pending-row insertion as the manual trigger, and submits through `RunExecutionCoordinator` with executor identity `scheduler`. `@DisallowConcurrentExecution` is defense-in-depth; the PostgreSQL partial unique index remains the authoritative non-overlap guarantee.
 - **Startup durability**: `ScheduleReconciler` loads every enabled `job_schedule` row on application startup and registers it in Quartz. Cron triggers use the job's validated IANA timezone, skip misfires rather than catching up, and use stable per-job Quartz keys so reconciliation and API upserts converge safely.
 - **API surface**: `PUT`, `GET`, and idempotent `DELETE /api/v1/jobs/{id}/schedule` manage recurring schedules. The API defaults a missing or blank timezone to `UTC`, returns the computed `nextFireTime`, and removes disabled schedules from Quartz.
-- **Known limitations**: RAMJobStore does not persist Quartz-native trigger bookkeeping, missed fires are deliberately not replayed, and there is no metrics/alert signal for silent misfires yet. Audit events and persistence of the cancellation warning were delivered in Phase 1c-3c; frontend administration remains pending in Phase 2c.
+- **Known limitations**: RAMJobStore does not persist Quartz-native trigger bookkeeping, missed fires are deliberately not replayed, and there is no metrics/alert signal for silent misfires yet. Phase 3 replaces RAMJobStore with Quartz JDBC clustering for the multi-API topology. Audit events, persistence of the cancellation warning, and frontend administration are implemented.
 
 #### Phase 1c-3: Security — 1c-3a+b+c IMPLEMENTED
 
@@ -678,124 +706,125 @@ Decided technical shape, applying to all three sub-phases:
 - Playwright browser binaries in CI.
 - No new database, credentials, or deployment topology beyond what Phase 1 already provides.
 
-### Phase 3: Distributed Workers
+### Phase 3: Distributed Workers and Highly Available Control Plane
 
-This phase separates the Spring Boot API/scheduler from replication execution. It is only justified when one API process cannot provide enough isolation or concurrency.
+Phase 3 expands the single-instance `api` runtime into a shared PostgreSQL control plane with multiple API instances and one or more replication workers. The implementation is split into exactly three plans. The plans are ordered because dispatch and execution cannot be made reliable until the persisted lease and retry contract is safe under stale workers.
 
-#### Components
-
-- `api` deployment: Spring Boot REST API, Quartz scheduler, job repository, and run dispatcher.
-- `worker` deployment: same codebase with the worker profile and no public API requirement.
-- Mandatory PostgreSQL metadata database for job definitions, runs, leases, and watermarks.
-- PostgreSQL `LISTEN/NOTIFY` connection for low-latency worker wake-up.
-- Periodic PostgreSQL polling for startup recovery, reconnects, and missed notifications.
-- Optional Kubernetes deployment, autoscaling, and centralized logs/metrics.
-
-#### Worker runtime
-
-`replicadb-server` under the `worker` profile is a runtime mode of the same artifact, not a second replication engine. It starts the common execution services and one PostgreSQL dispatch coordinator:
+#### Locked topology and invariants
 
 ```text
-replicadb-server (worker)
-    |
-    +-- PostgresNotifyDispatcher
-    |       +-- dedicated LISTEN connection
-    |       +-- NOTIFY wake-up handler
-    |       +-- periodic polling fallback
-    |
-    +-- RunClaimService
-    +-- LeaseRecoveryService
-    +-- ReplicationExecutionService
-    +-- WatermarkRepository
-    +-- ReplicaDB core
+API instances (1..N)
+     |
+     v
+PostgreSQL state and Quartz JDBC cluster
+     |
+LISTEN/NOTIFY plus mandatory polling
+     |
+Workers (1..N) -> claim, heartbeat, ReplicaDB core
 ```
 
-The worker should execute one `JobRun` at a time by default. ReplicaDB's existing `jobs` option still controls the internal parallel tasks for that run. A future `worker.max-concurrent-runs` setting must be bounded because total database pressure is approximately:
+- PostgreSQL is the only source of truth for run state. API-local maps, Quartz notifications, and worker logs are not state stores.
+- The API is horizontally scalable. Quartz uses its JDBC clustered store so only one API instance owns a scheduled firing.
+- The worker profile has no public API, frontend, Spring Security session, or Quartz scheduler. It starts only the repositories, dispatch coordinator, execution services, listener/poller, and ReplicaDB core.
+- A worker executes one `JobRun` at a time by default. A bounded `worker.max-concurrent-runs` setting may increase this later; ReplicaDB's existing `jobs` option still controls the internal tasks of one run.
+- Runs are never resumed. Worker loss creates a new attempt from the beginning, subject to the retry policy and replication-mode safety rules.
+- `LISTEN/NOTIFY` is a wake-up optimization. Startup polling, reconnect polling, and periodic polling are mandatory recovery paths.
+- The phase does not introduce an external broker, CDC, managed multi-table jobs, partition resume, or exactly-once execution.
+
+#### Plan 3.1: Distributed state contract, leases, retries, and fencing
+
+This plan makes the PostgreSQL state model safe for multiple APIs and workers before introducing the worker runtime.
+
+Scope:
+
+- Add forward-only migrations for `JobDefinition.maxAttempts`, `retryBackoffSeconds`, and `automaticRetryEnabled`.
+- Add `JobRun.availableAt` and an opaque `JobRun.leaseToken` generated on every claim. `availableAt` controls retry eligibility; it is evaluated with PostgreSQL `now()`.
+- Extend the Java records, repositories, mappers, OpenAPI schema, and frontend editor to expose the retry policy without exposing secrets.
+- Replace the single-instance claim methods with an atomic `claimNextEligible(...)` contract using `FOR UPDATE SKIP LOCKED`, `available_at <= now()`, and a fresh lease token.
+- Add `renewLease(runId, leaseToken, leaseDuration)` and make it update `lease_until` and `heartbeat_at` only when the token still owns the run.
+- Add an atomic `recoverExpiredRun(...)` operation. It locks an expired `RUNNING` row, moves it to `RETRY_SCHEDULED`, and inserts a new `PENDING` row with `previousRunId`, incremented `attempt`, and the computed `availableAt` when another attempt is allowed.
+- When `maxAttempts` is exhausted, recovery marks the abandoned run `FAILED` and creates no replacement row.
+- Automatic recovery applies to lease expiration, not to every ordinary `FAILED` result. The existing manual retry endpoint remains explicit and preserves run history.
+- Default `automaticRetryEnabled` to true for `complete-atomic` and `incremental`, and false for `complete`. A `complete` job may explicitly opt in, but the destructive-mode warning is mandatory in the API and frontend.
+- Require `id` plus `leaseToken` on heartbeat, cancellation completion, terminal-state, counter, error, and watermark updates. A stale worker's update must affect zero rows and must never advance a watermark.
+- Persist cancellation requests so they can be observed by a worker that did not receive the original HTTP request. Preserve the existing per-mode sink warning.
+
+The retry backoff is the persisted per-job delay in seconds before the replacement `PENDING` row becomes eligible. The first implementation uses this configured delay directly; changing to a different backoff formula is outside this phase unless the state contract is revised.
+
+Tests and exit criteria:
+
+- Repository integration tests prove that concurrent claims select distinct rows, duplicate recovery scans recover a row once, and `availableAt` is honored.
+- Fencing tests prove that a stale worker cannot renew a lease, finish a run, overwrite counters, or commit a watermark after recovery.
+- Retry tests prove attempt numbering, `previousRunId`, backoff eligibility, maximum-attempt exhaustion, and mode-specific automatic-retry defaults.
+- The plan exits when two independent processes can safely claim, renew, recover, and finalize runs using only PostgreSQL state, with no worker runtime required.
+
+**Implemented in Phase 3.1**: Flyway V13/V14 persist retry policy, eligibility, and lease identity; Spring JDBC claims use `FOR UPDATE SKIP LOCKED`; recovery creates fenced replacement attempts with PostgreSQL-owned backoff timestamps; API and execution paths use the shared ports and token-checked finalization; the REST/OpenAPI/frontend contract exposes policy and `availableAt` without exposing lease tokens. The current `api` coordinator remains a compatibility path until Phase 3.2 supplies the isolated worker runtime, notification/polling dispatch, and heartbeat loop.
+
+#### Plan 3.2: Worker runtime and PostgreSQL dispatch
+
+This plan introduces the `worker` profile and connects API/scheduler run creation to long-lived worker execution.
+
+Scope:
+
+- Add `application-worker.yml` and profile conditions that prevent REST controllers, frontend resources, Spring Security/session bootstrap, Quartz, API schedule reconciliation, and API-only maintenance tasks from starting in a worker process.
+- Extract a shared execution path from `RunExecutionCoordinator` and `JobExecutionService` so both the current `api` profile and the new worker profile use the same definition resolution, `ToolOptions` construction, ReplicaDB invocation, watermark commit, audit, and cleanup behavior.
+- Implement a bounded `WorkerDispatchCoordinator` with one active run by default. It must claim from PostgreSQL rather than receive a complete job configuration in a message.
+- Implement a dedicated PostgreSQL listener connection subscribed to `replicadb_runs` for run identifiers and a run-control channel for cancellation identifiers. The listener must reconnect and re-subscribe after connection failure.
+- Implement `PollingFallback` at worker startup, after listener reconnect, and at a configurable interval. Polling discovers pending/retryable runs and active cancellation requests even when notifications are lost.
+- Change manual triggers, Quartz triggers, and worker recovery dispatches to use a transactional `RunDispatchService`: insert or create the durable run and issue `pg_notify('replicadb_runs', run_id)` before the PostgreSQL transaction commits. The payload contains only the run identifier.
+- Move cancellation delivery from the API's in-memory `ToolOptions` registry to persisted `CANCEL_REQUESTED` state plus a run-control notification. The worker maps that state to `ReplicationExecutionContext.requestCancellation()` and completes the run with the lease token it still owns.
+- Implement an independent heartbeat loop that renews the lease during source reads, staging, `mergeStagingTable()`, `atomicInsertStagingTable()`, cleanup, and any other long-running core operation. A failed heartbeat must not falsely extend a lease; a lost lease must trigger local cancellation and fencing.
+- Keep source and sink connections owned by ReplicaDB tasks. The listener uses its own PostgreSQL connection and never transports credentials or resolved options.
+
+Tests and exit criteria:
+
+- Profile tests prove that `api` still exposes the REST/frontend runtime and `worker` exposes no public login or UI surface.
+- PostgreSQL integration tests prove transaction-coupled notification, rollback-without-notification, duplicate notifications, missed notifications, listener reconnect, startup polling, and periodic polling.
+- Multi-worker tests prove that one run is claimed once, duplicate polling does not duplicate a watermark, and a remote cancellation reaches the owning worker.
+- Long-running-operation tests prove that heartbeats remain active during merge and atomic swap and that a lease does not expire while the worker is healthy.
+- The plan exits when one API instance and multiple worker instances can execute, cancel, recover, and monitor runs through PostgreSQL without API-local execution state.
+
+#### Plan 3.3: API high availability and operational hardening
+
+This plan makes the API cluster and the distributed runtime operable as a deployment rather than only as a set of components.
+
+Scope:
+
+- Replace `RAMJobStore` with Quartz JDBC clustering backed by PostgreSQL. Add the Quartz schema through forward-only migrations, stable scheduler instance identities, cluster check-in, misfire behavior, and connection-pool sizing.
+- Make schedule reconciliation and schedule updates safe when multiple API instances start or receive concurrent changes. PostgreSQL/Quartz state remains authoritative; no API-local trigger is treated as durable.
+- Replace the in-memory `LoginAttemptService` window with a PostgreSQL-backed shared throttle so account and source-address limits apply consistently across API instances.
+- Add API and worker health/readiness signals for PostgreSQL connectivity, listener status, claim availability, and executor capacity. Add Micrometer counters/timers for claims, notification latency, polling lag, lease renewals, expired leases, retries, stale updates, cancellations, and terminal outcomes.
+- Document and test rolling startup/shutdown, metadata migrations, worker identity, listener reconnect, database outage behavior, and the separation between API and worker network exposure.
+- Add Docker Compose topology tests for multiple API instances and workers. Kubernetes deployment templates and autoscaling remain optional packaging work, but the concurrency formula must be documented: `worker instances * concurrent runs per worker * jobs per run`.
+- Add reproducible load and failure tests for duplicate schedule firing, worker loss during source copy and merge, API loss, PostgreSQL restart, notification loss, duplicate polling, and stale-worker fencing.
+
+Tests and exit criteria:
+
+- Two or more API instances share schedules without duplicate durable runs and continue serving the same PostgreSQL-backed state.
+- Shared login throttling and session behavior remain correct across API instances.
+- The deployment exposes actionable health and metrics for every Phase 3 recovery path.
+- The plan exits when the documented API-cluster plus worker topology passes integration, failure, and load checks with measured concurrency limits.
+
+#### Phase 3 dependency and overall exit criteria
 
 ```text
-worker instances * concurrent runs per worker * jobs per run
-```
-
-#### PostgreSQL notification and claim flow
-
-```text
-API + Quartz
-  |
-  | PostgreSQL transaction
-  +-- INSERT JobRun(PENDING)
-  +-- SELECT pg_notify('replicadb_runs', run_id)
-  +-- COMMIT
+Plan 3.1: state, retry, lease token, fencing
         |
         v
-   All LISTEN workers wake up
+Plan 3.2: worker profile, listener, polling, heartbeat
         |
         v
-   One worker claims with
-   FOR UPDATE SKIP LOCKED
-        |
-        v
-   ReplicaDB execution
-        |
-        v
-   PostgreSQL state + watermark
+Plan 3.3: Quartz JDBC HA, shared security, metrics, chaos/load
 ```
 
-The API inserts the `JobRun` and issues `pg_notify` in the same transaction. PostgreSQL delivers the notification after commit, so a worker never wakes for a run that was rolled back. The payload contains only a `runId` and must remain below PostgreSQL's notification payload limit; all job data is loaded from the state tables. The claim transaction, not the notification, is what assigns a run to exactly one active worker.
+Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and is the release gate for the full distributed topology. The overall phase is complete only when:
 
-#### Claim transaction and polling fallback
-
-```text
-BEGIN
-  select an eligible PENDING or RETRY_SCHEDULED run
-  using FOR UPDATE SKIP LOCKED
-  update it to RUNNING with worker_id and lease_until
-COMMIT
-```
-
-The claim must select only runs whose `available_at` has elapsed and whose lease is empty or expired. PostgreSQL row locking allows several workers to claim different runs concurrently without waiting on already claimed rows. A worker must never select a `PENDING` row and update it later in a separate unprotected operation.
-
-The worker performs a periodic fallback poll even when `LISTEN` is active. It polls at startup, after reconnecting, and on a configurable interval. This covers a worker that was offline when `NOTIFY` was sent and makes notification delivery an optimization rather than a correctness dependency.
-
-#### Common execution and recovery
-
-The notification handler and polling fallback execute the same sequence after discovering eligible work:
-
-```text
-1. Receive a notification or find an eligible row by polling
-2. Atomically claim JobRun(PENDING or RETRY_SCHEDULED)
-3. Set RUNNING, workerId, heartbeatAt, and leaseUntil
-4. Load an immutable job-definition snapshot
-5. Resolve secret references and build ToolOptions
-6. Execute ReplicaDB core
-7. Persist row counters, timings, error, and terminal state
-8. Commit the watermark only after staging and merge succeed
-9. Release the lease through a terminal state
-```
-
-The `JobRun` contains a lease and heartbeat governed by the rules in Decision 6. A recovery process returns a run to `RETRY_SCHEDULED` when `lease_until` expires, which handles a worker process that disappears during a database operation. Because runs are never resumed, that retry re-executes the job from the beginning. The worker uses a dedicated PostgreSQL connection for `LISTEN`; replication source and sink connections remain owned by the existing ReplicaDB tasks.
-
-The execution model is at-least-once, not exactly-once. Duplicate notifications and polling must be handled by the claim state, the idempotent sink merge, and the watermark commit rules. The API reads status only from PostgreSQL; it does not infer status from notification delivery or worker logs.
-
-The Phase 0 rich task result is what allows a worker to persist row counters and a watermark candidate. Without it the worker records only coarse-grained lifecycle state.
-
-#### Optional worker shapes
-
-The same worker profile can run as either:
-
-- A long-lived worker pool with a dedicated `LISTEN` connection and polling fallback.
-- An ephemeral task started with a `runId`, which executes one run and exits.
-
-The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral tasks are useful on Cloud Run Jobs, Azure Container Apps Jobs, ECS tasks, or Kubernetes Jobs when the platform starts them with a `runId`; those tasks still claim the run from PostgreSQL and do not rely on a notification remaining available.
-
-#### Phase 3 resources
-
-- At least one API instance and one worker instance.
-- Managed PostgreSQL with private connectivity from API and workers.
-- Dedicated PostgreSQL listener connection per long-lived worker.
-- Worker leases, heartbeats, retry limits, and dead-run recovery process.
-- Docker Compose for local topology tests and Kubernetes for production scaling when required.
-- Micrometer/Actuator or an equivalent metrics pipeline, plus centralized logs and Sentry error reporting.
-- Load tests that measure notification wake-up, polling fallback, row-claim contention, database load, worker recovery, duplicate notifications, and duplicate polling.
+- Worker loss produces a new, fully independent attempt within the configured lease/recovery window or a terminal `FAILED` row after the attempt limit.
+- A stale worker cannot mutate PostgreSQL state or advance a watermark after fencing.
+- A missed or duplicated notification has the same result as normal polling.
+- A merge longer than the lease duration does not trigger a duplicate claim while the heartbeat is healthy.
+- Multiple API instances do not duplicate Quartz schedule firings or bypass shared login throttling.
+- The standalone CLI artifact and its no-PostgreSQL execution path remain unchanged.
 
 ## Implementation Priorities
 
@@ -831,15 +860,12 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 - [x] **Phase 2b.** Add the job editor, schedule management, and mutating run actions (trigger/cancel/retry) to the frontend.
 - [x] **Phase 2c.** Add the job permission editor and user/role administration screens to the frontend.
 
-### Priority 4: Optional Distributed Deployment
+### Priority 4: Phase 3 Distributed Runtime
 
-- [ ] Define the PostgreSQL worker dispatcher and state schema.
-- [ ] Implement atomic run claims, leases, heartbeats, and retry scheduling using PostgreSQL `now()`.
-- [ ] Keep heartbeats alive during long merge and swap operations.
-- [ ] Implement the dedicated `LISTEN/NOTIFY` connection and reconnect logic.
-- [ ] Implement periodic polling as the mandatory notification-recovery path.
-- [ ] Dispatch run identifiers without transporting secrets.
-- [ ] Test worker loss, retries, missed notifications, duplicate notifications, and duplicate polling.
+- [x] **Phase 3.1.** Define the distributed state contract: per-job retry policy, `available_at`, lease tokens, atomic claims, lease renewal, expiry recovery, fencing, and mode-specific automatic-retry defaults.
+- [ ] **Phase 3.2.** Add the isolated `worker` profile, shared execution service, transactional `pg_notify` dispatch, dedicated listener, reconnect logic, mandatory polling, remote cancellation, and heartbeat during merge/swap.
+- [ ] **Phase 3.3.** Add Quartz JDBC clustering for multiple API instances, shared login throttling, health/metrics, deployment documentation, multi-node integration tests, and reproducible load/chaos checks.
+- [ ] Preserve the CLI artifact, CLI exit codes, options-file contract, and no-metadata-database execution path throughout all three plans.
 
 ---
 
@@ -861,7 +887,7 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 - Monitoring exposes status, counters, timestamps, and failure details. **Met since Phase 1c-1** via `GET /api/v1/runs`/`GET /api/v1/runs/{id}` (log excerpt is a stub, see above).
 - Unauthorized users cannot view, edit, execute, or cancel jobs. **Met for Phase 1c-3a+b** — Spring Security requires authentication for `/api/v1`, ADMIN bypasses ACLs, and OPERATOR/VIEWER operations are checked against the per-job permission table in backend services and controllers.
 - Administrators can manage users, roles, job permissions, and audit history. **Met in Phase 1c-3c** — state-changing authentication, user, job, permission, schedule, and run actions are recorded, retained for 365 days by default, and readable through ADMIN-only `GET /api/v1/audit`.
-- The backend API can create, schedule, trigger, and monitor jobs through `/api/v1`. **Met since Phase 1c-2**; the frontend UI that exposes this to users is Phase 2, not yet started.
+- The backend API can create, schedule, trigger, and monitor jobs through `/api/v1`. **Met since Phase 1c-2**; the authenticated frontend UI that exposes this to users is implemented across Phase 2a, Phase 2b, and Phase 2c.
 - Credentials are absent from job payloads, state records, API responses, and logs. **Met for state records since Phase 1b, and for API responses since Phase 1c-1** — `JobDefinitionResponse` never includes a literal password (only a boolean "configured" flag) and redacts connection strings via `CredentialRedactor`; log absence for the managed runtime is unchanged from the CLI's existing redaction behavior.
 - A replayed `Idempotency-Key` never produces a second run. **Met since Phase 1c-1** — `RunTriggerIdempotencyRepository` returns the original run for a key replayed within 24 hours.
 
@@ -874,13 +900,18 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 
 ### Phase 3
 
-- Worker loss does not lose a persisted run; the run reappears as claimable within one lease period.
+- Two or more API instances use Quartz JDBC clustering without duplicate schedule firings.
+- Worker loss preserves the original run as history and creates a new attempt only when the job retry policy permits it.
+- Expired leases are recovered using PostgreSQL `now()` and never resume the abandoned attempt.
+- A stale worker cannot renew, finalize, or commit a watermark after its lease token is fenced.
 - Duplicate notifications and duplicate database polling do not advance a watermark twice.
-- Expired worker leases return recoverable runs to the retry path.
 - A worker reconnects and rescans PostgreSQL after a listener failure.
-- Missed notifications are recovered by polling within one polling interval.
-- A merge lasting longer than the lease duration never triggers a duplicate claim.
-- Concurrency and scaling limits are established from reproducible benchmarks.
+- Missed notifications are recovered by startup, reconnect, and periodic polling.
+- A merge lasting longer than the lease duration never triggers a duplicate claim while heartbeat renewal is healthy.
+- Automatic recovery is enabled by default only for `complete-atomic` and `incremental`; `complete` remains manual unless explicitly opted in.
+- Remote cancellation reaches a worker through persisted state and control notification, without an API-local execution registry.
+- Shared login throttling behaves consistently across API instances.
+- Notification latency, polling lag, lease recovery, executor capacity, and concurrency limits are measured from reproducible tests.
 
 ---
 
@@ -903,6 +934,8 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 - Runs are never resumed. A retry is a full re-execution.
 - Partition assignment is not reproducible across executions, so no feature may depend on partition identity.
 - Retrying a `complete` run is destructive because the sink is truncated before any write.
+- Automatic lease-expiry recovery is enabled by default only for `complete-atomic` and `incremental`; `complete` requires explicit opt-in and retains its destructive warning.
+- Lease recovery creates a new `JobRun` with a new lease token; it never resumes or reopens the expired attempt.
 - Cancelling during a merge or atomic swap leaves the sink in an indeterminate state, and the API must say so.
 - Watermarks exist only for `incremental` mode, use a single declared column, and never propagate deletes.
 - An incremental merge requires primary keys on the source.
@@ -910,13 +943,18 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 
 ### Deployment
 
-- PostgreSQL is mandatory for the `api` and `worker` profiles; the CLI does not use it. **Implemented in Phase 1b and extended through Phase 1c-3c**: `application-api.yml` wires `spring.datasource`/`spring.flyway`, and the `job_definition`, `job_run`, `job_schedule`, `audit_event`, and cancellation-warning schema plus supporting indexes are versioned by Flyway migrations V1 through V11.
+- PostgreSQL is mandatory for the `api` and `worker` profiles; the CLI does not use it. **Implemented in Phase 1b and extended through Phase 3.1**: `application-api.yml` wires `spring.datasource`/`spring.flyway`, and the `job_definition`, `job_run`, `job_schedule`, `audit_event`, cancellation-warning, retry-policy, eligibility, and lease-fencing schema plus supporting indexes are versioned by Flyway migrations V1 through V14. Phase 3.2/3.3 add the worker dispatch and Quartz JDBC clustering migrations/runtime.
 - SQLite is limited to isolated CLI fixtures or unit tests.
 - The CLI remains available in every implementation phase and deployment model.
+- The `api` profile may run as multiple stateless instances; Quartz uses PostgreSQL JDBC clustering in Phase 3.
+- The `worker` profile has no public login, REST API, frontend, session bootstrap, or Quartz scheduler.
 - PostgreSQL `LISTEN/NOTIFY` is a wake-up signal, not a durable queue; polling recovery is mandatory.
 - Workers require a dedicated listener connection and must reconnect and re-subscribe after failure.
 - Lease and heartbeat timestamps come from PostgreSQL `now()`, never from worker clocks.
 - PostgreSQL row locking and leases must prevent two workers from claiming the same run.
+- All lease-owned updates require the current opaque lease token; stale workers must be fenced from state and watermark writes.
+- `available_at` controls retry eligibility and is evaluated with PostgreSQL `now()`.
+- Login throttling must be PostgreSQL-backed when more than one API instance is deployed.
 - User passwords are stored only as Argon2id hashes; sessions require secure cookie and CSRF configuration.
 - Every job operation must enforce ACLs in the backend, independently of frontend visibility.
 - The first administrator requires a controlled bootstrap flow with no default password.
@@ -947,6 +985,8 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 - `replicadb-server/src/main/java/org/replicadb/server/job/api/JobRunResponse.java` - HTTP representation of a run, including the persisted cancellation warning.
 - `replicadb-server/src/main/java/org/replicadb/server/job/domain/JobRunStatus.java` - The 7 job-run states, `isTerminal()`, and `fromReplicaExitCode(...)`.
 - `replicadb-server/src/main/java/org/replicadb/server/job/domain/JobRunStateMachine.java` - Legal `JobRun` state transitions.
+- `replicadb-server/src/main/java/org/replicadb/server/job/domain/JobDefinition.java` - Job configuration boundary to extend with the Phase 3 retry policy.
+- `replicadb-server/src/main/java/org/replicadb/server/job/api/JobDefinitionRequest.java` - API input boundary to extend with retry policy fields.
 - `replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobDefinitionRepository.java` - Spring JDBC persistence for job definitions.
 - `replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobRunRepository.java` - Row-locking claim (`FOR UPDATE SKIP LOCKED`), state transitions, `scheduleRetry(...)`, and watermark lookup.
 - `replicadb-server/src/main/java/org/replicadb/server/job/execution/JobDefinitionEnvResolver.java` - `${env:VARIABLE}` resolution; rejects `${secret:...}`.
@@ -964,6 +1004,8 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 - `replicadb-server/src/main/java/org/replicadb/server/job/domain/JobSchedule.java` - Validated cron and IANA timezone schedule value.
 - `replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobScheduleRepository.java` - PostgreSQL persistence for recurring schedules.
 - `replicadb-server/src/main/java/org/replicadb/server/job/execution/ScheduledRunTriggerJob.java`, `QuartzScheduleService.java`, `ScheduleReconciler.java` - Quartz trigger execution, lifecycle, and startup reconciliation.
+- `replicadb-server/src/main/java/org/replicadb/server/job/execution/RunExecutionCoordinator.java` - Current single-instance execution coordinator to replace or narrow behind the Phase 3 shared dispatch path.
+- `replicadb-server/src/main/resources/application.yml`, `application-api.yml` - Current single-instance Quartz/API configuration and the Phase 3 profile boundaries.
 - `replicadb-server/src/main/java/org/replicadb/server/job/api/JobScheduleController.java` - Schedule management endpoints under `/api/v1/jobs/{id}/schedule`.
 - `replicadb-server/src/main/resources/db/migration/V5__create_job_schedule.sql`, `V6__add_job_run_definition_created_index.sql` - Schedule persistence and job-history query index migrations.
 - `.ai/archive/phase-1c-2-quartz-scheduler.plan.md` - Phase 1c-2 implementation plan and execution retrospective.
@@ -986,6 +1028,6 @@ The long-lived pool is the natural fit for PostgreSQL `LISTEN/NOTIFY`. Ephemeral
 
 ---
 
-**Document Version**: 3.0
-**Last Updated**: August 18, 2026
-**Next Review**: Before implementation of Phase 2c (frontend administration)
+**Document Version**: 4.0
+**Last Updated**: August 20, 2026
+**Next Review**: Before implementation of Phase 3.2 (worker runtime and PostgreSQL dispatch)

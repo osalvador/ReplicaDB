@@ -25,6 +25,9 @@ describe('jobsApi mutations', () => {
     expect(request.sourceColumns).toBeUndefined();
     expect(request.sinkStagingTable).toBeUndefined();
     expect(request.sourceConnectionParams).toBeUndefined();
+    expect(request.maxAttempts).toBe(3);
+    expect(request.retryBackoffSeconds).toBe(60);
+    expect(request.automaticRetryEnabled).toBe(false);
   });
 
   it('normalizes advanced fields and keeps query instead of table', () => {
@@ -68,6 +71,20 @@ describe('jobsApi mutations', () => {
 
     expect(request.incrementalWatermarkColumn).toBe('updated_at');
     expect(request.initialWatermarkValue).toBe('0');
+  });
+
+  it('keeps explicit retry policy fields in the normalized payload', () => {
+    const request = toJobDefinitionRequest({
+      ...formInput('complete'),
+      maxAttempts: 5,
+      retryBackoffSeconds: 90,
+      automaticRetryEnabled: true
+    });
+
+    expect(request.maxAttempts).toBe(5);
+    expect(request.retryBackoffSeconds).toBe(90);
+    expect(request.automaticRetryEnabled).toBe(true);
+    expect(request).not.toHaveProperty('leaseToken');
   });
 
   it('posts the normalized payload when creating a job', async () => {
@@ -147,6 +164,9 @@ function formInput(mode: JobDefinitionFormInput['mode']): JobDefinitionFormInput
     initialWatermarkValue: '0',
     fetchSize: 100,
     bandwidthThrottling: 0,
-    verbose: false
+    verbose: false,
+    maxAttempts: 3,
+    retryBackoffSeconds: 60,
+    automaticRetryEnabled: mode !== 'complete'
   };
 }

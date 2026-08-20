@@ -51,6 +51,9 @@ export type JobDefinitionFormInput = {
   fetchSize: number;
   bandwidthThrottling: number;
   verbose: boolean;
+  maxAttempts: number;
+  retryBackoffSeconds: number;
+  automaticRetryEnabled: boolean;
 };
 
 export type JobDefinitionMutationInput =
@@ -106,7 +109,10 @@ export function toJobDefinitionRequest(
     jobs: input.jobs,
     fetchSize: input.fetchSize,
     bandwidthThrottling: input.bandwidthThrottling,
-    verbose: input.verbose
+    verbose: input.verbose,
+    maxAttempts: input.maxAttempts,
+    retryBackoffSeconds: input.retryBackoffSeconds,
+    automaticRetryEnabled: input.automaticRetryEnabled
   } satisfies components['schemas']['JobDefinitionRequest'];
 
   if (mode === 'incremental') {

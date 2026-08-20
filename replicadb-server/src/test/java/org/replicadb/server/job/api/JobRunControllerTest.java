@@ -228,7 +228,9 @@ class JobRunControllerTest {
             assertEquals(responseBody.get("warning").asText(), cancelled.cancellationWarning());
             mockMvc.perform(get("/api/v1/runs/" + pending.id()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.cancellationWarning").value(responseBody.get("warning").asText()));
+                .andExpect(jsonPath("$.cancellationWarning").value(responseBody.get("warning").asText()))
+                .andExpect(jsonPath("$.availableAt").exists())
+                .andExpect(jsonPath("$.leaseToken").doesNotExist());
             AuditEvent event = runEvents(AuditAction.RUN_CANCEL_REQUESTED, pending.id()).get(0);
             assertEquals(responseBody.get("warning").asText(), event.detail().get("warning"));
             }

@@ -85,6 +85,7 @@ export default function RunDetailPage() {
     ['Rows processed', run.rowsProcessed],
     ['Duration', run.durationMillis == null ? null : `${run.durationMillis} ms`],
     ['Committed watermark', run.committedWatermark],
+    ['Available', run.availableAt],
     ['Started', run.startedAt],
     ['Finished', run.finishedAt]
   ];

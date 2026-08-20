@@ -9,7 +9,8 @@ public final class JobRunStateMachine {
     private static final Map<JobRunStatus, Set<JobRunStatus>> LEGAL_TRANSITIONS = Map.of(
             JobRunStatus.PENDING, Set.of(JobRunStatus.RUNNING, JobRunStatus.CANCELLED),
             JobRunStatus.RUNNING, Set.of(JobRunStatus.SUCCEEDED, JobRunStatus.FAILED,
-                    JobRunStatus.CANCEL_REQUESTED, JobRunStatus.CANCELLED),
+                    JobRunStatus.CANCEL_REQUESTED, JobRunStatus.CANCELLED,
+                    JobRunStatus.RETRY_SCHEDULED),
             JobRunStatus.CANCEL_REQUESTED, Set.of(JobRunStatus.CANCELLED),
             JobRunStatus.FAILED, Set.of(JobRunStatus.RETRY_SCHEDULED));
 

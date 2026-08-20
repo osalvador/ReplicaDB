@@ -39,6 +39,9 @@ const baseJob: JobDefinitionResponse = {
   updatedAt: '2026-08-18T11:00:00Z',
   sourcePasswordConfigured: true,
   sinkPasswordConfigured: true,
+  maxAttempts: 5,
+  retryBackoffSeconds: 90,
+  automaticRetryEnabled: true,
   modeWarning: null
 };
 
@@ -114,7 +117,10 @@ describe('JobFormPage', () => {
       sinkConnect: 'jdbc:postgresql://sink.example:5432/sink_db',
       sinkTable: 'sink_table',
       mode: 'complete',
-      jobs: 2
+      jobs: 2,
+      maxAttempts: 3,
+      retryBackoffSeconds: 60,
+      automaticRetryEnabled: false
     });
     expect(request.sourceUser).toBeUndefined();
     expect(request.sourcePassword).toBeUndefined();
@@ -138,6 +144,9 @@ describe('JobFormPage', () => {
     expect(screen.getByLabelText(/^Sink table/)).toHaveValue(baseJob.sinkTable);
     expect(screen.getByRole('combobox', { name: 'Mode' })).toHaveTextContent(baseJob.mode ?? '');
     expect(screen.getByLabelText(/^Parallel tasks/)).toHaveValue(baseJob.jobs);
+    expect(screen.getByLabelText(/^Maximum automatic attempts/)).toHaveValue(5);
+    expect(screen.getByLabelText(/^Retry backoff/)).toHaveValue(90);
+    expect(screen.getByLabelText('Automatic retry after lease expiry')).toBeChecked();
     expect(screen.getByLabelText(/^Incremental watermark column/)).toHaveValue(baseJob.incrementalWatermarkColumn);
     expect(screen.getByLabelText(/^Initial watermark value/)).toHaveValue(baseJob.initialWatermarkValue);
   });
@@ -223,6 +232,36 @@ describe('JobFormPage', () => {
       expect(request).not.toHaveProperty('initialWatermarkValue');
     }
   );
+
+  it('applies mode defaults and preserves an explicit retry choice', async () => {
+    renderForm('/jobs/new');
+
+    const automaticRetry = screen.getByLabelText('Automatic retry after lease expiry');
+    expect(automaticRetry).not.toBeChecked();
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Mode' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'incremental' }));
+    expect(automaticRetry).toBeChecked();
+
+    fireEvent.click(automaticRetry);
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Mode' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'complete' }));
+    expect(automaticRetry).not.toBeChecked();
+  });
+
+  it('blocks submission when retry attempts or backoff are invalid', async () => {
+    mockedJobsApi.createJob.mockResolvedValue({ id: 'job-new', name: 'New job' });
+
+    renderForm('/jobs/new');
+    fillRequiredFields();
+    fireEvent.change(screen.getByLabelText(/^Maximum automatic attempts/), { target: { value: '0' } });
+    fireEvent.change(screen.getByLabelText(/^Retry backoff/), { target: { value: '-1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create job' }));
+
+    expect(await screen.findByText('Maximum attempts must be at least 1.')).toBeInTheDocument();
+    expect(screen.getByText('Retry backoff cannot be negative.')).toBeInTheDocument();
+    expect(mockedJobsApi.createJob).not.toHaveBeenCalled();
+  });
 
   it('renders a mutation ApiError and does not navigate', async () => {
     mockedJobsApi.createJob.mockRejectedValue(new ApiError(400, 'Invalid job', 'The source table is required.'));

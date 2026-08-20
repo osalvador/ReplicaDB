@@ -31,6 +31,14 @@ class OpenApiSpecificationIT {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.paths['/api/v1/jobs']").exists());
+                .andExpect(jsonPath("$.paths['/api/v1/jobs']").exists())
+                .andExpect(jsonPath("$.components.schemas.JobDefinitionRequest.properties.maxAttempts").exists())
+                .andExpect(jsonPath("$.components.schemas.JobDefinitionRequest.properties.retryBackoffSeconds").exists())
+                .andExpect(jsonPath("$.components.schemas.JobDefinitionRequest.properties.automaticRetryEnabled").exists())
+                .andExpect(jsonPath("$.components.schemas.JobDefinitionResponse.properties.maxAttempts").exists())
+                .andExpect(jsonPath("$.components.schemas.JobDefinitionResponse.properties.retryBackoffSeconds").exists())
+                .andExpect(jsonPath("$.components.schemas.JobDefinitionResponse.properties.automaticRetryEnabled").exists())
+                .andExpect(jsonPath("$.components.schemas.JobRunResponse.properties.availableAt").exists())
+                .andExpect(jsonPath("$.components.schemas.JobRunResponse.properties.leaseToken").doesNotExist());
     }
 }

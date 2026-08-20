@@ -7,6 +7,7 @@ import org.replicadb.server.job.domain.AzureAuthentication;
 import org.replicadb.server.job.domain.ConnectionCredentials;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
+import org.replicadb.server.job.domain.RetryPolicy;
 import org.replicadb.server.job.domain.SinkEndpoint;
 import org.replicadb.server.job.domain.SourceEndpoint;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,6 +55,9 @@ class JobDefinitionRepositoryIT {
         assertEquals(inserted, found);
         assertNotNull(found.createdAt());
         assertNotNull(found.updatedAt());
+        assertEquals(3, found.maxAttempts());
+        assertEquals(60, found.retryBackoffSeconds());
+        assertFalse(found.automaticRetryEnabled());
     }
 
     @Test
@@ -130,6 +134,7 @@ class JobDefinitionRepositoryIT {
             .withJobs(4)
             .withIncrementalWatermarkColumn("updated_at")
             .withInitialWatermarkValue("100")
+            .withRetryPolicy(new RetryPolicy(7, 90, true))
             .withCreatedAt(stale.createdAt())
             .withUpdatedAt(stale.updatedAt())
             .build();
@@ -152,6 +157,9 @@ class JobDefinitionRepositoryIT {
         assertTrue(updated.updatedAt().isAfter(stale.updatedAt()));
         assertEquals(inserted.name(), updated.name());
         assertEquals(inserted.createdAt(), updated.createdAt());
+        assertEquals(7, updated.maxAttempts());
+        assertEquals(90, updated.retryBackoffSeconds());
+        assertTrue(updated.automaticRetryEnabled());
         }
 
         @Test

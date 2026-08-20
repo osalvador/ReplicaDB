@@ -89,6 +89,9 @@ class JobDefinitionControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", org.hamcrest.Matchers.startsWith("/api/v1/jobs/")))
                 .andExpect(jsonPath("$.name").value("created-job"))
+                .andExpect(jsonPath("$.maxAttempts").value(3))
+                .andExpect(jsonPath("$.retryBackoffSeconds").value(60))
+                .andExpect(jsonPath("$.automaticRetryEnabled").value(false))
                 .andReturn();
 
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
@@ -213,6 +216,29 @@ class JobDefinitionControllerTest {
                         .content(jobJson("warning-job", "complete", 1)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.modeWarning").isNotEmpty());
+    }
+
+    @Test
+    void acceptsExplicitRetryPolicyAndKeepsCompleteWarning() throws Exception {
+        mockMvc.perform(post("/api/v1/jobs")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jobJsonWithRetryPolicy("retry-policy-job", "complete", 5, 90, true)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.maxAttempts").value(5))
+                .andExpect(jsonPath("$.retryBackoffSeconds").value(90))
+                .andExpect(jsonPath("$.automaticRetryEnabled").value(true))
+                .andExpect(jsonPath("$.modeWarning").isNotEmpty());
+    }
+
+    @Test
+    void rejectsInvalidRetryPolicyWithProblemDetail() throws Exception {
+        mockMvc.perform(post("/api/v1/jobs")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jobJsonWithRetryPolicy("invalid-retry-policy", "complete", 0, -1, true)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
     }
 
             @Test
@@ -352,6 +378,14 @@ class JobDefinitionControllerTest {
                   "jobs": %d
                 }
                 """.formatted(name, mode, jobs);
+    }
+
+    private static String jobJsonWithRetryPolicy(String name, String mode, int maxAttempts,
+                                                 long retryBackoffSeconds, boolean automaticRetryEnabled) {
+        return jobJson(name, mode, 1).replace("\"jobs\": 1", "\"jobs\": 1,\n"
+                + "                  \"maxAttempts\": " + maxAttempts + ",\n"
+                + "                  \"retryBackoffSeconds\": " + retryBackoffSeconds + ",\n"
+                + "                  \"automaticRetryEnabled\": " + automaticRetryEnabled);
     }
 
     private static String updateJson(String name, String mode) {

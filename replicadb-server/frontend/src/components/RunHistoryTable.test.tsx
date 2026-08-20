@@ -38,6 +38,7 @@ function renderHistory(status: typeof statuses[number]) {
       leaseUntil: null,
       heartbeatAt: null,
       createdAt: '2026-08-18T10:00:00Z',
+      availableAt: '2026-08-18T09:59:30Z',
       startedAt: '2026-08-18T10:00:01Z',
       finishedAt: '2026-08-18T10:00:02Z',
       rowsProcessed: 10,
@@ -77,6 +78,7 @@ describe('RunHistoryTable', () => {
     expect(chip).toHaveTextContent(status);
     expect(chip).toHaveAttribute('data-status-color', color);
     expect(screen.getByRole('heading', { level: 2, name: 'Run history' })).toBeInTheDocument();
+    expect(screen.getByText('2026-08-18T09:59:30Z')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'View run' })).toHaveAttribute('href', '/runs/run-1');
   });
 });
