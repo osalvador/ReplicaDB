@@ -54,7 +54,10 @@ jobs:
       run: docker info
 
     - name: Get version
-      run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
+      run: |
+        project_version="\${project.version}"
+        version="$(mvn -q -Dexec.executable=echo -Dexec.args="$project_version" --non-recursive exec:exec)"
+        echo "version=$version" >> "$GITHUB_ENV"
 
     - name: Integration tests (exclude Oracle cross-version)
       run: mvn -B test --file pom.xml -Dtest="org/replicadb/${{ matrix.source }}/*Test,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest,!org/replicadb/mongo/Mongo2DB2Test" -Dsurefire.timeout=1200
@@ -103,7 +106,10 @@ jobs:
       run: docker info
 
     - name: Get version
-      run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
+      run: |
+        project_version="\${project.version}"
+        version="$(mvn -q -Dexec.executable=echo -Dexec.args="$project_version" --non-recursive exec:exec)"
+        echo "version=$version" >> "$GITHUB_ENV"
 
     - name: Non-integration tests (exclude Oracle cross-version)
       run: mvn -B test --file pom.xml -Dtest="org/replicadb/*Test,org/replicadb/cli/*Test,org/replicadb/manager/*Test,org/replicadb/config/*Test,org/replicadb/rowset/*Test,org/replicadb/file/*Test,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest"
@@ -218,9 +224,10 @@ jobs:
         DB_USERNAME: postgres
         DB_PASSWORD: ''
         SPRING_PROFILES_ACTIVE: api
+        REPLICADB_SERVER_LOCAL_SEEDING_ENABLED: 'true'
       run: |
         set -euo pipefail
-        nohup java -Dspring.profiles.active=api -jar replicadb-server/target/replicadb-server-0.1.0-SNAPSHOT.jar > /tmp/replicadb-server-e2e.log 2>&1 &
+        nohup java -Dspring.profiles.active=api -Dreplicadb.server.local-seeding.enabled=true -jar replicadb-server/target/replicadb-server-0.1.0-SNAPSHOT.jar > /tmp/replicadb-server-e2e.log 2>&1 &
         echo $! > /tmp/replicadb-server-e2e.pid
     - name: Wait for API health
       run: |
@@ -229,6 +236,11 @@ jobs:
           cat /tmp/replicadb-server-e2e.log
           exit 1
         }
+    - name: Seed frontend fixtures
+      working-directory: replicadb-server/frontend
+      env:
+        REPLICADB_API_URL: http://localhost:8080
+      run: node scripts/seed-local-jobs.mjs
     - name: Run frontend smoke test and API type drift check
       working-directory: replicadb-server/frontend
       env:
@@ -277,7 +289,10 @@ jobs:
       run: docker info
 
     - name: Get version
-      run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
+      run: |
+        project_version="\${project.version}"
+        version="$(mvn -q -Dexec.executable=echo -Dexec.args="$project_version" --non-recursive exec:exec)"
+        echo "version=$version" >> "$GITHUB_ENV"
 
     - name: Clean Install
       run: |

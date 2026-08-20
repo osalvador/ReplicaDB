@@ -36,4 +36,4 @@ applyTo: 'replicadb-server/frontend/**/*.{ts,tsx,mts,js,mjs}'
 - Do not display or persist lease tokens in the frontend, and do not present `availableAt` as resume progress.
 
 ## Contradiction Check
-⚠️ Baseline unavailable: `inditex.instructions.md` and `amiga-*.instructions.md` were not present, and the AMIGA documentation search was unavailable. No project override was recorded; copy the baseline files before the next context regeneration.
+No organization baseline was available in this checkout, so no contradiction or project override was recorded.

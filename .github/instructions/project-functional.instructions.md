@@ -32,4 +32,4 @@ applyTo: '**/*.{java,properties,conf,yml,yaml}'
 - Do not describe the Phase 3.1 contract as a deployed worker runtime: `worker`, `LISTEN/NOTIFY`, polling dispatch, heartbeat renewal, and Quartz clustering remain deferred.
 
 ## Contradiction Check
-⚠️ Baseline unavailable: `inditex.instructions.md` and `amiga-*.instructions.md` were not present, and the AMIGA documentation search was unavailable. No project override was recorded; copy the baseline files before the next context regeneration.
+No organization baseline was available in this checkout, so no contradiction or project override was recorded.

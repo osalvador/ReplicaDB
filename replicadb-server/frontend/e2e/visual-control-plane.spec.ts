@@ -43,8 +43,8 @@ for (const viewport of viewports) {
       await expect(page).toHaveURL(/\/jobs\/new$/);
       await expect(page.getByRole('heading', { name: 'New job' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Basics' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Source' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Sink' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Source', exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Sink', exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Create job' })).toBeVisible();
       await expectContained(page);
 
@@ -57,8 +57,8 @@ for (const viewport of viewports) {
 
       await expect(page).toHaveURL(/\/jobs\/[^/]+$/);
       await expect(page.getByRole('heading', { name: seededJobName })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Source' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Sink' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Source', exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Sink', exact: true })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Execution' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Lifecycle' })).toBeVisible();
       await expect(page.getByRole('alert')).toContainText('Complete mode clears the sink');

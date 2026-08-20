@@ -28,4 +28,4 @@ applyTo: '**/*Test.java,**/*IT.java,replicadb-server/frontend/**/*.{test,spec}.{
 - Do not use mocked databases to claim lease/concurrency behavior, application timestamps for database-time eligibility, or broad selectors before their expansion is known.
 
 ## Contradiction Check
-⚠️ Baseline unavailable: `inditex.instructions.md` and `amiga-*.instructions.md` were not present, and the AMIGA documentation search was unavailable. No project override was recorded; copy the baseline files before the next context regeneration.
+No organization baseline was available in this checkout, so no contradiction or project override was recorded.

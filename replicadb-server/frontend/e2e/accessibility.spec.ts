@@ -69,7 +69,7 @@ test('authenticated controls expose keyboard and semantic accessibility contract
   await page.getByRole('tab', { name: 'Query' }).focus();
   await expectFocusedElementVisible(page);
   await page.getByRole('tab', { name: 'Query' }).press('Enter');
-  await expect(page.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', /query-tab/);
+  await expect(page.getByRole('tabpanel', { name: 'Query' })).toHaveAttribute('aria-labelledby', /query-tab/);
 
   await page.getByRole('combobox', { name: 'Source data source type' }).click();
   await page.getByRole('option', { name: 'SQL Server' }).click();

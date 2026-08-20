@@ -45,4 +45,4 @@ applyTo: '**/*.java'
 - Do not compare JVM-created compatibility timestamps with database-owned eligibility predicates, expose lease tokens, or remove the deprecated repository bridge before all production callers have moved to the port.
 
 ## Contradiction Check
-⚠️ Baseline unavailable: `inditex.instructions.md` and `amiga-*.instructions.md` were not present, and the AMIGA documentation search was unavailable. No project override was recorded; copy the baseline files before the next context regeneration.
+No organization baseline was available in this checkout, so no contradiction or project override was recorded.

@@ -33,15 +33,15 @@ test('admin can create a PostgreSQL job from the connection builder', async ({ p
   await hosts.nth(1).fill('sink.example');
   await ports.nth(1).fill('5432');
   await databases.nth(1).fill('sink_db');
-  await page.getByLabel('Table').fill('orders');
-  await page.getByLabel('Columns').fill('id, payload');
-  await page.getByLabel('Sink table').fill('orders_copy');
-  await page.getByLabel('Sink columns').fill('id, payload');
+  await page.getByRole('textbox', { name: 'Table', exact: true }).fill('orders');
+  await page.getByRole('textbox', { name: 'Columns', exact: true }).fill('id, payload');
+  await page.getByRole('textbox', { name: 'Sink table', exact: true }).fill('orders_copy');
+  await page.getByRole('textbox', { name: 'Sink columns', exact: true }).fill('id, payload');
   await page.getByRole('button', { name: 'Create job' }).click();
 
   await expect(page).toHaveURL(/\/jobs\/[^/]+$/);
   await expect(page.getByRole('heading', { name: jobName })).toBeVisible();
-  await expect(page.getByText('orders')).toBeVisible();
+  await expect(page.getByText('orders', { exact: true })).toBeVisible();
   await expect(page.getByText('orders_copy')).toBeVisible();
   await expect(page.getByText('id, payload').first()).toBeVisible();
 });
