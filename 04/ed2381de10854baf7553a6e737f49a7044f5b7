@@ -1,0 +1,22 @@
+replicadb-server/frontend/scripts/seed-local-jobs.mjs
+  h_feb0db10da3b67 6-10,184-288,305-306,312-314,319,324-327,331-345,350
+replicadb-server/frontend/scripts/seed-local-jobs.test.mjs
+  h_feb0db10da3b67 3-20,51-150
+replicadb-server/frontend/scripts/start-local.sh
+  h_feb0db10da3b67 120
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobRunController.java
+  h_feb0db10da3b67 3,26-27,51,59-60,68,115-116,130-136,143-154
+replicadb-server/src/test/java/org/replicadb/server/job/api/JobLifecycleIT.java
+  h_feb0db10da3b67 3,38,54,115-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "04ed2381de10854baf7553a6e737f49a7044f5b7",
+  "prompts": {},
+  "humans": {
+    "h_feb0db10da3b67": {
+      "author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
