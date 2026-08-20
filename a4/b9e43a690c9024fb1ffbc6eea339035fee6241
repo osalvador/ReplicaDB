@@ -1,0 +1,19 @@
+src/main/java/org/replicadb/manager/MySQLManager.java
+  s_bd7b7e0f4fa185::t_e70b9fd5f007f6 140,157,178,193
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "a4b9e43a690c9024fb1ffbc6eea339035fee6241",
+  "prompts": {},
+  "sessions": {
+    "s_bd7b7e0f4fa185": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "2881a264-55cb-48cd-b6b5-9e9065e4e181",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
