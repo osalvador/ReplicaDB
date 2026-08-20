@@ -1,0 +1,31 @@
+.ai/archive/phase-3-1-distributed-state-contract.plan.md
+  s_444a0a7e688df9::t_825961ddf4edef 1-281
+replicadb-server/frontend/src/api/schema.ts
+  s_444a0a7e688df9::t_dccc291a98dc9a 406-410,462-466,494-495
+ARCHITECTURE_DECISIONS.md
+  s_444a0a7e688df9::t_74b0dc262a2094 14-15,41,101-109,119-122,127,145,155-158,160-161,180,192-193,196,205-217,279-280,310-311,345-346,352-353,364-372,407,493,517,709,711,713,715-724,726-732,734,736,738,740-750,752,754,756-759,761,763,765,767,769-777,779,781-787,789,791,793-799,801,803-806,808,810-818,820,822-827,863,865-868,890,903-906,909-914,937-938,946,949-950,955-957,988-989,1007-1008,1031-1033
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobDefinitionController.java
+  s_444a0a7e688df9::t_c6365e4e0ad4e2 107-109
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobDefinitionMapper.java
+  s_444a0a7e688df9::t_7511fe636c821e 8,30,36-43,46-47,52-53,58-59,78-79,82-100,123-125
+replicadb-server/src/test/java/org/replicadb/server/job/api/JobDefinitionControllerTest.java
+  s_444a0a7e688df9::t_1dcb650d02a56b 92-94,221-243,383-390
+replicadb-server/src/test/java/org/replicadb/server/job/api/JobDefinitionMapperTest.java
+  s_444a0a7e688df9::t_6e3ea2021c05c4 32-34,117-131,154-166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "0759feca6c38c463709eb017eb929a5d60b44c69",
+  "prompts": {},
+  "sessions": {
+    "s_444a0a7e688df9": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "669fd040-a5ac-4369-9e68-ddba503a47ef",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
