@@ -3,6 +3,11 @@ import { pathToFileURL } from 'node:url';
 const DEFAULT_API_URL = 'http://localhost:8080';
 const DEFAULT_TABLE = 'sample_orders';
 const DEFAULT_POSTGRES_PORT = process.env.REPLICADB_POSTGRES_PORT ?? '5432';
+export const MINIMUM_RUNS_PER_JOB = 5;
+const RUN_CLEANUP_ATTEMPTS = 40;
+const RUN_CLEANUP_DELAY_MS = 100;
+const ACTIVE_RUN_STATUSES = new Set(['PENDING', 'RUNNING', 'CANCEL_REQUESTED']);
+const TERMINAL_RUN_STATUSES = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED', 'RETRY_SCHEDULED']);
 
 export const SOURCE_FIXTURES = [
   {
@@ -176,6 +181,111 @@ async function authenticate(fetchImpl, cookieJar, apiUrl, username, password) {
   throw lastError;
 }
 
+export function getMissingRunCount(totalRuns, minimumRuns = MINIMUM_RUNS_PER_JOB) {
+  return Math.max(0, minimumRuns - totalRuns);
+}
+
+function isActiveRun(run) {
+  return ACTIVE_RUN_STATUSES.has(run?.status);
+}
+
+function isActiveRunConflict(error) {
+  return error instanceof Error && error.message.includes('already has an active run');
+}
+
+async function listJobRuns(fetchImpl, cookieJar, apiUrl, jobId) {
+  return requestJson(fetchImpl, cookieJar, apiUrl, `/api/v1/jobs/${jobId}/runs?page=0&size=100`);
+}
+
+async function waitForRunToBecomeTerminal({
+  fetchImpl,
+  cookieJar,
+  apiUrl,
+  jobId,
+  runId
+}) {
+  for (let attempt = 0; attempt < RUN_CLEANUP_ATTEMPTS; attempt += 1) {
+    const run = await requestJson(fetchImpl, cookieJar, apiUrl, `/api/v1/runs/${runId}`);
+    if (TERMINAL_RUN_STATUSES.has(run?.status)) {
+      return run;
+    }
+
+    if (!isActiveRun(run)) {
+      throw new Error(`The API returned an unexpected seeded run status: ${run?.status ?? 'unknown'} for job ${jobId}.`);
+    }
+
+    await wait(RUN_CLEANUP_DELAY_MS);
+  }
+
+  throw new Error(`Run ${runId} for job ${jobId} did not reach a terminal status.`);
+}
+
+async function waitForActiveRunsToFinish({ fetchImpl, cookieJar, apiUrl, jobId }, page) {
+  for (const run of page?.content ?? []) {
+    if (isActiveRun(run)) {
+      await waitForRunToBecomeTerminal({
+        fetchImpl,
+        cookieJar,
+        apiUrl,
+        jobId,
+        runId: run.id
+      });
+    }
+  }
+}
+
+async function triggerSeededRun({ fetchImpl, cookieJar, apiUrl, jobId, csrfToken, index }) {
+  for (let attempt = 0; attempt < RUN_CLEANUP_ATTEMPTS; attempt += 1) {
+    try {
+      return await requestJson(fetchImpl, cookieJar, apiUrl, `/api/v1/jobs/${jobId}/runs`, {
+        method: 'POST',
+        headers: {
+          'Idempotency-Key': `local-seed-${jobId}-${Date.now()}-${index}-${attempt}`,
+          'X-ReplicaDB-Local-Seed': 'true'
+        }
+      }, csrfToken);
+    } catch (error) {
+      if (!isActiveRunConflict(error)) {
+        throw error;
+      }
+
+      const page = await listJobRuns(fetchImpl, cookieJar, apiUrl, jobId);
+  await waitForActiveRunsToFinish({ fetchImpl, cookieJar, apiUrl, jobId }, page);
+    }
+  }
+
+  throw new Error(`Could not create a seeded run for job ${jobId} because another run stayed active.`);
+}
+
+export async function seedJobRunHistory({
+  fetchImpl,
+  cookieJar,
+  apiUrl,
+  jobId,
+  csrfToken,
+  minimumRuns = MINIMUM_RUNS_PER_JOB
+}) {
+  const page = await listJobRuns(fetchImpl, cookieJar, apiUrl, jobId);
+  await waitForActiveRunsToFinish({ fetchImpl, cookieJar, apiUrl, jobId }, page);
+  const totalRuns = Number.isInteger(page?.totalElements)
+    ? page.totalElements
+    : (page?.content ?? []).length;
+  const missingRuns = getMissingRunCount(totalRuns, minimumRuns);
+
+  for (let index = 0; index < missingRuns; index += 1) {
+    const run = await triggerSeededRun({ fetchImpl, cookieJar, apiUrl, jobId, csrfToken, index });
+
+    if (!run?.id) {
+      throw new Error(`The API did not return a run ID for job ${jobId}.`);
+    }
+    if (run.status !== 'CANCELLED') {
+      throw new Error(`The local seed API did not create a terminal run for job ${jobId}: ${run.status ?? 'unknown'}.`);
+    }
+  }
+
+  return missingRuns;
+}
+
 export async function seedLocalJobs({
   apiUrl = process.env.REPLICADB_API_URL ?? DEFAULT_API_URL,
   username = process.env.REPLICADB_BOOTSTRAP_ADMIN_USERNAME,
@@ -192,31 +302,52 @@ export async function seedLocalJobs({
   const cookieJar = new Map();
   const csrfToken = await authenticate(fetchImpl, cookieJar, apiUrl, username, password);
   const page = await requestJson(fetchImpl, cookieJar, apiUrl, '/api/v1/jobs?page=0&size=100');
-  const existingNames = new Set((page?.content ?? []).map(job => job.name).filter(Boolean));
+  const existingJobs = new Map((page?.content ?? []).map(job => [job.name, job]));
+  const jobs = [];
   let created = 0;
   let skipped = 0;
 
   for (const fixture of SOURCE_FIXTURES) {
     const payload = buildJobPayload(fixture);
-    if (existingNames.has(payload.name)) {
+    const existingJob = existingJobs.get(payload.name);
+    if (existingJob) {
+      jobs.push(existingJob);
       skipped += 1;
       continue;
     }
 
-    await requestJson(fetchImpl, cookieJar, apiUrl, '/api/v1/jobs', {
+    const job = await requestJson(fetchImpl, cookieJar, apiUrl, '/api/v1/jobs', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload)
     }, csrfToken);
+    if (!job?.id) {
+      throw new Error(`The API did not return a job ID for ${payload.name}.`);
+    }
+    jobs.push(job);
     created += 1;
   }
 
-  return { created, skipped, total: SOURCE_FIXTURES.length };
+  let runsCreated = 0;
+  for (const job of jobs) {
+    if (!job?.id) {
+      throw new Error(`Cannot seed run history without a job ID for ${job?.name ?? 'unknown job'}.`);
+    }
+    runsCreated += await seedJobRunHistory({
+      fetchImpl,
+      cookieJar,
+      apiUrl,
+      jobId: job.id,
+      csrfToken
+    });
+  }
+
+  return { created, skipped, runsCreated, total: SOURCE_FIXTURES.length };
 }
 
 async function main() {
   const result = await seedLocalJobs();
-  console.log(`Local job fixtures ready: ${result.created} created, ${result.skipped} already present.`);
+  console.log(`Local job fixtures ready: ${result.created} created, ${result.skipped} already present, ${result.runsCreated} run history entries created.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

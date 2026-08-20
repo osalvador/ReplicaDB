@@ -1,5 +1,6 @@
 package org.replicadb.server.job.api;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.audit.AuditActorResolver;
 import org.replicadb.server.audit.AuditService;
@@ -22,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
@@ -45,6 +48,7 @@ public class JobRunController {
     private final JobAccessService jobAccessService;
     private final AuditService auditService;
     private final AuditActorResolver auditActorResolver;
+    private final boolean localSeedingEnabled;
 
     public JobRunController(JobRunRepository jobRunRepository,
                             JobDefinitionRepository jobDefinitionRepository,
@@ -52,7 +56,8 @@ public class JobRunController {
                             RunExecutionCoordinator executionCoordinator,
                             JobAccessService jobAccessService,
                             AuditService auditService,
-                            AuditActorResolver auditActorResolver) {
+                            AuditActorResolver auditActorResolver,
+                            @Value("${replicadb.server.local-seeding.enabled:false}") boolean localSeedingEnabled) {
         this.jobRunRepository = jobRunRepository;
         this.jobDefinitionRepository = jobDefinitionRepository;
         this.idempotencyRepository = idempotencyRepository;
@@ -60,6 +65,7 @@ public class JobRunController {
         this.jobAccessService = jobAccessService;
         this.auditService = auditService;
         this.auditActorResolver = auditActorResolver;
+        this.localSeedingEnabled = localSeedingEnabled;
     }
 
     @GetMapping("/jobs/{jobDefinitionId}/runs")
@@ -106,7 +112,8 @@ public class JobRunController {
     public ResponseEntity<JobRunResponse> trigger(
             @PathVariable UUID jobDefinitionId,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
-            Authentication authentication) {
+            Authentication authentication,
+            HttpServletRequest request) {
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 255) {
             throw new IllegalArgumentException("Idempotency-Key must be present and at most 255 characters");
         }
@@ -120,12 +127,31 @@ public class JobRunController {
             }
             return accepted(existingRun);
         }
+        boolean localSeedRequested = "true".equalsIgnoreCase(request.getHeader("X-ReplicaDB-Local-Seed"));
+        if (localSeedRequested && !localSeedingEnabled) {
+            throw new IllegalStateException("Local run seeding is disabled");
+        }
+        if (localSeedRequested && !jobAccessService.isAdmin(authentication)) {
+            throw new AccessDeniedException("Local run seeding requires ADMIN");
+        }
         if (jobRunRepository.hasActiveRun(jobDefinitionId)) {
             throw new IllegalStateException("Job definition " + jobDefinitionId + " already has an active run");
         }
 
         JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
         idempotencyRepository.upsert(idempotencyKey, definition.id(), pending.id());
+        if (localSeedRequested) {
+            String warning = cancellationWarning(definition.mode());
+            jobRunRepository.markPendingCancelled(pending.id(), warning);
+            JobRun cancelled = findRun(pending.id());
+            auditService.record(auditActorResolver.resolve(authentication), AuditAction.RUN_TRIGGERED,
+                AuditResourceType.JOB_RUN, cancelled.id().toString(), AuditOutcome.SUCCESS,
+                Map.of("jobDefinitionId", definition.id().toString(), "trigger", "local-seed"));
+            auditService.record(auditActorResolver.resolve(authentication), AuditAction.RUN_CANCEL_REQUESTED,
+                AuditResourceType.JOB_RUN, cancelled.id().toString(), AuditOutcome.SUCCESS,
+                Map.of("warning", warning, "resultingStatus", cancelled.status().name()));
+            return accepted(cancelled);
+        }
         executionCoordinator.submit(pending.id(), "api");
         auditService.record(auditActorResolver.resolve(authentication), AuditAction.RUN_TRIGGERED,
             AuditResourceType.JOB_RUN, pending.id().toString(), AuditOutcome.SUCCESS,
