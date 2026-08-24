@@ -1,0 +1,181 @@
+.ai/archive/phase-3-2-worker-runtime-and-postgresql-dispatch.plan.md
+  s_933c31d0f54f7d::t_e1f65361210b16 1-338
+.ai/learnings/phase32-notification-readiness.md
+  s_933c31d0f54f7d::t_e826a8da94ddfc 1-7
+.ai/learnings/phase32-spring-property-precedence.md
+  s_933c31d0f54f7d::t_5c0bb3c17b327b 1-7
+.github/workflows/CT_Push.yml
+  s_933c31d0f54f7d::t_aec7eecec05f8a 164-173
+ARCHITECTURE_DECISIONS.md
+  s_933c31d0f54f7d::t_197ec43cc4e942 15,353,727,761,787-788,868
+replicadb-server/frontend/README.develop.md
+  s_933c31d0f54f7d::t_729d723cf5c65d 137-177,255
+replicadb-server/src/main/java/org/replicadb/server/audit/api/AuditEventController.java
+  s_933c31d0f54f7d::t_f706a0ca742dee 10,23
+replicadb-server/src/main/java/org/replicadb/server/audit/execution/AuditRetentionTask.java
+  s_933c31d0f54f7d::t_a93d960054c503 7,12
+replicadb-server/src/main/java/org/replicadb/server/config/ApiSchedulingConfiguration.java
+  s_933c31d0f54f7d::t_745ec3b3112515 1-11
+replicadb-server/src/main/java/org/replicadb/server/job/api/GlobalExceptionHandler.java
+  s_933c31d0f54f7d::t_c35ce52a2b5f0a 14,21
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobDefinitionController.java
+  s_933c31d0f54f7d::t_e0996d5f621a7a 16,38
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobDefinitionMapper.java
+  s_933c31d0f54f7d::t_66b81510e30ce7 12,23
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobPermissionController.java
+  s_933c31d0f54f7d::t_fb830c9d5ac864 16,38
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobRunController.java
+  s_933c31d0f54f7d::t_620963fc3f26dc 14-15,30,46,53,59,64,69-70,74,80,142-149,152,155-160,202-207
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobScheduleController.java
+  s_933c31d0f54f7d::t_d13fcf75b1ec97 16,32
+replicadb-server/src/main/java/org/replicadb/server/job/application/RunCancellationService.java
+  s_933c31d0f54f7d::t_3806ac883fad0a 3-4,6-7,17-18,20,22-23,25-39,49-60
+replicadb-server/src/main/java/org/replicadb/server/job/application/RunDispatchResult.java
+  s_933c31d0f54f7d::t_c9ef8e1cd6ff1a 1-33
+replicadb-server/src/main/java/org/replicadb/server/job/application/RunDispatchService.java
+  s_933c31d0f54f7d::t_635239e0a53c86 1-112
+replicadb-server/src/main/java/org/replicadb/server/job/config/WorkerRuntimeConfiguration.java
+  s_933c31d0f54f7d::t_3072fa5de90487 1-80
+replicadb-server/src/main/java/org/replicadb/server/job/config/WorkerRuntimeLifecycle.java
+  s_933c31d0f54f7d::t_17fa13a4e55c5e 1-90
+replicadb-server/src/main/java/org/replicadb/server/job/config/WorkerRuntimeProperties.java
+  s_933c31d0f54f7d::t_19b6a46d0ab68d 1-137
+replicadb-server/src/main/java/org/replicadb/server/job/dispatch/NotificationPayloadParser.java
+  s_933c31d0f54f7d::t_1b24cc04f0702a 1-18
+replicadb-server/src/main/java/org/replicadb/server/job/dispatch/PollingFallback.java
+  s_933c31d0f54f7d::t_518939e91d2577 1-184
+replicadb-server/src/main/java/org/replicadb/server/job/dispatch/PostgreSQLNotificationListener.java
+  s_933c31d0f54f7d::t_ed71d62b220a44 1-255
+replicadb-server/src/main/java/org/replicadb/server/job/execution/ActiveRunRegistry.java
+  s_933c31d0f54f7d::t_10af65c392d357 1-55
+replicadb-server/src/main/java/org/replicadb/server/job/execution/HeartbeatHandle.java
+  s_933c31d0f54f7d::t_f1d1f79c00c00a 1-29
+replicadb-server/src/main/java/org/replicadb/server/job/execution/HeartbeatService.java
+  s_933c31d0f54f7d::t_24e1c8cc5c97ba 1-145
+replicadb-server/src/main/java/org/replicadb/server/job/execution/IdempotencyCleanupTask.java
+  s_933c31d0f54f7d::t_7ef826c6c9b4e5 4,9
+replicadb-server/src/main/java/org/replicadb/server/job/execution/JobExecutionService.java
+  s_933c31d0f54f7d::t_3b5cf4640589cc 44,54-55,64,70,73,75,85-89,124-126,130-133
+replicadb-server/src/main/java/org/replicadb/server/job/execution/QuartzScheduleService.java
+  s_933c31d0f54f7d::t_9fa0ab4090f443 14,24
+replicadb-server/src/main/java/org/replicadb/server/job/execution/RunExecutionCoordinator.java
+  s_933c31d0f54f7d::t_ed4f200d73cfc6 10,24,31,37,44,59,67
+replicadb-server/src/main/java/org/replicadb/server/job/execution/RunExecutionHandle.java
+  s_933c31d0f54f7d::t_d3a45c9e7a5841 1-45
+replicadb-server/src/main/java/org/replicadb/server/job/execution/ScheduleReconciler.java
+  s_933c31d0f54f7d::t_49d75ff07adabd 9,15
+replicadb-server/src/main/java/org/replicadb/server/job/execution/ScheduledRunTriggerJob.java
+  s_933c31d0f54f7d::t_5b70ab74de1059 14-15,19-20,26,35-37,41-43,62,64,71-78
+replicadb-server/src/main/java/org/replicadb/server/job/execution/WorkerDispatchCoordinator.java
+  s_933c31d0f54f7d::t_1f79f4701182dd 1-255
+replicadb-server/src/main/java/org/replicadb/server/job/execution/WorkerRunIdentity.java
+  s_933c31d0f54f7d::t_dbba7d5876bacc 1-19
+replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobRunRepository.java
+  s_933c31d0f54f7d::t_be35a092fbb998 45-47,49-56,58-62,64-67,72-75,255-283,411,419,423,426-437
+replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobScheduleRepository.java
+  s_933c31d0f54f7d::t_b1eb145cf5cc0f 6,17
+replicadb-server/src/main/java/org/replicadb/server/job/persistence/PostgresNotificationPublisher.java
+  s_933c31d0f54f7d::t_6a3fea5cdb81a5 1-44
+replicadb-server/src/main/java/org/replicadb/server/job/persistence/RunTriggerIdempotencyRepository.java
+  s_933c31d0f54f7d::t_837c2ed4cc32a9 20-23,25,29,32-34,39-60,82-84
+replicadb-server/src/main/java/org/replicadb/server/job/port/JobRunStore.java
+  s_933c31d0f54f7d::t_6b31f5453464a7 16-18,30-33,38
+replicadb-server/src/main/java/org/replicadb/server/job/port/RunNotificationPublisher.java
+  s_933c31d0f54f7d::t_e3525d5820ed04 1-13
+replicadb-server/src/main/java/org/replicadb/server/security/JobAccessService.java
+  s_933c31d0f54f7d::t_f334e91950098b 8,16
+replicadb-server/src/main/java/org/replicadb/server/security/api/AuthController.java
+  s_933c31d0f54f7d::t_2ded2e3e5ca337 17,35
+replicadb-server/src/main/java/org/replicadb/server/security/api/UserController.java
+  s_933c31d0f54f7d::t_3f199d76e7ae9b 14,34
+replicadb-server/src/main/java/org/replicadb/server/security/auth/LoginAttemptService.java
+  s_933c31d0f54f7d::t_ab1d8afec7dce7 4,14
+replicadb-server/src/main/java/org/replicadb/server/security/auth/ReplicaDbUserDetailsService.java
+  s_933c31d0f54f7d::t_5a4a295a5fa89a 7,11
+replicadb-server/src/main/java/org/replicadb/server/security/config/ProblemDetailAuthenticationEntryPoint.java
+  s_933c31d0f54f7d::t_5d0164c4396677 9,17
+replicadb-server/src/main/java/org/replicadb/server/security/config/SecurityConfig.java
+  s_933c31d0f54f7d::t_8328e2dd1d6df0 5,21
+replicadb-server/src/main/java/org/replicadb/server/security/execution/AdminBootstrapRunner.java
+  s_933c31d0f54f7d::t_e30e9b0fa97f9b 18,28
+replicadb-server/src/main/java/org/replicadb/server/security/persistence/AppUserRepository.java
+  s_933c31d0f54f7d::t_ef4d0ee1111049 8,22
+replicadb-server/src/main/java/org/replicadb/server/security/persistence/JobPermissionRepository.java
+  s_933c31d0f54f7d::t_c1016cc152cce8 8,22
+replicadb-server/src/main/resources/application-api.yml
+  s_933c31d0f54f7d::t_9c8ae76366f26b 8-12,29-30
+replicadb-server/src/main/resources/application-worker.yml
+  s_933c31d0f54f7d::t_87046a0057501c 1-33
+replicadb-server/src/test/java/org/replicadb/server/WorkerProfileContextTest.java
+  s_933c31d0f54f7d::t_54f92b977db4b5 1-110
+replicadb-server/src/test/java/org/replicadb/server/config/PostgresTestcontainersConfig.java
+  s_933c31d0f54f7d::t_1fc3b5dc84e94b 3-4,11-16,26-55
+replicadb-server/src/test/java/org/replicadb/server/job/api/JobRunCancellationRaceTest.java
+  s_933c31d0f54f7d::t_0314bc576c5294 74-75
+replicadb-server/src/test/java/org/replicadb/server/job/api/JobRunControllerTest.java
+  s_933c31d0f54f7d::t_019be686d29517 201,215,265-267,303-304,306,347,413-414,417,419
+replicadb-server/src/test/java/org/replicadb/server/job/api/RunDispatchApiIT.java
+  s_933c31d0f54f7d::t_d96a893a9273c3 1-78
+replicadb-server/src/test/java/org/replicadb/server/job/application/RunCancellationServiceTest.java
+  s_933c31d0f54f7d::t_1acfa5b6c347ab 5,11,21-22,34,36,50,63,66-92
+replicadb-server/src/test/java/org/replicadb/server/job/application/RunDispatchServiceIT.java
+  s_933c31d0f54f7d::t_be81c49948dc7e 1-235
+replicadb-server/src/test/java/org/replicadb/server/job/application/RunDispatchServiceTest.java
+  s_933c31d0f54f7d::t_dddf145c878c55 1-149
+replicadb-server/src/test/java/org/replicadb/server/job/config/WorkerRuntimeConfigurationTest.java
+  s_933c31d0f54f7d::t_464b6615f02ae8 1-101
+replicadb-server/src/test/java/org/replicadb/server/job/dispatch/DistributedWorkerLifecycleIT.java
+  s_933c31d0f54f7d::t_e696e8fd9cc3cd 1-286
+replicadb-server/src/test/java/org/replicadb/server/job/dispatch/PollingFallbackIT.java
+  s_933c31d0f54f7d::t_9e8205c17527eb 1-260
+replicadb-server/src/test/java/org/replicadb/server/job/dispatch/PollingFallbackTest.java
+  s_933c31d0f54f7d::t_7665981bbdc82b 1-159
+replicadb-server/src/test/java/org/replicadb/server/job/dispatch/PostgreSQLNotificationListenerIT.java
+  s_933c31d0f54f7d::t_ada723ccdb2c13 1-344
+replicadb-server/src/test/java/org/replicadb/server/job/dispatch/PostgreSQLNotificationListenerTest.java
+  s_933c31d0f54f7d::t_563ddceae55a94 1-280
+replicadb-server/src/test/java/org/replicadb/server/job/dispatch/RemoteCancellationIT.java
+  s_933c31d0f54f7d::t_e5948eb6e63690 1-223
+replicadb-server/src/test/java/org/replicadb/server/job/execution/HeartbeatServiceIT.java
+  s_933c31d0f54f7d::t_cefb72b2a997bb 1-130
+replicadb-server/src/test/java/org/replicadb/server/job/execution/HeartbeatServiceTest.java
+  s_933c31d0f54f7d::t_dd36f987e777a5 1-129
+replicadb-server/src/test/java/org/replicadb/server/job/execution/JobExecutionServiceIT.java
+  s_933c31d0f54f7d::t_952b67a2eb5030 25-28,55-56,100,125-126,128-129,153,166-170,172,175-177,186-187,190,192,194-195,200-207,225,236
+replicadb-server/src/test/java/org/replicadb/server/job/execution/RunExecutionCoordinatorTest.java
+  s_933c31d0f54f7d::t_56bf9677615a2c 16,67-68,82,97,121-122
+replicadb-server/src/test/java/org/replicadb/server/job/execution/RunExecutionHandleTest.java
+  s_933c31d0f54f7d::t_8f0d9d2b02bac2 1-94
+replicadb-server/src/test/java/org/replicadb/server/job/execution/ScheduledRunTriggerJobTest.java
+  s_933c31d0f54f7d::t_ba6d856626d860 14-15,23,33,42,48,51,63,74-75,81,92,102-119
+replicadb-server/src/test/java/org/replicadb/server/job/execution/WorkerDispatchCoordinatorIT.java
+  s_933c31d0f54f7d::t_6b6d0aebbb7d5d 1-204
+replicadb-server/src/test/java/org/replicadb/server/job/execution/WorkerDispatchCoordinatorTest.java
+  s_933c31d0f54f7d::t_5467435db48012 1-284
+replicadb-server/src/test/java/org/replicadb/server/job/execution/WorkerExecutionIT.java
+  s_933c31d0f54f7d::t_3a2cc2b32daf25 1-218
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/FlywayMigrationTest.java
+  s_933c31d0f54f7d::t_0d30717099a89b 86-87
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/JobRunRepositoryIT.java
+  s_933c31d0f54f7d::t_45b1882f37fc35 66-83,86,95,112-120,140-143,157,173,186,196,199,212,242,273,291,304,307-308,319-363,369,386,412,421,424-425,438-439,454,471,478-480,482,484-485,492-493,495,506-507,509-510,516,519,521-522,524,552-553,555,564-566,568-569,578,580-581,592-593,595-596,600,610,623-624,627,629,656,660-661,669-671,673,680-685,692-693,695-696,698-699,731
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/NotificationChannelContractTest.java
+  s_933c31d0f54f7d::t_9b728583aaae61 1-60
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/PostgresNotificationPublisherIT.java
+  s_933c31d0f54f7d::t_7a8b57551dc0ab 1-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "697baff46b3958e0e420c5006fe49a44eca6aef0",
+  "prompts": {},
+  "sessions": {
+    "s_933c31d0f54f7d": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "d6a5b9f9-e5a7-4f76-9d89-e1bd07eb8cd1",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
