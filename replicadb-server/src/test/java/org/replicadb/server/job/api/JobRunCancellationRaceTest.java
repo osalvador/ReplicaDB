@@ -71,8 +71,8 @@ class JobRunCancellationRaceTest {
     void auditsCancellationWhenRunTerminatesBeforeCancelUpdate() throws Exception {
         JobDefinition definition = jobDefinitionRepository.insert(
                 JobDefinitionTestFixtures.aJobDefinition().withName("cancel-race-job").build());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
-        JobRun running = jobRunRepository.claimById(pending.id(), "race-worker", Duration.ofMinutes(5))
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
+        JobRun running = jobRunRepository.claimNextEligible(pending.id(), "race-worker", Duration.ofMinutes(5))
                 .orElseThrow();
 
         when(executionCoordinator.requestCancellation(running.id())).thenAnswer(invocation -> {

@@ -14,6 +14,7 @@ import org.replicadb.server.audit.domain.AuditResourceType;
 import org.replicadb.server.security.auth.LoginAttemptService;
 import org.replicadb.server.security.auth.TooManyAttemptsException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Map;
 
 @RestController
+@Profile("api")
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 

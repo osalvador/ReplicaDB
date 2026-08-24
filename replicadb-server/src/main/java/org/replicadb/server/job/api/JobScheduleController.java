@@ -13,6 +13,7 @@ import org.replicadb.server.job.persistence.JobScheduleRepository;
 import org.replicadb.server.security.JobAccessService;
 import org.replicadb.server.security.domain.JobPermissionType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,6 +29,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
+@Profile("api")
 @RequestMapping("/api/v1/jobs/{jobDefinitionId}/schedule")
 @Validated
 public class JobScheduleController {

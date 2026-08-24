@@ -5,6 +5,11 @@ spring:
     password: ${DB_PASSWORD:}
   flyway:
     enabled: true
+  quartz:
+    job-store-type: memory
+    properties:
+      org.quartz.scheduler.instanceName: ReplicaDbScheduler
+      org.quartz.threadPool.threadCount: 2
   session:
     store-type: jdbc
     jdbc:
@@ -21,3 +26,5 @@ replicadb:
   server:
     execution:
       pool-size: 4
+    local-execution:
+      enabled: true

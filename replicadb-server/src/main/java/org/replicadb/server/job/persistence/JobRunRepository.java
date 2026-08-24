@@ -16,10 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,40 +42,38 @@ public class JobRunRepository implements JobRunStore {
         this.rowMapper = new JobRunRowMapper();
     }
 
-    public JobRun insertPending(UUID jobDefinitionId, UUID previousRunId, int attempt, Instant availableAt) {
-        if (availableAt == null) {
-            throw new IllegalArgumentException("availableAt must not be null");
+        @Override
+        public JobRun insertPendingNow(UUID jobDefinitionId, UUID previousRunId, int attempt) {
+            return insertPendingNow(UUID.randomUUID(), jobDefinitionId, previousRunId, attempt);
         }
-        UUID id = UUID.randomUUID();
-        Instant createdAt = Instant.now();
+
+        @Override
+        public JobRun insertPendingNow(UUID runId, UUID jobDefinitionId, UUID previousRunId, int attempt) {
+            return insertPendingWithDatabaseTime(runId, jobDefinitionId, previousRunId, attempt);
+        }
+
+        private JobRun insertPendingWithDatabaseTime(UUID id, UUID jobDefinitionId,
+                                                     UUID previousRunId, int attempt) {
         String sql = """
-                INSERT INTO job_run (id, job_definition_id, previous_run_id, status, attempt,
-                                     available_at, created_at)
-                VALUES (:id, :jobDefinitionId, :previousRunId, 'PENDING', :attempt,
-                        :availableAt, :createdAt)
-                """;
+            INSERT INTO job_run (id, job_definition_id, previous_run_id, status, attempt,
+                         available_at, created_at)
+            VALUES (:id, :jobDefinitionId, :previousRunId, 'PENDING', :attempt,
+                now(), now())
+            """;
         MapSqlParameterSource parameters = new MapSqlParameterSource()
-                .addValue("id", id)
-                .addValue("jobDefinitionId", jobDefinitionId)
-                .addValue("previousRunId", previousRunId, Types.OTHER)
-                .addValue("attempt", attempt)
-                .addValue("availableAt", Timestamp.from(availableAt))
-                .addValue("createdAt", Timestamp.from(createdAt));
+            .addValue("id", id)
+            .addValue("jobDefinitionId", jobDefinitionId)
+            .addValue("previousRunId", previousRunId, Types.OTHER)
+            .addValue("attempt", attempt);
         try {
             jdbcTemplate.update(sql, parameters);
         } catch (DuplicateKeyException exception) {
             throw new IllegalStateException(
-                    "Job definition " + jobDefinitionId + " already has an active run", exception);
+                "Job definition " + jobDefinitionId + " already has an active run", exception);
         }
-        return new JobRun(id, jobDefinitionId, previousRunId, JobRunStatus.PENDING, attempt,
-            null, null, null, createdAt, null, null, null, null, null, null, null,
-            availableAt, null);
-    }
-
-    @Deprecated
-    public JobRun insertPending(UUID jobDefinitionId, UUID previousRunId, int attempt) {
-        return insertPending(jobDefinitionId, previousRunId, attempt, Instant.now().minusSeconds(5));
-    }
+        return findById(id).orElseThrow(() -> new IllegalStateException(
+            "Created JobRun could not be loaded: " + id));
+        }
 
     @Transactional
     public Optional<JobRun> claimNextEligible(UUID requestedRunId, String executorIdentity,
@@ -256,9 +252,35 @@ public class JobRunRepository implements JobRunStore {
         return new RunRecoveryResult(Optional.of(findById(runId).orElseThrow()), Optional.empty());
     }
 
-    @Deprecated
-    public Optional<JobRun> claimById(UUID runId, String executorIdentity, Duration leaseDuration) {
-        return claimNextEligible(runId, executorIdentity, leaseDuration);
+    @Override
+    public List<UUID> findExpiredRunIds(int limit) {
+        validateLimit(limit);
+        return jdbcTemplate.query("""
+                SELECT id
+                FROM job_run
+                WHERE status IN ('RUNNING', 'CANCEL_REQUESTED')
+                  AND lease_until IS NOT NULL
+                  AND lease_until <= now()
+                ORDER BY lease_until, created_at, id
+                LIMIT :limit
+                """, Map.of("limit", limit),
+                (resultSet, rowNum) -> resultSet.getObject("id", UUID.class));
+    }
+
+    @Override
+    public List<UUID> findCancellationRequestedRunIds(String executorIdentity, int limit) {
+        if (executorIdentity == null || executorIdentity.isBlank()) {
+            throw new IllegalArgumentException("executorIdentity must not be blank");
+        }
+        validateLimit(limit);
+        return jdbcTemplate.query("""
+                SELECT id
+                FROM job_run
+                WHERE status = 'CANCEL_REQUESTED' AND executor_identity = :executorIdentity
+                ORDER BY created_at, id
+                LIMIT :limit
+                """, Map.of("executorIdentity", executorIdentity, "limit", limit),
+                (resultSet, rowNum) -> resultSet.getObject("id", UUID.class));
     }
 
     public boolean hasActiveRun(UUID jobDefinitionId) {
@@ -272,29 +294,6 @@ public class JobRunRepository implements JobRunStore {
         Boolean active = jdbcTemplate.queryForObject(sql,
                 Map.of("jobDefinitionId", jobDefinitionId), Boolean.class);
         return Boolean.TRUE.equals(active);
-    }
-
-    @Transactional
-    @Deprecated
-    public Optional<JobRun> claimNextPending(String executorIdentity, Duration leaseDuration) {
-        return claimNextEligible(null, executorIdentity, leaseDuration);
-    }
-
-    public void markSucceeded(UUID runId, long rowsProcessed, long durationMillis, String committedWatermark) {
-        JobRunStateMachine.assertLegalTransition(JobRunStatus.RUNNING, JobRunStatus.SUCCEEDED);
-        String sql = """
-                UPDATE job_run
-                SET status = 'SUCCEEDED', finished_at = now(), rows_processed = :rowsProcessed,
-                    duration_millis = :durationMillis, committed_watermark = :committedWatermark,
-                    error_message = NULL
-                WHERE id = :id AND status = 'RUNNING'
-                """;
-        int updated = jdbcTemplate.update(sql, new MapSqlParameterSource()
-                .addValue("id", runId)
-                .addValue("rowsProcessed", rowsProcessed)
-                .addValue("durationMillis", durationMillis)
-                .addValue("committedWatermark", committedWatermark, Types.VARCHAR));
-        assertUpdated(runId, updated, JobRunStatus.SUCCEEDED);
     }
 
         public JobRunStore.FencedUpdateResult recordProgress(UUID runId, LeaseToken leaseToken,
@@ -331,22 +330,6 @@ public class JobRunRepository implements JobRunStore {
         return fencedResult(runId, updated);
         }
 
-    public void markFailed(UUID runId, long rowsProcessed, long durationMillis, String errorMessage) {
-        JobRunStateMachine.assertLegalTransition(JobRunStatus.RUNNING, JobRunStatus.FAILED);
-        String sql = """
-                UPDATE job_run
-                SET status = 'FAILED', finished_at = now(), rows_processed = :rowsProcessed,
-                    duration_millis = :durationMillis, error_message = :errorMessage
-                WHERE id = :id AND status = 'RUNNING'
-                """;
-        int updated = jdbcTemplate.update(sql, new MapSqlParameterSource()
-                .addValue("id", runId)
-                .addValue("rowsProcessed", rowsProcessed)
-                .addValue("durationMillis", durationMillis)
-                .addValue("errorMessage", errorMessage, Types.VARCHAR));
-        assertUpdated(runId, updated, JobRunStatus.FAILED);
-    }
-
     public JobRunStore.FencedUpdateResult markFailed(UUID runId, LeaseToken leaseToken,
                                                      long rowsProcessed, long durationMillis,
                                                      String errorMessage) {
@@ -363,23 +346,6 @@ public class JobRunRepository implements JobRunStore {
                 .addValue("durationMillis", durationMillis)
                 .addValue("errorMessage", errorMessage, Types.VARCHAR));
         return fencedResult(runId, updated);
-    }
-
-    public void markCancelRequested(UUID runId, String cancellationWarning) {
-        JobRunStateMachine.assertLegalTransition(JobRunStatus.RUNNING, JobRunStatus.CANCEL_REQUESTED);
-        String sql = """
-                UPDATE job_run
-                SET status = 'CANCEL_REQUESTED', cancellation_warning = :cancellationWarning
-                WHERE id = :id AND status = 'RUNNING'
-                """;
-            int updated = jdbcTemplate.update(sql, new MapSqlParameterSource()
-                .addValue("id", runId)
-                .addValue("cancellationWarning", cancellationWarning, Types.VARCHAR));
-        if (updated == 0) {
-            // The execution may have reached a terminal state between the API read and this update.
-            return;
-        }
-        assertUpdated(runId, updated, JobRunStatus.CANCEL_REQUESTED);
     }
 
     @Override
@@ -399,21 +365,6 @@ public class JobRunRepository implements JobRunStore {
             return JobRunStore.CancellationResult.REQUESTED;
         }
         return cancellationStatus(runId);
-    }
-
-    public void markPendingCancelled(UUID runId, String cancellationWarning) {
-        JobRunStateMachine.assertLegalTransition(JobRunStatus.PENDING, JobRunStatus.CANCELLED);
-        String sql = """
-                UPDATE job_run
-                SET status = 'CANCELLED', finished_at = now(), rows_processed = 0,
-                    duration_millis = 0, error_message = NULL,
-                    cancellation_warning = :cancellationWarning
-                WHERE id = :id AND status = 'PENDING'
-                """;
-        int updated = jdbcTemplate.update(sql, new MapSqlParameterSource()
-                .addValue("id", runId)
-                .addValue("cancellationWarning", cancellationWarning, Types.VARCHAR));
-        assertUpdated(runId, updated, JobRunStatus.CANCELLED);
     }
 
     @Override
@@ -437,22 +388,6 @@ public class JobRunRepository implements JobRunStore {
         return cancellationStatus(runId);
     }
 
-    public void markCancelled(UUID runId, long rowsProcessed, long durationMillis) {
-        JobRunStateMachine.assertLegalTransition(JobRunStatus.RUNNING, JobRunStatus.CANCELLED);
-        JobRunStateMachine.assertLegalTransition(JobRunStatus.CANCEL_REQUESTED, JobRunStatus.CANCELLED);
-        String sql = """
-                UPDATE job_run
-                SET status = 'CANCELLED', finished_at = now(), rows_processed = :rowsProcessed,
-                    duration_millis = :durationMillis, error_message = NULL
-                WHERE id = :id AND status IN ('RUNNING', 'CANCEL_REQUESTED')
-                """;
-        int updated = jdbcTemplate.update(sql, new MapSqlParameterSource()
-                .addValue("id", runId)
-                .addValue("rowsProcessed", rowsProcessed)
-                .addValue("durationMillis", durationMillis));
-        assertUpdated(runId, updated, JobRunStatus.CANCELLED);
-    }
-
     public JobRunStore.FencedUpdateResult markCancelled(UUID runId, LeaseToken leaseToken,
                                                         long rowsProcessed, long durationMillis) {
         validateFencedValues(runId, leaseToken, rowsProcessed, durationMillis);
@@ -472,16 +407,8 @@ public class JobRunRepository implements JobRunStore {
     }
 
     @Transactional
-    public JobRun scheduleRetry(UUID failedRunId) {
-        return scheduleRetry(failedRunId, Instant.now().minusSeconds(5));
-    }
-
-    @Transactional
     @Override
-    public JobRun scheduleRetry(UUID failedRunId, Instant availableAt) {
-        if (availableAt == null) {
-            throw new IllegalArgumentException("availableAt must not be null");
-        }
+    public JobRun scheduleRetryNow(UUID failedRunId) {
         JobRun failedRun = findById(failedRunId)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown JobRun " + failedRunId));
         if (failedRun.status() != JobRunStatus.FAILED) {
@@ -489,15 +416,25 @@ public class JobRunRepository implements JobRunStore {
         }
         JobRunStateMachine.assertLegalTransition(JobRunStatus.FAILED, JobRunStatus.RETRY_SCHEDULED);
 
-        String sql = """
+        int updated = jdbcTemplate.update("""
                 UPDATE job_run
                 SET status = 'RETRY_SCHEDULED'
                 WHERE id = :id AND status = 'FAILED'
-                """;
-        int updated = jdbcTemplate.update(sql, Map.of("id", failedRunId));
+                """, Map.of("id", failedRunId));
         assertUpdated(failedRunId, updated, JobRunStatus.RETRY_SCHEDULED);
 
-        return insertPending(failedRun.jobDefinitionId(), failedRun.id(), failedRun.attempt() + 1, availableAt);
+        return insertPendingWithDatabaseTime(failedRun.jobDefinitionId(), failedRun.id(),
+                failedRun.attempt() + 1);
+    }
+
+    private JobRun insertPendingWithDatabaseTime(UUID jobDefinitionId, UUID previousRunId, int attempt) {
+        return insertPendingNow(jobDefinitionId, previousRunId, attempt);
+    }
+
+    private static void validateLimit(int limit) {
+        if (limit < 1) {
+            throw new IllegalArgumentException("limit must be positive");
+        }
     }
 
     public Optional<String> findLastCommittedWatermark(UUID jobDefinitionId) {

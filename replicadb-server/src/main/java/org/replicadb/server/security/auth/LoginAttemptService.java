@@ -1,6 +1,7 @@
 package org.replicadb.server.security.auth;
 
 import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Profile;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -10,6 +11,7 @@ import java.util.Deque;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
+@Profile("api")
 public class LoginAttemptService {
 
     private static final int MAX_ATTEMPTS = 5;

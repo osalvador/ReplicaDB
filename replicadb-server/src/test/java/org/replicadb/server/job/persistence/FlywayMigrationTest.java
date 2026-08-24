@@ -83,6 +83,8 @@ class FlywayMigrationTest {
         Flyway leaseFlyway = flyway().load();
         assertEquals(1, leaseFlyway.migrate().migrationsExecuted);
         assertEquals(14, leaseFlyway.info().applied().length);
+        assertEquals(14, leaseFlyway.info().all().length);
+        assertEquals(0, leaseFlyway.info().pending().length);
         leaseFlyway.validate();
 
         assertTrue(hasIndex("idx_job_run_eligible"));

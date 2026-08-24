@@ -11,6 +11,7 @@ import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.TriggerKey;
 import org.replicadb.server.job.domain.JobSchedule;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -20,6 +21,7 @@ import java.util.TimeZone;
 import java.util.UUID;
 
 @Service
+@Profile("api")
 public class QuartzScheduleService {
 
     private static final String GROUP = "replicadb-jobs";

@@ -198,7 +198,7 @@ class JobRunControllerTest {
             @Test
             void rejectsTriggerWhenTheJobAlreadyHasAnActiveRun() throws Exception {
             JobDefinition definition = jobDefinitionRepository.insert(definition("active-job"));
-            jobRunRepository.insertPending(definition.id(), null, 1);
+            jobRunRepository.insertPendingNow(definition.id(), null, 1);
 
             mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                     .post("/api/v1/jobs/" + definition.id() + "/runs")
@@ -212,7 +212,7 @@ class JobRunControllerTest {
             @Test
             void cancelsPendingRunAndReturnsModeWarning() throws Exception {
             JobDefinition definition = jobDefinitionRepository.insert(definition("pending-cancel"));
-            JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+            JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
 
                 MvcResult response = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                     .post("/api/v1/runs/" + pending.id() + "/cancel")
@@ -262,9 +262,9 @@ class JobRunControllerTest {
                 .withName("atomic-warning")
                 .withMode(ReplicationMode.COMPLETE_ATOMIC)
                 .build());
-            JobRun completeRun = jobRunRepository.insertPending(complete.id(), null, 1);
-            JobRun incrementalRun = jobRunRepository.insertPending(incremental.id(), null, 1);
-            JobRun atomicRun = jobRunRepository.insertPending(atomic.id(), null, 1);
+            JobRun completeRun = jobRunRepository.insertPendingNow(complete.id(), null, 1);
+            JobRun incrementalRun = jobRunRepository.insertPendingNow(incremental.id(), null, 1);
+            JobRun atomicRun = jobRunRepository.insertPendingNow(atomic.id(), null, 1);
 
             MvcResult completeResponse = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                     .post("/api/v1/runs/" + completeRun.id() + "/cancel")
@@ -300,10 +300,10 @@ class JobRunControllerTest {
             @Test
             void retriesFailedRunAsANewRun() throws Exception {
             JobDefinition definition = runtimeDefinition("retry-job", ReplicationMode.COMPLETE, 1);
-            JobRun failed = jobRunRepository.insertPending(definition.id(), null, 1);
-            JobRun running = jobRunRepository.claimById(failed.id(), "retry-fixture-worker", Duration.ofMinutes(5))
+            JobRun failed = jobRunRepository.insertPendingNow(definition.id(), null, 1);
+            JobRun running = jobRunRepository.claimNextEligible(failed.id(), "retry-fixture-worker", Duration.ofMinutes(5))
                 .orElseThrow();
-            jobRunRepository.markFailed(running.id(), 0, 0, "retryable failure");
+            jobRunRepository.markFailed(running.id(), running.leaseToken(), 0, 0, "retryable failure");
 
             MvcResult response = mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                     .post("/api/v1/runs/" + failed.id() + "/retry")
@@ -344,7 +344,7 @@ class JobRunControllerTest {
             JobDefinition definition = jobDefinitionRepository.insert(definition("view-run-job"));
             jobPermissionRepository.grant(definition.id(), userId, JobPermissionType.VIEW);
             JobRun failed = createTerminalRun(definition, JobRunStatus.FAILED);
-            JobRun pending = jobRunRepository.insertPending(definition.id(), null, 2);
+            JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 2);
 
             mockMvc.perform(get("/api/v1/jobs/" + definition.id() + "/runs"))
                 .andExpect(status().isOk());
@@ -410,13 +410,13 @@ class JobRunControllerTest {
             }
 
     private JobRun createTerminalRun(JobDefinition definition, JobRunStatus status) {
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
-        JobRun running = jobRunRepository.claimById(pending.id(), "read-test-worker", Duration.ofMinutes(5))
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
+        JobRun running = jobRunRepository.claimNextEligible(pending.id(), "read-test-worker", Duration.ofMinutes(5))
                 .orElseThrow();
         if (status == JobRunStatus.FAILED) {
-            jobRunRepository.markFailed(running.id(), 1, 2, "replication failed");
+            jobRunRepository.markFailed(running.id(), running.leaseToken(), 1, 2, "replication failed");
         } else {
-            jobRunRepository.markSucceeded(running.id(), 1, 2, null);
+            jobRunRepository.markSucceeded(running.id(), running.leaseToken(), 1, 2, null);
         }
         return jobRunRepository.findById(running.id()).orElseThrow();
     }

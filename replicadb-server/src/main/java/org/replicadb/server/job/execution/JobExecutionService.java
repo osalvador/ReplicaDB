@@ -18,8 +18,6 @@ import org.replicadb.server.job.application.RunFinalizationService;
 import org.replicadb.server.job.application.RunLeaseService;
 import org.replicadb.server.job.port.JobDefinitionStore;
 import org.replicadb.server.job.port.JobRunStore;
-import org.replicadb.server.job.persistence.JobDefinitionRepository;
-import org.replicadb.server.job.persistence.JobRunRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -43,6 +41,7 @@ public class JobExecutionService {
     private final JobDefinitionOptionsFileWriter optionsFileWriter;
     private final AuditService auditService;
     private final AuditActorResolver auditActorResolver;
+    private final ActiveRunRegistry activeRunRegistry;
 
     @Autowired
     public JobExecutionService(JobRunStore jobRunStore,
@@ -52,7 +51,8 @@ public class JobExecutionService {
                                JobDefinitionEnvResolver environmentResolver,
                                JobDefinitionOptionsFileWriter optionsFileWriter,
                                AuditService auditService,
-                               AuditActorResolver auditActorResolver) {
+                               AuditActorResolver auditActorResolver,
+                               ActiveRunRegistry activeRunRegistry) {
         this.jobRunStore = jobRunStore;
         this.jobDefinitionStore = jobDefinitionStore;
         this.runLeaseService = runLeaseService;
@@ -61,27 +61,18 @@ public class JobExecutionService {
         this.optionsFileWriter = optionsFileWriter;
         this.auditService = auditService;
         this.auditActorResolver = auditActorResolver;
-    }
-
-    public JobExecutionService(JobRunRepository jobRunRepository,
-                               JobDefinitionRepository jobDefinitionRepository,
-                               JobDefinitionEnvResolver environmentResolver,
-                               JobDefinitionOptionsFileWriter optionsFileWriter,
-                               AuditService auditService,
-                               AuditActorResolver auditActorResolver) {
-        this(jobRunRepository, jobDefinitionRepository,
-                new RunLeaseService(jobRunRepository), new RunFinalizationService(jobRunRepository),
-                environmentResolver, optionsFileWriter, auditService, auditActorResolver);
+        this.activeRunRegistry = activeRunRegistry;
     }
 
     public Optional<JobRunOutcome> executeNextPending(String executorIdentity) {
         Optional<JobRun> claimed = runLeaseService.claimNextEligible(executorIdentity,
                 java.time.Duration.ofMinutes(5));
-        return claimed.map(run -> executeClaimedRun(run, options -> { }));
+        return claimed.map(run -> executeClaimedRun(run, handle -> { }));
     }
 
-    public JobRunOutcome executeClaimedRun(JobRun run, Consumer<ToolOptions> onStarted) {
+    public JobRunOutcome executeClaimedRun(JobRun run, Consumer<RunExecutionHandle> onStarted) {
         ToolOptions options = null;
+        RunExecutionHandle handle = null;
         Path optionsFile = null;
         try {
                 JobDefinition definition = jobDefinitionStore.findById(run.jobDefinitionId())
@@ -91,7 +82,11 @@ public class JobExecutionService {
                     .orElse(definition.initialWatermarkValue());
                 optionsFile = optionsFileWriter.write(definition, previousWatermark, environmentResolver::resolve);
                 options = new ToolOptions(new String[]{"--options-file", optionsFile.toString()});
-                onStarted.accept(options);
+                handle = new RunExecutionHandle(run, options);
+                if (!activeRunRegistry.register(handle)) {
+                    throw new IllegalStateException("JobRun is already active locally: " + run.id());
+                }
+                onStarted.accept(handle);
 
             int exitCode = ReplicaDB.processReplica(options);
             JobRunStatus status = JobRunStatus.fromReplicaExitCode(exitCode);
@@ -126,7 +121,14 @@ public class JobExecutionService {
             return new JobRunOutcome(run.id(), JobRunStatus.FAILED, rowsProcessed, durationMillis);
         } finally {
             deleteOptionsFile(optionsFile);
+            if (handle != null) {
+                activeRunRegistry.remove(run.id(), handle);
+            }
         }
+    }
+
+    ActiveRunRegistry activeRunRegistry() {
+        return activeRunRegistry;
     }
 
     private static void deleteOptionsFile(Path optionsFile) {

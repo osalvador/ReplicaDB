@@ -13,6 +13,7 @@ import org.replicadb.server.security.domain.JobPermissionType;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.security.persistence.JobPermissionRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +35,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @RestController
+@Profile("api")
 @RequestMapping("/api/v1/jobs")
 public class JobDefinitionController {
 

@@ -162,6 +162,16 @@ jobs:
     - name: Test server module
       run: mvn -B test --file replicadb-server/pom.xml
 
+    - name: Verify Phase 3.1 repository bridge is removed
+      run: |
+        if rg -n 'claimById|claimNextPending|public void markSucceeded\(UUID runId, long|public void markFailed\(UUID runId, long|public void markCancelled\(UUID runId, long|public void markCancelRequested|public void markPendingCancelled' replicadb-server/src/main/java; then
+          echo "Deprecated Phase 3.1 repository signatures remain"
+          exit 1
+        fi
+
+    - name: Verify worker profile context
+      run: mvn -B -Dtest=WorkerRuntimeConfigurationTest,WorkerProfileContextTest test --file replicadb-server/pom.xml
+
     - name: Verify packaged frontend assets
       run: test -f replicadb-server/target/classes/static/index.html
 

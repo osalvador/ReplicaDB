@@ -63,9 +63,27 @@ class JobRunRepositoryIT {
     }
 
     @Test
+        void insertsPendingRunUsingDatabaseTimeAndClaimsItImmediately() {
+        JobDefinition definition = jobDefinitionRepository.insert(definition());
+
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
+        Map<String, Object> timestamps = jdbcTemplate.getJdbcTemplate().queryForMap("""
+            SELECT available_at <= now() AS available_now,
+                   created_at <= now() AS created_now
+            FROM job_run WHERE id = ?
+            """, pending.id());
+
+        assertTrue(Boolean.TRUE.equals(timestamps.get("available_now")), timestamps.toString());
+        assertTrue(Boolean.TRUE.equals(timestamps.get("created_now")), timestamps.toString());
+        assertEquals(JobRunStatus.RUNNING,
+            jobRunRepository.claimNextEligible(pending.id(), "worker-now", Duration.ofMinutes(5))
+                .orElseThrow().status());
+        }
+
+        @Test
     void claimsPendingRunAndSetsRunningFields() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
 
         Map<String, Object> availability = jdbcTemplate.getJdbcTemplate().queryForMap("""
             SELECT status, available_at, now() AS database_now,
@@ -74,7 +92,7 @@ class JobRunRepositoryIT {
             """, pending.id());
         assertTrue(Boolean.TRUE.equals(availability.get("eligible")), availability.toString());
 
-        JobRun claimed = jobRunRepository.claimNextPending("worker-1", Duration.ofMinutes(5)).orElseThrow();
+        JobRun claimed = jobRunRepository.claimNextEligible(null, "worker-1", Duration.ofMinutes(5)).orElseThrow();
 
         assertEquals(pending.id(), claimed.id());
         assertEquals(JobRunStatus.RUNNING, claimed.status());
@@ -91,12 +109,15 @@ class JobRunRepositoryIT {
         JobDefinition eligibleDefinition = jobDefinitionRepository.insert(definition());
         JobDefinition futureDefinition = jobDefinitionRepository.insert(definition());
         JobDefinition secondEligibleDefinition = jobDefinitionRepository.insert(definition());
-        JobRun eligible = jobRunRepository.insertPending(eligibleDefinition.id(), null, 1,
-            Instant.now().minusSeconds(1));
-        JobRun future = jobRunRepository.insertPending(futureDefinition.id(), null, 1,
-            Instant.now().plusSeconds(300));
-        jobRunRepository.insertPending(secondEligibleDefinition.id(), null, 1,
-            Instant.now().minusSeconds(1));
+        JobRun eligible = jobRunRepository.insertPendingNow(eligibleDefinition.id(), null, 1);
+        JobRun future = jobRunRepository.insertPendingNow(futureDefinition.id(), null, 1);
+        JobRun secondEligible = jobRunRepository.insertPendingNow(secondEligibleDefinition.id(), null, 1);
+        jdbcTemplate.update("UPDATE job_run SET available_at = now() + interval '300 seconds' WHERE id = :id",
+            Map.of("id", future.id()));
+        jdbcTemplate.update("UPDATE job_run SET available_at = now() - interval '1 second' WHERE id = :id",
+            Map.of("id", eligible.id()));
+        jdbcTemplate.update("UPDATE job_run SET available_at = now() - interval '1 second' WHERE id = :id",
+            Map.of("id", secondEligible.id()));
 
         JobRun firstClaim = jobRunRepository.claimNextEligible(null, "worker-1", Duration.ofMinutes(5))
             .orElseThrow();
@@ -116,9 +137,10 @@ class JobRunRepositoryIT {
         void directedClaimDoesNotClaimAnotherRunOrAnIneligibleRun() {
         JobDefinition firstDefinition = jobDefinitionRepository.insert(definition());
         JobDefinition secondDefinition = jobDefinitionRepository.insert(definition());
-        JobRun first = jobRunRepository.insertPending(firstDefinition.id(), null, 1);
-        JobRun second = jobRunRepository.insertPending(secondDefinition.id(), null, 1,
-            Instant.now().plusSeconds(300));
+        JobRun first = jobRunRepository.insertPendingNow(firstDefinition.id(), null, 1);
+        JobRun second = jobRunRepository.insertPendingNow(secondDefinition.id(), null, 1);
+        jdbcTemplate.update("UPDATE job_run SET available_at = now() + interval '300 seconds' WHERE id = :id",
+            Map.of("id", second.id()));
 
         assertTrue(jobRunRepository.claimNextEligible(second.id(), "worker-1", Duration.ofMinutes(5)).isEmpty());
         JobRun claimed = jobRunRepository.claimNextEligible(first.id(), "worker-1", Duration.ofMinutes(5))
@@ -132,7 +154,7 @@ class JobRunRepositoryIT {
         @Test
         void renewsAnUnexpiredLeaseOwnedByTheCurrentToken() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
         JobRun claimed = jobRunRepository.claimNextEligible(pending.id(), "worker-1", Duration.ofMinutes(5))
             .orElseThrow();
 
@@ -148,7 +170,7 @@ class JobRunRepositoryIT {
         @Test
         void fencesStaleTokensAndMissingRuns() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
         JobRun claimed = jobRunRepository.claimNextEligible(pending.id(), "worker-1", Duration.ofMinutes(5))
             .orElseThrow();
 
@@ -161,7 +183,7 @@ class JobRunRepositoryIT {
         @Test
         void refusesRenewalAfterExpiryOrTerminalTransition() {
         JobDefinition expiredDefinition = jobDefinitionRepository.insert(definition());
-        JobRun expiredPending = jobRunRepository.insertPending(expiredDefinition.id(), null, 1);
+        JobRun expiredPending = jobRunRepository.insertPendingNow(expiredDefinition.id(), null, 1);
         JobRun expired = jobRunRepository.claimNextEligible(expiredPending.id(), "worker-1",
             Duration.ofMinutes(5)).orElseThrow();
         jdbcTemplate.update("UPDATE job_run SET lease_until = now() - interval '1 second' WHERE id = :id",
@@ -171,10 +193,10 @@ class JobRunRepositoryIT {
             jobRunRepository.renewLease(expired.id(), expired.leaseToken(), Duration.ofMinutes(5)));
 
         JobDefinition terminalDefinition = jobDefinitionRepository.insert(definition());
-        JobRun terminalPending = jobRunRepository.insertPending(terminalDefinition.id(), null, 1);
+        JobRun terminalPending = jobRunRepository.insertPendingNow(terminalDefinition.id(), null, 1);
         JobRun terminal = jobRunRepository.claimNextEligible(terminalPending.id(), "worker-2",
             Duration.ofMinutes(5)).orElseThrow();
-        jobRunRepository.markSucceeded(terminal.id(), 0, 0, null);
+        jobRunRepository.markSucceeded(terminal.id(), terminal.leaseToken(), 0, 0, null);
 
         assertEquals(JobRunStore.LeaseRenewalResult.FENCED,
             jobRunRepository.renewLease(terminal.id(), terminal.leaseToken(), Duration.ofMinutes(5)));
@@ -187,7 +209,7 @@ class JobRunRepositoryIT {
             .withIncrementalWatermarkColumn("updated_at")
             .withRetryPolicy(new RetryPolicy(3, 10, true))
             .build());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
         JobRun claimed = jobRunRepository.claimNextEligible(pending.id(), "worker-1", Duration.ofMinutes(5))
             .orElseThrow();
         expire(claimed);
@@ -217,7 +239,7 @@ class JobRunRepositoryIT {
             .withIncrementalWatermarkColumn("updated_at")
             .withRetryPolicy(new RetryPolicy(3, 0, true))
             .build());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
         JobRun claimed = jobRunRepository.claimNextEligible(pending.id(), "worker-1", Duration.ofMinutes(5))
             .orElseThrow();
         expire(claimed);
@@ -248,7 +270,7 @@ class JobRunRepositoryIT {
         void marksExpiredRunsFailedWhenRetryIsDisabledOrExhausted() {
         JobDefinition completeDefinition = jobDefinitionRepository.insert(
             JobDefinitionTestFixtures.aJobDefinition().withMode(ReplicationMode.COMPLETE).build());
-        JobRun completePending = jobRunRepository.insertPending(completeDefinition.id(), null, 1);
+        JobRun completePending = jobRunRepository.insertPendingNow(completeDefinition.id(), null, 1);
         JobRun completeClaimed = jobRunRepository.claimNextEligible(completePending.id(), "worker-1",
             Duration.ofMinutes(5)).orElseThrow();
         expire(completeClaimed);
@@ -266,7 +288,7 @@ class JobRunRepositoryIT {
             .withIncrementalWatermarkColumn("updated_at")
             .withRetryPolicy(new RetryPolicy(1, 0, true))
             .build());
-        JobRun exhaustedPending = jobRunRepository.insertPending(exhaustedDefinition.id(), null, 1);
+        JobRun exhaustedPending = jobRunRepository.insertPendingNow(exhaustedDefinition.id(), null, 1);
         JobRun exhaustedClaimed = jobRunRepository.claimNextEligible(exhaustedPending.id(), "worker-2",
             Duration.ofMinutes(5)).orElseThrow();
         expire(exhaustedClaimed);
@@ -279,10 +301,11 @@ class JobRunRepositoryIT {
         @Test
         void cancellationWinsOverExpiredLeaseRecovery() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
         JobRun claimed = jobRunRepository.claimNextEligible(pending.id(), "worker-1", Duration.ofMinutes(5))
             .orElseThrow();
-        jobRunRepository.markCancelRequested(claimed.id(), "sink warning");
+        assertEquals(JobRunStore.CancellationResult.REQUESTED,
+            jobRunRepository.requestCancellation(claimed.id(), "sink warning"));
         expire(claimed);
 
         RunRecoveryResult result = jobRunRepository.recoverExpiredRun(claimed.id());
@@ -294,11 +317,56 @@ class JobRunRepositoryIT {
         }
 
         @Test
+        void scansExpiredRunsAndOwnedCancellationRequestsWithLimits() {
+        JobDefinition expiredRunningDefinition = jobDefinitionRepository.insert(definition());
+        JobDefinition expiredCancellationDefinition = jobDefinitionRepository.insert(definition());
+        JobDefinition liveDefinition = jobDefinitionRepository.insert(definition());
+        JobDefinition otherWorkerDefinition = jobDefinitionRepository.insert(definition());
+        JobDefinition terminalDefinition = jobDefinitionRepository.insert(definition());
+
+        JobRun expiredRunning = jobRunRepository.claimNextEligible(
+            jobRunRepository.insertPendingNow(expiredRunningDefinition.id(), null, 1).id(),
+            "worker-one", Duration.ofMinutes(5)).orElseThrow();
+        expire(expiredRunning);
+
+        JobRun expiredCancellation = jobRunRepository.claimNextEligible(
+            jobRunRepository.insertPendingNow(expiredCancellationDefinition.id(), null, 1).id(),
+            "worker-one", Duration.ofMinutes(5)).orElseThrow();
+        jobRunRepository.requestCancellation(expiredCancellation.id(), "cancel warning");
+        expire(expiredCancellation);
+
+        JobRun live = jobRunRepository.claimNextEligible(
+            jobRunRepository.insertPendingNow(liveDefinition.id(), null, 1).id(),
+            "worker-one", Duration.ofMinutes(5)).orElseThrow();
+        JobRun otherWorker = jobRunRepository.claimNextEligible(
+            jobRunRepository.insertPendingNow(otherWorkerDefinition.id(), null, 1).id(),
+            "worker-two", Duration.ofMinutes(5)).orElseThrow();
+        jobRunRepository.requestCancellation(otherWorker.id(), "other warning");
+        JobRun terminal = jobRunRepository.claimNextEligible(
+            jobRunRepository.insertPendingNow(terminalDefinition.id(), null, 1).id(),
+            "worker-three", Duration.ofMinutes(5)).orElseThrow();
+        jobRunRepository.markSucceeded(terminal.id(), terminal.leaseToken(), 0, 0, null);
+
+        java.util.List<UUID> expired = jobRunRepository.findExpiredRunIds(10);
+        assertTrue(expired.contains(expiredRunning.id()));
+        assertTrue(expired.contains(expiredCancellation.id()));
+        assertTrue(!expired.contains(live.id()));
+        assertTrue(!expired.contains(terminal.id()));
+        assertEquals(1, jobRunRepository.findExpiredRunIds(1).size());
+
+        assertEquals(java.util.List.of(expiredCancellation.id()),
+            jobRunRepository.findCancellationRequestedRunIds("worker-one", 10));
+        assertEquals(java.util.List.of(otherWorker.id()),
+            jobRunRepository.findCancellationRequestedRunIds("worker-two", 10));
+        assertTrue(jobRunRepository.findCancellationRequestedRunIds("worker-one", 1).size() <= 1);
+        }
+
+        @Test
         void ignoresMissingAndNonExpiredRuns() {
         assertTrue(jobRunRepository.recoverExpiredRun(UUID.randomUUID()).abandonedRun().isEmpty());
 
         JobDefinition definition = jobDefinitionRepository.insert(definition());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
         JobRun claimed = jobRunRepository.claimNextEligible(pending.id(), "worker-1", Duration.ofMinutes(5))
             .orElseThrow();
 
@@ -315,7 +383,7 @@ class JobRunRepositoryIT {
             .withIncrementalWatermarkColumn("updated_at")
             .withRetryPolicy(new RetryPolicy(3, 0, true))
             .build());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
         JobRun claimed = jobRunRepository.claimNextEligible(pending.id(), "worker-1", Duration.ofMinutes(5))
             .orElseThrow();
 
@@ -341,7 +409,7 @@ class JobRunRepositoryIT {
         @Test
         void allowsCurrentTokenToFinalizeAndPreservesCancellationWarning() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
         JobRun claimed = jobRunRepository.claimNextEligible(pending.id(), "worker-1", Duration.ofMinutes(5))
             .orElseThrow();
 
@@ -350,10 +418,11 @@ class JobRunRepositoryIT {
         assertEquals("42", jobRunRepository.findLastCommittedWatermark(definition.id()).orElseThrow());
 
         JobDefinition cancelledDefinition = jobDefinitionRepository.insert(definition());
-        JobRun cancelledPending = jobRunRepository.insertPending(cancelledDefinition.id(), null, 1);
+        JobRun cancelledPending = jobRunRepository.insertPendingNow(cancelledDefinition.id(), null, 1);
         JobRun cancelledClaimed = jobRunRepository.claimNextEligible(cancelledPending.id(), "worker-2",
             Duration.ofMinutes(5)).orElseThrow();
-        jobRunRepository.markCancelRequested(cancelledClaimed.id(), "sink warning");
+        assertEquals(JobRunStore.CancellationResult.REQUESTED,
+            jobRunRepository.requestCancellation(cancelledClaimed.id(), "sink warning"));
 
         assertEquals(JobRunStore.FencedUpdateResult.UPDATED,
             jobRunRepository.markCancelled(cancelledClaimed.id(), cancelledClaimed.leaseToken(), 2, 8));
@@ -366,8 +435,8 @@ class JobRunRepositoryIT {
     void skipsALockedPendingRowAndClaimsTheNextOne() throws Exception {
         JobDefinition firstDefinition = jobDefinitionRepository.insert(definition());
         JobDefinition secondDefinition = jobDefinitionRepository.insert(definition());
-        JobRun first = jobRunRepository.insertPending(firstDefinition.id(), null, 1);
-        JobRun second = jobRunRepository.insertPending(secondDefinition.id(), null, 1);
+        JobRun first = jobRunRepository.insertPendingNow(firstDefinition.id(), null, 1);
+        JobRun second = jobRunRepository.insertPendingNow(secondDefinition.id(), null, 1);
 
         try (Connection connection = dataSource.getConnection()) {
             connection.setAutoCommit(false);
@@ -382,7 +451,7 @@ class JobRunRepositoryIT {
             ExecutorService executor = Executors.newSingleThreadExecutor();
             try {
                 Future<JobRun> claimedFuture = executor.submit(
-                        () -> jobRunRepository.claimNextPending("worker-2", Duration.ofMinutes(5))
+                        () -> jobRunRepository.claimNextEligible(null, "worker-2", Duration.ofMinutes(5))
                                 .orElseThrow());
                 JobRun claimed = claimedFuture.get(2, TimeUnit.SECONDS);
 
@@ -399,31 +468,31 @@ class JobRunRepositoryIT {
 
     @Test
     void returnsEmptyWhenNoPendingRunExists() {
-        assertTrue(jobRunRepository.claimNextPending("worker-1", Duration.ofMinutes(5)).isEmpty());
+        assertTrue(jobRunRepository.claimNextEligible(null, "worker-1", Duration.ofMinutes(5)).isEmpty());
     }
 
     @Test
     void rejectsIllegalTransitionAfterCancellation() {
         JobDefinition pendingDefinition = jobDefinitionRepository.insert(definition());
         JobDefinition runningDefinition = jobDefinitionRepository.insert(definition());
-        JobRun pending = jobRunRepository.insertPending(pendingDefinition.id(), null, 1);
-        jobRunRepository.insertPending(runningDefinition.id(), null, 1);
-        JobRun running = jobRunRepository.claimNextPending("worker-1", Duration.ofMinutes(5)).orElseThrow();
+        JobRun pending = jobRunRepository.insertPendingNow(pendingDefinition.id(), null, 1);
+        jobRunRepository.insertPendingNow(runningDefinition.id(), null, 1);
+        JobRun running = jobRunRepository.claimNextEligible(null, "worker-1", Duration.ofMinutes(5)).orElseThrow();
 
-        jobRunRepository.markCancelled(running.id(), 4, 12);
+        jobRunRepository.markCancelled(running.id(), running.leaseToken(), 4, 12);
 
-        assertThrows(IllegalStateException.class,
-                () -> jobRunRepository.markSucceeded(pending.id(), 4, 12, "42"));
+        assertEquals(JobRunStore.FencedUpdateResult.FENCED,
+            jobRunRepository.markSucceeded(pending.id(), LeaseToken.generate(), 4, 12, "42"));
     }
 
     @Test
     void claimsOnlyTheRequestedPendingRun() {
         JobDefinition firstDefinition = jobDefinitionRepository.insert(definition());
         JobDefinition secondDefinition = jobDefinitionRepository.insert(definition());
-        JobRun first = jobRunRepository.insertPending(firstDefinition.id(), null, 1);
-        JobRun second = jobRunRepository.insertPending(secondDefinition.id(), null, 1);
+        JobRun first = jobRunRepository.insertPendingNow(firstDefinition.id(), null, 1);
+        JobRun second = jobRunRepository.insertPendingNow(secondDefinition.id(), null, 1);
 
-        JobRun claimed = jobRunRepository.claimById(second.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
+        JobRun claimed = jobRunRepository.claimNextEligible(second.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
 
         assertEquals(second.id(), claimed.id());
         assertEquals(JobRunStatus.PENDING,
@@ -434,24 +503,25 @@ class JobRunRepositoryIT {
     @Test
     void returnsEmptyWhenRequestedRunIsNotPendingOrDoesNotExist() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
-        JobRun running = jobRunRepository.claimById(pending.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
+        JobRun running = jobRunRepository.claimNextEligible(pending.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
 
-        assertTrue(jobRunRepository.claimById(running.id(), "worker-2", Duration.ofMinutes(5)).isEmpty());
-        assertTrue(jobRunRepository.claimById(UUID.randomUUID(), "worker-2", Duration.ofMinutes(5)).isEmpty());
+        assertTrue(jobRunRepository.claimNextEligible(running.id(), "worker-2", Duration.ofMinutes(5)).isEmpty());
+        assertTrue(jobRunRepository.claimNextEligible(UUID.randomUUID(), "worker-2", Duration.ofMinutes(5)).isEmpty());
     }
 
     @Test
     void reportsOnlyActiveStatuses() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
         assertTrue(jobRunRepository.hasActiveRun(definition.id()));
 
-        JobRun running = jobRunRepository.claimById(pending.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
+        JobRun running = jobRunRepository.claimNextEligible(pending.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
         assertTrue(jobRunRepository.hasActiveRun(definition.id()));
-        jobRunRepository.markCancelRequested(running.id(), "cancel warning");
+        assertEquals(JobRunStore.CancellationResult.REQUESTED,
+            jobRunRepository.requestCancellation(running.id(), "cancel warning"));
         assertTrue(jobRunRepository.hasActiveRun(definition.id()));
-        jobRunRepository.markCancelled(running.id(), 0, 0);
+        jobRunRepository.markCancelled(running.id(), running.leaseToken(), 0, 0);
         assertTrue(!jobRunRepository.hasActiveRun(definition.id()));
     }
 
@@ -479,10 +549,10 @@ class JobRunRepositoryIT {
             assertEquals(1, successes);
             assertEquals(1, failures);
 
-            JobRun running = jobRunRepository.claimNextPending("worker-1", Duration.ofMinutes(5)).orElseThrow();
-            jobRunRepository.markSucceeded(running.id(), 0, 0, null);
+            JobRun running = jobRunRepository.claimNextEligible(null, "worker-1", Duration.ofMinutes(5)).orElseThrow();
+            jobRunRepository.markSucceeded(running.id(), running.leaseToken(), 0, 0, null);
             assertTrue(!jobRunRepository.hasActiveRun(definition.id()));
-            jobRunRepository.insertPending(definition.id(), null, 2);
+            jobRunRepository.insertPendingNow(definition.id(), null, 2);
         } finally {
             executor.shutdownNow();
         }
@@ -491,11 +561,12 @@ class JobRunRepositoryIT {
     @Test
     void markCancelRequestedIsIdempotentAfterTerminalTransition() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
-        JobRun running = jobRunRepository.claimById(pending.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
-        jobRunRepository.markSucceeded(running.id(), 0, 0, null);
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
+        JobRun running = jobRunRepository.claimNextEligible(pending.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
+        jobRunRepository.markSucceeded(running.id(), running.leaseToken(), 0, 0, null);
 
-        jobRunRepository.markCancelRequested(running.id(), "ignored warning");
+        assertEquals(JobRunStore.CancellationResult.TERMINAL,
+            jobRunRepository.requestCancellation(running.id(), "ignored warning"));
         JobRun unchanged = jobRunRepository.findById(running.id()).orElseThrow();
         assertEquals(JobRunStatus.SUCCEEDED, unchanged.status());
         assertNull(unchanged.cancellationWarning());
@@ -504,9 +575,10 @@ class JobRunRepositoryIT {
     @Test
     void cancelsAPendingRunWithoutClaimingIt() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
 
-        jobRunRepository.markPendingCancelled(pending.id(), "pending warning");
+        assertEquals(JobRunStore.CancellationResult.CANCELLED,
+            jobRunRepository.cancelPending(pending.id(), "pending warning"));
 
         JobRun cancelled = jobRunRepository.findById(pending.id()).orElseThrow();
         assertEquals(JobRunStatus.CANCELLED, cancelled.status());
@@ -517,14 +589,15 @@ class JobRunRepositoryIT {
     @Test
     void preservesCancellationWarningWhenExecutorFinishesCancellation() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
-        JobRun running = jobRunRepository.claimById(pending.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
+        JobRun running = jobRunRepository.claimNextEligible(pending.id(), "worker-1", Duration.ofMinutes(5)).orElseThrow();
 
-        jobRunRepository.markCancelRequested(running.id(), "indeterminate sink warning");
+        assertEquals(JobRunStore.CancellationResult.REQUESTED,
+            jobRunRepository.requestCancellation(running.id(), "indeterminate sink warning"));
         assertEquals("indeterminate sink warning",
                 jobRunRepository.findById(running.id()).orElseThrow().cancellationWarning());
 
-        jobRunRepository.markCancelled(running.id(), 0, 0);
+        jobRunRepository.markCancelled(running.id(), running.leaseToken(), 0, 0);
 
         JobRun cancelled = jobRunRepository.findById(running.id()).orElseThrow();
         assertEquals(JobRunStatus.CANCELLED, cancelled.status());
@@ -534,7 +607,7 @@ class JobRunRepositoryIT {
     @Test
     void leavesCancellationWarningNullForUncancelledRun() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
 
         assertNull(jobRunRepository.findById(pending.id()).orElseThrow().cancellationWarning());
     }
@@ -547,13 +620,13 @@ class JobRunRepositoryIT {
             if (index == 0) {
                 filteredDefinitionId = definition.id();
             }
-            JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
-            JobRun running = jobRunRepository.claimById(pending.id(), "worker-" + index,
+            JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
+            JobRun running = jobRunRepository.claimNextEligible(pending.id(), "worker-" + index,
                     Duration.ofMinutes(5)).orElseThrow();
             if (index % 2 == 0) {
-                jobRunRepository.markSucceeded(running.id(), index, index, null);
+                jobRunRepository.markSucceeded(running.id(), running.leaseToken(), index, index, null);
             } else {
-                jobRunRepository.markFailed(running.id(), index, index, "failure");
+                jobRunRepository.markFailed(running.id(), running.leaseToken(), index, index, "failure");
             }
         }
 
@@ -580,12 +653,12 @@ class JobRunRepositoryIT {
     @Test
     void findsLastCommittedWatermarkOnlyFromSuccessfulRuns() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
-        jobRunRepository.insertPending(definition.id(), null, 1);
+        jobRunRepository.insertPendingNow(definition.id(), null, 1);
 
         assertTrue(jobRunRepository.findLastCommittedWatermark(definition.id()).isEmpty());
 
-        JobRun running = jobRunRepository.claimNextPending("worker-1", Duration.ofMinutes(5)).orElseThrow();
-        jobRunRepository.markSucceeded(running.id(), 4, 12, "42");
+        JobRun running = jobRunRepository.claimNextEligible(null, "worker-1", Duration.ofMinutes(5)).orElseThrow();
+        jobRunRepository.markSucceeded(running.id(), running.leaseToken(), 4, 12, "42");
 
         assertEquals("42", jobRunRepository.findLastCommittedWatermark(definition.id()).orElseThrow());
     }
@@ -593,31 +666,37 @@ class JobRunRepositoryIT {
     @Test
     void schedulesRetryAsANewPendingRun() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
-        jobRunRepository.insertPending(definition.id(), null, 1);
-        JobRun failed = jobRunRepository.claimNextPending("worker-1", Duration.ofMinutes(5)).orElseThrow();
-        jobRunRepository.markFailed(failed.id(), 4, 12, "temporary failure");
+        jobRunRepository.insertPendingNow(definition.id(), null, 1);
+        JobRun failed = jobRunRepository.claimNextEligible(null, "worker-1", Duration.ofMinutes(5)).orElseThrow();
+        jobRunRepository.markFailed(failed.id(), failed.leaseToken(), 4, 12, "temporary failure");
 
-        JobRun retry = jobRunRepository.scheduleRetry(failed.id());
+        JobRun retry = jobRunRepository.scheduleRetryNow(failed.id());
 
         assertEquals(JobRunStatus.RETRY_SCHEDULED,
                 jobRunRepository.findById(failed.id()).orElseThrow().status());
         assertEquals(JobRunStatus.PENDING, retry.status());
         assertEquals(failed.id(), retry.previousRunId());
         assertEquals(2, retry.attempt());
+        assertTrue(jdbcTemplate.queryForObject("""
+            SELECT available_at <= now() FROM job_run WHERE id = :id
+            """, Map.of("id", retry.id()), Boolean.class));
+        assertEquals(JobRunStatus.RUNNING,
+            jobRunRepository.claimNextEligible(retry.id(), "retry-worker", Duration.ofMinutes(5))
+                .orElseThrow().status());
     }
 
     @Test
     void rejectsRetryForNonFailedRuns() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
 
-        JobRun pending = jobRunRepository.insertPending(definition.id(), null, 1);
-        assertThrows(IllegalStateException.class, () -> jobRunRepository.scheduleRetry(pending.id()));
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
+        assertThrows(IllegalStateException.class, () -> jobRunRepository.scheduleRetryNow(pending.id()));
 
-        JobRun running = jobRunRepository.claimNextPending("worker-1", Duration.ofMinutes(5)).orElseThrow();
-        assertThrows(IllegalStateException.class, () -> jobRunRepository.scheduleRetry(running.id()));
+        JobRun running = jobRunRepository.claimNextEligible(null, "worker-1", Duration.ofMinutes(5)).orElseThrow();
+        assertThrows(IllegalStateException.class, () -> jobRunRepository.scheduleRetryNow(running.id()));
 
-        jobRunRepository.markSucceeded(running.id(), 4, 12, "42");
-        assertThrows(IllegalStateException.class, () -> jobRunRepository.scheduleRetry(running.id()));
+        jobRunRepository.markSucceeded(running.id(), running.leaseToken(), 4, 12, "42");
+        assertThrows(IllegalStateException.class, () -> jobRunRepository.scheduleRetryNow(running.id()));
     }
 
     private static JobDefinition definition() {
@@ -649,7 +728,7 @@ class JobRunRepositoryIT {
     private void insertAfter(java.util.concurrent.CountDownLatch start, UUID definitionId) {
         try {
             start.await(2, TimeUnit.SECONDS);
-            jobRunRepository.insertPending(definitionId, null, 1);
+            jobRunRepository.insertPendingNow(definitionId, null, 1);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(exception);

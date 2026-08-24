@@ -11,6 +11,7 @@ import org.replicadb.server.job.api.PageResponse;
 import org.replicadb.server.security.domain.AppUser;
 import org.replicadb.server.security.persistence.AppUserRepository;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -30,6 +31,7 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @RestController
+@Profile("api")
 @RequestMapping("/api/v1/users")
 @PreAuthorize("hasRole('ADMIN')")
 public class UserController {

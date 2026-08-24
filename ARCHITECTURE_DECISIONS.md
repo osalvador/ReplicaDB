@@ -12,7 +12,7 @@ The control plane does not resume interrupted work. A run either completes or is
 
 **Date**: August 13, 2026
 **Last decision review**: August 20, 2026
-**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings), Phase 2a/2b/2c (frontend authentication, monitoring, job actions, scheduling, user administration, and job permissions), and Phase 3.1 (distributed state contract, leases, retries, and fencing) implemented; Phase 3.2/3.3 remain not started
+**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings), Phase 2a/2b/2c (frontend authentication, monitoring, job actions, scheduling, user administration, and job permissions), Phase 3.1 (distributed state contract, leases, retries, and fencing), and Phase 3.2 (worker runtime and PostgreSQL dispatch) implemented; Phase 3.3 remains not started
 **Owner**: Development Team
 
 ---
@@ -350,7 +350,7 @@ The distributed contract is:
 - A worker claims one run at a time by default.
 - Worker loss is recovered through leases, heartbeats, and polling of expired or retryable runs.
 - A worker profile exposes no public API, frontend, Spring Security session, or Quartz scheduler. It starts only the shared repositories, dispatch coordinator, execution service, and core engine.
-- The `api` profile uses Quartz JDBC clustering so multiple API instances do not create duplicate schedule firings.
+- The `api` profile currently uses its compatible RAMJobStore; preventing duplicate schedule firings across multiple API instances is deferred to Phase 3.3 Quartz JDBC clustering.
 - Duplicate notifications and duplicate polling must be safe under the claim, sink idempotency, and watermark commit rules.
 - The API reads status only from PostgreSQL.
 
@@ -724,7 +724,7 @@ Workers (1..N) -> claim, heartbeat, ReplicaDB core
 ```
 
 - PostgreSQL is the only source of truth for run state. API-local maps, Quartz notifications, and worker logs are not state stores.
-- The API is horizontally scalable. Quartz uses its JDBC clustered store so only one API instance owns a scheduled firing.
+- Phase 3.2 keeps the API's compatible single-instance RAMJobStore; Quartz JDBC clustering for a horizontally scalable API remains Phase 3.3 work.
 - The worker profile has no public API, frontend, Spring Security session, or Quartz scheduler. It starts only the repositories, dispatch coordinator, execution services, listener/poller, and ReplicaDB core.
 - A worker executes one `JobRun` at a time by default. A bounded `worker.max-concurrent-runs` setting may increase this later; ReplicaDB's existing `jobs` option still controls the internal tasks of one run.
 - Runs are never resumed. Worker loss creates a new attempt from the beginning, subject to the retry policy and replication-mode safety rules.
@@ -758,7 +758,7 @@ Tests and exit criteria:
 - Retry tests prove attempt numbering, `previousRunId`, backoff eligibility, maximum-attempt exhaustion, and mode-specific automatic-retry defaults.
 - The plan exits when two independent processes can safely claim, renew, recover, and finalize runs using only PostgreSQL state, with no worker runtime required.
 
-**Implemented in Phase 3.1**: Flyway V13/V14 persist retry policy, eligibility, and lease identity; Spring JDBC claims use `FOR UPDATE SKIP LOCKED`; recovery creates fenced replacement attempts with PostgreSQL-owned backoff timestamps; API and execution paths use the shared ports and token-checked finalization; the REST/OpenAPI/frontend contract exposes policy and `availableAt` without exposing lease tokens. The current `api` coordinator remains a compatibility path until Phase 3.2 supplies the isolated worker runtime, notification/polling dispatch, and heartbeat loop.
+**Implemented in Phase 3.1**: Flyway V13/V14 persist retry policy, eligibility, and lease identity; Spring JDBC claims use `FOR UPDATE SKIP LOCKED`; recovery creates fenced replacement attempts with PostgreSQL-owned backoff timestamps; API and execution paths use the shared ports and token-checked finalization; the REST/OpenAPI/frontend contract exposes policy and `availableAt` without exposing lease tokens. The `api` coordinator remains a compatibility path alongside the isolated Phase 3.2 worker runtime.
 
 #### Plan 3.2: Worker runtime and PostgreSQL dispatch
 
@@ -783,6 +783,8 @@ Tests and exit criteria:
 - Multi-worker tests prove that one run is claimed once, duplicate polling does not duplicate a watermark, and a remote cancellation reaches the owning worker.
 - Long-running-operation tests prove that heartbeats remain active during merge and atomic swap and that a lease does not expire while the worker is healthy.
 - The plan exits when one API instance and multiple worker instances can execute, cancel, recover, and monitor runs through PostgreSQL without API-local execution state.
+
+**Implemented in Phase 3.2**: the API and Quartz dispatch durable UUID notifications through a transaction-bound PostgreSQL publisher; the worker profile starts a bounded coordinator, mandatory startup/reconnect/periodic polling, a dedicated reconnecting listener, independent lease heartbeats, durable cancellation delivery, and the shared execution service. Shared-schema Testcontainers scenarios prove two workers claim a run once, retries and lease recovery create new attempts, incremental watermarks remain fenced, and the worker exposes no HTTP, security-session, frontend, or Quartz surface. Phase 3.3 remains responsible for Quartz JDBC clustering, shared login throttling, health/metrics, deployment hardening, and load/chaos validation.
 
 #### Plan 3.3: API high availability and operational hardening
 
@@ -863,7 +865,7 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and is the rel
 ### Priority 4: Phase 3 Distributed Runtime
 
 - [x] **Phase 3.1.** Define the distributed state contract: per-job retry policy, `available_at`, lease tokens, atomic claims, lease renewal, expiry recovery, fencing, and mode-specific automatic-retry defaults.
-- [ ] **Phase 3.2.** Add the isolated `worker` profile, shared execution service, transactional `pg_notify` dispatch, dedicated listener, reconnect logic, mandatory polling, remote cancellation, and heartbeat during merge/swap.
+- [x] **Phase 3.2.** Add the isolated `worker` profile, shared execution service, transactional `pg_notify` dispatch, dedicated listener, reconnect logic, mandatory polling, remote cancellation, and heartbeat during merge/swap. **Implemented** with the Phase 3.2 runtime and PostgreSQL integration tests described above.
 - [ ] **Phase 3.3.** Add Quartz JDBC clustering for multiple API instances, shared login throttling, health/metrics, deployment documentation, multi-node integration tests, and reproducible load/chaos checks.
 - [ ] Preserve the CLI artifact, CLI exit codes, options-file contract, and no-metadata-database execution path throughout all three plans.
 

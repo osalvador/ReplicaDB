@@ -6,7 +6,6 @@ import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.domain.LeaseToken;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -14,7 +13,9 @@ import java.util.UUID;
 
 public interface JobRunStore {
 
-    JobRun insertPending(UUID jobDefinitionId, UUID previousRunId, int attempt, Instant availableAt);
+    JobRun insertPendingNow(UUID jobDefinitionId, UUID previousRunId, int attempt);
+
+    JobRun insertPendingNow(UUID runId, UUID jobDefinitionId, UUID previousRunId, int attempt);
 
     Optional<JobRun> findById(UUID id);
 
@@ -26,11 +27,15 @@ public interface JobRunStore {
 
     RunRecoveryResult recoverExpiredRun(UUID runId);
 
+    List<UUID> findExpiredRunIds(int limit);
+
+    List<UUID> findCancellationRequestedRunIds(String executorIdentity, int limit);
+
     CancellationResult requestCancellation(UUID runId, String cancellationWarning);
 
     CancellationResult cancelPending(UUID runId, String cancellationWarning);
 
-    JobRun scheduleRetry(UUID failedRunId, Instant availableAt);
+    JobRun scheduleRetryNow(UUID failedRunId);
 
     Optional<String> findLastCommittedWatermark(UUID jobDefinitionId);
 
