@@ -15,6 +15,7 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.env.Environment;
+import org.springframework.context.annotation.Profile;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Component
+@Profile("api")
 @ConditionalOnProperty(name = "replicadb.security.bootstrap.enabled", havingValue = "true", matchIfMissing = true)
 public class AdminBootstrapRunner implements ApplicationRunner {
 

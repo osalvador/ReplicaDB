@@ -6,11 +6,13 @@ import org.replicadb.server.job.domain.JobSchedule;
 import org.replicadb.server.job.persistence.JobScheduleRepository;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component
+@Profile("api")
 public class ScheduleReconciler implements ApplicationRunner {
 
     private static final Logger LOG = LogManager.getLogger(ScheduleReconciler.class);

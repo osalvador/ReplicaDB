@@ -9,6 +9,7 @@ import org.replicadb.server.job.domain.RetryPolicy;
 import org.replicadb.server.job.domain.SinkEndpoint;
 import org.replicadb.server.job.domain.SourceEndpoint;
 import org.replicadb.server.job.domain.StagingOptions;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -19,6 +20,7 @@ import java.util.Properties;
 import java.util.UUID;
 
 @Component
+@Profile("api")
 public class JobDefinitionMapper {
 
         private static final String COMPLETE_MODE_WARNING =

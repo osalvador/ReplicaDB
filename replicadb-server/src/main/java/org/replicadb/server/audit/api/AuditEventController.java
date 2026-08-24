@@ -7,6 +7,7 @@ import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.job.api.PageRequestParams;
 import org.replicadb.server.job.api.PageResponse;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,6 +20,7 @@ import java.util.Locale;
 import java.util.UUID;
 
 @RestController
+@Profile("api")
 @RequestMapping("/api/v1/audit")
 @PreAuthorize("hasRole('ADMIN')")
 public class AuditEventController {

@@ -11,6 +11,8 @@ import org.replicadb.server.audit.domain.AuditAction;
 import org.replicadb.server.audit.domain.AuditActor;
 import org.replicadb.server.audit.domain.AuditOutcome;
 import org.replicadb.server.audit.domain.AuditResourceType;
+import org.replicadb.server.job.application.RunDispatchResult;
+import org.replicadb.server.job.application.RunDispatchService;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.port.JobRunStore;
@@ -18,6 +20,7 @@ import org.replicadb.server.job.port.JobRunStore;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.never;
@@ -27,6 +30,7 @@ import static org.mockito.Mockito.when;
 class ScheduledRunTriggerJobTest {
 
     private JobRunStore jobRunStore;
+    private RunDispatchService runDispatchService;
     private RunExecutionCoordinator runExecutionCoordinator;
     private AuditService auditService;
     private AuditActorResolver auditActorResolver;
@@ -35,13 +39,16 @@ class ScheduledRunTriggerJobTest {
     @BeforeEach
     void setUp() {
         jobRunStore = Mockito.mock(JobRunStore.class);
+        runDispatchService = Mockito.mock(RunDispatchService.class);
         runExecutionCoordinator = Mockito.mock(RunExecutionCoordinator.class);
         auditService = Mockito.mock(AuditService.class);
         auditActorResolver = Mockito.mock(AuditActorResolver.class);
         job = new ScheduledRunTriggerJob();
         org.springframework.test.util.ReflectionTestUtils.setField(job, "jobRunStore", jobRunStore);
+        org.springframework.test.util.ReflectionTestUtils.setField(job, "runDispatchService", runDispatchService);
         org.springframework.test.util.ReflectionTestUtils.setField(
                 job, "runExecutionCoordinator", runExecutionCoordinator);
+        org.springframework.test.util.ReflectionTestUtils.setField(job, "localExecutionEnabled", true);
             org.springframework.test.util.ReflectionTestUtils.setField(job, "auditService", auditService);
             org.springframework.test.util.ReflectionTestUtils.setField(job, "auditActorResolver", auditActorResolver);
     }
@@ -53,8 +60,7 @@ class ScheduledRunTriggerJobTest {
 
         job.execute(context(jobDefinitionId));
 
-        verify(jobRunStore, never()).insertPending(Mockito.eq(jobDefinitionId), Mockito.isNull(),
-            Mockito.eq(1), Mockito.any(Instant.class));
+        verify(runDispatchService, never()).dispatchScheduled(jobDefinitionId);
         verify(runExecutionCoordinator, never()).submit(Mockito.any(), Mockito.anyString());
         verify(auditService, never()).record(Mockito.any(), Mockito.any(), Mockito.any(),
             Mockito.any(), Mockito.any(), Mockito.any());
@@ -65,15 +71,14 @@ class ScheduledRunTriggerJobTest {
         UUID jobDefinitionId = UUID.randomUUID();
         JobRun pending = pendingRun(jobDefinitionId);
         when(jobRunStore.hasActiveRun(jobDefinitionId)).thenReturn(false);
-        when(jobRunStore.insertPending(Mockito.eq(jobDefinitionId), Mockito.isNull(), Mockito.eq(1),
-            Mockito.any(Instant.class))).thenReturn(pending);
+        when(runDispatchService.dispatchScheduled(jobDefinitionId)).thenReturn(
+            new RunDispatchResult(Optional.of(pending), RunDispatchResult.Outcome.CREATED));
         AuditActor actor = AuditActor.system("scheduler");
         when(auditActorResolver.system("scheduler")).thenReturn(actor);
 
         job.execute(context(jobDefinitionId));
 
-        verify(jobRunStore).insertPending(Mockito.eq(jobDefinitionId), Mockito.isNull(), Mockito.eq(1),
-            Mockito.any(Instant.class));
+        verify(runDispatchService).dispatchScheduled(jobDefinitionId);
         verify(runExecutionCoordinator).submit(pending.id(), "scheduler");
         verify(auditService).record(actor, AuditAction.RUN_TRIGGERED, AuditResourceType.JOB_RUN,
             pending.id().toString(), AuditOutcome.SUCCESS,
@@ -84,8 +89,7 @@ class ScheduledRunTriggerJobTest {
     void ignoresAConcurrentInsertRace() throws Exception {
         UUID jobDefinitionId = UUID.randomUUID();
         when(jobRunStore.hasActiveRun(jobDefinitionId)).thenReturn(false);
-        when(jobRunStore.insertPending(Mockito.eq(jobDefinitionId), Mockito.isNull(), Mockito.eq(1),
-            Mockito.any(Instant.class)))
+        when(runDispatchService.dispatchScheduled(jobDefinitionId))
                 .thenThrow(new IllegalStateException("active run"));
 
         assertDoesNotThrow(() -> job.execute(context(jobDefinitionId)));
@@ -93,6 +97,24 @@ class ScheduledRunTriggerJobTest {
         verify(runExecutionCoordinator, never()).submit(Mockito.any(), Mockito.anyString());
         verify(auditService, never()).record(Mockito.any(), Mockito.any(), Mockito.any(),
             Mockito.any(), Mockito.any(), Mockito.any());
+    }
+
+    @Test
+    void doesNotSubmitWhenLocalExecutionIsDisabled() throws Exception {
+        UUID jobDefinitionId = UUID.randomUUID();
+        JobRun pending = pendingRun(jobDefinitionId);
+        when(jobRunStore.hasActiveRun(jobDefinitionId)).thenReturn(false);
+        when(runDispatchService.dispatchScheduled(jobDefinitionId)).thenReturn(
+                new RunDispatchResult(Optional.of(pending), RunDispatchResult.Outcome.CREATED));
+        org.springframework.test.util.ReflectionTestUtils.setField(job, "localExecutionEnabled", false);
+
+        job.execute(context(jobDefinitionId));
+
+        verify(runDispatchService).dispatchScheduled(jobDefinitionId);
+        verify(runExecutionCoordinator, never()).submit(Mockito.any(), Mockito.anyString());
+        verify(auditService).record(Mockito.any(), Mockito.eq(AuditAction.RUN_TRIGGERED),
+                Mockito.eq(AuditResourceType.JOB_RUN), Mockito.eq(pending.id().toString()),
+                Mockito.eq(AuditOutcome.SUCCESS), Mockito.anyMap());
     }
 
     private static JobExecutionContext context(UUID jobDefinitionId) {

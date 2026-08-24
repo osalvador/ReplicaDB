@@ -5,6 +5,7 @@ import org.replicadb.server.security.domain.GlobalRole;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.sql.ResultSet;
@@ -18,6 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
+@Profile("api")
 public class AppUserRepository {
 
     private static final String SELECT_COLUMNS = """

@@ -11,12 +11,14 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.context.annotation.Profile;
 
 import jakarta.validation.ConstraintViolationException;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@Profile("api")
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

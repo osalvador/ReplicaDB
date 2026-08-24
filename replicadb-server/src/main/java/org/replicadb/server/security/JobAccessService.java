@@ -5,6 +5,7 @@ import org.replicadb.server.security.domain.JobPermissionType;
 import org.replicadb.server.security.persistence.JobPermissionRepository;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -12,6 +13,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
+@Profile("api")
 public class JobAccessService {
 
     private final JobPermissionRepository permissionRepository;

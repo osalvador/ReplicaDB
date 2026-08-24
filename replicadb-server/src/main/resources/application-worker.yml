@@ -1,0 +1,33 @@
+spring:
+  main:
+    web-application-type: none
+  datasource:
+    url: ${DB_URL:}
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 8
+  flyway:
+    enabled: true
+  session:
+    store-type: none
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+      - org.springframework.boot.autoconfigure.quartz.QuartzAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+      - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
+replicadb:
+  worker:
+    identity: ${REPLICADB_WORKER_IDENTITY:}
+    max-concurrent-runs: 1
+    lease-duration: 5m
+    heartbeat-interval: 30s
+    poll-interval: 30s
+    poll-batch-size: 100
+    listener:
+      initial-reconnect-delay: 1s
+      max-reconnect-delay: 30s
+    shutdown-timeout: 30s

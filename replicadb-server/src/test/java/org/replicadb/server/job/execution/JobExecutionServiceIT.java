@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 import org.replicadb.cli.ReplicationMode;
-import org.replicadb.cli.ToolOptions;
 import org.replicadb.server.audit.AuditActorResolver;
 import org.replicadb.server.audit.AuditService;
 import org.replicadb.server.audit.domain.AuditAction;
@@ -23,6 +22,10 @@ import org.replicadb.server.job.domain.SinkEndpoint;
 import org.replicadb.server.job.domain.SourceEndpoint;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
+import org.replicadb.server.job.application.RunFinalizationService;
+import org.replicadb.server.job.application.RunLeaseService;
+import org.replicadb.server.job.port.JobDefinitionStore;
+import org.replicadb.server.job.port.JobRunStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -49,6 +52,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
@@ -92,7 +97,7 @@ class JobExecutionServiceIT {
         JobDefinition definition = jobDefinition(sourceDatabase, sinkDatabase,
                 "orders", "orders_copy", ReplicationMode.INCREMENTAL, "updated_at", "0");
         JobDefinition persistedDefinition = jobDefinitionRepository.insert(definition);
-        JobRun pending = jobRunRepository.insertPending(persistedDefinition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(persistedDefinition.id(), null, 1);
 
         JobRunOutcome outcome = executionService.executeNextPending("integration-worker").orElseThrow();
         JobRun persistedRun = jobRunRepository.findById(pending.id()).orElseThrow();
@@ -117,11 +122,11 @@ class JobExecutionServiceIT {
         JobDefinition definition = jobDefinition(sourceDatabase, sinkDatabase,
                 "orders", "missing_sink", ReplicationMode.INCREMENTAL, "updated_at", "0");
         JobDefinition persistedDefinition = jobDefinitionRepository.insert(definition);
-        jobRunRepository.insertPending(persistedDefinition.id(), null, 1);
-        JobRun previousRunning = jobRunRepository.claimNextPending("previous-worker", java.time.Duration.ofMinutes(5))
+        jobRunRepository.insertPendingNow(persistedDefinition.id(), null, 1);
+        JobRun previousRunning = jobRunRepository.claimNextEligible(null, "previous-worker", java.time.Duration.ofMinutes(5))
                 .orElseThrow();
-        jobRunRepository.markSucceeded(previousRunning.id(), 2, 10, "15");
-        JobRun pending = jobRunRepository.insertPending(persistedDefinition.id(), previousRunning.id(), 2);
+        jobRunRepository.markSucceeded(previousRunning.id(), previousRunning.leaseToken(), 2, 10, "15");
+        JobRun pending = jobRunRepository.insertPendingNow(persistedDefinition.id(), previousRunning.id(), 2);
 
         JobRunOutcome outcome = executionService.executeNextPending("integration-worker").orElseThrow();
         JobRun persistedRun = jobRunRepository.findById(pending.id()).orElseThrow();
@@ -145,7 +150,7 @@ class JobExecutionServiceIT {
             .withSinkTable("orders_copy")
             .build();
         JobDefinition persistedDefinition = jobDefinitionRepository.insert(definition);
-        JobRun pending = jobRunRepository.insertPending(persistedDefinition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(persistedDefinition.id(), null, 1);
 
         JobRunOutcome outcome = executionService.executeNextPending("integration-worker").orElseThrow();
         JobRun persistedRun = jobRunRepository.findById(pending.id()).orElseThrow();
@@ -158,17 +163,18 @@ class JobExecutionServiceIT {
 
     @Test
     void emptyQueueDoesNotMarkAnyRun() {
-        JobRunRepository repository = Mockito.mock(JobRunRepository.class);
-        JobDefinitionRepository definitions = Mockito.mock(JobDefinitionRepository.class);
-        when(repository.claimNextPending(anyString(), any())).thenReturn(Optional.empty());
-        JobExecutionService service = new JobExecutionService(repository, definitions,
+        JobRunStore runStore = Mockito.mock(JobRunStore.class);
+        JobDefinitionStore definitions = Mockito.mock(JobDefinitionStore.class);
+        when(runStore.claimNextEligible(isNull(), eq("integration-worker"), any())).thenReturn(Optional.empty());
+        JobExecutionService service = new JobExecutionService(runStore, definitions,
+            new RunLeaseService(runStore), new RunFinalizationService(runStore),
             new JobDefinitionEnvResolver(), new JobDefinitionOptionsFileWriter(),
-            Mockito.mock(AuditService.class), Mockito.mock(AuditActorResolver.class));
+            Mockito.mock(AuditService.class), Mockito.mock(AuditActorResolver.class), new ActiveRunRegistry());
 
         assertTrue(service.executeNextPending("integration-worker").isEmpty());
-        verify(repository, never()).markSucceeded(any(), any(Long.class), any(Long.class), any());
-        verify(repository, never()).markFailed(any(), any(Long.class), any(Long.class), anyString());
-        verify(repository, never()).markCancelled(any(), any(Long.class), any(Long.class));
+        verify(runStore, never()).markSucceeded(any(), any(), any(Long.class), any(Long.class), any());
+        verify(runStore, never()).markFailed(any(), any(), any(Long.class), any(Long.class), anyString());
+        verify(runStore, never()).markCancelled(any(), any(), any(Long.class), any(Long.class));
     }
 
         @Test
@@ -177,22 +183,28 @@ class JobExecutionServiceIT {
         Path sinkDatabase = createDatabase("sink-callback.db", true, "orders_copy");
         JobDefinition definition = jobDefinitionWithConnectionParams(sourceDatabase, sinkDatabase);
         JobDefinition persistedDefinition = jobDefinitionRepository.insert(definition);
-        JobRun pending = jobRunRepository.insertPending(persistedDefinition.id(), null, 1);
-        JobRun claimed = jobRunRepository.claimNextPending("callback-worker", java.time.Duration.ofMinutes(5))
+        JobRun pending = jobRunRepository.insertPendingNow(persistedDefinition.id(), null, 1);
+        JobRun claimed = jobRunRepository.claimNextEligible(null, "callback-worker", java.time.Duration.ofMinutes(5))
             .orElseThrow();
         AtomicInteger callbackCount = new AtomicInteger();
-        AtomicReference<ToolOptions> startedOptions = new AtomicReference<>();
+        AtomicReference<RunExecutionHandle> startedHandle = new AtomicReference<>();
 
-        JobRunOutcome outcome = executionService.executeClaimedRun(claimed, options -> {
+        JobRunOutcome outcome = executionService.executeClaimedRun(claimed, handle -> {
             callbackCount.incrementAndGet();
-            startedOptions.set(options);
+            startedHandle.set(handle);
+            assertTrue(executionService.activeRunRegistry().find(claimed.id()).isPresent());
         });
 
         assertEquals(claimed.id(), outcome.runId());
         assertEquals(1, callbackCount.get());
-        assertTrue(startedOptions.get() != null);
-        assertEquals("ReplicaDB", startedOptions.get().getSourceConnectionParams().getProperty("ApplicationName"));
-        assertEquals("100", startedOptions.get().getSinkConnectionParams().getProperty("batch.size"));
+        assertTrue(startedHandle.get() != null);
+        assertEquals(claimed.id(), startedHandle.get().runId());
+        assertEquals(claimed.leaseToken(), startedHandle.get().leaseToken());
+        assertEquals("ReplicaDB", startedHandle.get().toolOptions()
+            .getSourceConnectionParams().getProperty("ApplicationName"));
+        assertEquals("100", startedHandle.get().toolOptions()
+            .getSinkConnectionParams().getProperty("batch.size"));
+        assertTrue(executionService.activeRunRegistry().find(claimed.id()).isEmpty());
         assertEquals(JobRunStatus.SUCCEEDED, jobRunRepository.findById(claimed.id()).orElseThrow().status());
         }
 
@@ -210,7 +222,7 @@ class JobExecutionServiceIT {
         JobDefinition successfulDefinition = jobDefinition(sourceDatabase, sinkDatabase,
                 "orders", "orders_copy", ReplicationMode.COMPLETE, null, null);
         JobDefinition persistedSuccessful = jobDefinitionRepository.insert(successfulDefinition);
-        JobRun successfulRun = jobRunRepository.insertPending(persistedSuccessful.id(), null, 1);
+        JobRun successfulRun = jobRunRepository.insertPendingNow(persistedSuccessful.id(), null, 1);
         executionService.executeNextPending("cleanup-worker").orElseThrow();
         Path successfulPath = writtenPath.get();
 
@@ -221,7 +233,7 @@ class JobExecutionServiceIT {
         JobDefinition failingDefinition = jobDefinition(sourceDatabase, failingSink,
                 "orders", "missing_sink", ReplicationMode.COMPLETE, null, null);
         JobDefinition persistedFailing = jobDefinitionRepository.insert(failingDefinition);
-        jobRunRepository.insertPending(persistedFailing.id(), null, 1);
+        jobRunRepository.insertPendingNow(persistedFailing.id(), null, 1);
         executionService.executeNextPending("cleanup-worker").orElseThrow();
         Path failingPath = writtenPath.get();
 

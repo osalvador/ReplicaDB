@@ -134,6 +134,47 @@ curl http://localhost:8080/actuator/health
 
 La respuesta debe indicar que el estado es `UP`. En el primer arranque, `AdminBootstrapRunner` crea el usuario administrador definido por `REPLICADB_BOOTSTRAP_ADMIN_USERNAME` y `REPLICADB_BOOTSTRAP_ADMIN_PASSWORD` si todavía no existe un administrador.
 
+## Perfiles gestionados: API y worker
+
+El perfil `api` es el plano de control. Expone REST, autenticación, sesiones,
+Quartz y el frontend, y reconcilia las programaciones persistidas. Mantiene la
+ejecución local activada por defecto para conservar el despliegue monolítico.
+
+En un despliegue distribuido, define
+`REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED=false`. El API seguirá creando los
+runs en PostgreSQL y publicando sus identificadores, pero la ejecución quedará
+a cargo de uno o más workers.
+
+El perfil `worker` no abre un puerto HTTP y no inicia REST, frontend,
+autenticación/sesiones ni Quartz. Solo necesita PostgreSQL y el artefacto del
+servidor:
+
+```bash
+export DB_URL='<metadata-jdbc-url>'
+export DB_USERNAME='<metadata-user>'
+export DB_PASSWORD='<managed-secret>'
+export REPLICADB_WORKER_IDENTITY='worker-1'
+java -Dspring.profiles.active=worker \
+  -jar replicadb-server/target/replicadb-server-0.1.0-SNAPSHOT.jar
+```
+
+Si `REPLICADB_WORKER_IDENTITY` está vacío, el proceso genera una identidad
+`worker-<UUID>`. La configuración por defecto es un run concurrente, lease de
+5 minutos, heartbeat de 30 segundos y polling de 30 segundos. El pool JDBC
+debe tener al menos `max-concurrent-runs + 4` conexiones; el valor por defecto
+es 8.
+
+Los canales PostgreSQL `replicadb_runs` y `replicadb_run_control` transportan
+únicamente UUID de runs. `LISTEN/NOTIFY` acelera la entrega, pero el worker
+también hace polling al arrancar, al reconectar el listener y periódicamente.
+El listener reintenta con backoff de 1 a 30 segundos. La cancelación duradera
+se guarda como `CANCEL_REQUESTED` y el control local es una señal auxiliar.
+
+Al detener un worker se dejan de aceptar claims, se detienen polling y listener,
+se solicitan cancelaciones locales, se paran heartbeats y se espera hasta
+30 segundos al executor. Un retry y una recuperación por lease siempre vuelven
+a ejecutar el run desde el principio; nunca reanudan una partición abandonada.
+
 ## 4. Arrancar Vite
 
 En otro terminal, desde la raíz del repositorio:
@@ -211,7 +252,7 @@ El perfil `api` persiste la política de recuperación de cada job:
 
 Los runs elegibles usan `availableAt`, evaluado con el reloj PostgreSQL. Cada claim genera un lease token opaco; el token se usa solo dentro del estado y nunca aparece en respuestas REST, tipos TypeScript, logs o UI. Las renovaciones y escrituras terminales de un worker obsoleto son rechazadas por fencing. Una expiración conserva el run original y crea una nueva tentativa desde el principio cuando la política lo permite; no existe resume.
 
-La cancelación se persiste antes de intentar la señal local. Esto permite que una futura instancia worker observe `CANCEL_REQUESTED` aunque la petición HTTP haya sido atendida por otra instancia. `LISTEN/NOTIFY`, polling distribuido, el perfil `worker`, el heartbeat durante merge/swap y Quartz JDBC clustering pertenecen a Phase 3.2 y 3.3; no forman parte del runtime actual.
+La cancelación se persiste antes de intentar la señal local. Esto permite que una futura instancia worker observe `CANCEL_REQUESTED` aunque la petición HTTP haya sido atendida por otra instancia. `LISTEN/NOTIFY`, polling distribuido, el perfil `worker` y el heartbeat durante merge/swap están implementados en Phase 3.2. Quartz JDBC clustering, throttling de login compartido, métricas y pruebas de carga/caos siguen diferidos a Phase 3.3.
 
 ## Ejecutar el smoke test E2E
 

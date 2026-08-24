@@ -4,9 +4,11 @@ import org.replicadb.server.security.persistence.AppUserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 @Service
+@Profile("api")
 public class ReplicaDbUserDetailsService implements UserDetailsService {
 
     private final AppUserRepository repository;

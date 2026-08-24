@@ -5,6 +5,7 @@ import org.replicadb.server.security.domain.JobPermissionType;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.sql.ResultSet;
@@ -18,6 +19,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Repository
+@Profile("api")
 public class JobPermissionRepository {
 
     private static final String INSERT_SQL = """

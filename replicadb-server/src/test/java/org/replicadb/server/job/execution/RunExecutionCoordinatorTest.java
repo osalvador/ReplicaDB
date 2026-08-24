@@ -13,6 +13,7 @@ import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
+import org.replicadb.server.job.application.RunLeaseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -63,7 +64,8 @@ class RunExecutionCoordinatorTest {
     @BeforeEach
     void clearState() {
         jdbcTemplate.update("TRUNCATE TABLE job_run, job_definition CASCADE", Map.of());
-        coordinator = new RunExecutionCoordinator(jobRunRepository, jobExecutionService, 1);
+        coordinator = new RunExecutionCoordinator(new RunLeaseService(jobRunRepository), jobExecutionService,
+            jobExecutionService.activeRunRegistry(), 1);
     }
 
     @AfterEach
@@ -77,7 +79,7 @@ class RunExecutionCoordinatorTest {
         Path sinkDatabase = createDatabase("sink-success.db", 0);
         JobDefinition definition = jobDefinition(sourceDatabase, sinkDatabase, ReplicationMode.COMPLETE);
         JobDefinition persistedDefinition = jobDefinitionRepository.insert(definition);
-        JobRun pending = jobRunRepository.insertPending(persistedDefinition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(persistedDefinition.id(), null, 1);
 
         coordinator.submit(pending.id(), "coordinator-worker");
         JobRun completed = awaitTerminal(pending.id());
@@ -92,7 +94,7 @@ class RunExecutionCoordinatorTest {
         Path sinkDatabase = createDatabase("sink-cancel.db", 0);
         JobDefinition definition = jobDefinition(sourceDatabase, sinkDatabase, ReplicationMode.COMPLETE);
         JobDefinition persistedDefinition = jobDefinitionRepository.insert(definition);
-        JobRun pending = jobRunRepository.insertPending(persistedDefinition.id(), null, 1);
+        JobRun pending = jobRunRepository.insertPendingNow(persistedDefinition.id(), null, 1);
 
         coordinator.submit(pending.id(), "coordinator-worker");
         boolean cancellationDelivered = awaitCancellationRequest(pending.id());
@@ -116,7 +118,8 @@ class RunExecutionCoordinatorTest {
             taskStarted.countDown();
             return Optional.empty();
         });
-        RunExecutionCoordinator isolatedCoordinator = new RunExecutionCoordinator(repository, executionService, 1);
+        RunExecutionCoordinator isolatedCoordinator = new RunExecutionCoordinator(
+            new RunLeaseService(repository), executionService, new ActiveRunRegistry(), 1);
 
         isolatedCoordinator.submit(UUID.randomUUID(), "shutdown-worker");
         isolatedCoordinator.shutdown();

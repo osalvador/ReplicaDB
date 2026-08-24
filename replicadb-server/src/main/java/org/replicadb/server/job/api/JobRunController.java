@@ -11,6 +11,8 @@ import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.application.RunCancellationService;
+import org.replicadb.server.job.application.RunDispatchResult;
+import org.replicadb.server.job.application.RunDispatchService;
 import org.replicadb.server.job.execution.RunExecutionCoordinator;
 import org.replicadb.server.job.port.JobDefinitionStore;
 import org.replicadb.server.job.port.JobRunStore;
@@ -18,7 +20,6 @@ import org.replicadb.server.security.JobAccessService;
 import org.replicadb.server.security.domain.JobPermissionType;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
-import org.replicadb.server.job.persistence.RunTriggerIdempotencyRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.context.annotation.Profile;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.ResponseEntity;
@@ -41,37 +43,41 @@ import java.util.Set;
 import java.util.UUID;
 
 @RestController
+@Profile("api")
 @RequestMapping("/api/v1")
 public class JobRunController {
 
     private final JobRunStore jobRunStore;
     private final JobDefinitionStore jobDefinitionStore;
     private final RunCancellationService runCancellationService;
-    private final RunTriggerIdempotencyRepository idempotencyRepository;
+    private final RunDispatchService runDispatchService;
     private final RunExecutionCoordinator executionCoordinator;
     private final JobAccessService jobAccessService;
     private final AuditService auditService;
     private final AuditActorResolver auditActorResolver;
     private final boolean localSeedingEnabled;
+    private final boolean localExecutionEnabled;
 
     public JobRunController(JobRunStore jobRunStore,
                             JobDefinitionStore jobDefinitionStore,
                             RunCancellationService runCancellationService,
-                            RunTriggerIdempotencyRepository idempotencyRepository,
+                            RunDispatchService runDispatchService,
                             RunExecutionCoordinator executionCoordinator,
                             JobAccessService jobAccessService,
                             AuditService auditService,
                             AuditActorResolver auditActorResolver,
-                            @Value("${replicadb.server.local-seeding.enabled:false}") boolean localSeedingEnabled) {
+                            @Value("${replicadb.server.local-seeding.enabled:false}") boolean localSeedingEnabled,
+                            @Value("${replicadb.server.local-execution.enabled:true}") boolean localExecutionEnabled) {
         this.jobRunStore = jobRunStore;
         this.jobDefinitionStore = jobDefinitionStore;
         this.runCancellationService = runCancellationService;
-        this.idempotencyRepository = idempotencyRepository;
+        this.runDispatchService = runDispatchService;
         this.executionCoordinator = executionCoordinator;
         this.jobAccessService = jobAccessService;
         this.auditService = auditService;
         this.auditActorResolver = auditActorResolver;
         this.localSeedingEnabled = localSeedingEnabled;
+        this.localExecutionEnabled = localExecutionEnabled;
     }
 
     @GetMapping("/jobs/{jobDefinitionId}/runs")
@@ -125,14 +131,6 @@ public class JobRunController {
         }
         JobDefinition definition = findDefinition(jobDefinitionId);
         jobAccessService.require(authentication, jobDefinitionId, JobPermissionType.EXECUTE);
-        Optional<UUID> existingRunId = idempotencyRepository.findValidRunId(idempotencyKey);
-        if (existingRunId.isPresent()) {
-            JobRun existingRun = findRun(existingRunId.get());
-            if (!jobDefinitionId.equals(existingRun.jobDefinitionId())) {
-                throw new IllegalStateException("Idempotency-Key is already used for another job");
-            }
-            return accepted(existingRun);
-        }
         boolean localSeedRequested = "true".equalsIgnoreCase(request.getHeader("X-ReplicaDB-Local-Seed"));
         if (localSeedRequested && !localSeedingEnabled) {
             throw new IllegalStateException("Local run seeding is disabled");
@@ -140,25 +138,27 @@ public class JobRunController {
         if (localSeedRequested && !jobAccessService.isAdmin(authentication)) {
             throw new AccessDeniedException("Local run seeding requires ADMIN");
         }
-        if (jobRunStore.hasActiveRun(jobDefinitionId)) {
-            throw new IllegalStateException("Job definition " + jobDefinitionId + " already has an active run");
-        }
 
-        JobRun pending = jobRunStore.insertPending(definition.id(), null, 1, java.time.Instant.now().minusSeconds(5));
-        idempotencyRepository.upsert(idempotencyKey, definition.id(), pending.id());
+        String warning = localSeedRequested ? cancellationWarning(definition.mode()) : null;
+        RunDispatchResult dispatch = runDispatchService.dispatchManual(
+                definition.id(), idempotencyKey, localSeedRequested, warning);
+        JobRun pending = dispatch.run().orElseThrow(() -> new IllegalStateException(
+                "Run dispatch did not return a JobRun"));
+        if (dispatch.replayed()) {
+            return accepted(pending);
+        }
         if (localSeedRequested) {
-            String warning = cancellationWarning(definition.mode());
-            runCancellationService.cancelPending(pending.id(), warning);
-            JobRun cancelled = findRun(pending.id());
             auditService.record(auditActorResolver.resolve(authentication), AuditAction.RUN_TRIGGERED,
-                AuditResourceType.JOB_RUN, cancelled.id().toString(), AuditOutcome.SUCCESS,
+                AuditResourceType.JOB_RUN, pending.id().toString(), AuditOutcome.SUCCESS,
                 Map.of("jobDefinitionId", definition.id().toString(), "trigger", "local-seed"));
             auditService.record(auditActorResolver.resolve(authentication), AuditAction.RUN_CANCEL_REQUESTED,
-                AuditResourceType.JOB_RUN, cancelled.id().toString(), AuditOutcome.SUCCESS,
-                Map.of("warning", warning, "resultingStatus", cancelled.status().name()));
-            return accepted(cancelled);
+                AuditResourceType.JOB_RUN, pending.id().toString(), AuditOutcome.SUCCESS,
+                Map.of("warning", warning, "resultingStatus", pending.status().name()));
+            return accepted(pending);
         }
-        executionCoordinator.submit(pending.id(), "api");
+        if (localExecutionEnabled) {
+            executionCoordinator.submit(pending.id(), "api");
+        }
         auditService.record(auditActorResolver.resolve(authentication), AuditAction.RUN_TRIGGERED,
             AuditResourceType.JOB_RUN, pending.id().toString(), AuditOutcome.SUCCESS,
             Map.of("jobDefinitionId", definition.id().toString(), "trigger", "manual"));
@@ -199,8 +199,12 @@ public class JobRunController {
         if (failedRun.status() != JobRunStatus.FAILED) {
             throw new IllegalStateException("Only failed JobRuns can be retried: " + id);
         }
-        JobRun retry = jobRunStore.scheduleRetry(id, java.time.Instant.now().minusSeconds(5));
-        executionCoordinator.submit(retry.id(), "api");
+        RunDispatchResult dispatch = runDispatchService.dispatchRetry(id);
+        JobRun retry = dispatch.run().orElseThrow(() -> new IllegalStateException(
+            "Retry dispatch did not return a JobRun"));
+        if (dispatch.created() && localExecutionEnabled) {
+            executionCoordinator.submit(retry.id(), "api");
+        }
         auditService.record(auditActorResolver.resolve(authentication), AuditAction.RUN_RETRIED,
             AuditResourceType.JOB_RUN, retry.id().toString(), AuditOutcome.SUCCESS,
             Map.of("previousRunId", id.toString()));
