@@ -321,6 +321,14 @@ The draft was reviewed once by a critic sub-agent. The review found implementati
 - **Resolution**: did not modify CLI production code or mask the failures. The server suite, managed multinode gates, image checks, documentation gate, and `NoSpringBootOnClasspathTest` passed; full CLI integration remains a CI/architecture-specific release check.
 - **Learning**: classify heterogeneous database integration failures by container readiness and architecture before treating them as product regressions.
 
+#### Gap 7: CI runner tool availability differed from the development environment
+
+- **Task**: 6.1.
+- **Plan assumed**: common local command-line tools used by validation scripts would be available on the GitHub-hosted runner.
+- **Reality**: `ubuntu-latest` did not provide `rg`; the first remote run stopped in the documentation gate, and the next stopped in the image smoke gate before reaching the multinode load checks.
+- **Resolution**: replaced all CI-invoked `rg` checks with portable `grep` equivalents, including recursive source scanning and explicit error handling for directory scans. Re-ran the image smoke and four-run load gates with ripgrep excluded from `PATH`; both passed.
+- **Learning**: validation scripts and workflow shell steps should depend only on explicitly provisioned tools or baseline POSIX utilities; local availability is not evidence of runner availability.
+
 ### Patterns Discovered
 
 - **Framework probe first**: validate Spring Boot management, Actuator exporter, and Quartz property binding with a minimal context before adding dependent health/metrics code.
@@ -337,3 +345,4 @@ The draft was reviewed once by a critic sub-agent. The review found implementati
 - Compose smoke, four-run concurrent load, worker-loss copy/merge, PostgreSQL restart, notification loss, listener restart, duplicate polling, and chaos harnesses: passed.
 - Documentation, shell syntax, POM XML, Compose YAML, and CI YAML checks: passed. `actionlint` retains pre-existing warnings in the release workflow unrelated to these changes.
 - Root CLI `NoSpringBootOnClasspathTest`: 2 tests passed. Full cross-database CLI suite: attempted, but blocked by DB2 amd64 emulation/container readiness on the local ARM64 environment.
+- Remote CI follow-up: the first run exposed the undeclared `rg` dependency; the portable replacements are staged for the next `Only CI/CT` run, with the affected image and load checks already passing locally.
