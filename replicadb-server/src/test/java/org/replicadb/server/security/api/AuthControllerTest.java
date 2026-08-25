@@ -63,7 +63,7 @@ class AuthControllerTest {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE audit_event, SPRING_SESSION_ATTRIBUTES, SPRING_SESSION, app_user CASCADE",
+        jdbcTemplate.update("TRUNCATE TABLE login_attempt, audit_event, SPRING_SESSION_ATTRIBUTES, SPRING_SESSION, app_user CASCADE",
             Map.of());
     }
 

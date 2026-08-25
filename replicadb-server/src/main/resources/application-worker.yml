@@ -1,6 +1,6 @@
 spring:
   main:
-    web-application-type: none
+    web-application-type: servlet
   datasource:
     url: ${DB_URL:}
     username: ${DB_USERNAME:}
@@ -19,6 +19,18 @@ spring:
       - org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
       - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
+      - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
+server:
+  port: -1
+management:
+  server:
+    port: ${REPLICADB_WORKER_MANAGEMENT_PORT:9091}
+    address: ${REPLICADB_WORKER_MANAGEMENT_ADDRESS:127.0.0.1}
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
 replicadb:
   worker:
     identity: ${REPLICADB_WORKER_IDENTITY:}

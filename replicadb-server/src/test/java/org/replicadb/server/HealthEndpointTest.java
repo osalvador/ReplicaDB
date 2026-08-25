@@ -41,4 +41,28 @@ class HealthEndpointTest {
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
+
+        @Test
+        void livenessAndReadinessEndpointsArePubliclyProbeable() {
+        ResponseEntity<String> liveness = restTemplate.getForEntity(
+            "http://localhost:" + port + "/actuator/health/liveness", String.class);
+        ResponseEntity<String> readiness = restTemplate.getForEntity(
+            "http://localhost:" + port + "/actuator/health/readiness", String.class);
+
+        assertEquals(HttpStatus.OK, liveness.getStatusCode());
+        assertEquals(HttpStatus.OK, readiness.getStatusCode());
+        assertTrue(liveness.getBody().contains("\"status\":\"UP\""));
+        assertTrue(readiness.getBody().contains("\"status\":\"UP\""));
+        }
+
+        @Test
+        void metricsAndPrometheusEndpointsRequireAuthentication() {
+        ResponseEntity<String> metrics = restTemplate.getForEntity(
+            "http://localhost:" + port + "/actuator/metrics", String.class);
+        ResponseEntity<String> prometheus = restTemplate.getForEntity(
+            "http://localhost:" + port + "/actuator/prometheus", String.class);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, metrics.getStatusCode());
+        assertEquals(HttpStatus.UNAUTHORIZED, prometheus.getStatusCode());
+        }
 }

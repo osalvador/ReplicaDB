@@ -10,6 +10,7 @@ import org.replicadb.server.job.execution.JobExecutionService;
 import org.replicadb.server.job.execution.WorkerDispatchCoordinator;
 import org.replicadb.server.job.execution.WorkerRunIdentity;
 import org.replicadb.server.job.port.JobRunStore;
+import org.replicadb.server.observability.ManagedRuntimeMetrics;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -38,31 +39,34 @@ public class WorkerRuntimeConfiguration {
                                                                JobExecutionService jobExecutionService,
                                                                ActiveRunRegistry activeRunRegistry,
                                                                HeartbeatService heartbeatService,
-                                                               WorkerRuntimeProperties properties) {
+                                                               WorkerRuntimeProperties properties,
+                                                               ManagedRuntimeMetrics metrics) {
         return new WorkerDispatchCoordinator(runLeaseService, jobRunStore, jobExecutionService,
                 activeRunRegistry, heartbeatService,
                 WorkerRunIdentity.resolve(properties.getIdentity()), properties.getMaxConcurrentRuns(),
-                properties.getLeaseDuration(), properties.getShutdownTimeout());
+                properties.getLeaseDuration(), properties.getShutdownTimeout(), metrics);
     }
 
     @Bean
     public PollingFallback workerPollingFallback(WorkerDispatchCoordinator workerCoordinator,
                                                  JobRunStore jobRunStore,
                                                  RunDispatchService runDispatchService,
-                                                 WorkerRuntimeProperties properties) {
+                                                 WorkerRuntimeProperties properties,
+                                                 ManagedRuntimeMetrics metrics) {
         return new PollingFallback(workerCoordinator, jobRunStore, runDispatchService,
                 workerCoordinator.workerIdentity().value(), properties.getPollInterval(),
-                properties.getPollBatchSize(), PollingFallback.newScheduler(), properties.getShutdownTimeout());
+                properties.getPollBatchSize(), PollingFallback.newScheduler(), properties.getShutdownTimeout(), metrics);
     }
 
     @Bean
     public PostgreSQLNotificationListener workerNotificationListener(DataSource dataSource,
                                                                       WorkerDispatchCoordinator workerCoordinator,
                                                                       PollingFallback pollingFallback,
-                                                                      WorkerRuntimeProperties properties) {
+                                                                      WorkerRuntimeProperties properties,
+                                                                      ManagedRuntimeMetrics metrics) {
         return new PostgreSQLNotificationListener(dataSource, workerCoordinator, pollingFallback,
                 properties.getListener().getInitialReconnectDelay(),
-                properties.getListener().getMaxReconnectDelay(), properties.getShutdownTimeout());
+                properties.getListener().getMaxReconnectDelay(), properties.getShutdownTimeout(), metrics);
     }
 
     @Bean

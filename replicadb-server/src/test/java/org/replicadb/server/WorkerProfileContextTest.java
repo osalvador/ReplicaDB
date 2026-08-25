@@ -17,6 +17,7 @@ import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
 import org.replicadb.server.job.persistence.PostgresNotificationPublisher;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Import;
@@ -27,6 +28,7 @@ import org.springframework.web.context.WebApplicationContext;
 
 import javax.sql.DataSource;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -49,6 +51,9 @@ class WorkerProfileContextTest {
     @Autowired
     private PostgresNotificationPublisher notificationPublisher;
 
+    @Autowired
+    private ServerProperties serverProperties;
+
     @Test
     void loadsSharedPostgresStateWithoutApiSurface() throws Exception {
         assertTrue(applicationContext.getBeansOfType(DataSource.class).size() >= 1);
@@ -61,7 +66,8 @@ class WorkerProfileContextTest {
         assertTrue(applicationContext.getBean(WorkerRuntimeLifecycle.class).isRunning());
         assertTrue(applicationContext.getBean(PollingFallback.class).isRunning());
         assertTrue(applicationContext.getBean(PostgreSQLNotificationListener.class).isRunning());
-        assertFalse(applicationContext instanceof WebApplicationContext);
+        assertTrue(applicationContext instanceof WebApplicationContext);
+        assertEquals(-1, serverProperties.getPort());
         assertTrue(applicationContext.getBeansOfType(SecurityFilterChain.class).isEmpty());
         assertTrue(applicationContext.getBeansOfType(SessionRepository.class).isEmpty());
         assertTrue(applicationContext.getBeansOfType(Scheduler.class).isEmpty());

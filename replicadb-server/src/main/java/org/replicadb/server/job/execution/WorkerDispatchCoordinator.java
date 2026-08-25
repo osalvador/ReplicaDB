@@ -6,6 +6,7 @@ import org.replicadb.server.job.application.RunLeaseService;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.port.JobRunStore;
+import org.replicadb.server.observability.ManagedRuntimeMetrics;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -37,8 +38,10 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
     private final WorkerRunIdentity workerIdentity;
     private final Duration leaseDuration;
     private final Duration shutdownTimeout;
+    private final ManagedRuntimeMetrics metrics;
     private final ExecutorService executor;
     private final Semaphore capacity;
+    private final int maxConcurrentRuns;
     private final AtomicBoolean accepting = new AtomicBoolean(true);
 
     public WorkerDispatchCoordinator(RunLeaseService runLeaseService,
@@ -50,6 +53,21 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
                                      int maxConcurrentRuns,
                                      Duration leaseDuration,
                                      Duration shutdownTimeout) {
+                        this(runLeaseService, jobRunStore, jobExecutionService, activeRunRegistry, heartbeatService,
+                            workerIdentity, maxConcurrentRuns, leaseDuration, shutdownTimeout,
+                            ManagedRuntimeMetrics.noop());
+                        }
+
+                        public WorkerDispatchCoordinator(RunLeaseService runLeaseService,
+                                         JobRunStore jobRunStore,
+                                         JobExecutionService jobExecutionService,
+                                         ActiveRunRegistry activeRunRegistry,
+                                         HeartbeatService heartbeatService,
+                                         WorkerRunIdentity workerIdentity,
+                                         int maxConcurrentRuns,
+                                         Duration leaseDuration,
+                                         Duration shutdownTimeout,
+                                         ManagedRuntimeMetrics metrics) {
         this.runLeaseService = Objects.requireNonNull(runLeaseService, "runLeaseService must not be null");
         this.jobRunStore = Objects.requireNonNull(jobRunStore, "jobRunStore must not be null");
         this.jobExecutionService = Objects.requireNonNull(jobExecutionService,
@@ -63,6 +81,8 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
         }
         this.leaseDuration = positive(leaseDuration, "leaseDuration");
         this.shutdownTimeout = positive(shutdownTimeout, "shutdownTimeout");
+        this.metrics = Objects.requireNonNull(metrics, "metrics must not be null");
+        this.maxConcurrentRuns = maxConcurrentRuns;
         this.capacity = new Semaphore(maxConcurrentRuns);
         this.executor = new ThreadPoolExecutor(
                 maxConcurrentRuns,
@@ -72,6 +92,7 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
                 new SynchronousQueue<>(),
                 new WorkerThreadFactory(),
                 new ThreadPoolExecutor.AbortPolicy());
+            this.metrics.updateWorkerCapacity(0, maxConcurrentRuns);
     }
 
     public WorkerDispatchCoordinator(RunLeaseService runLeaseService,
@@ -104,7 +125,16 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
 
     public void signalRun(UUID runId) {
         Objects.requireNonNull(runId, "runId must not be null");
-        dispatch(() -> claimAndExecute(runId));
+        signalRun(runId, null);
+    }
+
+    public void signalRun(UUID runId, long notificationReceivedNanos) {
+        Objects.requireNonNull(runId, "runId must not be null");
+        signalRun(runId, Long.valueOf(notificationReceivedNanos));
+    }
+
+    private void signalRun(UUID runId, Long notificationReceivedNanos) {
+        dispatch(() -> claimAndExecute(runId, notificationReceivedNanos));
     }
 
     public void signalEligibleWork() {
@@ -113,7 +143,9 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
 
     public boolean signalCancellation(UUID runId) {
         Objects.requireNonNull(runId, "runId must not be null");
-        return activeRunRegistry.requestCancellation(runId);
+        boolean signalled = activeRunRegistry.requestCancellation(runId);
+        metrics.recordCancellation("local", signalled ? "signalled" : "missed");
+        return signalled;
     }
 
     public void startAccepting() {
@@ -121,10 +153,12 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
             throw new IllegalStateException("Worker executor is shut down");
         }
         accepting.set(true);
+        updateCapacityMetrics();
     }
 
     public void stopAccepting() {
         accepting.set(false);
+        updateCapacityMetrics();
     }
 
     public void shutdown() {
@@ -148,10 +182,23 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
             executor.shutdownNow();
             LOG.warn("Interrupted while stopping the worker executor");
         }
+        updateCapacityMetrics();
     }
 
     public boolean isShutdown() {
         return executor.isShutdown();
+    }
+
+    public boolean isAccepting() {
+        return accepting.get() && !executor.isShutdown();
+    }
+
+    public int maxConcurrentRuns() {
+        return maxConcurrentRuns;
+    }
+
+    public int availableCapacity() {
+        return capacity.availablePermits();
     }
 
     @Override
@@ -159,12 +206,18 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
         shutdown();
     }
 
-    private void claimAndExecute(UUID runId) {
+    private void claimAndExecute(UUID runId, Long notificationReceivedNanos) {
         if (!accepting.get()) {
             return;
         }
         Optional<JobRun> claimed = runLeaseService.claimRequested(runId, workerIdentity.value(), leaseDuration);
-        claimed.ifPresent(this::executeClaimedRun);
+        claimed.ifPresent(run -> {
+            if (notificationReceivedNanos != null) {
+                metrics.recordNotificationClaimLatencyNanos(
+                        System.nanoTime() - notificationReceivedNanos);
+            }
+            executeClaimedRun(run);
+        });
     }
 
     private void claimAndExecuteNext() {
@@ -214,6 +267,7 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
         if (!accepting.get() || !capacity.tryAcquire()) {
             return;
         }
+        updateCapacityMetrics();
         try {
             executor.execute(() -> {
                 try {
@@ -223,6 +277,7 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
                             exception.getClass().getSimpleName());
                 } finally {
                     capacity.release();
+                    updateCapacityMetrics();
                 }
             });
         } catch (RejectedExecutionException exception) {
@@ -231,6 +286,11 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
                 LOG.debug("Worker wake-up was rejected while at capacity");
             }
         }
+    }
+
+    private void updateCapacityMetrics() {
+        int available = capacity.availablePermits();
+        metrics.updateWorkerCapacity(maxConcurrentRuns - available, available);
     }
 
     private static Duration positive(Duration value, String name) {

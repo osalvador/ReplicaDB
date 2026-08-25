@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.server.job.port.JobRunStore;
 import org.replicadb.server.job.port.RunNotificationPublisher;
+import org.replicadb.server.observability.ManagedRuntimeMetrics;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,12 +19,19 @@ public final class RunCancellationService {
 
     private final JobRunStore runStore;
     private final RunNotificationPublisher notificationPublisher;
+    private final ManagedRuntimeMetrics metrics;
 
     @Autowired
-    public RunCancellationService(JobRunStore runStore, RunNotificationPublisher notificationPublisher) {
+    public RunCancellationService(JobRunStore runStore, RunNotificationPublisher notificationPublisher,
+                                  ManagedRuntimeMetrics metrics) {
         this.runStore = Objects.requireNonNull(runStore, "runStore must not be null");
         this.notificationPublisher = Objects.requireNonNull(notificationPublisher,
                 "notificationPublisher must not be null");
+        this.metrics = Objects.requireNonNull(metrics, "metrics must not be null");
+    }
+
+    public RunCancellationService(JobRunStore runStore, RunNotificationPublisher notificationPublisher) {
+        this(runStore, notificationPublisher, ManagedRuntimeMetrics.noop());
     }
 
     @Deprecated
@@ -44,19 +52,24 @@ public final class RunCancellationService {
         Objects.requireNonNull(runId, "runId must not be null");
         Objects.requireNonNull(localSignal, "localSignal must not be null");
         JobRunStore.CancellationResult result = runStore.requestCancellation(runId, cancellationWarning);
+        metrics.recordCancellation("request", result.name());
         if (result == JobRunStore.CancellationResult.REQUESTED
                 || result == JobRunStore.CancellationResult.ALREADY_REQUESTED) {
             try {
                 notificationPublisher.publishCancellation(runId);
+                metrics.recordCancellation("notification", "published");
             } catch (RuntimeException exception) {
                 LOG.warn("Cancellation notification failed for run {} with {}",
                         runId, exception.getClass().getSimpleName());
+                metrics.recordCancellation("notification", "failed");
             }
             try {
                 localSignal.accept(runId);
+                metrics.recordCancellation("local", "signalled");
             } catch (RuntimeException exception) {
                 LOG.warn("Local cancellation signal failed for run {} with {}",
                         runId, exception.getClass().getSimpleName());
+                metrics.recordCancellation("local", "failed");
             }
         }
         return result;
@@ -64,6 +77,8 @@ public final class RunCancellationService {
 
     public JobRunStore.CancellationResult cancelPending(UUID runId, String cancellationWarning) {
         Objects.requireNonNull(runId, "runId must not be null");
-        return runStore.cancelPending(runId, cancellationWarning);
+        JobRunStore.CancellationResult result = runStore.cancelPending(runId, cancellationWarning);
+        metrics.recordCancellation("pending", result.name());
+        return result;
     }
 }

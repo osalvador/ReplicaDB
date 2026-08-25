@@ -11,8 +11,8 @@ ReplicaDB is not being extended into a CDC, ETL, schema-migration, or universal 
 The control plane does not resume interrupted work. A run either completes or is executed again from the beginning. Safety comes from the staging-based replication modes, not from progress checkpoints.
 
 **Date**: August 13, 2026
-**Last decision review**: August 20, 2026
-**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings), Phase 2a/2b/2c (frontend authentication, monitoring, job actions, scheduling, user administration, and job permissions), Phase 3.1 (distributed state contract, leases, retries, and fencing), and Phase 3.2 (worker runtime and PostgreSQL dispatch) implemented; Phase 3.3 remains not started
+**Last decision review**: August 25, 2026
+**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings), Phase 2a/2b/2c (frontend authentication, monitoring, job actions, scheduling, user administration, and job permissions), Phase 3.1 (distributed state contract, leases, retries, and fencing), and Phase 3.2 (worker runtime and PostgreSQL dispatch) implemented; Phase 3.3 is in progress with Quartz JDBC clustering, shared login throttling, health/metrics, server packaging, and local Compose validation implemented, while process-level failure/load validation and final release gates remain; Phase 3.4 (hybrid worker load distribution) is approved but not started
 **Owner**: Development Team
 
 ---
@@ -355,6 +355,30 @@ The distributed contract is:
 - The API reads status only from PostgreSQL.
 
 `LISTEN/NOTIFY` provides no acknowledgements, replay, consumer groups, or durable per-worker delivery: it is a wake-up signal, not a work queue. The durable work item is always the `JobRun` row, so periodic polling is the mandatory recovery path and notification delivery is only an optimization. An external broker is deliberately excluded from this phase.
+
+#### Hybrid worker load distribution
+
+**Status**: APPROVED direction; Phase 3.4 is not started.
+
+The worker fleet should distribute load as uniformly as practical without introducing a central dispatcher, a worker registry, or an external broker. The target is approximate fairness with bounded coordination overhead. PostgreSQL remains the only arbiter of ownership, and the existing lease, `FOR UPDATE SKIP LOCKED`, and fencing contracts do not change.
+
+The dispatch policy has two lanes:
+
+1. **Directed notification lane.** A `replicadb_runs` notification gives each worker at most one directed claim opportunity for the advertised `runId`. Duplicate notifications for the same run are coalesced locally. The worker calls `claimRequested(runId)` only when it has local capacity. If that claim is empty because another worker won the race or the run is no longer eligible, the worker may make exactly one immediate `claimNextEligible()` fallback. A fallback never chains into another fallback. The notification itself does not fan out into one directed attempt per free slot.
+2. **Generic refill lane.** Startup, listener reconnect, periodic polling, and run completion create refill opportunities for currently free slots. A refill may create at most one generic claim opportunity per free slot, using `claimNextEligible()`. These opportunities are coalesced and bounded; they do not prefetch or hold `JobRun` rows outside a PostgreSQL claim.
+
+The local admission rules are:
+
+- The capacity permit is acquired immediately before a claim opportunity is executed and remains held for the claimed run's coordination and execution lifetime. Jitter or cooldown must never occupy a run slot while waiting.
+- A small per-worker random jitter makes simultaneous workers less likely to reach PostgreSQL in the same order on every event.
+- After every successful claim, a bounded cooldown applies before that worker's next generic refill opportunity. This is the primary anti-monopoly control for a fast worker.
+- Repeated empty or duplicate claim outcomes may increase an adaptive contention backoff for later generic opportunities. The backoff has a maximum and decays after successful or uncontended work; it is a contention-control signal, not a permanent penalty for losing a race.
+- There is no age-based priority escape from the cooldown. The maximum delay and mandatory polling are the starvation guard, while `available_at` and the existing queue ordering continue to determine eligible work.
+- A worker configured with more slots is expected to process proportionally more work. With `max-concurrent-runs > 1`, only the generic refill lane uses one opportunity per currently free slot; a single notification still creates one directed opportunity per worker.
+
+The primary fairness measure is normalized busy-slot time: `busy-slot-seconds / max-concurrent-runs` for each worker over a measurement window. Normalized completed-run count is secondary because run durations and sizes differ. Queue age, especially the oldest eligible `JobRun`, remains an operational latency signal but does not override the admission policy.
+
+This policy is probabilistic rather than a guarantee. Network latency, database connection latency, worker capacity, and different run durations can still produce unequal results. The policy must therefore be evaluated with aggregate per-worker metrics and not inferred from one notification or a short test window. It must preserve duplicate-notification safety, missed-notification polling, lease recovery, cancellation delivery, and token-fenced finalization.
 
 #### Lease and heartbeat rules
 
@@ -708,7 +732,7 @@ Decided technical shape, applying to all three sub-phases:
 
 ### Phase 3: Distributed Workers and Highly Available Control Plane
 
-Phase 3 expands the single-instance `api` runtime into a shared PostgreSQL control plane with multiple API instances and one or more replication workers. The implementation is split into exactly three plans. The plans are ordered because dispatch and execution cannot be made reliable until the persisted lease and retry contract is safe under stale workers.
+Phase 3 expands the single-instance `api` runtime into a shared PostgreSQL control plane with multiple API instances and one or more replication workers. The implementation is split into four ordered slices. The slices are ordered because dispatch and execution cannot be made reliable until the persisted lease and retry contract is safe under stale workers, and load distribution cannot be measured safely until the worker runtime and operational telemetry exist.
 
 #### Locked topology and invariants
 
@@ -724,9 +748,11 @@ Workers (1..N) -> claim, heartbeat, ReplicaDB core
 ```
 
 - PostgreSQL is the only source of truth for run state. API-local maps, Quartz notifications, and worker logs are not state stores.
-- Phase 3.2 keeps the API's compatible single-instance RAMJobStore; Quartz JDBC clustering for a horizontally scalable API remains Phase 3.3 work.
+- Phase 3.2 introduced the worker runtime while the API still used its compatible single-instance RAMJobStore. Phase 3.3 now provides the PostgreSQL-backed clustered scheduler; all API instances in a deployment must use the clustered configuration before they share schedules.
 - The worker profile has no public API, frontend, Spring Security session, or Quartz scheduler. It starts only the repositories, dispatch coordinator, execution services, listener/poller, and ReplicaDB core.
 - A worker executes one `JobRun` at a time by default. A bounded `worker.max-concurrent-runs` setting may increase this later; ReplicaDB's existing `jobs` option still controls the internal tasks of one run.
+- Worker admission follows the approved hybrid distribution policy: notifications use one directed opportunity per worker with at most one general fallback, while startup/reconnect/polling/completion refill currently free slots one opportunity per slot. Duplicate wake-ups are coalesced, and bounded jitter/cooldown reduces repeated wins by a fast worker.
+- The hybrid policy is an approximate fairness mechanism only. It does not add a global worker registry or central assignment service; PostgreSQL claims remain authoritative, and fairness is evaluated with normalized busy-slot time rather than raw run counts.
 - Runs are never resumed. Worker loss creates a new attempt from the beginning, subject to the retry policy and replication-mode safety rules.
 - `LISTEN/NOTIFY` is a wake-up optimization. Startup polling, reconnect polling, and periodic polling are mandatory recovery paths.
 - The phase does not introduce an external broker, CDC, managed multi-table jobs, partition resume, or exactly-once execution.
@@ -784,11 +810,13 @@ Tests and exit criteria:
 - Long-running-operation tests prove that heartbeats remain active during merge and atomic swap and that a lease does not expire while the worker is healthy.
 - The plan exits when one API instance and multiple worker instances can execute, cancel, recover, and monitor runs through PostgreSQL without API-local execution state.
 
-**Implemented in Phase 3.2**: the API and Quartz dispatch durable UUID notifications through a transaction-bound PostgreSQL publisher; the worker profile starts a bounded coordinator, mandatory startup/reconnect/periodic polling, a dedicated reconnecting listener, independent lease heartbeats, durable cancellation delivery, and the shared execution service. Shared-schema Testcontainers scenarios prove two workers claim a run once, retries and lease recovery create new attempts, incremental watermarks remain fenced, and the worker exposes no HTTP, security-session, frontend, or Quartz surface. Phase 3.3 remains responsible for Quartz JDBC clustering, shared login throttling, health/metrics, deployment hardening, and load/chaos validation.
+**Implemented in Phase 3.2**: the API and Quartz dispatch durable UUID notifications through a transaction-bound PostgreSQL publisher; the worker profile starts a bounded coordinator, mandatory startup/reconnect/periodic polling, a dedicated reconnecting listener, independent lease heartbeats, durable cancellation delivery, and the shared execution service. Shared-schema Testcontainers scenarios prove two workers claim a run once, retries and lease recovery create new attempts, incremental watermarks remain fenced, and the worker exposes no HTTP, security-session, frontend, or Quartz surface. Phase 3.3 has implemented Quartz JDBC clustering, shared login throttling, health/metrics, server packaging, and a local Compose topology; process-level failure/load validation and final release gates remain.
+
+The hybrid worker load-distribution policy in Decision 6 is an approved follow-up direction and is not claimed as implemented by Phase 3.2 or Phase 3.3. Phase 3.4 below must preserve the current durable claim contract while adding the directed-notification/fallback split, refill opportunities for free slots, wake-up coalescing, bounded jitter, success cooldown, adaptive contention backoff, and normalized busy-slot observability described above.
 
 #### Plan 3.3: API high availability and operational hardening
 
-This plan makes the API cluster and the distributed runtime operable as a deployment rather than only as a set of components.
+This plan makes the API cluster and the distributed runtime operable as a deployment rather than only as a set of components. Quartz JDBC clustering, shared login throttling, health/metrics, server packaging, and a local Compose topology are implemented; process-level failure/load validation and final release hardening remain in progress.
 
 Scope:
 
@@ -807,6 +835,38 @@ Tests and exit criteria:
 - The deployment exposes actionable health and metrics for every Phase 3 recovery path.
 - The plan exits when the documented API-cluster plus worker topology passes integration, failure, and load checks with measured concurrency limits.
 
+#### Phase 3.4: Hybrid Worker Load Distribution
+
+**Status**: APPROVED; not started.
+
+Phase 3.4 improves worker-fleet fairness without introducing a central dispatcher, a worker registry, an external broker, or a second source of truth. It depends on the durable worker runtime from Phase 3.2 and the health/metrics and process-validation foundations from Phase 3.3. Its objective is approximate uniformity of real worker utilization, not strict round-robin assignment or perfect equality.
+
+The phase preserves the Phase 3.2 claim and fencing contract and adds two local admission lanes:
+
+- **Directed notification lane**: each worker gets at most one directed claim opportunity per `replicadb_runs` notification. Duplicate notifications for the same `runId` are coalesced. When the worker has capacity it calls `claimRequested(runId)`; if that claim is empty, it performs at most one immediate `claimNextEligible()` fallback. The fallback never chains, and a notification does not create one directed attempt per free slot.
+- **Generic refill lane**: startup, listener reconnect, periodic polling, and run completion create refill opportunities. The worker may create at most one `claimNextEligible()` opportunity per currently free slot. Refill opportunities are coalesced and bounded and never prefetch a `JobRun` or hold a database row before the claim.
+
+The local admission behavior is part of the phase contract:
+
+- The capacity permit is acquired immediately before a claim opportunity and remains held through the claimed run's coordination and execution lifetime. Jitter and cooldown must not consume a run slot while waiting.
+- Each worker uses a small independent random jitter. After every successful claim, a bounded cooldown delays that worker's next generic refill opportunity. This cooldown is the primary control against a fast worker monopolizing a sustained backlog.
+- Repeated empty or duplicate claims may increase a decaying contention backoff for later generic opportunities. The backoff is capped and must not permanently penalize a worker that loses a race.
+- There is no age-based priority escape from the cooldown. A maximum delay and mandatory polling provide the starvation guard; `available_at` and the existing PostgreSQL queue ordering remain authoritative.
+- `max-concurrent-runs` remains the worker capacity boundary. With different capacities, the expected share is proportional to the configured slots; the fairness comparison uses normalized busy-slot time rather than raw run count.
+
+Phase 3.4 does not change leases, `available_at`, retry/recovery semantics, cancellation delivery, watermarks, or token-fenced finalization. It does not use SQL random ordering to distribute work and does not treat notification arrival as proof of ownership. The only durable work item remains `JobRun`.
+
+The primary fairness measure is `busy-slot-seconds / max-concurrent-runs` per worker over a sustained-backlog window. Normalized completed-run count is secondary because run sizes and durations differ. Queue age remains an operational signal and must be measured, but it does not override the admission policy. Metrics must identify workers through bounded operational dimensions such as `executor_identity` at the aggregation boundary and must never include run ids, job ids, credentials, lease tokens, or resolved configuration values.
+
+Phase 3.4 exits when:
+
+- No worker exceeds its configured concurrent-run capacity, including during duplicate notifications, polling overlap, reconnects, and run completion races.
+- Under a sustained backlog, normalized busy-slot time is approximately balanced for workers with equal capacity and proportional for workers with different capacity.
+- A directed notification produces no more than one directed claim and one general fallback per worker, while generic refill never exceeds the number of free slots.
+- Jitter, cooldown, and contention backoff remain bounded, do not hold execution slots while waiting, and do not prevent eligible work from being discovered by startup, reconnect, or periodic polling.
+- Duplicate notifications, missed notifications, worker loss, cancellation, retry recovery, stale-worker fencing, and incremental watermark commit retain the Phase 3.2 behavior.
+- A reproducible multi-worker test records aggregate busy-slot time, claim outcomes, queue age, and throughput for enough work and time to distinguish distribution from a single scheduling race.
+
 #### Phase 3 dependency and overall exit criteria
 
 ```text
@@ -817,9 +877,12 @@ Plan 3.2: worker profile, listener, polling, heartbeat
         |
         v
 Plan 3.3: Quartz JDBC HA, shared security, metrics, chaos/load
+     |
+     v
+Phase 3.4: hybrid worker load distribution
 ```
 
-Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and is the release gate for the full distributed topology. The overall phase is complete only when:
+Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and provides the operational measurement foundations for Phase 3.4. Phase 3.4 depends on the worker claim/runtime contract and the observability required to measure normalized busy-slot time. The overall phase is complete only when:
 
 - Worker loss produces a new, fully independent attempt within the configured lease/recovery window or a terminal `FAILED` row after the attempt limit.
 - A stale worker cannot mutate PostgreSQL state or advance a watermark after fencing.
@@ -867,7 +930,8 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and is the rel
 - [x] **Phase 3.1.** Define the distributed state contract: per-job retry policy, `available_at`, lease tokens, atomic claims, lease renewal, expiry recovery, fencing, and mode-specific automatic-retry defaults.
 - [x] **Phase 3.2.** Add the isolated `worker` profile, shared execution service, transactional `pg_notify` dispatch, dedicated listener, reconnect logic, mandatory polling, remote cancellation, and heartbeat during merge/swap. **Implemented** with the Phase 3.2 runtime and PostgreSQL integration tests described above.
 - [ ] **Phase 3.3.** Add Quartz JDBC clustering for multiple API instances, shared login throttling, health/metrics, deployment documentation, multi-node integration tests, and reproducible load/chaos checks.
-- [ ] Preserve the CLI artifact, CLI exit codes, options-file contract, and no-metadata-database execution path throughout all three plans.
+- [ ] **Phase 3.4.** Add hybrid worker load distribution: directed notifications with one bounded fallback, free-slot refill, wake-up coalescing, bounded jitter, success cooldown, decaying contention backoff, and normalized busy-slot observability. Preserve PostgreSQL claim/fencing semantics and validate approximate fairness under sustained backlog.
+- [ ] Preserve the CLI artifact, CLI exit codes, options-file contract, and no-metadata-database execution path throughout all Phase 3 slices.
 
 ---
 
@@ -907,6 +971,9 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and is the rel
 - Expired leases are recovered using PostgreSQL `now()` and never resume the abandoned attempt.
 - A stale worker cannot renew, finalize, or commit a watermark after its lease token is fenced.
 - Duplicate notifications and duplicate database polling do not advance a watermark twice.
+- Under a sustained backlog, normalized busy-slot time is approximately balanced across workers with equal capacity, while workers with different capacities receive proportionally different shares.
+- A directed notification causes at most one directed claim and one general fallback per worker; generic refill never exceeds the number of free local slots.
+- Jitter, success cooldown, and adaptive contention backoff remain bounded, do not hold execution slots while waiting, and do not prevent an eligible run from being discovered by mandatory polling.
 - A worker reconnects and rescans PostgreSQL after a listener failure.
 - Missed notifications are recovered by startup, reconnect, and periodic polling.
 - A merge lasting longer than the lease duration never triggers a duplicate claim while heartbeat renewal is healthy.
@@ -938,6 +1005,7 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and is the rel
 - Retrying a `complete` run is destructive because the sink is truncated before any write.
 - Automatic lease-expiry recovery is enabled by default only for `complete-atomic` and `incremental`; `complete` requires explicit opt-in and retains its destructive warning.
 - Lease recovery creates a new `JobRun` with a new lease token; it never resumes or reopens the expired attempt.
+- Worker load distribution is approximate. The hybrid policy uses notification-directed claims, one bounded fallback, free-slot refill, coalesced wake-ups, bounded jitter, success cooldown, and decaying contention backoff; it does not provide strict round-robin assignment or perfect equality.
 - Cancelling during a merge or atomic swap leaves the sink in an indeterminate state, and the API must say so.
 - Watermarks exist only for `incremental` mode, use a single declared column, and never propagate deletes.
 - An incremental merge requires primary keys on the source.
@@ -945,7 +1013,7 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and is the rel
 
 ### Deployment
 
-- PostgreSQL is mandatory for the `api` and `worker` profiles; the CLI does not use it. **Implemented in Phase 1b and extended through Phase 3.1**: `application-api.yml` wires `spring.datasource`/`spring.flyway`, and the `job_definition`, `job_run`, `job_schedule`, `audit_event`, cancellation-warning, retry-policy, eligibility, and lease-fencing schema plus supporting indexes are versioned by Flyway migrations V1 through V14. Phase 3.2/3.3 add the worker dispatch and Quartz JDBC clustering migrations/runtime.
+- PostgreSQL is mandatory for the `api` and `worker` profiles; the CLI does not use it. **Implemented in Phase 1b and extended through Phase 3.3**: `application-api.yml` and `application-worker.yml` wire `spring.datasource`/`spring.flyway`, and the `job_definition`, `job_run`, `job_schedule`, `audit_event`, cancellation-warning, retry-policy, eligibility, lease-fencing, Quartz, and login-throttle schema plus supporting indexes are versioned by Flyway migrations V1 through V16. The worker dispatch, Quartz JDBC clustering, and shared throttle runtime remain isolated from the CLI artifact.
 - SQLite is limited to isolated CLI fixtures or unit tests.
 - The CLI remains available in every implementation phase and deployment model.
 - The `api` profile may run as multiple stateless instances; Quartz uses PostgreSQL JDBC clustering in Phase 3.
@@ -1030,6 +1098,6 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and is the rel
 
 ---
 
-**Document Version**: 4.0
-**Last Updated**: August 20, 2026
-**Next Review**: Before implementation of Phase 3.2 (worker runtime and PostgreSQL dispatch)
+**Document Version**: 4.2
+**Last Updated**: August 25, 2026
+**Next Review**: Before implementation of Phase 3.4 (hybrid worker load distribution)
