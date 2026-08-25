@@ -14,7 +14,9 @@ sources:
     resource: .ai/archive/phase-2a-frontend-auth-monitoring.plan.md
   - id: phase2c
     resource: .ai/archive/phase-2c-frontend-administration.plan.md
-generated: { by: itx-init/2.1, at: "2026-08-20T11:00:36Z" }
+  - id: phase33
+    resource: .ai/archive/phase-3-3-api-high-availability-and-operational-hardening.plan.md
+generated: { by: itx-code, at: "2026-08-25T13:42:47Z" }
 status: draft
 ---
 
@@ -22,4 +24,4 @@ The archive contains repeated gaps in four families: framework/dependency assump
 
 ## Gap Recurrence
 
-Candidate for promotion to organization-level instructions: require resolved dependency/API inspection, explicit Flyway targets for staged migrations, database-time consistency checks, migration-bridge callers, documentation path searches, exact-assertion impact searches, explicit MockMvc versus real-port classification, clean-runner package configuration, and an executable focused check before broad validation. This is a proposal only because no organization baseline was available for comparison.
+Candidate for promotion to organization-level instructions: require resolved dependency/API inspection, explicit Flyway targets for staged migrations, database-time consistency checks, migration-bridge callers, documentation path searches, exact-assertion impact searches, explicit MockMvc versus real-port classification, clean-runner package configuration, executable focused checks before broad validation, image/package freshness checks, database-observable failure barriers, baseline-tool-only CI scripts, and pipefail-safe output matching. Phase 3.3 confirms that framework probes, test-profile parity, fixture ordering, process readiness, and CI-shell portability should be treated as preflight requirements. This remains a proposal because no organization baseline was available for comparison.

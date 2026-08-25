@@ -57,3 +57,11 @@ Java 17/Maven, JDBC and vendor SDKs, Spring Boot 3.3.5, PostgreSQL/Flyway, Quart
 * [Dependency upgrade compatibility](/learnings/dependency-upgrade-compatibility.md) - Validate APIs, bytecode, and coordinated dependency families before major bumps.
 * [Dependency CI gates](/learnings/dependency-ci-gates.md) - Merge automation requires successful CI for the exact current PR head.
 * [Frontend E2E fixture isolation](/learnings/frontend-e2e-fixture-isolation.md) - Keep browser fixtures environment-aware and safe under parallel workers.
+* [Phase 3.3 framework probes](/learnings/phase33-framework-probe.md) - Resolve framework behavior and effective dependency APIs before dependent runtime work.
+* [Phase 3.3 test profile drift](/learnings/phase33-test-profile-drift.md) - Keep Spring test-profile overrides synchronized with production configuration.
+* [Phase 3.3 Flyway fixture order](/learnings/phase33-flyway-fixture-order.md) - Load test data after metadata migrations own schema initialization.
+* [Phase 3.3 artifact readiness](/learnings/phase33-artifact-readiness.md) - Validate packaged artifacts and application health, not only classes or ports.
+* [Phase 3.3 database barriers](/learnings/phase33-database-observable-barriers.md) - Use database-visible state for deterministic failure tests.
+* [Phase 3.3 CLI architecture limits](/learnings/phase33-cli-architecture-limit.md) - Separate architecture-sensitive container failures from product regressions.
+* [Phase 3.3 CI portability](/learnings/phase33-ci-tool-portability.md) - Depend only on provisioned or baseline POSIX tools in CI scripts.
+* [Phase 3.3 pipefail matching](/learnings/phase33-pipefail-safe-matching.md) - Avoid quiet pipeline consumers when strict shell mode is enabled.

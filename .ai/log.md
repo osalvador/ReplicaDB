@@ -1,5 +1,10 @@
 # Directory Update Log
 
+## 2026-08-25
+* **Update**: Completed and archived the Phase 3.3 API high-availability and operational-hardening plan (`.ai/archive/phase-3-3-api-high-availability-and-operational-hardening.plan.md`) with its `/itx-code` execution retrospective (commits `b54fa5c`, `19096c3`, `b52e356`, `96e41f4`).
+* **Update**: Added eight Phase 3.3 execution learnings covering framework probes, profile drift, Flyway fixture ordering, artifact readiness, database-observable barriers, CLI architecture limits, CI tool portability, and `pipefail`-safe matching.
+* **Update**: Refreshed OKF architecture, decision, testing, redaction, deployment, and technical-debt concepts to reflect Quartz JDBC clustering, PostgreSQL login throttling, worker management, Prometheus metrics, Compose validation, and the remaining Phase 3.4 fairness scope.
+
 ## 2026-08-20
 * **Update**: Added OKF learnings from dependency compatibility analysis and CI/browser validation (`c6f4a91`, `a4b9e43`, `be7009d`) (build dependencies, automation, frontend tests).
 * **Update**: Dependency automation and MariaDB driver handling were hardened (`be7009d`) (build dependencies, Dependabot, CI workflows).
