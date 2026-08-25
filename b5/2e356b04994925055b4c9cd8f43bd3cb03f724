@@ -1,0 +1,23 @@
+implementation_plan.md
+  s_e7e431c28f6f13::t_477da6ef6e955a 332-339,357
+scripts/phase3-image-smoke.sh
+  s_e7e431c28f6f13::t_6d87c35196895e 18-19
+scripts/phase3-load-test.sh
+  s_e7e431c28f6f13::t_273558008cb089 195-199
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b52e356b04994925055b4c9cd8f43bd3cb03f724",
+  "prompts": {},
+  "sessions": {
+    "s_e7e431c28f6f13": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "7def6d20-e3e1-4e46-b65c-a4a59530d039",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
