@@ -81,14 +81,20 @@ class FlywayMigrationTest {
         }
 
         Flyway leaseFlyway = flyway().load();
-        assertEquals(1, leaseFlyway.migrate().migrationsExecuted);
-        assertEquals(14, leaseFlyway.info().applied().length);
-        assertEquals(14, leaseFlyway.info().all().length);
+        assertEquals(3, leaseFlyway.migrate().migrationsExecuted);
+        assertEquals(16, leaseFlyway.info().applied().length);
+        assertEquals(16, leaseFlyway.info().all().length);
         assertEquals(0, leaseFlyway.info().pending().length);
         leaseFlyway.validate();
 
         assertTrue(hasIndex("idx_job_run_eligible"));
         assertFalse(hasIndex("idx_job_run_pending"));
+        assertTrue(hasTable("qrtz_job_details"));
+        assertTrue(hasTable("qrtz_triggers"));
+        assertTrue(hasTable("qrtz_fired_triggers"));
+        assertTrue(hasTable("qrtz_scheduler_state"));
+        assertTrue(hasTable("qrtz_locks"));
+        assertTrue(hasIndex("idx_qrtz_t_nft_st_misfire_grp"));
         try (Connection connection = DriverManager.getConnection(POSTGRES.getJdbcUrl(),
             POSTGRES.getUsername(), POSTGRES.getPassword());
              PreparedStatement statement = connection.prepareStatement("""
@@ -191,6 +197,19 @@ class FlywayMigrationTest {
              PreparedStatement statement = connection.prepareStatement(
                      "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = ?)");) {
             statement.setString(1, indexName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getBoolean(1);
+            }
+        }
+    }
+
+    private static boolean hasTable(String tableName) throws Exception {
+        try (Connection connection = DriverManager.getConnection(POSTGRES.getJdbcUrl(),
+                POSTGRES.getUsername(), POSTGRES.getPassword());
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT to_regclass(?) IS NOT NULL")) {
+            statement.setString(1, tableName);
             try (ResultSet resultSet = statement.executeQuery()) {
                 resultSet.next();
                 return resultSet.getBoolean(1);

@@ -27,6 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -82,7 +84,7 @@ class PostgreSQLNotificationListenerTest {
         doAnswer(invocation -> {
             routed.countDown();
             return null;
-        }).when(coordinator).signalRun(runId);
+        }).when(coordinator).signalRun(eq(runId), anyLong());
         when(coordinator.signalCancellation(cancellationId)).thenAnswer(invocation -> {
             routed.countDown();
             return true;
@@ -96,7 +98,7 @@ class PostgreSQLNotificationListenerTest {
 
         assertTrue(routed.await(2, TimeUnit.SECONDS));
         listener.stop();
-        verify(coordinator).signalRun(runId);
+        verify(coordinator).signalRun(eq(runId), anyLong());
         verify(coordinator).signalCancellation(cancellationId);
         verify(polling).onListenerReconnected();
         verify(connection.createStatement()).execute("LISTEN " + RunNotificationPublisher.RUN_CHANNEL);
@@ -124,7 +126,7 @@ class PostgreSQLNotificationListenerTest {
         doAnswer(invocation -> {
             routed.countDown();
             return null;
-        }).when(coordinator).signalRun(runId);
+        }).when(coordinator).signalRun(eq(runId), anyLong());
         AtomicInteger connections = new AtomicInteger();
         List<Duration> delays = new ArrayList<>();
         PostgreSQLNotificationListener listener = listener(

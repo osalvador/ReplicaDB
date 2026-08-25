@@ -6,6 +6,7 @@ import org.replicadb.server.job.application.RunDispatchResult;
 import org.replicadb.server.job.application.RunDispatchService;
 import org.replicadb.server.job.execution.WorkerDispatchCoordinator;
 import org.replicadb.server.job.port.JobRunStore;
+import org.replicadb.server.observability.ManagedRuntimeMetrics;
 
 import java.time.Duration;
 import java.util.List;
@@ -32,6 +33,7 @@ public final class PollingFallback implements AutoCloseable {
     private final Duration shutdownTimeout;
     private final int batchSize;
     private final ScheduledExecutorService scheduler;
+    private final ManagedRuntimeMetrics metrics;
     private final AtomicBoolean running = new AtomicBoolean();
     private final AtomicBoolean scanInProgress = new AtomicBoolean();
     private volatile ScheduledFuture<?> periodicScan;
@@ -44,6 +46,19 @@ public final class PollingFallback implements AutoCloseable {
                            int batchSize,
                            ScheduledExecutorService scheduler,
                            Duration shutdownTimeout) {
+                this(workerCoordinator, jobRunStore, runDispatchService, workerIdentity, pollInterval,
+                    batchSize, scheduler, shutdownTimeout, ManagedRuntimeMetrics.noop());
+                }
+
+                public PollingFallback(WorkerDispatchCoordinator workerCoordinator,
+                           JobRunStore jobRunStore,
+                           RunDispatchService runDispatchService,
+                           String workerIdentity,
+                           Duration pollInterval,
+                           int batchSize,
+                           ScheduledExecutorService scheduler,
+                           Duration shutdownTimeout,
+                           ManagedRuntimeMetrics metrics) {
         this.workerCoordinator = Objects.requireNonNull(workerCoordinator,
                 "workerCoordinator must not be null");
         this.jobRunStore = Objects.requireNonNull(jobRunStore, "jobRunStore must not be null");
@@ -60,6 +75,7 @@ public final class PollingFallback implements AutoCloseable {
         this.batchSize = batchSize;
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler must not be null");
         this.shutdownTimeout = positive(shutdownTimeout, "shutdownTimeout");
+        this.metrics = Objects.requireNonNull(metrics, "metrics must not be null");
     }
 
     public PollingFallback(WorkerDispatchCoordinator workerCoordinator,
@@ -80,8 +96,9 @@ public final class PollingFallback implements AutoCloseable {
         if (!running.compareAndSet(false, true)) {
             return;
         }
-        scanIfAvailable();
-        periodicScan = scheduler.scheduleWithFixedDelay(this::scanIfAvailable,
+        metrics.updatePollingRunning(true);
+        scanIfAvailable("startup");
+        periodicScan = scheduler.scheduleWithFixedDelay(() -> scanIfAvailable("periodic"),
                 pollInterval.toMillis(), pollInterval.toMillis(), TimeUnit.MILLISECONDS);
     }
 
@@ -90,7 +107,7 @@ public final class PollingFallback implements AutoCloseable {
             return;
         }
         try {
-            scheduler.execute(this::scanIfAvailable);
+            scheduler.execute(() -> scanIfAvailable("reconnect"));
         } catch (RuntimeException exception) {
             LOG.debug("Polling reconnect scan could not be scheduled with {}",
                     exception.getClass().getSimpleName());
@@ -98,13 +115,14 @@ public final class PollingFallback implements AutoCloseable {
     }
 
     public void scanNow() {
-        scanIfAvailable();
+        scanIfAvailable("manual");
     }
 
     public void stop() {
         if (!running.compareAndSet(true, false)) {
             return;
         }
+        metrics.updatePollingRunning(false);
         ScheduledFuture<?> scan = periodicScan;
         if (scan != null) {
             scan.cancel(false);
@@ -125,23 +143,45 @@ public final class PollingFallback implements AutoCloseable {
         return running.get();
     }
 
+    public boolean isScanInProgress() {
+        return scanInProgress.get();
+    }
+
     @Override
     public void close() {
         stop();
     }
 
-    private void scanIfAvailable() {
-        if (!running.get() || !scanInProgress.compareAndSet(false, true)) {
+    private void scanIfAvailable(String trigger) {
+        if (!running.get()) {
+            metrics.recordPollingScan(trigger, "skipped");
+            return;
+        }
+        if (!scanInProgress.compareAndSet(false, true)) {
+            metrics.recordPollingScan(trigger, "skipped");
             return;
         }
         try {
             workerCoordinator.signalEligibleWork();
             signalCancellationRequests();
             recoverExpiredRuns();
+            recordPollingLag();
+            metrics.recordPollingScan(trigger, "success");
         } catch (RuntimeException exception) {
+            metrics.recordPollingScan(trigger, "error");
             LOG.warn("Worker polling scan failed with {}", exception.getClass().getSimpleName());
         } finally {
             scanInProgress.set(false);
+        }
+    }
+
+    private void recordPollingLag() {
+        try {
+            JobRunStore.EligibleRunSnapshot snapshot = jobRunStore.findEligibleRunSnapshot(1);
+            if (snapshot != null) {
+                metrics.recordPollingLag(snapshot.oldestAvailableAt());
+            }
+        } catch (RuntimeException ignored) {
         }
     }
 

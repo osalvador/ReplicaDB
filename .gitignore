@@ -24,3 +24,6 @@ create_db_error.log
 .DS_Store
 .vscode
 *.log
+.phase3-compose/
+.phase3-logs/
+.phase3-*.env

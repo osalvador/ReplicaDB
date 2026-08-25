@@ -16,6 +16,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -86,6 +90,34 @@ class QuartzScheduleServiceTest {
     }
 
     @Test
+    void concurrentRegistrationConvergesToOneJobAndTrigger() throws Exception {
+        UUID jobDefinitionId = UUID.randomUUID();
+        JobSchedule schedule = schedule(jobDefinitionId, "0 0 1 1 1 ?", "UTC", true);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            var first = executor.submit((java.util.concurrent.Callable<Void>) () -> {
+                registerAfter(start, ready, schedule);
+                return null;
+            });
+            var second = executor.submit((java.util.concurrent.Callable<Void>) () -> {
+                registerAfter(start, ready, schedule);
+                return null;
+            });
+            assertTrue(ready.await(5, TimeUnit.SECONDS));
+            start.countDown();
+            first.get(5, TimeUnit.SECONDS);
+            second.get(5, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        assertEquals(1, scheduler.getJobKeys(GroupMatcher.jobGroupEquals("replicadb-jobs")).size());
+        assertEquals(1, scheduler.getTriggerKeys(GroupMatcher.triggerGroupEquals("replicadb-jobs")).size());
+    }
+
+    @Test
     void disabledSchedulesAreNotRegistered() throws Exception {
         UUID jobDefinitionId = UUID.randomUUID();
         service.schedule(schedule(jobDefinitionId, "0 0 1 1 1 ?", "UTC", true));
@@ -117,6 +149,13 @@ class QuartzScheduleServiceTest {
                                         String timeZone, boolean enabled) {
         Instant now = Instant.now();
         return new JobSchedule(jobDefinitionId, cronExpression, timeZone, enabled, now, now);
+    }
+
+    private void registerAfter(CountDownLatch start, CountDownLatch ready,
+                               JobSchedule schedule) throws Exception {
+        ready.countDown();
+        assertTrue(start.await(5, TimeUnit.SECONDS));
+        service.schedule(schedule);
     }
 
     private static JobKey jobKey(UUID jobDefinitionId) {

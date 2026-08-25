@@ -1,99 +1,61 @@
 package org.replicadb.server.security.auth;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.replicadb.server.security.persistence.LoginAttemptRepository;
 
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneOffset;
+import java.util.Optional;
+import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class LoginAttemptServiceTest {
 
-    @Test
-    void blocksAfterFiveFailuresWithinWindow() {
-        LoginAttemptService service = new LoginAttemptService();
+    private LoginAttemptRepository repository;
+    private LoginAttemptService service;
+    private LoginAttemptReservation reservation;
 
-        recordFailures(service, "alice", "10.0.0.1", 5);
+    @BeforeEach
+    void setUp() {
+        repository = mock(LoginAttemptRepository.class);
+        service = new LoginAttemptService(repository);
+        reservation = new LoginAttemptReservation(UUID.randomUUID(), "user:alice", "addr:10.0.0.1");
+    }
+
+    @Test
+    void returnsRepositoryReservationWhenAttemptIsAllowed() {
+        when(repository.reserve("alice", "10.0.0.1")).thenReturn(Optional.of(reservation));
+
+        assertEquals(reservation, service.checkAllowed("alice", "10.0.0.1"));
+    }
+
+    @Test
+    void blocksWhenRepositoryReportsLimitReached() {
+        when(repository.reserve("alice", "10.0.0.1")).thenReturn(Optional.empty());
 
         assertThrows(TooManyAttemptsException.class,
                 () -> service.checkAllowed("alice", "10.0.0.1"));
     }
 
     @Test
-    void successClearsUsernameAndAddressCounters() {
-        LoginAttemptService service = new LoginAttemptService();
-        recordFailures(service, "alice", "10.0.0.1", 5);
+    void delegatesFailureAndSuccessFinalization() {
+        service.recordFailure(reservation);
+        service.recordSuccess(reservation);
 
-        service.recordSuccess("alice", "10.0.0.1");
-
-        assertDoesNotThrow(() -> service.checkAllowed("alice", "10.0.0.1"));
+        verify(repository).recordFailure(reservation);
+        verify(repository).recordSuccess(reservation);
     }
 
     @Test
-    void ignoresFailuresOutsideTheFifteenMinuteWindow() {
-        MutableClock clock = new MutableClock(Instant.parse("2026-08-17T10:00:00Z"));
-        LoginAttemptService service = new LoginAttemptService(clock);
-        recordFailures(service, "alice", "10.0.0.1", 5);
+    void propagatesRepositoryFailureSoTheDecisionFailsClosed() {
+        when(repository.reserve("alice", "10.0.0.1"))
+                .thenThrow(new RuntimeException("database unavailable"));
 
-        clock.advance(Duration.ofMinutes(16));
-
-        assertDoesNotThrow(() -> service.checkAllowed("alice", "10.0.0.1"));
-    }
-
-    @Test
-    void addressLimitAppliesAcrossUsernames() {
-        LoginAttemptService service = new LoginAttemptService();
-        recordFailures(service, "alice", "10.0.0.1", 5);
-
-        assertThrows(TooManyAttemptsException.class,
-                () -> service.checkAllowed("bob", "10.0.0.1"));
-    }
-
-    @Test
-    void usernameLimitAppliesAcrossAddresses() {
-        LoginAttemptService service = new LoginAttemptService();
-        recordFailures(service, "alice", "10.0.0.1", 5);
-
-        assertThrows(TooManyAttemptsException.class,
-                () -> service.checkAllowed("alice", "10.0.0.2"));
-        assertDoesNotThrow(() -> service.checkAllowed("carol", "10.0.0.2"));
-    }
-
-    private static void recordFailures(LoginAttemptService service, String username,
-                                       String remoteAddress, int count) {
-        for (int attempt = 0; attempt < count; attempt++) {
-            service.recordFailure(username, remoteAddress);
-        }
-    }
-
-    private static final class MutableClock extends Clock {
-
-        private Instant current;
-
-        private MutableClock(Instant current) {
-            this.current = current;
-        }
-
-        private void advance(Duration duration) {
-            current = current.plus(duration);
-        }
-
-        @Override
-        public ZoneOffset getZone() {
-            return ZoneOffset.UTC;
-        }
-
-        @Override
-        public Clock withZone(java.time.ZoneId zone) {
-            return this;
-        }
-
-        @Override
-        public Instant instant() {
-            return current;
-        }
+        assertThrows(RuntimeException.class,
+                () -> service.checkAllowed("alice", "10.0.0.1"));
     }
 }

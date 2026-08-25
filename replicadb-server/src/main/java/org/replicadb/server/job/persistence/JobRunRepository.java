@@ -18,6 +18,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -282,6 +283,23 @@ public class JobRunRepository implements JobRunStore {
                 """, Map.of("executorIdentity", executorIdentity, "limit", limit),
                 (resultSet, rowNum) -> resultSet.getObject("id", UUID.class));
     }
+
+            @Override
+            public JobRunStore.EligibleRunSnapshot findEligibleRunSnapshot(int limit) {
+            validateLimit(limit);
+            List<Instant> availableAt = jdbcTemplate.query("""
+                SELECT available_at
+                FROM job_run
+                WHERE status = 'PENDING' AND available_at <= now()
+                ORDER BY available_at, created_at, id
+                LIMIT :limit
+                """, Map.of("limit", limit + 1),
+                (resultSet, rowNum) -> resultSet.getTimestamp("available_at").toInstant());
+            boolean truncated = availableAt.size() > limit;
+            List<Instant> bounded = truncated ? availableAt.subList(0, limit) : availableAt;
+            return new JobRunStore.EligibleRunSnapshot(bounded.size(), truncated,
+                bounded.isEmpty() ? null : bounded.get(0));
+            }
 
     public boolean hasActiveRun(UUID jobDefinitionId) {
         String sql = """

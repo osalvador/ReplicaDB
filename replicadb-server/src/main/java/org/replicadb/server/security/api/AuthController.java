@@ -12,6 +12,7 @@ import org.replicadb.server.audit.domain.AuditActor;
 import org.replicadb.server.audit.domain.AuditOutcome;
 import org.replicadb.server.audit.domain.AuditResourceType;
 import org.replicadb.server.security.auth.LoginAttemptService;
+import org.replicadb.server.security.auth.LoginAttemptReservation;
 import org.replicadb.server.security.auth.TooManyAttemptsException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.context.annotation.Profile;
@@ -59,8 +60,9 @@ public class AuthController {
                                       HttpServletRequest httpRequest,
                                       HttpServletResponse httpResponse) {
         String remoteAddress = httpRequest.getRemoteAddr();
+        LoginAttemptReservation reservation;
         try {
-            loginAttemptService.checkAllowed(request.username(), remoteAddress);
+            reservation = loginAttemptService.checkAllowed(request.username(), remoteAddress);
         } catch (TooManyAttemptsException exception) {
             auditService.record(auditActorResolver.forAttemptedLogin(request.username(), remoteAddress),
                     AuditAction.LOGIN_FAILED, AuditResourceType.SESSION, request.username(),
@@ -73,14 +75,14 @@ public class AuthController {
             authentication = authenticationManager.authenticate(
                     UsernamePasswordAuthenticationToken.unauthenticated(request.username(), request.password()));
         } catch (AuthenticationException exception) {
-            loginAttemptService.recordFailure(request.username(), remoteAddress);
+            loginAttemptService.recordFailure(reservation);
             auditService.record(auditActorResolver.forAttemptedLogin(request.username(), remoteAddress),
                     AuditAction.LOGIN_FAILED, AuditResourceType.SESSION, request.username(),
                     AuditOutcome.FAILURE);
             throw exception;
         }
 
-        loginAttemptService.recordSuccess(request.username(), remoteAddress);
+        loginAttemptService.recordSuccess(reservation);
         AuditActor actor = auditActorResolver.resolve(authentication);
         auditService.record(actor, AuditAction.LOGIN_SUCCEEDED, AuditResourceType.SESSION,
                 actor.username(), AuditOutcome.SUCCESS);

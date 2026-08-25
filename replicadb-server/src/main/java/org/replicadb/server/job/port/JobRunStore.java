@@ -6,6 +6,7 @@ import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.domain.LeaseToken;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -30,6 +31,8 @@ public interface JobRunStore {
     List<UUID> findExpiredRunIds(int limit);
 
     List<UUID> findCancellationRequestedRunIds(String executorIdentity, int limit);
+
+    EligibleRunSnapshot findEligibleRunSnapshot(int limit);
 
     CancellationResult requestCancellation(UUID runId, String cancellationWarning);
 
@@ -76,5 +79,8 @@ public interface JobRunStore {
         CANCELLED,
         TERMINAL,
         NOT_FOUND
+    }
+
+    record EligibleRunSnapshot(int eligibleCount, boolean truncated, Instant oldestAvailableAt) {
     }
 }

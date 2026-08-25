@@ -3,6 +3,8 @@ package org.replicadb.server.job.application;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.LeaseToken;
 import org.replicadb.server.job.port.JobRunStore;
+import org.replicadb.server.observability.ManagedRuntimeMetrics;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -16,22 +18,30 @@ public final class RunLeaseService {
     public static final Duration DEFAULT_LEASE_DURATION = Duration.ofMinutes(5);
 
     private final JobRunStore runStore;
+    private final ManagedRuntimeMetrics metrics;
 
-    public RunLeaseService(JobRunStore runStore) {
+    @Autowired
+    public RunLeaseService(JobRunStore runStore, ManagedRuntimeMetrics metrics) {
         this.runStore = Objects.requireNonNull(runStore, "runStore must not be null");
+        this.metrics = Objects.requireNonNull(metrics, "metrics must not be null");
+    }
+
+    @Deprecated
+    public RunLeaseService(JobRunStore runStore) {
+        this(runStore, ManagedRuntimeMetrics.noop());
     }
 
     public Optional<JobRun> claimNextEligible(String executorIdentity, Duration leaseDuration) {
         validateExecutorIdentity(executorIdentity);
         validateLeaseDuration(leaseDuration);
-        return runStore.claimNextEligible(null, executorIdentity, leaseDuration);
+        return claim(null, executorIdentity, leaseDuration, "queue");
     }
 
     public Optional<JobRun> claimRequested(UUID runId, String executorIdentity, Duration leaseDuration) {
         Objects.requireNonNull(runId, "runId must not be null");
         validateExecutorIdentity(executorIdentity);
         validateLeaseDuration(leaseDuration);
-        return runStore.claimNextEligible(runId, executorIdentity, leaseDuration);
+        return claim(runId, executorIdentity, leaseDuration, "directed");
     }
 
     public Optional<JobRun> claimNextEligible(String executorIdentity) {
@@ -43,7 +53,26 @@ public final class RunLeaseService {
         Objects.requireNonNull(runId, "runId must not be null");
         Objects.requireNonNull(leaseToken, "leaseToken must not be null");
         validateLeaseDuration(leaseDuration);
-        return runStore.renewLease(runId, leaseToken, leaseDuration);
+        try {
+            JobRunStore.LeaseRenewalResult result = runStore.renewLease(runId, leaseToken, leaseDuration);
+            metrics.recordLeaseRenewal(result);
+            return result;
+        } catch (RuntimeException exception) {
+            metrics.recordLeaseRenewal("error");
+            throw exception;
+        }
+    }
+
+    private Optional<JobRun> claim(UUID requestedRunId, String executorIdentity, Duration leaseDuration,
+                                   String claimType) {
+        try {
+            Optional<JobRun> result = runStore.claimNextEligible(requestedRunId, executorIdentity, leaseDuration);
+            metrics.recordClaim(claimType, result.isPresent() ? "claimed" : "empty");
+            return result;
+        } catch (RuntimeException exception) {
+            metrics.recordClaim(claimType, "error");
+            throw exception;
+        }
     }
 
     private static void validateExecutorIdentity(String executorIdentity) {

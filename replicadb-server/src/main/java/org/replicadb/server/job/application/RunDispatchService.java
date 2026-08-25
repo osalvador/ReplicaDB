@@ -1,9 +1,12 @@
 package org.replicadb.server.job.application;
 
 import org.replicadb.server.job.domain.JobRun;
+import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.persistence.RunTriggerIdempotencyRepository;
 import org.replicadb.server.job.port.JobRunStore;
 import org.replicadb.server.job.port.RunNotificationPublisher;
+import org.replicadb.server.observability.ManagedRuntimeMetrics;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,15 +20,26 @@ public class RunDispatchService {
     private final JobRunStore runStore;
     private final RunTriggerIdempotencyRepository idempotencyRepository;
     private final RunNotificationPublisher notificationPublisher;
+    private final ManagedRuntimeMetrics metrics;
 
+    @Autowired
     public RunDispatchService(JobRunStore runStore,
                               RunTriggerIdempotencyRepository idempotencyRepository,
-                              RunNotificationPublisher notificationPublisher) {
+                              RunNotificationPublisher notificationPublisher,
+                              ManagedRuntimeMetrics metrics) {
         this.runStore = Objects.requireNonNull(runStore, "runStore must not be null");
         this.idempotencyRepository = Objects.requireNonNull(idempotencyRepository,
                 "idempotencyRepository must not be null");
         this.notificationPublisher = Objects.requireNonNull(notificationPublisher,
                 "notificationPublisher must not be null");
+        this.metrics = Objects.requireNonNull(metrics, "metrics must not be null");
+    }
+
+    @Deprecated
+    public RunDispatchService(JobRunStore runStore,
+                              RunTriggerIdempotencyRepository idempotencyRepository,
+                              RunNotificationPublisher notificationPublisher) {
+        this(runStore, idempotencyRepository, notificationPublisher, ManagedRuntimeMetrics.noop());
     }
 
     @Transactional
@@ -63,6 +77,7 @@ public class RunDispatchService {
             JobRun replay = runStore.findById(existing.runId())
                     .orElseThrow(() -> new IllegalStateException(
                             "Idempotency-Key refers to missing JobRun " + existing.runId()));
+                metrics.recordDispatch("manual", "replayed");
             return new RunDispatchResult(Optional.of(replay), RunDispatchResult.Outcome.REPLAYED);
         }
 
@@ -74,10 +89,12 @@ public class RunDispatchService {
                 throw new IllegalStateException("Could not cancel local seed JobRun " + pending.id());
             }
             JobRun cancelled = runStore.findById(pending.id()).orElse(pending);
+            metrics.recordDispatch("manual", "created");
             return new RunDispatchResult(Optional.of(cancelled), RunDispatchResult.Outcome.CREATED);
         }
 
         notificationPublisher.publishRun(pending.id());
+        metrics.recordDispatch("manual", "created");
         return new RunDispatchResult(Optional.of(pending), RunDispatchResult.Outcome.CREATED);
     }
 
@@ -86,6 +103,7 @@ public class RunDispatchService {
         Objects.requireNonNull(jobDefinitionId, "jobDefinitionId must not be null");
         JobRun pending = runStore.insertPendingNow(jobDefinitionId, null, 1);
         notificationPublisher.publishRun(pending.id());
+        metrics.recordDispatch("scheduled", "created");
         return new RunDispatchResult(Optional.of(pending), RunDispatchResult.Outcome.CREATED);
     }
 
@@ -94,6 +112,8 @@ public class RunDispatchService {
         Objects.requireNonNull(failedRunId, "failedRunId must not be null");
         JobRun retry = runStore.scheduleRetryNow(failedRunId);
         notificationPublisher.publishRun(retry.id());
+        metrics.recordDispatch("retry", "created");
+        metrics.recordRetry("manual");
         return new RunDispatchResult(Optional.of(retry), RunDispatchResult.Outcome.CREATED);
     }
 
@@ -104,9 +124,18 @@ public class RunDispatchService {
         if (recovery.replacementRun().isPresent()) {
             JobRun replacement = recovery.replacementRun().orElseThrow();
             notificationPublisher.publishRun(replacement.id());
+            metrics.recordDispatch("recovery", "replacement");
+            metrics.recordLeaseRecovery("replacement");
+            metrics.recordRetry("automatic");
             return new RunDispatchResult(Optional.of(replacement),
                     RunDispatchResult.Outcome.RECOVERY_REPLACEMENT);
         }
+        metrics.recordDispatch("recovery", "noop");
+        String recoveryOutcome = recovery.abandonedRun()
+            .map(JobRun::status)
+            .map(status -> status == JobRunStatus.CANCELLED ? "cancelled" : "failed")
+            .orElse("noop");
+        metrics.recordLeaseRecovery(recoveryOutcome);
         return new RunDispatchResult(recovery.abandonedRun(), RunDispatchResult.Outcome.RECOVERY_NOOP);
     }
 }

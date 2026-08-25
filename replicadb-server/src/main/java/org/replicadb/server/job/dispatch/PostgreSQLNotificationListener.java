@@ -6,6 +6,7 @@ import org.postgresql.PGConnection;
 import org.postgresql.PGNotification;
 import org.replicadb.server.job.execution.WorkerDispatchCoordinator;
 import org.replicadb.server.job.port.RunNotificationPublisher;
+import org.replicadb.server.observability.ManagedRuntimeMetrics;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -39,6 +40,7 @@ public final class PostgreSQLNotificationListener implements AutoCloseable {
     private final Duration shutdownTimeout;
     private final Sleeper sleeper;
     private final ExecutorService executor;
+    private final ManagedRuntimeMetrics metrics;
     private final AtomicBoolean running = new AtomicBoolean();
     private final AtomicReference<Connection> activeConnection = new AtomicReference<>();
 
@@ -51,7 +53,21 @@ public final class PostgreSQLNotificationListener implements AutoCloseable {
         this(dataSource::getConnection, workerCoordinator, pollingFallback,
                 initialReconnectDelay, maxReconnectDelay, DEFAULT_NOTIFICATION_WAIT,
                 shutdownTimeout, PostgreSQLNotificationListener::sleep,
-                Executors.newSingleThreadExecutor(new ListenerThreadFactory()));
+                            Executors.newSingleThreadExecutor(new ListenerThreadFactory()),
+                            ManagedRuntimeMetrics.noop());
+                        }
+
+                        public PostgreSQLNotificationListener(DataSource dataSource,
+                                          WorkerDispatchCoordinator workerCoordinator,
+                                          PollingFallback pollingFallback,
+                                          Duration initialReconnectDelay,
+                                          Duration maxReconnectDelay,
+                                          Duration shutdownTimeout,
+                                          ManagedRuntimeMetrics metrics) {
+                        this(dataSource::getConnection, workerCoordinator, pollingFallback,
+                            initialReconnectDelay, maxReconnectDelay, DEFAULT_NOTIFICATION_WAIT,
+                            shutdownTimeout, PostgreSQLNotificationListener::sleep,
+                            Executors.newSingleThreadExecutor(new ListenerThreadFactory()), metrics);
     }
 
     PostgreSQLNotificationListener(ConnectionProvider connectionProvider,
@@ -63,6 +79,21 @@ public final class PostgreSQLNotificationListener implements AutoCloseable {
                                    Duration shutdownTimeout,
                                    Sleeper sleeper,
                                    ExecutorService executor) {
+                    this(connectionProvider, workerCoordinator, pollingFallback, initialReconnectDelay,
+                        maxReconnectDelay, notificationWait, shutdownTimeout, sleeper, executor,
+                        ManagedRuntimeMetrics.noop());
+                    }
+
+                    PostgreSQLNotificationListener(ConnectionProvider connectionProvider,
+                                   WorkerDispatchCoordinator workerCoordinator,
+                                   PollingFallback pollingFallback,
+                                   Duration initialReconnectDelay,
+                                   Duration maxReconnectDelay,
+                                   Duration notificationWait,
+                                   Duration shutdownTimeout,
+                                   Sleeper sleeper,
+                                   ExecutorService executor,
+                                   ManagedRuntimeMetrics metrics) {
         this.connectionProvider = Objects.requireNonNull(connectionProvider,
                 "connectionProvider must not be null");
         this.workerCoordinator = Objects.requireNonNull(workerCoordinator,
@@ -78,17 +109,20 @@ public final class PostgreSQLNotificationListener implements AutoCloseable {
         this.shutdownTimeout = positive(shutdownTimeout, "shutdownTimeout");
         this.sleeper = Objects.requireNonNull(sleeper, "sleeper must not be null");
         this.executor = Objects.requireNonNull(executor, "executor must not be null");
+        this.metrics = Objects.requireNonNull(metrics, "metrics must not be null");
     }
 
     public void start() {
         if (!running.compareAndSet(false, true)) {
             return;
         }
+        metrics.updateListenerConnected(false);
         executor.execute(this::listenLoop);
     }
 
     public void stop() {
         running.set(false);
+        metrics.updateListenerConnected(false);
         closeActiveConnection();
         executor.shutdownNow();
         try {
@@ -109,6 +143,10 @@ public final class PostgreSQLNotificationListener implements AutoCloseable {
         return executor.isShutdown();
     }
 
+    public boolean isConnected() {
+        return activeConnection.get() != null;
+    }
+
     @Override
     public void close() {
         stop();
@@ -123,6 +161,7 @@ public final class PostgreSQLNotificationListener implements AutoCloseable {
                 activeConnection.set(connection);
                 PGConnection pgConnection = connection.unwrap(PGConnection.class);
                 subscribe(connection);
+                metrics.updateListenerConnected(true);
                 pollingFallback.onListenerReconnected();
                 reconnectDelay = initialReconnectDelay;
                 consume(pgConnection);
@@ -138,6 +177,7 @@ public final class PostgreSQLNotificationListener implements AutoCloseable {
             } finally {
                 if (connection != null) {
                     activeConnection.compareAndSet(connection, null);
+                    metrics.updateListenerConnected(false);
                     closeQuietly(connection);
                 }
             }
@@ -166,21 +206,24 @@ public final class PostgreSQLNotificationListener implements AutoCloseable {
 
     private void route(PGNotification notification) {
         if (notification == null) {
+            metrics.recordNotificationReceived(null, false);
             return;
         }
         String channel = notification.getName();
         if (!RunNotificationPublisher.RUN_CHANNEL.equals(channel)
                 && !RunNotificationPublisher.CONTROL_CHANNEL.equals(channel)) {
+            metrics.recordNotificationReceived(channel, false);
             LOG.debug("Ignoring notification on unsupported channel");
             return;
         }
         Optional<UUID> runId = payloadParser.parse(notification.getParameter());
+        metrics.recordNotificationReceived(channel, runId.isPresent());
         if (runId.isEmpty()) {
             LOG.warn("Ignoring malformed notification on channel {}", channel);
             return;
         }
         if (RunNotificationPublisher.RUN_CHANNEL.equals(channel)) {
-            workerCoordinator.signalRun(runId.orElseThrow());
+            workerCoordinator.signalRun(runId.orElseThrow(), System.nanoTime());
         } else {
             workerCoordinator.signalCancellation(runId.orElseThrow());
         }

@@ -37,6 +37,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/", "/index.html", "/assets/**", "/favicon.ico",
                                 "/api/v1/auth/login", "/api/v1/auth/csrf", "/actuator/health",
+                                        "/actuator/health/**",
                                 "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session

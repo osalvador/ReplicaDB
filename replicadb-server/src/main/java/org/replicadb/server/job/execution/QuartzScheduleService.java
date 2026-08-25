@@ -5,6 +5,7 @@ import org.quartz.CronTrigger;
 import org.quartz.JobBuilder;
 import org.quartz.JobDetail;
 import org.quartz.JobKey;
+import org.quartz.ObjectAlreadyExistsException;
 import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.Trigger;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
 
@@ -56,11 +58,7 @@ public class QuartzScheduleService {
                 .build();
 
         try {
-            if (scheduler.checkExists(jobKey)) {
-                scheduler.rescheduleJob(triggerKey, trigger);
-            } else {
-                scheduler.scheduleJob(jobDetail, trigger);
-            }
+            converge(jobKey, triggerKey, jobDetail, trigger);
         } catch (SchedulerException exception) {
             throw schedulerFailure("schedule", jobDefinitionId, exception);
         }
@@ -93,6 +91,31 @@ public class QuartzScheduleService {
 
     private static TriggerKey triggerKey(UUID jobDefinitionId) {
         return new TriggerKey(jobDefinitionId.toString(), GROUP);
+    }
+
+    private void converge(JobKey jobKey, TriggerKey triggerKey, JobDetail jobDetail,
+                           CronTrigger trigger) throws SchedulerException {
+        SchedulerException lastFailure = null;
+        for (int attempt = 0; attempt < 2; attempt++) {
+            try {
+                if (scheduler.checkExists(jobKey)) {
+                    Date rescheduled = scheduler.rescheduleJob(triggerKey, trigger);
+                    if (rescheduled != null) {
+                        return;
+                    }
+                    scheduler.scheduleJob(trigger);
+                    return;
+                }
+                scheduler.scheduleJob(jobDetail, Set.of(trigger), false);
+                return;
+            } catch (ObjectAlreadyExistsException exception) {
+                lastFailure = exception;
+            }
+        }
+        if (lastFailure != null) {
+            throw lastFailure;
+        }
+        throw new SchedulerException("Could not converge Quartz schedule");
     }
 
     private static IllegalStateException schedulerFailure(String operation, UUID jobDefinitionId,

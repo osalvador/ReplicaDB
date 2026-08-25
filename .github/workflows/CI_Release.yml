@@ -86,6 +86,14 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+    -   name: Build and push managed server image
+        uses: docker/build-push-action@v7
+        with:
+          context: replicadb-server
+          file: replicadb-server/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: osalvador/replicadb-server:${{ env.version }},osalvador/replicadb-server:latest
+
     -   name: Build and push
         uses: docker/build-push-action@v7
         with:
