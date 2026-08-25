@@ -329,6 +329,14 @@ The draft was reviewed once by a critic sub-agent. The review found implementati
 - **Resolution**: replaced all CI-invoked `rg` checks with portable `grep` equivalents, including recursive source scanning and explicit error handling for directory scans. Re-ran the image smoke and four-run load gates with ripgrep excluded from `PATH`; both passed.
 - **Learning**: validation scripts and workflow shell steps should depend only on explicitly provisioned tools or baseline POSIX utilities; local availability is not evidence of runner availability.
 
+#### Gap 8: Quiet grep pipelines were incompatible with `pipefail`
+
+- **Task**: 5.4 and 6.1.
+- **Plan assumed**: replacing `rg -q` with `grep -q` preserved the shell pipeline behavior.
+- **Reality**: the metrics assertion found its expected text, exited early, and caused the upstream `printf` to receive `SIGPIPE`; `set -o pipefail` then failed the otherwise successful load scenario.
+- **Resolution**: matched captured metrics and image metadata through here-strings instead of producer-to-quiet-grep pipelines, then reran the four-run load and image smoke gates successfully.
+- **Learning**: when strict shell mode is enabled, avoid quiet consumers in pipelines whose producers must write the complete captured output; test the success path with `pipefail` enabled.
+
 ### Patterns Discovered
 
 - **Framework probe first**: validate Spring Boot management, Actuator exporter, and Quartz property binding with a minimal context before adding dependent health/metrics code.
@@ -346,3 +354,4 @@ The draft was reviewed once by a critic sub-agent. The review found implementati
 - Documentation, shell syntax, POM XML, Compose YAML, and CI YAML checks: passed. `actionlint` retains pre-existing warnings in the release workflow unrelated to these changes.
 - Root CLI `NoSpringBootOnClasspathTest`: 2 tests passed. Full cross-database CLI suite: attempted, but blocked by DB2 amd64 emulation/container readiness on the local ARM64 environment.
 - Remote CI follow-up: the first run exposed the undeclared `rg` dependency; the portable replacements are staged for the next `Only CI/CT` run, with the affected image and load checks already passing locally.
+- Remote CI follow-up: the second run exposed a `grep -q`/`pipefail` SIGPIPE in the load harness; here-string matching now passes the same four-run scenario locally.

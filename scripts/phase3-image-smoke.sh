@@ -15,8 +15,8 @@ docker build \
 image_user=$(docker image inspect "$image_name" --format '{{.Config.User}}')
 test "$image_user" = "replicadb:replicadb"
 
-docker image inspect "$image_name" --format '{{json .Config.Entrypoint}}' \
-    | grep -Fq 'spring.profiles.active'
+image_entrypoint=$(docker image inspect "$image_name" --format '{{json .Config.Entrypoint}}')
+grep -Fq 'spring.profiles.active' <<< "$image_entrypoint"
 
 for profile in api worker; do
     docker run --rm \
