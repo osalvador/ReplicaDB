@@ -10,12 +10,14 @@ sources:
     resource: replicadb-server/src/main/java/org/replicadb/server/job/execution/ScheduleReconciler.java
   - id: config
     resource: replicadb-server/src/main/resources/application.yml
-generated: { by: itx-init/2.1, at: "2026-08-20T11:00:36Z" }
+  - id: deployment
+    resource: DEPLOYMENT.md
+generated: { by: itx-code, at: "2026-08-25T13:42:47Z" }
 status: stable
 ---
 
 Driving forces: deliver durable jobs, scheduling, monitoring, and access control before the complexity of distributed workers is justified.
 
-Decision: the `api` profile starts the REST surface and Quartz integration in one JVM, with asynchronous run coordination around the core engine. PostgreSQL stores product state and persisted schedules; the current Quartz runtime is reconciled from that state. Phase 3.1 places claims, recovery, cancellation intent, and fenced finalization behind application ports/services without introducing a worker runtime.
+Decision: the initial managed deployment starts the REST surface and Quartz integration in one JVM, with asynchronous run coordination around the core engine. PostgreSQL stores product state and persisted schedules; the API now uses the clustered JDBC Quartz store and reconciles product state into it. Phase 3.1 and Phase 3.2 extended the original monolith with durable claims, recovery, cancellation intent, fenced finalization, and an isolated worker runtime; Phase 3.3 operationalized the multi-API/multi-worker topology.
 
-Trade-off: a single instance limits scale and worker isolation. The current API coordinator still has only best-effort local cancellation delivery and no heartbeat or expiry-recovery loop. Distributed worker dispatch through PostgreSQL notifications and polling is an approved Phase 3.2 direction, not current implementation.
+Trade-off: the original single-instance design limited scale and worker isolation. The compatibility API coordinator remains available, while distributed worker dispatch through PostgreSQL notifications/polling, heartbeats, shared throttling, and clustered Quartz are now implemented. Phase 3.4 still addresses approximate fairness across worker capacity and is not part of this decision's completed scope.
