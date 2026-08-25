@@ -8,7 +8,7 @@ repository_root=${1:-$(CDPATH= cd -- "$script_dir/.." && pwd)}
 require_text() {
     local file=$1
     local pattern=$2
-    if ! rg -q --fixed-strings "$pattern" "$repository_root/$file"; then
+    if ! grep -Fq -- "$pattern" "$repository_root/$file"; then
         printf 'missing documentation requirement: %s -> %s\n' "$file" "$pattern" >&2
         exit 1
     fi
@@ -17,7 +17,7 @@ require_text() {
 forbidden_text() {
     local file=$1
     local pattern=$2
-    if rg -n --fixed-strings "$pattern" "$repository_root/$file" >/dev/null; then
+    if grep -Fn -- "$pattern" "$repository_root/$file" >/dev/null; then
         printf 'stale documentation text: %s -> %s\n' "$file" "$pattern" >&2
         exit 1
     fi
@@ -43,7 +43,7 @@ require_text replicadb-server/src/main/resources/application-worker.yml 'web-app
 require_text replicadb-server/src/main/resources/application-worker.yml 'port: -1'
 require_text docker-compose.server.yml 'REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED: "false"'
 
-if rg -n -i '(^|["[:space:]])(password|token)(["[:space:]]*[:=]["[:space:]]*)[[:alnum:]]' \
+if grep -Ein '(^|["[:space:]])(password|token)(["[:space:]]*[:=]["[:space:]]*)[[:alnum:]]' \
         "$repository_root/DEPLOYMENT.md" "$repository_root/docker-compose.server.yml" \
         "$repository_root/scripts/phase3-compose-smoke.sh" >/dev/null; then
     printf 'possible secret-bearing deployment content found\n' >&2
