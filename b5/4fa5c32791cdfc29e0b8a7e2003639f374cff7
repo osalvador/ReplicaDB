@@ -1,0 +1,21 @@
+ARCHITECTURE_DECISIONS.md
+  s_e7e431c28f6f13::t_9e157791911cd1 14-15,359-382,735,751,754-755,813-815,819,838-869,880-882,885,933-934,974-976,1008,1016,1101-1103
+implementation_plan.md
+  s_e7e431c28f6f13::t_7e3ee4f1cbae46 1-339
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b54fa5c32791cdfc29e0b8a7e2003639f374cff7",
+  "prompts": {},
+  "sessions": {
+    "s_e7e431c28f6f13": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "7def6d20-e3e1-4e46-b65c-a4a59530d039",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
