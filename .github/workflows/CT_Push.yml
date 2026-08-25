@@ -164,7 +164,7 @@ jobs:
 
     - name: Verify Phase 3.1 repository bridge is removed
       run: |
-        if rg -n 'claimById|claimNextPending|public void markSucceeded\(UUID runId, long|public void markFailed\(UUID runId, long|public void markCancelled\(UUID runId, long|public void markCancelRequested|public void markPendingCancelled' replicadb-server/src/main/java; then
+        if grep -R -En 'claimById|claimNextPending|public void markSucceeded\(UUID runId, long|public void markFailed\(UUID runId, long|public void markCancelled\(UUID runId, long|public void markCancelRequested|public void markPendingCancelled' replicadb-server/src/main/java; then
           echo "Deprecated Phase 3.1 repository signatures remain"
           exit 1
         fi

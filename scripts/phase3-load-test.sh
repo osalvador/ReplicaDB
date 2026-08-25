@@ -192,11 +192,11 @@ done
 worker_metrics=$(for worker_service in worker-one worker-two; do
     compose exec -T "$worker_service" curl -fsS http://127.0.0.1:9091/actuator/prometheus
 done)
-printf '%s\n' "$worker_metrics" | rg -q 'replicadb_managed_claims_total'
-printf '%s\n' "$worker_metrics" | rg -q 'replicadb_managed_terminal_outcomes_total'
-printf '%s\n' "$worker_metrics" | rg -q 'replicadb_managed_notification_claim_latency'
-printf '%s\n' "$worker_metrics" | rg -q 'replicadb_managed_polling_scans_total'
-if printf '%s\n' "$worker_metrics" | rg -q 'job_id=|run_id=|lease_token=|password=|jdbc:'; then
+printf '%s\n' "$worker_metrics" | grep -Fq 'replicadb_managed_claims_total'
+printf '%s\n' "$worker_metrics" | grep -Fq 'replicadb_managed_terminal_outcomes_total'
+printf '%s\n' "$worker_metrics" | grep -Fq 'replicadb_managed_notification_claim_latency'
+printf '%s\n' "$worker_metrics" | grep -Fq 'replicadb_managed_polling_scans_total'
+if printf '%s\n' "$worker_metrics" | grep -Eq 'job_id=|run_id=|lease_token=|password=|jdbc:'; then
     printf 'high-cardinality or secret-bearing metric label found\n' >&2
     exit 1
 fi
