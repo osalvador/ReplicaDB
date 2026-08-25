@@ -1,0 +1,61 @@
+.ai/architecture/deployment-and-operations.md
+  s_e7e431c28f6f13::t_79dde33e651726 21-29,35,37,39,41
+.ai/architecture/managed-execution.md
+  s_e7e431c28f6f13::t_8eef61fa58d74d 21-27,33,35
+.ai/architecture/persistence-state.md
+  s_e7e431c28f6f13::t_079fedd106bf77 17-21,25,27,29
+.ai/architecture/security-and-audit.md
+  s_e7e431c28f6f13::t_f6589670cc1d24 15-19,25
+.ai/architecture/system-overview.md
+  s_e7e431c28f6f13::t_23a4d81de40938 13,20,25
+.ai/archive/phase-3-3-api-high-availability-and-operational-hardening.plan.md
+  s_e7e431c28f6f13::t_cd4954c46dae01 266,270-272,359
+.ai/decisions/monolithic-control-plane.md
+  s_e7e431c28f6f13::t_b7f8ee4ab41720 13-15,21,23
+.ai/decisions/postgresql-state.md
+  s_e7e431c28f6f13::t_0dc85b8d735828 13-17,23,25
+.ai/index.md
+  s_e7e431c28f6f13::t_56367e7072f76c 60-67
+.ai/learnings/gap-recurrence.md
+  s_e7e431c28f6f13::t_ee7c36222ecfc2 17-19,27
+.ai/learnings/phase33-artifact-readiness.md
+  s_e7e431c28f6f13::t_fbf5c1850011bd 1-13
+.ai/learnings/phase33-ci-tool-portability.md
+  s_e7e431c28f6f13::t_abaafd2fe13583 1-13
+.ai/learnings/phase33-cli-architecture-limit.md
+  s_e7e431c28f6f13::t_f13368605ffb16 1-13
+.ai/learnings/phase33-database-observable-barriers.md
+  s_e7e431c28f6f13::t_abfe42b89be5a1 1-13
+.ai/learnings/phase33-flyway-fixture-order.md
+  s_e7e431c28f6f13::t_134a92c9806369 1-13
+.ai/learnings/phase33-framework-probe.md
+  s_e7e431c28f6f13::t_e87a568ccb632a 1-13
+.ai/learnings/phase33-pipefail-safe-matching.md
+  s_e7e431c28f6f13::t_32586963fe57d0 1-13
+.ai/learnings/phase33-test-profile-drift.md
+  s_e7e431c28f6f13::t_e8b40df477c09a 1-13
+.ai/learnings/tech-debt.md
+  s_e7e431c28f6f13::t_1ea124b985f865 13-15,21,24,27-30
+.ai/log.md
+  s_e7e431c28f6f13::t_afd7c62cf70e97 3-7
+.ai/patterns/security-redaction.md
+  s_e7e431c28f6f13::t_aa2870403f0601 15-17,23
+.ai/patterns/testing-fixtures.md
+  s_e7e431c28f6f13::t_936a8430925186 19-25,31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "2e26d916bac614255f7f04d8cf1326b09844a811",
+  "prompts": {},
+  "sessions": {
+    "s_e7e431c28f6f13": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "7def6d20-e3e1-4e46-b65c-a4a59530d039",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
