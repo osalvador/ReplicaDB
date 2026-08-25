@@ -1,0 +1,21 @@
+ARCHITECTURE_DECISIONS.md
+  s_e7e431c28f6f13::t_911d3dda499206 15,813,819,932
+scripts/check-phase3-docs.sh
+  s_e7e431c28f6f13::t_46b896b3fc8def 33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "96e41f4c580ac285a15a1ba8b629c72c60f35f97",
+  "prompts": {},
+  "sessions": {
+    "s_e7e431c28f6f13": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "7def6d20-e3e1-4e46-b65c-a4a59530d039",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
