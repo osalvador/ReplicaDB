@@ -30,7 +30,7 @@ require_text DEPLOYMENT.md 'RAM/JDBC scheduler'
 require_text DEPLOYMENT.md 'Process-level worker-loss'
 require_text README.md '## Managed server artifact'
 require_text replicadb-server/frontend/README.develop.md 'topología Compose local'
-require_text ARCHITECTURE_DECISIONS.md 'Phase 3.3 is in progress'
+require_text ARCHITECTURE_DECISIONS.md 'Phase 3.3 is complete'
 require_text ARCHITECTURE_DECISIONS.md 'Flyway migrations V1 through V16'
 
 forbidden_text README.md 'It is unreleased, unauthenticated, and has no metadata persistence or scheduler yet'

@@ -12,7 +12,7 @@ The control plane does not resume interrupted work. A run either completes or is
 
 **Date**: August 13, 2026
 **Last decision review**: August 25, 2026
-**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings), Phase 2a/2b/2c (frontend authentication, monitoring, job actions, scheduling, user administration, and job permissions), Phase 3.1 (distributed state contract, leases, retries, and fencing), and Phase 3.2 (worker runtime and PostgreSQL dispatch) implemented; Phase 3.3 is in progress with Quartz JDBC clustering, shared login throttling, health/metrics, server packaging, and local Compose validation implemented, while process-level failure/load validation and final release gates remain; Phase 3.4 (hybrid worker load distribution) is approved but not started
+**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings), Phase 2a/2b/2c (frontend authentication, monitoring, job actions, scheduling, user administration, and job permissions), Phase 3.1 (distributed state contract, leases, retries, and fencing), Phase 3.2 (worker runtime and PostgreSQL dispatch), and Phase 3.3 (API high availability, shared throttling, observability, packaging, and process validation) implemented and validated; Phase 3.4 (hybrid worker load distribution) is approved but not started
 **Owner**: Development Team
 
 ---
@@ -810,13 +810,13 @@ Tests and exit criteria:
 - Long-running-operation tests prove that heartbeats remain active during merge and atomic swap and that a lease does not expire while the worker is healthy.
 - The plan exits when one API instance and multiple worker instances can execute, cancel, recover, and monitor runs through PostgreSQL without API-local execution state.
 
-**Implemented in Phase 3.2**: the API and Quartz dispatch durable UUID notifications through a transaction-bound PostgreSQL publisher; the worker profile starts a bounded coordinator, mandatory startup/reconnect/periodic polling, a dedicated reconnecting listener, independent lease heartbeats, durable cancellation delivery, and the shared execution service. Shared-schema Testcontainers scenarios prove two workers claim a run once, retries and lease recovery create new attempts, incremental watermarks remain fenced, and the worker exposes no HTTP, security-session, frontend, or Quartz surface. Phase 3.3 has implemented Quartz JDBC clustering, shared login throttling, health/metrics, server packaging, and a local Compose topology; process-level failure/load validation and final release gates remain.
+**Implemented in Phase 3.2**: the API and Quartz dispatch durable UUID notifications through a transaction-bound PostgreSQL publisher; the worker profile starts a bounded coordinator, mandatory startup/reconnect/periodic polling, a dedicated reconnecting listener, independent lease heartbeats, durable cancellation delivery, and the shared execution service. Shared-schema Testcontainers scenarios prove two workers claim a run once, retries and lease recovery create new attempts, incremental watermarks remain fenced, and the worker exposes no HTTP, security-session, frontend, or Quartz surface. **Phase 3.3 is complete**: Quartz JDBC clustering, shared login throttling, health/metrics, server packaging, local Compose topology, process-level failure/load validation, and final release gates passed in local validation and GitHub Actions.
 
 The hybrid worker load-distribution policy in Decision 6 is an approved follow-up direction and is not claimed as implemented by Phase 3.2 or Phase 3.3. Phase 3.4 below must preserve the current durable claim contract while adding the directed-notification/fallback split, refill opportunities for free slots, wake-up coalescing, bounded jitter, success cooldown, adaptive contention backoff, and normalized busy-slot observability described above.
 
 #### Plan 3.3: API high availability and operational hardening
 
-This plan makes the API cluster and the distributed runtime operable as a deployment rather than only as a set of components. Quartz JDBC clustering, shared login throttling, health/metrics, server packaging, and a local Compose topology are implemented; process-level failure/load validation and final release hardening remain in progress.
+This plan makes the API cluster and the distributed runtime operable as a deployment rather than only as a set of components. Quartz JDBC clustering, shared login throttling, health/metrics, server packaging, local Compose topology, process-level failure/load validation, and final release hardening are implemented and validated.
 
 Scope:
 
@@ -929,7 +929,7 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and provides t
 
 - [x] **Phase 3.1.** Define the distributed state contract: per-job retry policy, `available_at`, lease tokens, atomic claims, lease renewal, expiry recovery, fencing, and mode-specific automatic-retry defaults.
 - [x] **Phase 3.2.** Add the isolated `worker` profile, shared execution service, transactional `pg_notify` dispatch, dedicated listener, reconnect logic, mandatory polling, remote cancellation, and heartbeat during merge/swap. **Implemented** with the Phase 3.2 runtime and PostgreSQL integration tests described above.
-- [ ] **Phase 3.3.** Add Quartz JDBC clustering for multiple API instances, shared login throttling, health/metrics, deployment documentation, multi-node integration tests, and reproducible load/chaos checks.
+- [x] **Phase 3.3.** Add Quartz JDBC clustering for multiple API instances, shared login throttling, health/metrics, deployment documentation, multi-node integration tests, and reproducible load/chaos checks. **Completed and validated on August 25, 2026; GitHub Actions passed the server, integration, frontend, multinode, and release gates.**
 - [ ] **Phase 3.4.** Add hybrid worker load distribution: directed notifications with one bounded fallback, free-slot refill, wake-up coalescing, bounded jitter, success cooldown, decaying contention backoff, and normalized busy-slot observability. Preserve PostgreSQL claim/fencing semantics and validate approximate fairness under sustained backlog.
 - [ ] Preserve the CLI artifact, CLI exit codes, options-file contract, and no-metadata-database execution path throughout all Phase 3 slices.
 
