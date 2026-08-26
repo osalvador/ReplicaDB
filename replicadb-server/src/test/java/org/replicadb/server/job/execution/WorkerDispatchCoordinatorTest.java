@@ -143,16 +143,20 @@ class WorkerDispatchCoordinatorTest {
         @Test
         void emptyDirectedAndFallbackClaimsDoNotChain() throws Exception {
         UUID requestedRunId = UUID.randomUUID();
+            CountDownLatch directedClaimAttempted = new CountDownLatch(1);
         when(jobRunStore.claimNextEligible(eq(requestedRunId), eq(WORKER_IDENTITY), eq(LEASE_DURATION)))
-            .thenReturn(Optional.empty());
+                .thenAnswer(invocation -> {
+                    directedClaimAttempted.countDown();
+                    return Optional.empty();
+                });
         when(jobRunStore.claimNextEligible(isNull(), eq(WORKER_IDENTITY), eq(LEASE_DURATION)))
             .thenReturn(Optional.empty());
 
         coordinator.signalRun(requestedRunId);
 
-        await(() -> coordinator.availableCapacity() == 1);
+            assertTrue(directedClaimAttempted.await(2, TimeUnit.SECONDS));
+            verify(jobRunStore, timeout(1_000)).claimNextEligible(null, WORKER_IDENTITY, LEASE_DURATION);
         verify(jobRunStore).claimNextEligible(requestedRunId, WORKER_IDENTITY, LEASE_DURATION);
-        verify(jobRunStore).claimNextEligible(null, WORKER_IDENTITY, LEASE_DURATION);
         verify(jobRunStore, times(2)).claimNextEligible(any(), eq(WORKER_IDENTITY), eq(LEASE_DURATION));
         verify(jobExecutionService, never()).executeClaimedRun(any(), any());
         }
