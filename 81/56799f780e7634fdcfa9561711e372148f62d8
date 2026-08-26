@@ -1,0 +1,19 @@
+replicadb-server/src/test/java/org/replicadb/server/job/execution/WorkerDispatchCoordinatorTest.java
+  s_fb1f00207df513::t_eb139f4b5989ca 146,148-151,157-158
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "8156799f780e7634fdcfa9561711e372148f62d8",
+  "prompts": {},
+  "sessions": {
+    "s_fb1f00207df513": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "2d375680-355c-4b73-8869-83ed5c9bfd58",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
