@@ -258,6 +258,8 @@ jobs:
         distribution: 'temurin'
         server-id: github
         settings-path: ${{ github.workspace }}
+    - name: Install CLI artifact
+      run: mvn -B install -DskipTests --file pom.xml
     - name: Run focused Phase 3.4 policy and metrics tests
       run: mvn -B -Dtest=WorkerAdmissionPolicyTest,ContentionBackoffTest,WorkerAdmissionQueueTest,WorkerBusySlotTrackerTest,ManagedRuntimeMetricsTest,WorkerDispatchCoordinatorTest test --file replicadb-server/pom.xml
     - name: Run reproducible fairness harness
