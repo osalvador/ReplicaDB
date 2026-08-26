@@ -1,0 +1,21 @@
+.github/workflows/CT_Push.yml
+  s_fb1f00207df513::t_e3068baf3f3fef 247
+scripts/phase3-fairness-test.sh
+  s_fb1f00207df513::t_f3d37af7f221cb 265-269,278-283,294-298
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b726219d057aa5fd4995961a3dd9b4609db6ca17",
+  "prompts": {},
+  "sessions": {
+    "s_fb1f00207df513": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "2d375680-355c-4b73-8869-83ed5c9bfd58",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
