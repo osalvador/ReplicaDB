@@ -1,0 +1,19 @@
+scripts/phase3-fairness-test.sh
+  s_fb1f00207df513::t_865013448235b2 230-232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "95fdfaa02bb80d69337c791295ea088e296ac5db",
+  "prompts": {},
+  "sessions": {
+    "s_fb1f00207df513": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "2d375680-355c-4b73-8869-83ed5c9bfd58",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
