@@ -227,7 +227,9 @@ for attempt in $(seq 1 600); do
     assert_capacity "$current_one" "$first_capacity"
     assert_capacity "$current_two" "$second_capacity"
     terminal_count=$(while IFS='|' read -r run_id job_id; do
-        [[ "$(read_status "$api_two" "$run_id")" = SUCCEEDED ]] && printf '1\n'
+        if [[ "$(read_status "$api_two" "$run_id")" = SUCCEEDED ]]; then
+            printf '1\n'
+        fi
     done < "$run_file" | wc -l | tr -d '[:space:]')
     if [[ "$terminal_count" -eq "$jobs_to_run" ]]; then
         break
