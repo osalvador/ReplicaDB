@@ -355,7 +355,7 @@
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
-            <version>3.4.3</version>
+            <version>3.5.0</version>
             <exclusions>
                 <!-- Exclude SLF4J bindings to avoid conflict with log4j-slf4j-impl -->
                 <exclusion>
