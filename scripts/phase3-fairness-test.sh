@@ -262,7 +262,11 @@ two_normalized_before=$(metric_value "$baseline_two" replicadb_worker_normalized
 one_normalized_after=$(metric_value "$final_one" replicadb_worker_normalized_busy_slot_seconds 'worker_identity="worker-one"')
 two_normalized_after=$(metric_value "$final_two" replicadb_worker_normalized_busy_slot_seconds 'worker_identity="worker-two"')
 
-awk -v one="$one_completed" -v two="$two_completed" -v first_capacity="$first_capacity" \
+printf 'phase3 fairness observations raw_runs=%s/%s raw_busy=%s/%s normalized_busy=%s/%s tolerance=%s\n' \
+    "$one_completed" "$two_completed" "$one_busy_after" "$two_busy_after" \
+    "$one_normalized_after" "$two_normalized_after" "$tolerance"
+
+if ! awk -v one="$one_completed" -v two="$two_completed" -v first_capacity="$first_capacity" \
     -v second_capacity="$second_capacity" -v tolerance="$tolerance" '
     BEGIN {
         if (one < 1 || two < 1) exit 1
@@ -271,7 +275,12 @@ awk -v one="$one_completed" -v two="$two_completed" -v first_capacity="$first_ca
         exit !(ratio >= expected * (1 - tolerance) && ratio <= expected * (1 + tolerance))
     }
 '
-awk -v one_before="$one_normalized_before" -v two_before="$two_normalized_before" \
+then
+    printf 'raw worker share outside tolerance: worker-one=%s worker-two=%s capacities=%s/%s tolerance=%s\n' \
+        "$one_completed" "$two_completed" "$first_capacity" "$second_capacity" "$tolerance" >&2
+    exit 1
+fi
+if ! awk -v one_before="$one_normalized_before" -v two_before="$two_normalized_before" \
     -v one_after="$one_normalized_after" -v two_after="$two_normalized_after" \
     -v tolerance="$tolerance" '
     BEGIN {
@@ -282,6 +291,11 @@ awk -v one_before="$one_normalized_before" -v two_before="$two_normalized_before
         exit !(ratio >= 1 - tolerance && ratio <= 1 + tolerance)
     }
 '
+then
+    printf 'normalized worker utilization outside tolerance: worker-one=%s worker-two=%s tolerance=%s\n' \
+        "$one_normalized_after" "$two_normalized_after" "$tolerance" >&2
+    exit 1
+fi
 
 metrics_one="$final_one"
 metrics_two="$final_two"
