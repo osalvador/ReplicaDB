@@ -9,4 +9,8 @@ export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-replicadb-phase3-multinode-$
 
 "$script_dir/phase3-compose-smoke.sh"
 
+if [[ "${PHASE3_RUN_FAIRNESS:-false}" = true ]]; then
+	"$script_dir/phase3-fairness-test.sh"
+fi
+
 printf 'phase3 multinode smoke passed with two API processes and two worker processes\n'

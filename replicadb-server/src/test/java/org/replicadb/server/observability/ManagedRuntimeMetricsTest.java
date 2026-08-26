@@ -3,6 +3,7 @@ package org.replicadb.server.observability;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.replicadb.server.job.domain.JobRunStatus;
+import org.replicadb.server.job.execution.AdmissionLane;
 import org.replicadb.server.job.port.JobRunStore;
 import org.replicadb.server.job.port.RunNotificationPublisher;
 
@@ -33,6 +34,12 @@ class ManagedRuntimeMetricsTest {
         metrics.recordFencedUpdate("succeeded", JobRunStore.FencedUpdateResult.FENCED);
         metrics.recordCancellation("request", "requested");
         metrics.recordTerminalOutcome(JobRunStatus.SUCCEEDED);
+        metrics.recordAdmission(AdmissionLane.DIRECTED, "claimed");
+        metrics.recordAdmission(AdmissionLane.GENERIC, "coalesced");
+        metrics.recordAdmission(null, "unexpected");
+        metrics.recordWorkerCompletedRun("worker/a", "SUCCEEDED");
+        metrics.recordWorkerCompletedRun("worker/a", "FAILED");
+        metrics.recordWorkerCompletedRun("worker/a", "CANCELLED");
         metrics.updateWorkerCapacity(2, 1);
         metrics.updateListenerConnected(true);
         metrics.updatePollingRunning(true);
@@ -61,6 +68,18 @@ class ManagedRuntimeMetricsTest {
                 .tag("operation", "request").tag("outcome", "requested").counter().count());
         assertEquals(1.0, registry.get(ManagedRuntimeMetrics.TERMINAL_OUTCOMES)
                 .tag("status", "succeeded").counter().count());
+        assertEquals(1.0, registry.get(ManagedRuntimeMetrics.ADMISSION_EVENTS)
+                .tag("lane", "directed").tag("outcome", "claimed").counter().count());
+        assertEquals(1.0, registry.get(ManagedRuntimeMetrics.ADMISSION_EVENTS)
+                .tag("lane", "generic").tag("outcome", "coalesced").counter().count());
+        assertEquals(1.0, registry.get(ManagedRuntimeMetrics.ADMISSION_EVENTS)
+                .tag("lane", "other").tag("outcome", "other").counter().count());
+        assertEquals(1.0, registry.get(ManagedRuntimeMetrics.COMPLETED_RUNS)
+                .tag("worker_identity", "worker_a").tag("outcome", "succeeded").counter().count());
+        assertEquals(1.0, registry.get(ManagedRuntimeMetrics.COMPLETED_RUNS)
+                .tag("worker_identity", "worker_a").tag("outcome", "failed").counter().count());
+        assertEquals(1.0, registry.get(ManagedRuntimeMetrics.COMPLETED_RUNS)
+                .tag("worker_identity", "worker_a").tag("outcome", "cancelled").counter().count());
         assertEquals(2.0, registry.get(ManagedRuntimeMetrics.ACTIVE_WORKER_SLOTS).gauge().value());
         assertEquals(1.0, registry.get(ManagedRuntimeMetrics.FREE_WORKER_SLOTS).gauge().value());
         assertEquals(1.0, registry.get(ManagedRuntimeMetrics.LISTENER_CONNECTED).gauge().value());
@@ -71,5 +90,8 @@ class ManagedRuntimeMetricsTest {
                 .noneMatch(tag -> tag.getValue().contains("run-id-that-must-not-be-a-tag")));
         assertFalse(registry.getMeters().stream()
                 .anyMatch(meter -> meter.getId().getName().contains("run-id-that-must-not-be-a-tag")));
+        assertTrue(registry.getMeters().stream()
+                .flatMap(meter -> meter.getId().getTags().stream())
+                .noneMatch(tag -> tag.getValue().contains("jdbc:")));
     }
 }

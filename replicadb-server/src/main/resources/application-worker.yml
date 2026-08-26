@@ -42,4 +42,13 @@ replicadb:
     listener:
       initial-reconnect-delay: 1s
       max-reconnect-delay: 30s
+    admission:
+      jitter-max: 100ms
+      generic-cooldown: 250ms
+      directed-queue-capacity: 1024
+      adaptive-backoff:
+        enabled: true
+        initial-delay: 25ms
+        max-delay: 2s
+        decay-half-life: 30s
     shutdown-timeout: 30s

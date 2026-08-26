@@ -68,6 +68,13 @@ Worker settings include:
 - `REPLICADB_WORKER_MANAGEMENT_ADDRESS`, normally a private interface
 - `REPLICADB_WORKER_MANAGEMENT_PORT`, `9091` by default
 - `REPLICADB_WORKER_MAX_CONCURRENT_RUNS`, `1` by default
+- `REPLICADB_WORKER_ADMISSION_JITTER_MAX`, `100ms` by default
+- `REPLICADB_WORKER_ADMISSION_GENERIC_COOLDOWN`, `250ms` by default
+- `REPLICADB_WORKER_ADMISSION_DIRECTED_QUEUE_CAPACITY`, `1024` by default
+- `REPLICADB_WORKER_ADMISSION_ADAPTIVE_BACKOFF_ENABLED`, `true` by default
+- `REPLICADB_WORKER_ADMISSION_ADAPTIVE_BACKOFF_INITIAL_DELAY`, `25ms` by default
+- `REPLICADB_WORKER_ADMISSION_ADAPTIVE_BACKOFF_MAX_DELAY`, `2s` by default
+- `REPLICADB_WORKER_ADMISSION_ADAPTIVE_BACKOFF_DECAY_HALF_LIFE`, `30s` by default
 - `REPLICADB_WORKER_LEASE_DURATION`, `5m` by default
 - `REPLICADB_WORKER_HEARTBEAT_INTERVAL`, `30s` by default
 - `REPLICADB_WORKER_POLL_INTERVAL`, `30s` by default
@@ -83,6 +90,22 @@ The worker has no product REST controllers, frontend, Spring Security session,
 or Quartz scheduler. Its Actuator management port is an operational surface,
 not a product API; restrict it with the private network, firewall, or an
 authenticated internal proxy.
+
+Worker admission is local to each process. A run notification creates at most
+one directed claim opportunity per worker; an empty directed claim can make
+one generic fallback, never another fallback. Startup, listener reconnect,
+periodic polling, and completion refill at most one generic opportunity per
+currently free slot. Jitter, successful-claim cooldown, and decaying
+contention backoff delay only the opportunity scheduler and never occupy a run
+permit. PostgreSQL remains the only ownership arbiter.
+
+The worker fleet is expected to distribute work approximately, not by strict
+round robin. Evaluate sustained backlog with normalized busy-slot time:
+`busy-slot-seconds / max-concurrent-runs`. Equal-capacity workers should be
+approximately balanced; workers with different capacities should receive
+proportionally different raw work while their normalized utilization remains
+comparable. Queue age and polling lag are operational signals and do not bypass
+cooldown.
 
 ## PostgreSQL migrations
 
@@ -199,7 +222,8 @@ checks schedule visibility from the second API, triggers a run, and verifies
 that the worker writes the expected rows. The worker management port is
 internal-only in this topology.
 
-Process-level worker-loss, PostgreSQL-restart, load, and chaos validation is a
-separate Phase 3.3 release gate. It must run with dynamic project names and
-isolated state, and must report missing Docker infrastructure separately from
-product failures.
+Process-level worker-loss, PostgreSQL-restart, fairness, load, and chaos
+validation is a separate Phase 3.4 release gate. The standalone CLI
+compatibility gate runs independently of PostgreSQL and Docker. Both gates use
+dynamic project names and isolated state, and report missing infrastructure
+separately from product failures.

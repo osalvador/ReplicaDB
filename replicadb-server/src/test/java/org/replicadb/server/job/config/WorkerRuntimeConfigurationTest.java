@@ -24,6 +24,77 @@ class WorkerRuntimeConfigurationTest {
         WorkerRuntimeProperties properties = new WorkerRuntimeProperties();
 
         assertDoesNotThrow(() -> properties.validate(8));
+        assertEquals(Duration.ofMillis(100), properties.getAdmission().getJitterMax());
+        assertEquals(Duration.ofMillis(250), properties.getAdmission().getGenericCooldown());
+        assertEquals(1_024, properties.getAdmission().getDirectedQueueCapacity());
+        assertTrue(properties.getAdmission().getAdaptiveBackoff().isEnabled());
+    }
+
+    @Test
+    void acceptsZeroJitterAndCooldownWhenBackoffIsValid() {
+        WorkerRuntimeProperties properties = new WorkerRuntimeProperties();
+        properties.getAdmission().setJitterMax(Duration.ZERO);
+        properties.getAdmission().setGenericCooldown(Duration.ZERO);
+
+        assertDoesNotThrow(() -> properties.validate(8));
+    }
+
+    @Test
+    void rejectsNegativeOptionalAdmissionDuration() {
+        WorkerRuntimeProperties properties = new WorkerRuntimeProperties();
+        properties.getAdmission().setJitterMax(Duration.ofMillis(-1));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> properties.validate(8));
+
+        assertTrue(exception.getMessage().contains("jitter-max"));
+    }
+
+    @Test
+    void rejectsInvalidEnabledBackoff() {
+        WorkerRuntimeProperties properties = new WorkerRuntimeProperties();
+        properties.getAdmission().getAdaptiveBackoff().setInitialDelay(Duration.ZERO);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> properties.validate(8));
+
+        assertTrue(exception.getMessage().contains("initial-delay"));
+    }
+
+    @Test
+    void allowsZeroBackoffValuesOnlyWhenBackoffIsDisabled() {
+        WorkerRuntimeProperties properties = new WorkerRuntimeProperties();
+        WorkerRuntimeProperties.AdaptiveBackoff backoff = properties.getAdmission().getAdaptiveBackoff();
+        backoff.setEnabled(false);
+        backoff.setInitialDelay(Duration.ZERO);
+        backoff.setMaxDelay(Duration.ZERO);
+        backoff.setDecayHalfLife(Duration.ZERO);
+
+        assertDoesNotThrow(() -> properties.validate(8));
+    }
+
+    @Test
+    void rejectsBackoffMaximumBelowInitialDelay() {
+        WorkerRuntimeProperties properties = new WorkerRuntimeProperties();
+        WorkerRuntimeProperties.AdaptiveBackoff backoff = properties.getAdmission().getAdaptiveBackoff();
+        backoff.setInitialDelay(Duration.ofSeconds(2));
+        backoff.setMaxDelay(Duration.ofSeconds(1));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> properties.validate(8));
+
+        assertTrue(exception.getMessage().contains("max-delay"));
+    }
+
+    @Test
+    void rejectsDirectedQueueCapacityOutsideBound() {
+        WorkerRuntimeProperties properties = new WorkerRuntimeProperties();
+        properties.getAdmission().setDirectedQueueCapacity(100_001);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> properties.validate(8));
+
+        assertTrue(exception.getMessage().contains("directed-queue-capacity"));
     }
 
     @Test
@@ -87,6 +158,7 @@ class WorkerRuntimeConfigurationTest {
         order.verify(coordinator).stopAccepting();
         order.verify(polling).stop();
         order.verify(listener).stop();
+        order.verify(coordinator).cancelPendingAdmissionsAndActiveRuns(Duration.ofSeconds(2));
         order.verify(heartbeat).shutdown();
         order.verify(coordinator).shutdown(Duration.ofSeconds(2));
         assertEquals(false, lifecycle.isRunning());

@@ -252,7 +252,7 @@ El perfil `api` persiste la política de recuperación de cada job:
 
 Los runs elegibles usan `availableAt`, evaluado con el reloj PostgreSQL. Cada claim genera un lease token opaco; el token se usa solo dentro del estado y nunca aparece en respuestas REST, tipos TypeScript, logs o UI. Las renovaciones y escrituras terminales de un worker obsoleto son rechazadas por fencing. Una expiración conserva el run original y crea una nueva tentativa desde el principio cuando la política lo permite; no existe resume.
 
-La cancelación se persiste antes de intentar la señal local. Esto permite que una futura instancia worker observe `CANCEL_REQUESTED` aunque la petición HTTP haya sido atendida por otra instancia. `LISTEN/NOTIFY`, polling distribuido, el perfil `worker` y el heartbeat durante merge/swap están implementados en Phase 3.2. Quartz JDBC clustering, throttling de login compartido, métricas, el management port interno y la topología Compose local están implementados como parte de Phase 3.3. Las pruebas multi-proceso de pérdida/reinicio, carga/caos y los gates finales de release siguen pendientes hasta completar la validación operativa.
+La cancelación se persiste antes de intentar la señal local. Esto permite que una futura instancia worker observe `CANCEL_REQUESTED` aunque la petición HTTP haya sido atendida por otra instancia. `LISTEN/NOTIFY`, polling distribuido, el perfil `worker` y el heartbeat durante merge/swap están implementados en Phase 3.2. Quartz JDBC clustering, throttling de login compartido, métricas, el management port interno y la topología Compose local están implementados como parte de Phase 3.3. La distribución híbrida de carga de Phase 3.4, sus pruebas de fairness/resiliencia y los gates finales de release están implementados y validados.
 
 ## Ejecutar el smoke test E2E
 
@@ -301,4 +301,4 @@ Para eliminar el contenedor local y sus datos:
 docker rm replicadb-dev-postgres
 ```
 
-La imagen del managed server y la topología Compose están disponibles para validación local. No hay todavía una release oficial ni una URL pública del frontend. Los nombres de endpoints y la configuración pueden cambiar mientras la validación multi-proceso y los gates de release de Phase 3.3 sigan pendientes.
+La imagen del managed server y la topología Compose están disponibles para validación local. No hay todavía una release oficial ni una URL pública del frontend. Los nombres de endpoints y la configuración pueden cambiar en futuras versiones, pero la topología distribuida actual y la compatibilidad del artefacto CLI están cubiertas por los gates de Phase 3.4.
