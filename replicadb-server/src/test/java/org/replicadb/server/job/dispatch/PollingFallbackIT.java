@@ -1,5 +1,6 @@
 package org.replicadb.server.job.dispatch;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +10,7 @@ import org.replicadb.cli.ToolOptions;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.application.RunDispatchService;
 import org.replicadb.server.job.application.RunLeaseService;
+import org.replicadb.server.job.config.WorkerRuntimeProperties;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobRun;
@@ -23,6 +25,10 @@ import org.replicadb.server.job.execution.JobRunOutcome;
 import org.replicadb.server.job.execution.RunExecutionHandle;
 import org.replicadb.server.job.execution.WorkerDispatchCoordinator;
 import org.replicadb.server.job.execution.WorkerRunIdentity;
+import org.replicadb.server.job.execution.WorkerAdmissionPolicy;
+import org.replicadb.server.job.execution.WorkerAdmissionScheduler;
+import org.replicadb.server.observability.ManagedRuntimeMetrics;
+import org.replicadb.server.observability.WorkerBusySlotTracker;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
 import org.replicadb.server.job.port.RunNotificationPublisher;
@@ -198,9 +204,26 @@ class PollingFallbackIT {
         WorkerDispatchCoordinator coordinator = new WorkerDispatchCoordinator(
                 runLeaseService, jobRunRepository, executionService, registry, heartbeatService,
                 new WorkerRunIdentity(WORKER_IDENTITY), 1,
-                Duration.ofMinutes(5), Duration.ofSeconds(2));
+                Duration.ofMinutes(5), Duration.ofSeconds(2), metrics(), policy(),
+                new WorkerAdmissionScheduler(), tracker(), 1_024);
         coordinators.add(coordinator);
         return coordinator;
+    }
+
+    private static ManagedRuntimeMetrics metrics() {
+        return new ManagedRuntimeMetrics(new SimpleMeterRegistry());
+    }
+
+    private static WorkerBusySlotTracker tracker() {
+        return new WorkerBusySlotTracker(new SimpleMeterRegistry(), WORKER_IDENTITY, 1, System::nanoTime);
+    }
+
+    private static WorkerAdmissionPolicy policy() {
+        WorkerRuntimeProperties.Admission admission = new WorkerRuntimeProperties.Admission();
+        admission.setJitterMax(Duration.ZERO);
+        admission.setGenericCooldown(Duration.ZERO);
+        admission.getAdaptiveBackoff().setEnabled(false);
+        return new WorkerAdmissionPolicy(admission, System::nanoTime, () -> 0.0);
     }
 
     private JobRun pendingRun() {

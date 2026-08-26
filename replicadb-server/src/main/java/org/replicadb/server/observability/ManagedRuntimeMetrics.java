@@ -4,6 +4,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.replicadb.server.job.execution.AdmissionLane;
 import org.replicadb.server.job.port.JobRunStore;
 import org.replicadb.server.job.port.RunNotificationPublisher;
 import org.replicadb.server.job.domain.JobRunStatus;
@@ -17,6 +18,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.LongSupplier;
 
 @Component
 public final class ManagedRuntimeMetrics {
@@ -35,10 +37,14 @@ public final class ManagedRuntimeMetrics {
     public static final String TERMINAL_OUTCOMES = "replicadb.managed.terminal.outcomes";
     public static final String ACTIVE_WORKER_SLOTS = "replicadb.worker.active.slots";
     public static final String FREE_WORKER_SLOTS = "replicadb.worker.free.slots";
+    public static final String ADMISSION_EVENTS = "replicadb.worker.admission.events";
+    public static final String BUSY_SLOT_SECONDS = "replicadb.worker.busy.slot.seconds";
+    public static final String NORMALIZED_BUSY_SLOT_SECONDS = "replicadb.worker.normalized.busy.slot.seconds";
+    public static final String COMPLETED_RUNS = "replicadb.worker.completed.runs";
     public static final String LISTENER_CONNECTED = "replicadb.worker.listener.connected";
     public static final String POLLING_RUNNING = "replicadb.worker.polling.running";
 
-    private static final Set<String> CLAIM_TYPES = Set.of("directed", "queue", "other");
+    private static final Set<String> CLAIM_TYPES = Set.of("directed", "fallback", "queue", "other");
     private static final Set<String> CLAIM_OUTCOMES = Set.of("claimed", "empty", "error", "other");
     private static final Set<String> DISPATCH_TYPES = Set.of("manual", "scheduled", "retry", "recovery", "other");
     private static final Set<String> DISPATCH_OUTCOMES = Set.of("created", "replayed", "replacement", "noop", "error", "other");
@@ -54,6 +60,11 @@ public final class ManagedRuntimeMetrics {
             "requested", "already_requested", "cancelled", "terminal", "not_found",
             "published", "signalled", "missed", "updated", "fenced", "failed", "error", "other");
     private static final Set<String> RECOVERY_OUTCOMES = Set.of("replacement", "cancelled", "failed", "noop", "error", "other");
+        private static final Set<String> ADMISSION_LANES = Set.of("directed", "fallback", "generic", "other");
+        private static final Set<String> ADMISSION_OUTCOMES = Set.of(
+            "claimed", "empty", "coalesced", "dropped", "error", "other");
+        private static final Set<String> COMPLETED_RUN_OUTCOMES = Set.of(
+            "succeeded", "failed", "cancelled", "retry_scheduled", "other");
         private static final Set<String> TERMINAL_STATUSES = Set.of(
             "pending", "running", "succeeded", "failed", "cancel_requested", "cancelled", "retry_scheduled");
     private static final ManagedRuntimeMetrics NOOP = new ManagedRuntimeMetrics(new SimpleMeterRegistry(), false);
@@ -88,6 +99,25 @@ public final class ManagedRuntimeMetrics {
     public void recordClaim(String claimType, String outcome) {
         increment(CLAIMS, "claim_type", normalize(claimType, CLAIM_TYPES),
                 "outcome", normalize(outcome, CLAIM_OUTCOMES));
+    }
+
+    public void recordAdmission(AdmissionLane lane, String outcome) {
+        increment(ADMISSION_EVENTS,
+                "lane", normalize(lane == null ? null : lane.name(), ADMISSION_LANES),
+                "outcome", normalize(outcome, ADMISSION_OUTCOMES));
+    }
+
+    public void recordWorkerCompletedRun(String workerIdentity, String outcome) {
+        increment(COMPLETED_RUNS,
+                "worker_identity", WorkerMetricsIdentity.normalize(workerIdentity),
+                "outcome", normalize(outcome, COMPLETED_RUN_OUTCOMES));
+    }
+
+    public WorkerBusySlotTracker createWorkerBusySlotTracker(String workerIdentity,
+                                                              int maxConcurrentRuns,
+                                                              LongSupplier nanoTimeSource) {
+        return new WorkerBusySlotTracker(meterRegistry, WorkerMetricsIdentity.normalize(workerIdentity),
+                maxConcurrentRuns, nanoTimeSource, enabled);
     }
 
     public void recordDispatch(String dispatchType, String outcome) {

@@ -5,10 +5,12 @@ import org.replicadb.server.job.application.RunDispatchService;
 import org.replicadb.server.job.dispatch.PollingFallback;
 import org.replicadb.server.job.dispatch.PostgreSQLNotificationListener;
 import org.replicadb.server.job.execution.ActiveRunRegistry;
+import org.replicadb.server.job.execution.WorkerAdmissionPolicy;
 import org.replicadb.server.job.execution.HeartbeatService;
 import org.replicadb.server.job.execution.JobExecutionService;
 import org.replicadb.server.job.execution.WorkerDispatchCoordinator;
 import org.replicadb.server.job.execution.WorkerRunIdentity;
+import org.replicadb.server.observability.WorkerBusySlotTracker;
 import org.replicadb.server.job.port.JobRunStore;
 import org.replicadb.server.observability.ManagedRuntimeMetrics;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,10 +43,16 @@ public class WorkerRuntimeConfiguration {
                                                                HeartbeatService heartbeatService,
                                                                WorkerRuntimeProperties properties,
                                                                ManagedRuntimeMetrics metrics) {
+        WorkerRunIdentity identity = WorkerRunIdentity.resolve(properties.getIdentity());
         return new WorkerDispatchCoordinator(runLeaseService, jobRunStore, jobExecutionService,
                 activeRunRegistry, heartbeatService,
-                WorkerRunIdentity.resolve(properties.getIdentity()), properties.getMaxConcurrentRuns(),
-                properties.getLeaseDuration(), properties.getShutdownTimeout(), metrics);
+                identity, properties.getMaxConcurrentRuns(),
+                properties.getLeaseDuration(), properties.getShutdownTimeout(), metrics,
+                new WorkerAdmissionPolicy(properties.getAdmission()),
+                new org.replicadb.server.job.execution.WorkerAdmissionScheduler(),
+                metrics.createWorkerBusySlotTracker(
+                        identity.value(), properties.getMaxConcurrentRuns(), System::nanoTime),
+                properties.getAdmission().getDirectedQueueCapacity());
     }
 
     @Bean

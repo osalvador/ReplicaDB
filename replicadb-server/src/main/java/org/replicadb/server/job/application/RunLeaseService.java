@@ -4,6 +4,7 @@ import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.LeaseToken;
 import org.replicadb.server.job.port.JobRunStore;
 import org.replicadb.server.observability.ManagedRuntimeMetrics;
+import org.replicadb.server.job.execution.AdmissionLane;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -42,6 +43,12 @@ public final class RunLeaseService {
         validateExecutorIdentity(executorIdentity);
         validateLeaseDuration(leaseDuration);
         return claim(runId, executorIdentity, leaseDuration, "directed");
+    }
+
+    public Optional<JobRun> claimFallback(String executorIdentity, Duration leaseDuration) {
+        validateExecutorIdentity(executorIdentity);
+        validateLeaseDuration(leaseDuration);
+        return claim(null, executorIdentity, leaseDuration, "fallback");
     }
 
     public Optional<JobRun> claimNextEligible(String executorIdentity) {

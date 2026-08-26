@@ -162,7 +162,7 @@ public final class PollingFallback implements AutoCloseable {
             return;
         }
         try {
-            workerCoordinator.signalEligibleWork();
+            workerCoordinator.requestGenericRefill(trigger);
             signalCancellationRequests();
             recoverExpiredRuns();
             recordPollingLag();

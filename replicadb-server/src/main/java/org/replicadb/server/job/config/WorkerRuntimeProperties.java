@@ -7,6 +7,8 @@ import java.time.Duration;
 @ConfigurationProperties(prefix = "replicadb.worker")
 public class WorkerRuntimeProperties {
 
+    private static final int MAX_DIRECTED_QUEUE_CAPACITY = 100_000;
+
     private String identity = "";
     private int maxConcurrentRuns = 1;
     private Duration leaseDuration = Duration.ofMinutes(5);
@@ -15,6 +17,7 @@ public class WorkerRuntimeProperties {
     private Duration shutdownTimeout = Duration.ofSeconds(30);
     private int pollBatchSize = 100;
     private Listener listener = new Listener();
+    private Admission admission = new Admission();
 
     public String getIdentity() {
         return identity;
@@ -80,6 +83,14 @@ public class WorkerRuntimeProperties {
         this.listener = listener;
     }
 
+    public Admission getAdmission() {
+        return admission;
+    }
+
+    public void setAdmission(Admission admission) {
+        this.admission = admission;
+    }
+
     public void validate(int datasourcePoolSize) {
         if (maxConcurrentRuns < 1) {
             throw new IllegalArgumentException("replicadb.worker.max-concurrent-runs must be positive");
@@ -100,6 +111,7 @@ public class WorkerRuntimeProperties {
             throw new IllegalArgumentException(
                     "replicadb.worker.listener.max-reconnect-delay must not be less than initial-reconnect-delay");
         }
+        validateAdmission();
         if (datasourcePoolSize < maxConcurrentRuns + 4) {
             throw new IllegalArgumentException(
                     "spring.datasource.hikari.maximum-pool-size must be at least "
@@ -107,9 +119,45 @@ public class WorkerRuntimeProperties {
         }
     }
 
+    private void validateAdmission() {
+        if (admission == null) {
+            throw new IllegalArgumentException("replicadb.worker.admission must not be null");
+        }
+        nonNegative(admission.jitterMax, "replicadb.worker.admission.jitter-max");
+        nonNegative(admission.genericCooldown, "replicadb.worker.admission.generic-cooldown");
+        if (admission.directedQueueCapacity < 1
+                || admission.directedQueueCapacity > MAX_DIRECTED_QUEUE_CAPACITY) {
+            throw new IllegalArgumentException(
+                    "replicadb.worker.admission.directed-queue-capacity must be between 1 and "
+                            + MAX_DIRECTED_QUEUE_CAPACITY);
+        }
+        if (admission.adaptiveBackoff == null) {
+            throw new IllegalArgumentException("replicadb.worker.admission.adaptive-backoff must not be null");
+        }
+        if (!admission.adaptiveBackoff.enabled) {
+            return;
+        }
+        positive(admission.adaptiveBackoff.initialDelay,
+                "replicadb.worker.admission.adaptive-backoff.initial-delay");
+        positive(admission.adaptiveBackoff.maxDelay,
+                "replicadb.worker.admission.adaptive-backoff.max-delay");
+        positive(admission.adaptiveBackoff.decayHalfLife,
+                "replicadb.worker.admission.adaptive-backoff.decay-half-life");
+        if (admission.adaptiveBackoff.maxDelay.compareTo(admission.adaptiveBackoff.initialDelay) < 0) {
+            throw new IllegalArgumentException(
+                    "replicadb.worker.admission.adaptive-backoff.max-delay must not be less than initial-delay");
+        }
+    }
+
     private static void positive(Duration duration, String property) {
         if (duration == null || duration.isZero() || duration.isNegative()) {
             throw new IllegalArgumentException(property + " must be positive");
+        }
+    }
+
+    private static void nonNegative(Duration duration, String property) {
+        if (duration == null || duration.isNegative()) {
+            throw new IllegalArgumentException(property + " must not be negative");
         }
     }
 
@@ -132,6 +180,86 @@ public class WorkerRuntimeProperties {
 
         public void setMaxReconnectDelay(Duration maxReconnectDelay) {
             this.maxReconnectDelay = maxReconnectDelay;
+        }
+    }
+
+    public static class Admission {
+
+        private Duration jitterMax = Duration.ofMillis(100);
+        private Duration genericCooldown = Duration.ofMillis(250);
+        private int directedQueueCapacity = 1_024;
+        private AdaptiveBackoff adaptiveBackoff = new AdaptiveBackoff();
+
+        public Duration getJitterMax() {
+            return jitterMax;
+        }
+
+        public void setJitterMax(Duration jitterMax) {
+            this.jitterMax = jitterMax;
+        }
+
+        public Duration getGenericCooldown() {
+            return genericCooldown;
+        }
+
+        public void setGenericCooldown(Duration genericCooldown) {
+            this.genericCooldown = genericCooldown;
+        }
+
+        public int getDirectedQueueCapacity() {
+            return directedQueueCapacity;
+        }
+
+        public void setDirectedQueueCapacity(int directedQueueCapacity) {
+            this.directedQueueCapacity = directedQueueCapacity;
+        }
+
+        public AdaptiveBackoff getAdaptiveBackoff() {
+            return adaptiveBackoff;
+        }
+
+        public void setAdaptiveBackoff(AdaptiveBackoff adaptiveBackoff) {
+            this.adaptiveBackoff = adaptiveBackoff;
+        }
+    }
+
+    public static class AdaptiveBackoff {
+
+        private boolean enabled = true;
+        private Duration initialDelay = Duration.ofMillis(25);
+        private Duration maxDelay = Duration.ofSeconds(2);
+        private Duration decayHalfLife = Duration.ofSeconds(30);
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public Duration getInitialDelay() {
+            return initialDelay;
+        }
+
+        public void setInitialDelay(Duration initialDelay) {
+            this.initialDelay = initialDelay;
+        }
+
+        public Duration getMaxDelay() {
+            return maxDelay;
+        }
+
+        public void setMaxDelay(Duration maxDelay) {
+            this.maxDelay = maxDelay;
+        }
+
+        public Duration getDecayHalfLife() {
+            return decayHalfLife;
+        }
+
+        public void setDecayHalfLife(Duration decayHalfLife) {
+            this.decayHalfLife = decayHalfLife;
         }
     }
 }

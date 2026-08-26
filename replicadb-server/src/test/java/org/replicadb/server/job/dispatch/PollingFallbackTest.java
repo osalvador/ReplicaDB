@@ -67,7 +67,7 @@ class PollingFallbackTest {
 
         pollingFallback.start();
 
-        verify(workerCoordinator, timeout(1_000).atLeast(2)).signalEligibleWork();
+        verify(workerCoordinator, timeout(1_000).atLeast(2)).requestGenericRefill(any());
         assertTrue(pollingFallback.isRunning());
     }
 
@@ -78,7 +78,7 @@ class PollingFallbackTest {
 
         pollingFallback.onListenerReconnected();
 
-        verify(workerCoordinator, timeout(1_000)).signalEligibleWork();
+        verify(workerCoordinator, timeout(1_000)).requestGenericRefill("reconnect");
     }
 
     @Test
@@ -127,7 +127,7 @@ class PollingFallbackTest {
 
         pollingFallback.start();
 
-        verify(workerCoordinator).signalEligibleWork();
+        verify(workerCoordinator).requestGenericRefill("startup");
         verify(workerCoordinator).signalCancellation(cancellationOne);
         verify(workerCoordinator).signalCancellation(cancellationTwo);
         verify(runDispatchService).recoverExpiredRun(expiredOne);

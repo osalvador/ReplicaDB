@@ -73,6 +73,8 @@ mvn -f replicadb-server/pom.xml spring-boot:run -Dspring-boot.run.profiles=api
 
 The managed server listens on the API port, persists control-plane state in PostgreSQL, and serves the authenticated API/frontend under the `api` profile. The `worker` profile executes durable runs without exposing the product API; its internal Actuator management port is configurable and should remain on a private network. Use the deployment guide for the supported API/worker topology and migration handoff.
 
+The distributed worker runtime uses the Phase 3.4 hybrid admission policy for approximate load distribution. The standalone CLI artifact remains Spring-free, accepts its existing options-file contract, and does not require the managed metadata database.
+
 If Maven reports that `org.replicadb:ReplicaDB` cannot be resolved, run `mvn install -DskipTests` from the repository root first. The sibling server project resolves the CLI artifact from the local Maven repository rather than from a reactor build.
 
 ## Stand Alone

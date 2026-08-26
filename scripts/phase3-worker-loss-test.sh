@@ -24,6 +24,14 @@ esac
 export REPLICADB_WORKER_LEASE_DURATION="$lease_duration"
 export REPLICADB_WORKER_POLL_INTERVAL="$poll_interval"
 export REPLICADB_WORKER_HEARTBEAT_INTERVAL="$heartbeat_interval"
+export REPLICADB_WORKER_ONE_MAX_CONCURRENT_RUNS=${PHASE3_WORKER_LOSS_WORKER_ONE_CAPACITY:-1}
+export REPLICADB_WORKER_TWO_MAX_CONCURRENT_RUNS=${PHASE3_WORKER_LOSS_WORKER_TWO_CAPACITY:-1}
+export REPLICADB_WORKER_ONE_ADMISSION_JITTER_MAX=${PHASE3_WORKER_LOSS_JITTER_MAX:-25ms}
+export REPLICADB_WORKER_TWO_ADMISSION_JITTER_MAX=${PHASE3_WORKER_LOSS_JITTER_MAX:-25ms}
+export REPLICADB_WORKER_ONE_ADMISSION_GENERIC_COOLDOWN=${PHASE3_WORKER_LOSS_COOLDOWN:-100ms}
+export REPLICADB_WORKER_TWO_ADMISSION_GENERIC_COOLDOWN=${PHASE3_WORKER_LOSS_COOLDOWN:-100ms}
+export REPLICADB_WORKER_ONE_ADMISSION_ADAPTIVE_BACKOFF_ENABLED=${PHASE3_WORKER_LOSS_BACKOFF_ENABLED:-true}
+export REPLICADB_WORKER_TWO_ADMISSION_ADAPTIVE_BACKOFF_ENABLED=${PHASE3_WORKER_LOSS_BACKOFF_ENABLED:-true}
 unset COMPOSE_PROFILES
 
 mkdir -p "$state_directory"
@@ -212,6 +220,12 @@ run_copy_loss() {
     test "$(printf '%s' "$replacement" | jq -r '.attempt')" = 2
     test "$(printf '%s' "$replacement" | jq -r '.previousRunId')" = "$run_id"
     test "$(compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc 'SELECT count(*) FROM phase3_sink' | tr -d '[:space:]')" = 20
+    worker_metrics=$(compose exec -T worker-one curl -fsS http://127.0.0.1:9091/actuator/prometheus)
+    grep -F 'replicadb_worker_admission_events_total' <<< "$worker_metrics" >/dev/null
+    if grep -Eq 'job_id=|run_id=|lease_token=|password=|jdbc:' <<< "$worker_metrics"; then
+        printf 'high-cardinality or secret-bearing worker metric found\n' >&2
+        exit 1
+    fi
 }
 
 run_merge_loss() {
@@ -243,6 +257,12 @@ run_merge_loss() {
     test "$(printf '%s' "$replacement" | jq -r '.attempt')" = 2
     test "$(printf '%s' "$replacement" | jq -r '.previousRunId')" = "$run_id"
     test "$(compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc 'SELECT count(*) FROM phase3_sink' | tr -d '[:space:]')" = 20
+    worker_metrics=$(compose exec -T worker-one curl -fsS http://127.0.0.1:9091/actuator/prometheus)
+    grep -F 'replicadb_worker_admission_events_total' <<< "$worker_metrics" >/dev/null
+    if grep -Eq 'job_id=|run_id=|lease_token=|password=|jdbc:' <<< "$worker_metrics"; then
+        printf 'high-cardinality or secret-bearing worker metric found\n' >&2
+        exit 1
+    fi
 }
 
 step 'start services'

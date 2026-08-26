@@ -60,6 +60,7 @@ public final class WorkerRuntimeLifecycle implements SmartLifecycle {
         workerCoordinator.stopAccepting();
         pollingFallback.stop();
         notificationListener.stop();
+        workerCoordinator.cancelPendingAdmissionsAndActiveRuns(shutdownTimeout);
         heartbeatService.shutdown();
         workerCoordinator.shutdown(shutdownTimeout);
     }

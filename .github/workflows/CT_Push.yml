@@ -235,6 +235,59 @@ jobs:
           .phase3-logs
           replicadb-server/target/surefire-reports
 
+  phase3_4:
+    runs-on: ubuntu-latest
+    needs: server
+    timeout-minutes: 45
+    name: Phase 3.4 fairness
+    env:
+      TESTCONTAINERS_CONFIG_FILE: src/test/resources/testcontainers-ci.properties
+      DOCKER_HOST: unix:///var/run/docker.sock
+      TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE: /var/run/docker.sock
+      PHASE3_FAIRNESS_RUNS: '12'
+      PHASE3_FAIRNESS_TOLERANCE: '0.75'
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Check Docker info
+      run: docker info
+    - name: Set up JDK 17
+      uses: actions/setup-java@v5
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        server-id: github
+        settings-path: ${{ github.workspace }}
+    - name: Run focused Phase 3.4 policy and metrics tests
+      run: mvn -B -Dtest=WorkerAdmissionPolicyTest,ContentionBackoffTest,WorkerAdmissionQueueTest,WorkerBusySlotTrackerTest,ManagedRuntimeMetricsTest,WorkerDispatchCoordinatorTest test --file replicadb-server/pom.xml
+    - name: Run reproducible fairness harness
+      run: scripts/phase3-fairness-test.sh
+    - name: Upload fairness diagnostics
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: phase3-4-fairness-diagnostics
+        path: |
+          .phase3-logs
+          replicadb-server/target/surefire-reports
+
+  cli_compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    name: Standalone CLI compatibility
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up JDK 17
+      uses: actions/setup-java@v5
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        server-id: github
+        settings-path: ${{ github.workspace }}
+    - name: Run standalone CLI compatibility gate
+      run: scripts/phase3-cli-compatibility.sh
+
   frontend_e2e:
     runs-on: ubuntu-latest
     needs: server
@@ -343,6 +396,8 @@ jobs:
       - non_integration
       - server
       - multi_node
+      - phase3_4
+      - cli_compatibility
       - frontend_e2e
     name: Package release
 

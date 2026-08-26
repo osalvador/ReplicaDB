@@ -29,6 +29,9 @@ jobs:
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
+    - name: Verify standalone CLI compatibility
+      run: scripts/phase3-cli-compatibility.sh
+
     - name: Get version
       run: |
         if [ "${{ github.event.inputs.version }}" != "" ]; then
