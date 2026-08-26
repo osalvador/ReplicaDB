@@ -244,7 +244,7 @@ jobs:
       TESTCONTAINERS_CONFIG_FILE: src/test/resources/testcontainers-ci.properties
       DOCKER_HOST: unix:///var/run/docker.sock
       TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE: /var/run/docker.sock
-      PHASE3_FAIRNESS_RUNS: '12'
+      PHASE3_FAIRNESS_RUNS: '24'
       PHASE3_FAIRNESS_TOLERANCE: '0.75'
 
     steps:
