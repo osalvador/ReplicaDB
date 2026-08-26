@@ -1,0 +1,113 @@
+.ai/archive/phase-3-4-hybrid-worker-load-distribution-and-cli-compatibility-closeout.plan.md
+  s_fb1f00207df513::t_7ed5e37808c83f 1-308
+scripts/phase3-fairness-test.sh
+  s_fb1f00207df513::t_f9cd3f3fcf3a28 1-297
+.ai/learnings/phase34-event-contract-tests.md
+  s_fb1f00207df513::t_e594086e602055 1-11
+.ai/learnings/phase34-fairness-metrics.md
+  s_fb1f00207df513::t_9c17954cf4af11 1-11
+.ai/learnings/phase34-packaged-cli-probes.md
+  s_fb1f00207df513::t_a65c3742afb0cc 1-11
+.ai/learnings/phase34-post-transition-refill.md
+  s_fb1f00207df513::t_8be13bce5357fd 1-11
+.github/workflows/CI_Release.yml
+  s_fb1f00207df513::t_23b30da5fdf4a6 32-34
+.github/workflows/CT_Push.yml
+  s_fb1f00207df513::t_17b5dffd91de1a 238-290,399-400
+ARCHITECTURE_DECISIONS.md
+  s_fb1f00207df513::t_edf05924896951 15,353,361,815,840,844-845,863,887,935-936,971-985,1018,1036,1073-1076,1108-1110
+DEPLOYMENT.md
+  s_fb1f00207df513::t_ada0ef3a5f295e 71-77,94-109,225-229
+README.md
+  s_fb1f00207df513::t_dc41652e564370 76-77
+docker-compose.server.yml
+  s_fb1f00207df513::t_b5725b20dc80f0 84-91,123-130
+replicadb-server/frontend/README.develop.md
+  s_fb1f00207df513::t_816f8aa44b0408 255,304
+replicadb-server/src/main/java/org/replicadb/server/job/application/RunLeaseService.java
+  s_fb1f00207df513::t_b4d0a68fa77ead 7,48-53
+replicadb-server/src/main/java/org/replicadb/server/job/config/WorkerRuntimeConfiguration.java
+  s_fb1f00207df513::t_403e061d951557 8,13,46,49-55
+replicadb-server/src/main/java/org/replicadb/server/job/config/WorkerRuntimeLifecycle.java
+  s_fb1f00207df513::t_99e3c6b91e5f9d 63
+replicadb-server/src/main/java/org/replicadb/server/job/config/WorkerRuntimeProperties.java
+  s_fb1f00207df513::t_7e6ba0e57baf32 10-11,20,86-93,114,122-151,158-163,185-264
+replicadb-server/src/main/java/org/replicadb/server/job/dispatch/PollingFallback.java
+  s_fb1f00207df513::t_210564fa26e14b 165
+replicadb-server/src/main/java/org/replicadb/server/job/execution/AdmissionLane.java
+  s_fb1f00207df513::t_9c4ab457222157 1-7
+replicadb-server/src/main/java/org/replicadb/server/job/execution/ContentionBackoff.java
+  s_fb1f00207df513::t_c82a743badba40 1-99
+replicadb-server/src/main/java/org/replicadb/server/job/execution/WorkerAdmissionPolicy.java
+  s_fb1f00207df513::t_37bd5241f28b5a 1-138
+replicadb-server/src/main/java/org/replicadb/server/job/execution/WorkerAdmissionQueue.java
+  s_fb1f00207df513::t_150debd10b508d 1-127
+replicadb-server/src/main/java/org/replicadb/server/job/execution/WorkerAdmissionScheduler.java
+  s_fb1f00207df513::t_219df08bb1f062 1-67
+replicadb-server/src/main/java/org/replicadb/server/job/execution/WorkerDispatchCoordinator.java
+  s_fb1f00207df513::t_3b6da58aebc7da 6,11,44-47,52-53,55,70,81-119,134-139,142,154,167,195-207,211-222,233,252,269-274,276,280,296,298,301-305,311,314-317,320,322,325-330,332,335,339,346-349,353,375-450,453-457,461,463,467-468,470-473,476-479,483-488,490,492,497-501
+replicadb-server/src/main/java/org/replicadb/server/observability/ManagedRuntimeMetrics.java
+  s_fb1f00207df513::t_7d85c9289fc4fa 7,21,40-43,47,63-67,104-122
+replicadb-server/src/main/java/org/replicadb/server/observability/WorkerBusySlotTracker.java
+  s_fb1f00207df513::t_de3a62d45fe2b2 1-103
+replicadb-server/src/main/java/org/replicadb/server/observability/WorkerMetricsIdentity.java
+  s_fb1f00207df513::t_ea403993d4bb6a 1-23
+replicadb-server/src/main/resources/application-worker.yml
+  s_fb1f00207df513::t_e16b61e415f861 45-53
+replicadb-server/src/test/java/org/replicadb/server/job/config/WorkerRuntimeConfigurationTest.java
+  s_fb1f00207df513::t_b0f47d7cefd641 27-97,161
+replicadb-server/src/test/java/org/replicadb/server/job/dispatch/PollingFallbackIT.java
+  s_fb1f00207df513::t_a37dd24b0d0014 3,13,28-31,207-208,213-228
+replicadb-server/src/test/java/org/replicadb/server/job/dispatch/PollingFallbackTest.java
+  s_fb1f00207df513::t_66c104605aa7db 70,81,130
+replicadb-server/src/test/java/org/replicadb/server/job/dispatch/PostgreSQLNotificationListenerIT.java
+  s_fb1f00207df513::t_ad0fe4354a7ba8 3,12,25-28,63-64,133,148,287-288,293-308
+replicadb-server/src/test/java/org/replicadb/server/job/dispatch/RemoteCancellationIT.java
+  s_fb1f00207df513::t_69de9663a00ceb 3,13,25-28,176-177,182-197
+replicadb-server/src/test/java/org/replicadb/server/job/execution/ContentionBackoffTest.java
+  s_fb1f00207df513::t_cce4d7028a062a 1-68
+replicadb-server/src/test/java/org/replicadb/server/job/execution/HybridWorkerDistributionIT.java
+  s_fb1f00207df513::t_3b39eac8c47418 1-208
+replicadb-server/src/test/java/org/replicadb/server/job/execution/WorkerAdmissionPolicyTest.java
+  s_fb1f00207df513::t_3d17bcd8354948 1-84
+replicadb-server/src/test/java/org/replicadb/server/job/execution/WorkerAdmissionQueueTest.java
+  s_fb1f00207df513::t_3ec1ae4a730a89 1-56
+replicadb-server/src/test/java/org/replicadb/server/job/execution/WorkerDispatchCoordinatorIT.java
+  s_fb1f00207df513::t_265a4bbd15c720 3,11,20-21,180-198
+replicadb-server/src/test/java/org/replicadb/server/job/execution/WorkerDispatchCoordinatorTest.java
+  s_fb1f00207df513::t_43dfd66ae91538 3,9,14-15,29,39,67,96,103-104,123-249,336-356,397-413
+replicadb-server/src/test/java/org/replicadb/server/observability/ManagedRuntimeMetricsTest.java
+  s_fb1f00207df513::t_62df659b328a8b 6,37-42,71-82,93-95
+replicadb-server/src/test/java/org/replicadb/server/observability/WorkerBusySlotTrackerTest.java
+  s_fb1f00207df513::t_0e3ece201bb0fa 1-71
+scripts/check-phase3-docs.sh
+  s_fb1f00207df513::t_f1853be0702714 29-31,37-38,42-44
+scripts/phase3-cli-compatibility.sh
+  s_fb1f00207df513::t_66a33e80894ed4 1-104
+scripts/phase3-load-test.sh
+  s_fb1f00207df513::t_8d7206864b7302 22-27
+scripts/phase3-multinode-test.sh
+  s_fb1f00207df513::t_d7df4326932666 12-15
+scripts/phase3-resilience-test.sh
+  s_fb1f00207df513::t_ae7008aca617f3 16-23
+scripts/phase3-worker-loss-test.sh
+  s_fb1f00207df513::t_aca2835eb62b4e 27-34,223-228,260-265
+src/test/java/org/replicadb/CliOfflineExecutionTest.java
+  s_fb1f00207df513::t_4d077d135748e0 1-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "7a26db3dba192a4812728c344d812c071b8e0434",
+  "prompts": {},
+  "sessions": {
+    "s_fb1f00207df513": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "2d375680-355c-4b73-8869-83ed5c9bfd58",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
