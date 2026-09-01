@@ -146,8 +146,8 @@ class FlywayMigrationTest {
         createSchema(schema);
         try {
             Flyway flyway = flyway(schema).load();
-            assertEquals(19, flyway.migrate().migrationsExecuted);
-            assertEquals(19, flyway.info().applied().length);
+            assertEquals(20, flyway.migrate().migrationsExecuted);
+            assertEquals(20, flyway.info().applied().length);
             assertEquals(0, flyway.info().pending().length);
             flyway.validate();
 
@@ -168,6 +168,9 @@ class FlywayMigrationTest {
             assertTrue(hasIndex(schema, "idx_job_definition_sink_datasource"));
             assertTrue(hasIndex(schema, "idx_job_run_resolved_source_datasource"));
             assertTrue(hasIndex(schema, "idx_job_run_resolved_sink_datasource"));
+            assertTrue(hasTable(schema, "run_log"));
+            assertTrue(hasColumn(schema, "run_log", "captured_size"));
+            assertTrue(hasColumn(schema, "run_log", "format_version"));
 
             UUID datasourceId = UUID.randomUUID();
             UUID jobId = UUID.randomUUID();

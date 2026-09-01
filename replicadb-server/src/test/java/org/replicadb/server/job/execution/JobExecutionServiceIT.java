@@ -27,7 +27,9 @@ import org.replicadb.server.job.domain.ManagedDataSource;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
 import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
+import org.replicadb.server.job.persistence.RunLogRepository;
 import org.replicadb.server.job.port.JobRunStore;
+import org.replicadb.server.job.port.RunLogStore;
 import org.replicadb.server.security.secret.EncryptedSecurityBundle;
 import org.replicadb.server.security.secret.SecretProtectionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,6 +83,9 @@ class JobExecutionServiceIT {
     @Autowired
     private ManagedDataSourceRepository dataSourceRepository;
 
+        @Autowired
+        private RunLogRepository runLogRepository;
+
     @Autowired
     private DatasourceMapper datasourceMapper;
 
@@ -116,6 +121,7 @@ class JobExecutionServiceIT {
 
         assertEquals(JobRunStatus.SUCCEEDED, outcome.status());
         assertEquals(2, outcome.rowsProcessed());
+        assertTrue(runLogRepository.findByRunId(pending.id()).isPresent());
         assertEquals(JobRunStatus.SUCCEEDED, persistedRun.status());
         assertEquals("20", persistedRun.committedWatermark());
         assertEquals("20", jobRunRepository.findLastCommittedWatermark(persistedDefinition.id()).orElseThrow());
@@ -149,6 +155,8 @@ class JobExecutionServiceIT {
         assertEquals(JobRunStatus.FAILED, outcome.status());
         assertEquals(JobRunStatus.FAILED, persistedRun.status());
         assertFalse(persistedRun.errorMessage().isBlank());
+        assertFalse(persistedRun.errorMessage().startsWith("ReplicaDB execution failed for run "));
+        assertTrue(persistedRun.errorMessage().length() <= 512);
         assertEquals("15", jobRunRepository.findLastCommittedWatermark(persistedDefinition.id()).orElseThrow());
         AuditEvent event = terminalEvent(AuditAction.RUN_FAILED, pending.id());
         assertEquals(persistedRun.errorMessage(), event.detail().get("errorMessage"));
@@ -192,7 +200,7 @@ class JobExecutionServiceIT {
                 new RunPreparationService(new RunLeaseService(runStore)),
                 new RunFinalizationService(runStore),
                 new DatasourceResolutionService(protectionService), new ManagedToolOptionsFactory(),
-                mock(AuditService.class), new AuditActorResolver(), new ActiveRunRegistry());
+                mock(AuditService.class), new AuditActorResolver(), new ActiveRunRegistry(), mock(RunLogStore.class));
 
         assertTrue(service.executeNextPending("integration-worker").isEmpty());
         verify(runStore, never()).markSucceeded(any(), any(), anyLong(), anyLong(), any());

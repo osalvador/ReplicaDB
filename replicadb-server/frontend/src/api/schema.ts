@@ -631,7 +631,16 @@ export interface components {
         RunLogResponse: {
             /** Format: uuid */
             runId?: string;
-            excerpt?: string;
+            content?: string;
+            truncated?: boolean;
+            /** Format: int32 */
+            capturedSize?: number;
+            /** Format: int32 */
+            formatVersion?: number;
+            /** Format: date-time */
+            capturedAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
         };
         PageResponseJobDefinitionResponse: {
             content?: components["schemas"]["JobDefinitionResponse"][];

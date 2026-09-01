@@ -11,6 +11,7 @@ import LoadingState from '../components/LoadingState';
 import PageHeader from '../components/PageHeader';
 import StatusChip from '../components/StatusChip';
 import SurfaceSection from '../components/SurfaceSection';
+import RunLogViewer from '../components/RunLogViewer';
 import { getRunRefetchInterval } from '../utils/runStatus';
 
 function displayValue(value: string | number | null | undefined): string | number {
@@ -143,28 +144,8 @@ export default function RunDetailPage() {
       {cancelWarning && <Alert severity="warning">{cancelWarning}</Alert>}
       {actionError && <Alert severity="error">{actionError}</Alert>}
       {run.errorMessage && <Alert severity="error">{run.errorMessage}</Alert>}
-      <SurfaceSection title="Log excerpt">
-        {logQuery.isPending ? (
-          <LoadingState label="Loading log excerpt" compact />
-        ) : logQuery.isError ? (
-          <Alert severity="error">Unable to load the run log.</Alert>
-        ) : logQuery.data?.excerpt ? (
-          <Typography
-            component="pre"
-            sx={{
-              maxWidth: '100%',
-              overflowX: 'auto',
-              whiteSpace: 'pre-wrap',
-              overflowWrap: 'anywhere',
-              fontFamily: 'monospace',
-              m: 0
-            }}
-          >
-            {logQuery.data.excerpt}
-          </Typography>
-        ) : (
-          <EmptyState title="No log excerpt available." />
-        )}
+      <SurfaceSection title="Detailed log">
+        <RunLogViewer log={logQuery.data} loading={logQuery.isPending} error={logQuery.isError} />
       </SurfaceSection>
     </Stack>
   );

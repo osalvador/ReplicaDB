@@ -37,6 +37,11 @@ public class JobDefinitionMapper {
         int bandwidthThrottling = request.bandwidthThrottling() == null ? 0 : request.bandwidthThrottling();
         boolean verbose = Boolean.TRUE.equals(request.verbose());
         ReplicationMode mode = parseMode(request.mode());
+        String watermarkColumn = normalizeOptional(request.incrementalWatermarkColumn());
+        String initialWatermarkValue = normalizeOptional(request.initialWatermarkValue());
+        if (mode == ReplicationMode.INCREMENTAL && watermarkColumn == null) {
+            throw new IllegalArgumentException("incrementalWatermarkColumn is required for incremental mode");
+        }
         RetryPolicy retryPolicy = retryPolicy(request, mode, existingRetryPolicy, existingMode);
         boolean sourceUseEnabled = resolveUseEnabled(request.sourceDatasourceUseEnabled(), existingSourceUseEnabled);
         boolean sinkUseEnabled = resolveUseEnabled(request.sinkDatasourceUseEnabled(), existingSinkUseEnabled);
@@ -48,9 +53,17 @@ public class JobDefinitionMapper {
                         stagingOptions(request.sinkStagingSchema(), request.sinkStagingTable()),
                         Boolean.TRUE.equals(request.sinkDisableEscape()),
                         Boolean.TRUE.equals(request.sinkDisableTruncate())),
-                sourceUseEnabled, sinkUseEnabled, mode, request.jobs(), request.incrementalWatermarkColumn(),
-                request.initialWatermarkValue(), createdAt, updatedAt, fetchSize, bandwidthThrottling, verbose,
+                sourceUseEnabled, sinkUseEnabled, mode, request.jobs(), watermarkColumn,
+                initialWatermarkValue, createdAt, updatedAt, fetchSize, bandwidthThrottling, verbose,
                 retryPolicy);
+    }
+
+    private static String normalizeOptional(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 
     private static RetryPolicy retryPolicy(JobDefinitionRequest request, ReplicationMode mode,

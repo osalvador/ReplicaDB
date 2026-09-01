@@ -45,7 +45,13 @@ function renderDetail(run: JobRunResponse = baseRun) {
     defaultOptions: { queries: { retry: false } }
   });
   mockedRunsApi.getRun.mockResolvedValue(run);
-  mockedRunsApi.getRunLog.mockResolvedValue({ runId: run.id, excerpt: 'run log excerpt' });
+  mockedRunsApi.getRunLog.mockResolvedValue({
+    runId: run.id,
+    content: 'run log excerpt',
+    truncated: false,
+    capturedSize: 15,
+    formatVersion: 1
+  });
 
   const view = render(
     <ThemeProvider theme={theme}>
@@ -77,12 +83,12 @@ describe('RunDetailPage', () => {
     expect(getRunRefetchInterval('RETRY_SCHEDULED')).toBe(false);
   });
 
-  it('renders counters, timings, watermark, and log excerpt', async () => {
+  it('renders counters, timings, watermark, and detailed log', async () => {
     renderDetail();
 
     expect(await screen.findByText('RUNNING')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Run metrics' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: 'Log excerpt' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'Detailed log' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Run status: RUNNING' })).toBeInTheDocument();
     expect(screen.getByText('10')).toBeInTheDocument();
     expect(screen.getByText('1000 ms')).toBeInTheDocument();

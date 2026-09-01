@@ -282,6 +282,19 @@ describe('JobFormPage', () => {
     expect(automaticRetry).not.toBeChecked();
   });
 
+  it('requires a watermark column before submitting incremental mode', async () => {
+    mockedJobsApi.createJob.mockResolvedValue({ id: 'job-new', name: 'New job' });
+    renderForm('/jobs/new');
+    await fillRequiredFields();
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Mode' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'incremental' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create job' }));
+
+    expect(await screen.findByText('Watermark column is required for incremental mode.')).toBeInTheDocument();
+    expect(mockedJobsApi.createJob).not.toHaveBeenCalled();
+  });
+
   it('blocks submission when retry attempts or backoff are invalid', async () => {
     mockedJobsApi.createJob.mockResolvedValue({ id: 'job-new', name: 'New job' });
 

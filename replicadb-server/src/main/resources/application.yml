@@ -26,3 +26,6 @@ replicadb:
       pool-size: 4
     audit:
       retention-days: 365
+    run-log:
+      retention-days: ${REPLICADB_RUN_LOG_RETENTION_DAYS:${replicadb.server.audit.retention-days:365}}
+      batch-size: ${REPLICADB_RUN_LOG_RETENTION_BATCH_SIZE:1000}

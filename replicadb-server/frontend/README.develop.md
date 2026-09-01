@@ -47,21 +47,21 @@ ambos servicios estén disponibles.
 Desde la raíz del repositorio:
 
 ```bash
-export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD='<local-password>'
 ./replicadb-server/frontend/scripts/start-local.sh
 ```
 
-When `REPLICADB_SECURITY_MASTER_KEY_FILE` is not set, the script creates a
-temporary 256-bit keyring outside the repository and removes it during cleanup.
-Set that variable to a deployment-managed keyring when testing persistence
-across restarts.
+El script define por defecto `REPLICADB_BOOTSTRAP_ADMIN_USERNAME=admin`,
+`REPLICADB_BOOTSTRAP_ADMIN_PASSWORD=replicadb-local-admin` y la variable
+`REPLICADB_LOCAL_MASTER_KEY` con una clave de desarrollo fija. La clave se
+escribe en un keyring temporal fuera del repositorio y se elimina al terminar.
+Estos valores son solo para desarrollo local y no deben reutilizarse fuera de
+este entorno. Puedes sobrescribirlos antes de lanzar el script.
 
 El nombre de usuario opcional es `admin` por defecto. Puedes
 personalizarlo sin guardar credenciales en el repositorio:
 
 ```bash
 export REPLICADB_BOOTSTRAP_ADMIN_USERNAME='my-local-admin'
-export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD='<local-password>'
 ./replicadb-server/frontend/scripts/start-local.sh
 ```
 
@@ -77,6 +77,65 @@ Pulsa `Ctrl+C` para detener API y Vite y eliminar el contenedor PostgreSQL.
 El script requiere libres los puertos `5432`, `8080` y `5173`; no detiene
 procesos ajenos que estén utilizando esos puertos. Para usar Podman en lugar
 de Docker, define `CONTAINER_ENGINE=podman`.
+
+## Probar PostgreSQL a PostgreSQL en el mismo contenedor
+
+El PostgreSQL iniciado por el script contiene la base `replicadb`, que sirve
+como base de metadatos del servidor y también puede usarse como origen y
+destino de una réplica local. Mantén el script ejecutándose y abre otro
+terminal. Si el puerto `5432` estaba ocupado, usa el puerto que el script
+imprimió al arrancar.
+
+Crea una tabla de origen y una tabla de destino:
+
+```bash
+psql -h localhost -p 5432 -U postgres -d replicadb <<'SQL'
+CREATE TABLE IF NOT EXISTS local_source_orders (
+    id BIGINT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS local_sink_orders (
+    id BIGINT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+TRUNCATE TABLE local_source_orders, local_sink_orders;
+INSERT INTO local_source_orders (id, payload)
+VALUES (1, 'one'), (2, 'two'), (3, 'three');
+SQL
+```
+
+Entra en `http://localhost:5173` con `admin` y
+`replicadb-local-admin`. En **Datasources**, crea dos perfiles PostgreSQL,
+uno de origen y otro de destino, usando:
+
+- Conexión: `jdbc:postgresql://localhost:5432/replicadb`
+- Usuario: `postgres`
+- Contraseña: vacía, porque el contenedor local usa `trust`
+
+En **Jobs**, crea un trabajo con esos dos perfiles:
+
+- Tabla origen: `local_source_orders`
+- Tabla destino: `local_sink_orders`
+- Columnas origen y destino: `id,payload`
+- Modo: `complete`
+- Jobs: `1`
+
+Guarda y lanza el trabajo. El API se inicia con ejecución local habilitada,
+por lo que no necesitas iniciar un worker separado. El run debe terminar en
+`SUCCEEDED`; comprueba el destino con:
+
+```bash
+psql -h localhost -p 5432 -U postgres -d replicadb \
+  -c 'TABLE local_sink_orders;'
+```
+
+Para probar diagnósticos, cambia la tabla destino a
+`local_missing_orders`, lanza otro run y abre su detalle. El resumen y el log
+detallado deben mostrar el fallo sin contraseñas ni material de clave.
+
+Cada línea del log detallado incluye la fecha y hora de emisión del evento,
+incluidas las líneas de los stacktraces, para identificar dónde queda detenido
+un run.
 
 ## 1. Arrancar PostgreSQL
 

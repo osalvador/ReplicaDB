@@ -217,6 +217,28 @@ The cleanup task is not a Quartz job. A crashed request can temporarily retain
 a pending reservation until cleanup; this is conservative and does not open a
 cluster-wide bypass.
 
+## Managed run diagnostics
+
+Managed server executions persist one redacted diagnostic log per run in the
+`run_log` table. Logs capture INFO, DEBUG, WARN, and ERROR events, including
+exception stack traces, and are available through
+`GET /api/v1/runs/{id}/log` to users with job `VIEW` permission. Standalone
+CLI executions do not persist per-run logs and keep their existing logging and
+exit-code behavior.
+
+Each log is limited to 256 KiB after redaction. When the limit is exceeded,
+the first 75% and last 25% are retained with a `[TRUNCATED: middle omitted]`
+marker; the response includes truncation and captured-size metadata. Passwords,
+credentials, URI user-info, tokens, certificates, private keys, encrypted
+bundles, lease tokens, and datasource security maps must not appear in stored
+or returned content. SQL and object names may remain, so treat run logs as
+sensitive operational data.
+
+Run logs follow the retention and cleanup lifecycle of their associated runs.
+Include the `run_log` table in PostgreSQL backup, restore, and data-retention
+procedures. Empty logs are returned as a safe response with metadata rather
+than exposing the run's internal configuration.
+
 ## Health and metrics
 
 API probes are available at `/actuator/health`,

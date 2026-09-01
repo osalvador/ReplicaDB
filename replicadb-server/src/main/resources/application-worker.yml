@@ -20,6 +20,8 @@ spring:
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
       - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
       - org.springframework.boot.actuate.autoconfigure.security.servlet.ManagementWebSecurityAutoConfiguration
+logging:
+  config: classpath:log4j2-spring.xml
 server:
   port: -1
 management:

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" packages="org.replicadb.server.job.execution">
+    <Appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{36} - %msg%throwable%n"/>
+        </Console>
+        <RunLogCapture name="RunLogCapture"/>
+    </Appenders>
+    <Loggers>
+        <Root level="debug">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="RunLogCapture"/>
+        </Root>
+    </Loggers>
+</Configuration>

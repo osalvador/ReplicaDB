@@ -51,6 +51,10 @@ export type JobDefinitionMutationInput =
   | components['schemas']['JobDefinitionRequest'];
 
 const normalizeOptionalString = (value?: string): string | undefined => value === '' ? undefined : value;
+const normalizeWatermarkColumn = (value?: string): string | undefined => {
+  const normalized = value?.trim();
+  return normalized ? normalized : undefined;
+};
 
 export function toJobDefinitionRequest(
   input: JobDefinitionMutationInput
@@ -86,8 +90,8 @@ export function toJobDefinitionRequest(
   if (mode === 'incremental') {
     return {
       ...request,
-      incrementalWatermarkColumn: input.incrementalWatermarkColumn,
-      initialWatermarkValue: input.initialWatermarkValue
+      incrementalWatermarkColumn: normalizeWatermarkColumn(input.incrementalWatermarkColumn),
+      initialWatermarkValue: normalizeOptionalString(input.initialWatermarkValue)
     };
   }
 

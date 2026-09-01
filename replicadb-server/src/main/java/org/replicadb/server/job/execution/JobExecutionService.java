@@ -19,12 +19,16 @@ import org.replicadb.server.job.application.RunFinalizationService;
 import org.replicadb.server.job.application.RunLeaseService;
 import org.replicadb.server.job.application.RunPreparationService;
 import org.replicadb.server.job.port.JobRunStore;
+import org.replicadb.server.job.port.RunLogStore;
+import org.replicadb.server.job.domain.RunLog;
+import org.replicadb.execution.ReplicationLogContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.time.Instant;
 
 @Service
 public class JobExecutionService {
@@ -39,6 +43,7 @@ public class JobExecutionService {
     private final AuditService auditService;
     private final AuditActorResolver auditActorResolver;
     private final ActiveRunRegistry activeRunRegistry;
+    private final RunLogStore runLogStore;
 
     @Autowired
     public JobExecutionService(JobRunStore jobRunStore,
@@ -48,7 +53,8 @@ public class JobExecutionService {
                                ManagedToolOptionsFactory managedToolOptionsFactory,
                                AuditService auditService,
                                AuditActorResolver auditActorResolver,
-                               ActiveRunRegistry activeRunRegistry) {
+                               ActiveRunRegistry activeRunRegistry,
+                               RunLogStore runLogStore) {
         this.jobRunStore = jobRunStore;
         this.runPreparationService = runPreparationService;
         this.runFinalizationService = runFinalizationService;
@@ -57,6 +63,7 @@ public class JobExecutionService {
         this.auditService = auditService;
         this.auditActorResolver = auditActorResolver;
         this.activeRunRegistry = activeRunRegistry;
+        this.runLogStore = runLogStore;
     }
 
     public Optional<JobRunOutcome> executeNextPending(String executorIdentity) {
@@ -70,12 +77,16 @@ public class JobExecutionService {
         JobRun run = preparation.run();
         ToolOptions options = null;
         RunExecutionHandle handle = null;
+        RunLogCaptureRegistry.Capture capture = RunLogCaptureAppender.registry().register(run.id().toString());
+        Instant captureStarted = Instant.now();
+        ReplicationLogContext.Scope logContext = ReplicationLogContext.bindRunId(run.id().toString());
         try {
             JobDefinition definition = preparation.definition();
                 String previousWatermark = jobRunStore.findLastCommittedWatermark(definition.id())
                     .orElse(definition.initialWatermarkValue());
             options = managedToolOptionsFactory.build(datasourceResolutionService.resolve(preparation),
                 previousWatermark);
+                RunLogCaptureAppender.registry().alias(options.getExecutionContext().getRunId(), capture);
                 handle = new RunExecutionHandle(run, options);
                 if (!activeRunRegistry.register(handle)) {
                     throw new IllegalStateException("JobRun is already active locally: " + run.id());
@@ -96,11 +107,14 @@ public class JobExecutionService {
                         run.id(), leaseToken, rowsProcessed, durationMillis);
                 recordIfUpdated(result, run, status, rowsProcessed, durationMillis, null);
             } else {
-                String errorMessage = redactedFailureMessage("ReplicaDB execution failed for run " + run.id());
+                String errorMessage = redactedFailureMessage(options.getExecutionContext().getDiagnosticCollector()
+                    .snapshot().events().stream().findFirst().map(event -> event.message()).orElse(
+                        "ReplicaDB execution failed for run " + run.id()));
                 JobRunStore.FencedUpdateResult result = runFinalizationService.markFailed(
                         run.id(), leaseToken, rowsProcessed, durationMillis, errorMessage);
                 recordIfUpdated(result, run, JobRunStatus.FAILED, rowsProcessed, durationMillis, errorMessage);
             }
+            persistRunLog(run.id(), capture, captureStarted);
             return new JobRunOutcome(run.id(), status, rowsProcessed, durationMillis);
         } catch (Exception exception) {
             long rowsProcessed = options == null ? 0 : options.getExecutionContext().getRowsProcessed();
@@ -112,12 +126,21 @@ public class JobExecutionService {
                 JobRunStore.FencedUpdateResult result = runFinalizationService.markFailed(
                     run.id(), requireLeaseToken(run), rowsProcessed, durationMillis, message);
                 recordIfUpdated(result, run, JobRunStatus.FAILED, rowsProcessed, durationMillis, message);
+            persistRunLog(run.id(), capture, captureStarted);
             return new JobRunOutcome(run.id(), JobRunStatus.FAILED, rowsProcessed, durationMillis);
         } finally {
+            logContext.close();
+            RunLogCaptureAppender.registry().unregister(capture);
             if (handle != null) {
                 activeRunRegistry.remove(run.id(), handle);
             }
         }
+    }
+
+    private void persistRunLog(java.util.UUID runId, RunLogCaptureRegistry.Capture capture, Instant capturedAt) {
+        RunLogCaptureRegistry.Snapshot snapshot = capture.snapshot();
+        runLogStore.replaceTerminal(new RunLog(runId, snapshot.content(), snapshot.truncated(),
+                snapshot.capturedBytes(), RunLog.CURRENT_FORMAT_VERSION, capturedAt, Instant.now()));
     }
 
     ActiveRunRegistry activeRunRegistry() {
@@ -162,6 +185,6 @@ public class JobExecutionService {
         if (redacted == null || redacted.isBlank()) {
             return "Job execution failed";
         }
-        return redacted;
+        return redacted.length() <= 512 ? redacted : redacted.substring(0, 512);
     }
 }

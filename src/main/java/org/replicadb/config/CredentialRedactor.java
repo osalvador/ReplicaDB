@@ -52,7 +52,11 @@ public final class CredentialRedactor {
     private static final Pattern JDBC_PARAMETER = Pattern.compile(
             "(?i)(^|;)(password|accessToken|clientSecret|AADSecurePrincipalSecret|clientKeyPassword|privateKeyPassword|secretKey|sasToken|user|username|loginHint|clientId|tenantId|msiClientId)=([^;]*)");
     private static final Pattern MESSAGE_PARAMETER = Pattern.compile(
-            "(?i)(password|accessToken|clientSecret|AADSecurePrincipalSecret|clientKeyPassword|privateKeyPassword|secretKey|sasToken|user|username|loginHint|clientId|tenantId|msiClientId)\\s*=\\s*([^\\s,;]*)");
+            "(?i)(password|token|accessToken|clientSecret|AADSecurePrincipalSecret|clientKeyPassword|privateKeyPassword|secretKey|sasToken|user|username|loginHint|clientId|tenantId|msiClientId)\\s*=\\s*([^\\s,;]*)");
+        private static final Pattern ENVIRONMENT_PLACEHOLDER = Pattern.compile("\\$\\{[^}]+}");
+        private static final Pattern PEM_BLOCK = Pattern.compile(
+            "(?is)-----BEGIN [^-]+-----.*?-----END [^-]+-----");
+        private static final Pattern PEM_MARKER = Pattern.compile("(?i)-----(?:BEGIN|END) [^-]+-----");
 
     private CredentialRedactor() {
     }
@@ -65,7 +69,10 @@ public final class CredentialRedactor {
         if (value == null) {
             return null;
         }
-        return redactConnectionString(value);
+        String redacted = redactConnectionString(value);
+        redacted = ENVIRONMENT_PLACEHOLDER.matcher(redacted).replaceAll(REDACTED_VALUE);
+        redacted = PEM_BLOCK.matcher(redacted).replaceAll(REDACTED_VALUE);
+        return PEM_MARKER.matcher(redacted).replaceAll(REDACTED_VALUE);
     }
 
     public static String redactConnectionString(String value) {

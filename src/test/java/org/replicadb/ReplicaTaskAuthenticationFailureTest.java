@@ -6,6 +6,7 @@ import org.replicadb.cli.ToolOptions;
 import org.replicadb.manager.ConnManager;
 import org.replicadb.manager.DataSourceType;
 import org.replicadb.manager.ManagerFactory;
+import org.replicadb.execution.ReplicationDiagnosticEvent;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -33,6 +34,8 @@ class ReplicaTaskAuthenticationFailureTest {
         assertSame(authenticationFailure, thrown);
         assertTrue(source.closed);
         assertTrue(sink.closed);
+        assertEquals(ReplicationDiagnosticEvent.Stage.SOURCE_CONNECTION,
+            options.getExecutionContext().getDiagnosticCollector().snapshot().events().get(0).stage());
     }
 
     @Test
@@ -48,6 +51,8 @@ class ReplicaTaskAuthenticationFailureTest {
         assertSame(authenticationFailure, thrown);
         assertTrue(source.closed);
         assertTrue(sink.closed);
+        assertEquals(ReplicationDiagnosticEvent.Stage.SINK_CONNECTION,
+            options.getExecutionContext().getDiagnosticCollector().snapshot().events().get(0).stage());
     }
 
     @Test
@@ -79,6 +84,8 @@ class ReplicaTaskAuthenticationFailureTest {
         assertSame(readFailure, thrown);
         assertTrue(source.closed);
         assertTrue(sink.closed);
+        assertEquals(ReplicationDiagnosticEvent.Stage.SOURCE_READ,
+            options.getExecutionContext().getDiagnosticCollector().snapshot().events().get(0).stage());
     }
 
     @Test
@@ -94,6 +101,8 @@ class ReplicaTaskAuthenticationFailureTest {
         assertSame(insertFailure, thrown);
         assertTrue(source.closed);
         assertTrue(sink.closed);
+        assertEquals(ReplicationDiagnosticEvent.Stage.SINK_WRITE,
+            options.getExecutionContext().getDiagnosticCollector().snapshot().events().get(0).stage());
     }
 
     @Test

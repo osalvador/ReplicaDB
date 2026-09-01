@@ -143,7 +143,7 @@ class JobRunControllerTest {
     }
 
     @Test
-    void getsRunAndItsPersistedLogExcerpt() throws Exception {
+    void getsRunAndItsPersistedLog() throws Exception {
         JobDefinition definition = jobDefinitionRepository.insert(definition("job-log"));
         JobRun failed = createTerminalRun(definition, JobRunStatus.FAILED);
         JobRun succeeded = createTerminalRun(definition, JobRunStatus.SUCCEEDED);
@@ -154,10 +154,13 @@ class JobRunControllerTest {
         mockMvc.perform(get("/api/v1/runs/" + failed.id() + "/log"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.runId").value(failed.id().toString()))
-                .andExpect(jsonPath("$.excerpt").value("replication failed"));
+                .andExpect(jsonPath("$.content").value(""))
+                .andExpect(jsonPath("$.truncated").value(false))
+                .andExpect(jsonPath("$.capturedSize").value(0));
         mockMvc.perform(get("/api/v1/runs/" + succeeded.id() + "/log"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.excerpt").value(""));
+                .andExpect(jsonPath("$.content").value(""))
+                .andExpect(jsonPath("$.formatVersion").value(1));
 
         mockMvc.perform(get("/api/v1/runs/" + UUID.randomUUID()))
                 .andExpect(status().isNotFound())

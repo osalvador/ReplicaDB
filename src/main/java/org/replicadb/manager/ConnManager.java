@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.execution.ReplicationCancelledException;
+import org.replicadb.execution.ReplicationDiagnosticEvent;
 
 import java.sql.*;
 import java.util.Random;
@@ -308,6 +309,11 @@ public abstract class ConnManager {
 
     protected void checkCancellation() throws ReplicationCancelledException {
         if (options.getExecutionContext().isCancellationRequested()) {
+            options.getExecutionContext().getDiagnosticCollector().record(
+                    ReplicationDiagnosticEvent.Stage.CANCELLATION,
+                    ReplicationDiagnosticEvent.Category.CANCELLATION,
+                    ReplicationDiagnosticEvent.Severity.INFO, null, getClass().getSimpleName(),
+                    "Cancellation observed", null);
             throw new ReplicationCancelledException(
                     "Replication run " + options.getExecutionContext().getRunId() + " was cancelled");
         }

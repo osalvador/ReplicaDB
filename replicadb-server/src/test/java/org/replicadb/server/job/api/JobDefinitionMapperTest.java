@@ -13,6 +13,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JobDefinitionMapperTest {
@@ -99,6 +100,22 @@ class JobDefinitionMapperTest {
 
         assertNull(incremental.modeWarning());
         assertNull(atomic.modeWarning());
+    }
+
+    @Test
+    void rejectsBlankWatermarkColumnForIncrementalMode() {
+        JobDefinitionRequest request = request("incremental");
+        JobDefinitionRequest invalid = new JobDefinitionRequest(
+                request.name(), request.sourceDatasourceId(), request.sourceDatasourceUseEnabled(),
+                request.sourceTable(), request.sourceWhere(), request.sourceColumns(), request.sourceQuery(),
+                request.sinkDatasourceId(), request.sinkDatasourceUseEnabled(), request.sinkTable(),
+                request.sinkColumns(), request.sinkStagingSchema(), request.sinkStagingTable(),
+                request.sinkDisableEscape(), request.sinkDisableTruncate(), request.mode(), request.jobs(),
+                "  ", request.initialWatermarkValue(), request.fetchSize(), request.bandwidthThrottling(),
+                request.verbose(), request.maxAttempts(), request.retryBackoffSeconds(), request.automaticRetryEnabled());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> mapper.toDefinition(invalid, UUID.randomUUID(), invalid.name(), null, null));
     }
 
     @Test
