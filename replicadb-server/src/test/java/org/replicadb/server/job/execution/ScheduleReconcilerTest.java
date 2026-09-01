@@ -10,8 +10,10 @@ import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobSchedule;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobScheduleRepository;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -40,6 +42,9 @@ class ScheduleReconcilerTest {
     private JobDefinitionRepository jobDefinitionRepository;
 
     @Autowired
+    private ManagedDataSourceRepository managedDataSourceRepository;
+
+    @Autowired
     private ScheduleReconciler reconciler;
 
     @Autowired
@@ -50,7 +55,10 @@ class ScheduleReconcilerTest {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE job_schedule, job_run, job_definition CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE job_schedule, job_run, job_definition, datasource_permission, "
+            + "managed_datasource CASCADE", Map.of());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.source());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.sink());
     }
 
     @Test
@@ -102,8 +110,7 @@ class ScheduleReconcilerTest {
     private static JobDefinition jobDefinition() {
         return JobDefinitionTestFixtures.aJobDefinition()
             .withName("reconciler-job-" + UUID.randomUUID())
-            .withSourcePassword("${env:SOURCE_PASSWORD}")
-            .withSinkPassword("${env:SINK_PASSWORD}")
+            .withDefaultDatasourceReferences()
             .build();
     }
 

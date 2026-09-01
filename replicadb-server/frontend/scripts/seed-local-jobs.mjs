@@ -13,72 +13,109 @@ export const SOURCE_FIXTURES = [
   {
     key: 'oracle',
     label: 'Oracle',
+    connectorType: 'oracle',
     connect: 'jdbc:oracle:thin:@//localhost:1521/ORCL',
     mode: 'complete'
   },
   {
     key: 'mysql',
     label: 'MySQL',
+    connectorType: 'mysql',
     connect: 'jdbc:mysql://localhost:3306/replicadb',
     mode: 'complete-atomic'
   },
   {
     key: 'mariadb',
     label: 'MariaDB',
+    connectorType: 'mariadb',
     connect: 'jdbc:mariadb://localhost:3306/replicadb',
     mode: 'incremental'
   },
   {
     key: 'postgres',
     label: 'PostgreSQL',
+    connectorType: 'postgres',
     connect: `jdbc:postgresql://localhost:${DEFAULT_POSTGRES_PORT}/replicadb`,
     mode: 'complete'
   },
   {
     key: 'db2',
     label: 'DB2 LUW',
+    connectorType: 'db2',
     connect: 'jdbc:db2://localhost:50000/replicadb',
     mode: 'complete-atomic'
   },
   {
     key: 'db2i',
     label: 'DB2 for i',
+    connectorType: 'db2-as400',
     connect: 'jdbc:as400://localhost:446/replicadb',
     mode: 'incremental'
   },
   {
     key: 'sqlite',
     label: 'SQLite',
+    connectorType: 'sqlite',
     connect: 'jdbc:sqlite:/tmp/replicadb-develop-source.db',
     mode: 'complete'
   },
   {
     key: 'sqlserver',
     label: 'SQL Server',
+    connectorType: 'sqlserver',
     connect: 'jdbc:sqlserver://localhost:1433;database=replicadb',
     mode: 'complete-atomic'
   },
   {
     key: 'denodo',
     label: 'Denodo',
+    connectorType: 'denodo',
     connect: 'jdbc:vdb://localhost:9999/replicadb',
     mode: 'incremental'
   },
   {
     key: 'file',
     label: 'File',
+    connectorType: 'file',
     connect: 'file:///tmp/replicadb-develop-source.csv',
     mode: 'complete'
   }
 ];
 
-export function buildJobPayload(fixture) {
+export const SINK_FIXTURE = {
+  key: 'postgres-sink',
+  label: 'PostgreSQL',
+  connectorType: 'postgres',
+  connect: `jdbc:postgresql://localhost:${DEFAULT_POSTGRES_PORT}/replicadb`
+};
+
+export function buildDatasourceName(fixture, role = 'source') {
+  return `Develop / ${fixture.label} ${role} datasource`;
+}
+
+export function buildDatasourcePayload(fixture, role = 'source') {
+  return {
+    name: buildDatasourceName(fixture, role),
+    connectorType: fixture.connectorType,
+    technicalParams: {},
+    security: { connect: fixture.connect },
+    clearSecurityKeys: []
+  };
+}
+
+export function buildJobPayload(fixture, sourceDatasourceId, sinkDatasourceId) {
+  if (!sourceDatasourceId || !sinkDatasourceId) {
+    throw new Error(`Datasource IDs are required to seed the ${fixture.label} job.`);
+  }
+
   const payload = {
     name: `Develop / ${fixture.label} source`,
-    sourceConnect: fixture.connect,
+    sourceDatasourceId,
+    sourceDatasourceUseEnabled: true,
     sourceTable: DEFAULT_TABLE,
     sourceColumns: 'id, payload',
-    sinkConnect: `jdbc:postgresql://localhost:${DEFAULT_POSTGRES_PORT}/replicadb`,
+    sinkDatasourceId,
+    sinkDatasourceUseEnabled: true,
     sinkTable: `sample_${fixture.key}_orders`,
     sinkColumns: 'id, payload',
     mode: fixture.mode,
@@ -197,6 +234,33 @@ async function listJobRuns(fetchImpl, cookieJar, apiUrl, jobId) {
   return requestJson(fetchImpl, cookieJar, apiUrl, `/api/v1/jobs/${jobId}/runs?page=0&size=100`);
 }
 
+async function ensureDatasource({
+  fetchImpl,
+  cookieJar,
+  apiUrl,
+  existingDatasources,
+  fixture,
+  role,
+  csrfToken
+}) {
+  const payload = buildDatasourcePayload(fixture, role);
+  const existing = existingDatasources.get(payload.name);
+  if (existing?.id) {
+    return { datasource: existing, created: false };
+  }
+
+  const datasource = await requestJson(fetchImpl, cookieJar, apiUrl, '/api/v1/datasources', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  }, csrfToken);
+  if (!datasource?.id) {
+    throw new Error(`The API did not return a datasource ID for ${payload.name}.`);
+  }
+  existingDatasources.set(payload.name, datasource);
+  return { datasource, created: true };
+}
+
 async function waitForRunToBecomeTerminal({
   fetchImpl,
   cookieJar,
@@ -290,7 +354,8 @@ export async function seedLocalJobs({
   apiUrl = process.env.REPLICADB_API_URL ?? DEFAULT_API_URL,
   username = process.env.REPLICADB_BOOTSTRAP_ADMIN_USERNAME,
   password = process.env.REPLICADB_BOOTSTRAP_ADMIN_PASSWORD,
-  fetchImpl = globalThis.fetch
+  fetchImpl = globalThis.fetch,
+  minimumRuns = MINIMUM_RUNS_PER_JOB
 } = {}) {
   if (!username || !password) {
     throw new Error('REPLICADB_BOOTSTRAP_ADMIN_USERNAME and REPLICADB_BOOTSTRAP_ADMIN_PASSWORD must be set.');
@@ -301,6 +366,36 @@ export async function seedLocalJobs({
 
   const cookieJar = new Map();
   const csrfToken = await authenticate(fetchImpl, cookieJar, apiUrl, username, password);
+  const datasourcePage = await requestJson(fetchImpl, cookieJar, apiUrl, '/api/v1/datasources?page=0&size=100');
+  const existingDatasources = new Map((datasourcePage?.content ?? []).map(datasource => [datasource.name, datasource]));
+  let datasourcesCreated = 0;
+
+  const sinkResult = await ensureDatasource({
+    fetchImpl,
+    cookieJar,
+    apiUrl,
+    existingDatasources,
+    fixture: SINK_FIXTURE,
+    role: 'sink',
+    csrfToken
+  });
+  datasourcesCreated += sinkResult.created ? 1 : 0;
+
+  const sourceDatasources = new Map();
+  for (const fixture of SOURCE_FIXTURES) {
+    const result = await ensureDatasource({
+      fetchImpl,
+      cookieJar,
+      apiUrl,
+      existingDatasources,
+      fixture,
+      role: 'source',
+      csrfToken
+    });
+    sourceDatasources.set(fixture.key, result.datasource);
+    datasourcesCreated += result.created ? 1 : 0;
+  }
+
   const page = await requestJson(fetchImpl, cookieJar, apiUrl, '/api/v1/jobs?page=0&size=100');
   const existingJobs = new Map((page?.content ?? []).map(job => [job.name, job]));
   const jobs = [];
@@ -308,7 +403,8 @@ export async function seedLocalJobs({
   let skipped = 0;
 
   for (const fixture of SOURCE_FIXTURES) {
-    const payload = buildJobPayload(fixture);
+    const sourceDatasource = sourceDatasources.get(fixture.key);
+    const payload = buildJobPayload(fixture, sourceDatasource?.id, sinkResult.datasource.id);
     const existingJob = existingJobs.get(payload.name);
     if (existingJob) {
       jobs.push(existingJob);
@@ -338,16 +434,23 @@ export async function seedLocalJobs({
       cookieJar,
       apiUrl,
       jobId: job.id,
-      csrfToken
+      csrfToken,
+      minimumRuns
     });
   }
 
-  return { created, skipped, runsCreated, total: SOURCE_FIXTURES.length };
+  return {
+    created,
+    skipped,
+    runsCreated,
+    datasourcesCreated,
+    total: SOURCE_FIXTURES.length
+  };
 }
 
 async function main() {
   const result = await seedLocalJobs();
-  console.log(`Local job fixtures ready: ${result.created} created, ${result.skipped} already present, ${result.runsCreated} run history entries created.`);
+  console.log(`Local datasource/job fixtures ready: ${result.datasourcesCreated} datasources created, ${result.created} jobs created, ${result.skipped} jobs already present, ${result.runsCreated} run history entries created.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

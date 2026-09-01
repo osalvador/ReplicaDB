@@ -71,7 +71,12 @@ test('authenticated controls expose keyboard and semantic accessibility contract
   await page.getByRole('tab', { name: 'Query' }).press('Enter');
   await expect(page.getByRole('tabpanel', { name: 'Query' })).toHaveAttribute('aria-labelledby', /query-tab/);
 
-  await page.getByRole('combobox', { name: 'Source data source type' }).click();
+  await expect(page.getByRole('combobox', { name: 'Source datasource' })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Sink datasource' })).toBeVisible();
+
+  await page.goto('/datasources/new');
+  await expect(page.getByRole('heading', { name: 'New datasource' })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Datasource data source type' }).click();
   await page.getByRole('option', { name: 'SQL Server' }).click();
   const disclosure = page.getByRole('button', { name: 'Microsoft Entra Authentication' });
   await expect(disclosure).toHaveAttribute('aria-expanded', 'false');

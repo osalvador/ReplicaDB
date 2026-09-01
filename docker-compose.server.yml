@@ -29,6 +29,8 @@ services:
       REPLICADB_BOOTSTRAP_ADMIN_PASSWORD: ${REPLICADB_BOOTSTRAP_ADMIN_PASSWORD:?REPLICADB_BOOTSTRAP_ADMIN_PASSWORD must be set}
       REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED: "false"
       SERVER_SERVLET_SESSION_COOKIE_SECURE: "false"
+    secrets:
+      - replicadb-master-key
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,6 +59,8 @@ services:
       REPLICADB_BOOTSTRAP_ADMIN_PASSWORD: ${REPLICADB_BOOTSTRAP_ADMIN_PASSWORD:?REPLICADB_BOOTSTRAP_ADMIN_PASSWORD must be set}
       REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED: "false"
       SERVER_SERVLET_SESSION_COOKIE_SECURE: "false"
+    secrets:
+      - replicadb-master-key
     depends_on:
       postgres:
         condition: service_healthy
@@ -95,6 +99,8 @@ services:
       REPLICADB_WORKER_HEARTBEAT_INTERVAL: ${REPLICADB_WORKER_HEARTBEAT_INTERVAL:-30s}
       REPLICADB_WORKER_POLL_INTERVAL: ${REPLICADB_WORKER_POLL_INTERVAL:-30s}
       REPLICADB_WORKER_POLL_BATCH_SIZE: ${REPLICADB_WORKER_POLL_BATCH_SIZE:-100}
+    secrets:
+      - replicadb-master-key
     depends_on:
       postgres:
         condition: service_healthy
@@ -134,6 +140,8 @@ services:
       REPLICADB_WORKER_HEARTBEAT_INTERVAL: ${REPLICADB_WORKER_HEARTBEAT_INTERVAL:-30s}
       REPLICADB_WORKER_POLL_INTERVAL: ${REPLICADB_WORKER_POLL_INTERVAL:-30s}
       REPLICADB_WORKER_POLL_BATCH_SIZE: ${REPLICADB_WORKER_POLL_BATCH_SIZE:-100}
+    secrets:
+      - replicadb-master-key
     depends_on:
       postgres:
         condition: service_healthy
@@ -149,6 +157,10 @@ services:
 
 volumes:
   metadata-data:
+
+secrets:
+  replicadb-master-key:
+    file: ${REPLICADB_SECURITY_MASTER_KEY_FILE:?REPLICADB_SECURITY_MASTER_KEY_FILE must point to a keyring file}
 
 networks:
   public:

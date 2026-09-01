@@ -13,9 +13,11 @@ import org.replicadb.server.job.application.RunLeaseService;
 import org.replicadb.server.job.config.WorkerRuntimeProperties;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
+import org.replicadb.server.job.domain.ClaimedRunPreparation;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.domain.LeaseToken;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
 import org.replicadb.server.job.domain.RetryPolicy;
 import org.replicadb.server.job.execution.ActiveRunRegistry;
 import org.replicadb.server.job.execution.HeartbeatHandle;
@@ -31,6 +33,7 @@ import org.replicadb.server.observability.ManagedRuntimeMetrics;
 import org.replicadb.server.observability.WorkerBusySlotTracker;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
 import org.replicadb.server.job.port.RunNotificationPublisher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -75,6 +78,9 @@ class PollingFallbackIT {
     private JobRunRepository jobRunRepository;
 
     @Autowired
+    private ManagedDataSourceRepository managedDataSourceRepository;
+
+    @Autowired
     private RunLeaseService runLeaseService;
 
     @Autowired
@@ -91,7 +97,10 @@ class PollingFallbackIT {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE job_run, job_definition CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE job_run, job_definition, datasource_permission, "
+            + "managed_datasource CASCADE", Map.of());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.source());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.sink());
     }
 
     @AfterEach
@@ -148,6 +157,7 @@ class PollingFallbackIT {
     void concurrentExpiryScansCreateOneReplacementAndOneNotification() throws Exception {
         JobDefinition definition = jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
                 .withName("polling-recovery-" + UUID.randomUUID())
+            .withDefaultDatasourceReferences()
                 .withRetryPolicy(new RetryPolicy(3, 0, true))
                 .build());
         JobRun claimed = runLeaseService.claimRequested(
@@ -194,7 +204,8 @@ class PollingFallbackIT {
         HeartbeatService heartbeatService = mock(HeartbeatService.class);
         when(heartbeatService.start(any())).thenReturn(mock(HeartbeatHandle.class));
         doAnswer(invocation -> {
-            JobRun run = invocation.getArgument(0);
+            ClaimedRunPreparation preparation = invocation.getArgument(0);
+            JobRun run = preparation.run();
             RunExecutionHandle handle = new RunExecutionHandle(run, options());
             registry.register(handle);
             Consumer<RunExecutionHandle> onStarted = invocation.getArgument(1);
@@ -229,6 +240,7 @@ class PollingFallbackIT {
     private JobRun pendingRun() {
         JobDefinition definition = jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
                 .withName("polling-job-" + UUID.randomUUID())
+            .withDefaultDatasourceReferences()
                 .build());
         return jobRunRepository.insertPendingNow(definition.id(), null, 1);
     }

@@ -1,6 +1,10 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import AppLayout from '../layout/AppLayout';
 import DashboardPage from '../pages/DashboardPage';
+import DatasourceFormPage from '../pages/DatasourceFormPage';
+import DatasourceDetailPage from '../pages/DatasourceDetailPage';
+import DatasourcePermissionsPage from '../pages/DatasourcePermissionsPage';
+import DatasourcesPage from '../pages/DatasourcesPage';
 import JobDetailPage from '../pages/JobDetailPage';
 import JobFormPage from '../pages/JobFormPage';
 import JobPermissionsPage from '../pages/JobPermissionsPage';
@@ -23,6 +27,9 @@ export const routeObjects: RouteObject[] = [
         element: <ProtectedRoute />,
         children: [
           { index: true, element: <DashboardPage /> },
+          { path: 'datasources', element: <DatasourcesPage /> },
+          { path: 'datasources/:id', element: <DatasourceDetailPage /> },
+          { path: 'datasources/:id/edit', element: <DatasourceFormPage /> },
           { path: 'jobs/new', element: <JobFormPage /> },
           { path: 'jobs/:id/edit', element: <JobFormPage /> },
           { path: 'jobs/:id', element: <JobDetailPage /> },
@@ -30,6 +37,8 @@ export const routeObjects: RouteObject[] = [
           {
             element: <RequireRole role="ADMIN" />,
             children: [
+              { path: 'datasources/new', element: <DatasourceFormPage /> },
+              { path: 'datasources/:id/permissions', element: <DatasourcePermissionsPage /> },
               { path: 'users', element: <UsersPage /> },
               { path: 'jobs/:id/permissions', element: <JobPermissionsPage /> }
             ]

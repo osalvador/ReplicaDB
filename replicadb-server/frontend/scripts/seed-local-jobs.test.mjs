@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  buildDatasourcePayload,
   buildJobPayload,
   getMissingRunCount,
   MINIMUM_RUNS_PER_JOB,
+  seedLocalJobs,
   seedJobRunHistory,
   SOURCE_FIXTURES
 } from './seed-local-jobs.mjs';
@@ -33,9 +35,93 @@ test('covers all replication modes', () => {
   );
 });
 
+test('builds datasource profiles with connector metadata and transient connection security', () => {
+  const payload = buildDatasourcePayload(SOURCE_FIXTURES[0]);
+
+  assert.deepEqual(payload, {
+    name: 'Develop / Oracle source datasource',
+    connectorType: 'oracle',
+    technicalParams: {},
+    security: { connect: 'jdbc:oracle:thin:@//localhost:1521/ORCL' },
+    clearSecurityKeys: []
+  });
+});
+
+test('creates datasource profiles before datasource-only jobs', async () => {
+  const calls = [];
+  let datasourceCount = 0;
+  let jobCount = 0;
+  const fetchImpl = async (url, options = {}) => {
+    calls.push({ url, options });
+    if (url.endsWith('/api/v1/auth/csrf')) {
+      return jsonResponse({ token: 'csrf-token' });
+    }
+    if (url.endsWith('/api/v1/auth/login')) {
+      return jsonResponse({});
+    }
+    if (url.endsWith('/api/v1/datasources?page=0&size=100')) {
+      return jsonResponse({ content: [], totalElements: 0 });
+    }
+    if (url.endsWith('/api/v1/datasources')) {
+      const payload = JSON.parse(options.body);
+      datasourceCount += 1;
+      return jsonResponse({
+        id: `datasource-${datasourceCount}`,
+        name: payload.name,
+        connectorType: payload.connectorType
+      }, 201);
+    }
+    if (url.endsWith('/api/v1/jobs?page=0&size=100')) {
+      return jsonResponse({ content: [], totalElements: 0 });
+    }
+    if (url.endsWith('/api/v1/jobs')) {
+      jobCount += 1;
+      return jsonResponse({ id: `job-${jobCount}`, name: JSON.parse(options.body).name }, 201);
+    }
+    if (url.includes('/runs?page=0&size=100')) {
+      return jsonResponse({ content: [], totalElements: 0 });
+    }
+    if (url.endsWith('/runs')) {
+      return jsonResponse({ id: `seed-run-${calls.length}`, status: 'CANCELLED' }, 202);
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  const result = await seedLocalJobs({
+    apiUrl: 'http://localhost:8080',
+    username: 'admin',
+    password: 'synthetic-test-password',
+    fetchImpl,
+    minimumRuns: 0
+  });
+
+  const datasourcePosts = calls.filter(call => call.options.method === 'POST'
+    && call.url.endsWith('/api/v1/datasources'));
+  const jobPosts = calls.filter(call => call.options.method === 'POST'
+    && call.url.endsWith('/api/v1/jobs'));
+  assert.equal(result.datasourcesCreated, SOURCE_FIXTURES.length + 1);
+  assert.equal(result.created, SOURCE_FIXTURES.length);
+  assert.equal(result.runsCreated, 0);
+  assert.equal(datasourcePosts.length, SOURCE_FIXTURES.length + 1);
+  assert.equal(jobPosts.length, SOURCE_FIXTURES.length);
+  assert.equal(calls.findIndex(call => call.url.endsWith('/api/v1/datasources'))
+    < calls.findIndex(call => call.url.endsWith('/api/v1/jobs')), true);
+  for (const call of jobPosts) {
+    const payload = JSON.parse(call.options.body);
+    assert.equal(payload.sourceConnect, undefined);
+    assert.equal(payload.sinkConnect, undefined);
+    assert.match(payload.sourceDatasourceId, /^datasource-/);
+    assert.match(payload.sinkDatasourceId, /^datasource-/);
+  }
+});
+
 test('adds watermark fields only to incremental fixtures and never embeds credentials', () => {
   for (const fixture of SOURCE_FIXTURES) {
-    const payload = buildJobPayload(fixture);
+    const payload = buildJobPayload(fixture, `source-${fixture.key}`, 'sink-postgres');
+    assert.equal(payload.sourceDatasourceId, `source-${fixture.key}`);
+    assert.equal(payload.sinkDatasourceId, 'sink-postgres');
+    assert.equal(payload.sourceConnect, undefined);
+    assert.equal(payload.sinkConnect, undefined);
     assert.equal(payload.sourceUser, undefined);
     assert.equal(payload.sourcePassword, undefined);
     assert.equal(payload.sinkPassword, undefined);

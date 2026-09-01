@@ -9,13 +9,16 @@ import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.application.RunFinalizationService;
 import org.replicadb.server.job.application.RunLeaseService;
 import org.replicadb.server.job.config.WorkerRuntimeProperties;
+import org.replicadb.server.job.domain.ClaimedRunPreparation;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
 import org.replicadb.server.job.domain.RetryPolicy;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
 import org.replicadb.server.job.port.JobRunStore;
 import org.replicadb.server.observability.ManagedRuntimeMetrics;
 import org.replicadb.server.observability.WorkerBusySlotTracker;
@@ -61,6 +64,9 @@ class WorkerDispatchCoordinatorIT {
     private JobRunRepository jobRunRepository;
 
     @Autowired
+    private ManagedDataSourceRepository managedDataSourceRepository;
+
+    @Autowired
     private RunLeaseService runLeaseService;
 
     @Autowired
@@ -74,7 +80,10 @@ class WorkerDispatchCoordinatorIT {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE job_run, job_definition CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE job_run, job_definition, datasource_permission, "
+            + "managed_datasource CASCADE", Map.of());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.source());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.sink());
     }
 
     @AfterEach
@@ -101,7 +110,8 @@ class WorkerDispatchCoordinatorIT {
         CountDownLatch releaseExecutions = new CountDownLatch(1);
         AtomicInteger executionCount = new AtomicInteger();
         doAnswer(invocation -> {
-            JobRun run = invocation.getArgument(0);
+            ClaimedRunPreparation preparation = invocation.getArgument(0);
+            JobRun run = preparation.run();
             RunExecutionHandle handle = new RunExecutionHandle(run, options());
             Consumer<RunExecutionHandle> onStarted = invocation.getArgument(1);
             onStarted.accept(handle);
@@ -139,7 +149,8 @@ class WorkerDispatchCoordinatorIT {
         secondCoordinator = coordinator("continuing-worker", executionService, new ActiveRunRegistry());
         CountDownLatch executed = new CountDownLatch(1);
         doAnswer(invocation -> {
-            RunExecutionHandle handle = new RunExecutionHandle(invocation.getArgument(0), options());
+            ClaimedRunPreparation preparation = invocation.getArgument(0);
+            RunExecutionHandle handle = new RunExecutionHandle(preparation.run(), options());
             Consumer<RunExecutionHandle> onStarted = invocation.getArgument(1);
             onStarted.accept(handle);
             executed.countDown();
@@ -202,6 +213,7 @@ class WorkerDispatchCoordinatorIT {
         JobDefinition definition = jobDefinitionRepository.insert(
                 JobDefinitionTestFixtures.aJobDefinition()
                         .withName("worker-coordinator-" + UUID.randomUUID())
+                    .withDefaultDatasourceReferences()
                         .build());
         return jobRunRepository.insertPendingNow(definition.id(), null, 1);
     }
@@ -209,6 +221,7 @@ class WorkerDispatchCoordinatorIT {
     private JobDefinition jobDefinitionWithRetry() {
         return jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
                 .withName("worker-recovery-" + UUID.randomUUID())
+            .withDefaultDatasourceReferences()
                 .withRetryPolicy(new RetryPolicy(3, 0, true))
                 .build());
     }

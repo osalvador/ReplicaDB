@@ -9,6 +9,8 @@ import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.execution.RunExecutionCoordinator;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -48,6 +50,9 @@ class RunDispatchApiIT {
     private JobRunRepository jobRunRepository;
 
     @Autowired
+    private ManagedDataSourceRepository managedDataSourceRepository;
+
+    @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
     @MockBean
@@ -55,13 +60,17 @@ class RunDispatchApiIT {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE run_trigger_idempotency, job_run, job_definition CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE run_trigger_idempotency, job_run, job_definition, "
+            + "datasource_permission, managed_datasource CASCADE", Map.of());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.source());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.sink());
     }
 
     @Test
     void distributedApiDispatchLeavesPendingWorkForWorkers() throws Exception {
         JobDefinition definition = jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
                 .withName("distributed-api-" + UUID.randomUUID())
+            .withDefaultDatasourceReferences()
                 .build());
 
         mockMvc.perform(post("/api/v1/jobs/" + definition.id() + "/runs")

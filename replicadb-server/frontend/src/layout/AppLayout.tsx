@@ -43,6 +43,9 @@ export default function AppLayout() {
           >
             ReplicaDB
           </Typography>
+          <Button component={RouterLink} to="/datasources" variant="text" size="small">
+            Datasources
+          </Button>
           {user?.role === 'ADMIN' && (
             <Button component={RouterLink} to="/users" variant="text" size="small">
               Users

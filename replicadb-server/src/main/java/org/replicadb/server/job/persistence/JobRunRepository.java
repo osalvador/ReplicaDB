@@ -4,9 +4,14 @@ import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStateMachine;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.domain.LeaseToken;
+import org.replicadb.server.job.domain.ClaimedRunPreparation;
+import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.ManagedDataSource;
 import org.replicadb.server.job.domain.RetryPolicy;
 import org.replicadb.server.job.application.RunRecoveryResult;
+import org.replicadb.server.job.port.JobDefinitionStore;
 import org.replicadb.server.job.port.JobRunStore;
+import org.replicadb.server.job.port.ManagedDataSourceStore;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -19,6 +24,8 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,15 +39,22 @@ public class JobRunRepository implements JobRunStore {
             id, job_definition_id, previous_run_id, status, attempt, executor_identity,
             lease_until, heartbeat_at, created_at, started_at, finished_at,
             rows_processed, duration_millis, committed_watermark, error_message, cancellation_warning,
-            available_at, lease_token
+            available_at, lease_token, resolved_source_datasource_id,
+            resolved_sink_datasource_id, datasources_resolved_at
             """;
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
     private final JobRunRowMapper rowMapper;
+    private final JobDefinitionStore jobDefinitionStore;
+    private final ManagedDataSourceStore managedDataSourceStore;
 
-    public JobRunRepository(NamedParameterJdbcTemplate jdbcTemplate) {
+    public JobRunRepository(NamedParameterJdbcTemplate jdbcTemplate,
+                            JobDefinitionStore jobDefinitionStore,
+                            ManagedDataSourceStore managedDataSourceStore) {
         this.jdbcTemplate = jdbcTemplate;
         this.rowMapper = new JobRunRowMapper();
+        this.jobDefinitionStore = jobDefinitionStore;
+        this.managedDataSourceStore = managedDataSourceStore;
     }
 
         @Override
@@ -87,16 +101,22 @@ public class JobRunRepository implements JobRunStore {
         MapSqlParameterSource selectParameters = new MapSqlParameterSource();
         if (requestedRunId == null) {
             selectSql = """
-                    SELECT id FROM job_run
-                    WHERE status = 'PENDING' AND available_at <= now()
-                    ORDER BY available_at, created_at, id
-                    LIMIT 1 FOR UPDATE SKIP LOCKED
+                                        SELECT r.id FROM job_run r
+                                        JOIN job_definition d ON d.id = r.job_definition_id
+                                        WHERE r.status = 'PENDING' AND r.available_at <= now()
+                                            AND d.source_datasource_use_enabled
+                                            AND d.sink_datasource_use_enabled
+                                        ORDER BY r.available_at, r.created_at, r.id
+                                        LIMIT 1 FOR UPDATE OF r, d SKIP LOCKED
                     """;
         } else {
             selectSql = """
-                    SELECT id FROM job_run
-                    WHERE id = :id AND status = 'PENDING' AND available_at <= now()
-                    FOR UPDATE SKIP LOCKED
+                                        SELECT r.id FROM job_run r
+                                        JOIN job_definition d ON d.id = r.job_definition_id
+                                        WHERE r.id = :id AND r.status = 'PENDING' AND r.available_at <= now()
+                                            AND d.source_datasource_use_enabled
+                                            AND d.sink_datasource_use_enabled
+                                        FOR UPDATE OF r, d SKIP LOCKED
                     """;
             selectParameters.addValue("id", requestedRunId);
         }
@@ -126,6 +146,95 @@ public class JobRunRepository implements JobRunStore {
         }
 
         return findById(runId);
+    }
+
+    @Override
+    @Transactional
+    public Optional<ClaimedRunPreparation> claimAndPrepare(UUID requestedRunId, String executorIdentity,
+                                                           Duration leaseDuration) {
+        if (leaseDuration == null || leaseDuration.isNegative() || leaseDuration.isZero()) {
+            throw new IllegalArgumentException("leaseDuration must be positive");
+        }
+
+        String selectSql = requestedRunId == null
+                ? """
+                    SELECT r.id, r.job_definition_id
+                    FROM job_run r
+                    JOIN job_definition d ON d.id = r.job_definition_id
+                    WHERE r.status = 'PENDING' AND r.available_at <= now()
+                      AND d.source_datasource_use_enabled
+                      AND d.sink_datasource_use_enabled
+                    ORDER BY r.available_at, r.created_at, r.id
+                    LIMIT 1
+                    FOR UPDATE OF r, d SKIP LOCKED
+                    """
+                : """
+                    SELECT r.id, r.job_definition_id
+                    FROM job_run r
+                    JOIN job_definition d ON d.id = r.job_definition_id
+                    WHERE r.id = :id AND r.status = 'PENDING' AND r.available_at <= now()
+                      AND d.source_datasource_use_enabled
+                      AND d.sink_datasource_use_enabled
+                    FOR UPDATE OF r, d SKIP LOCKED
+                    """;
+        MapSqlParameterSource selectParameters = new MapSqlParameterSource();
+        if (requestedRunId != null) {
+            selectParameters.addValue("id", requestedRunId);
+        }
+        List<ClaimTarget> targets = jdbcTemplate.query(selectSql, selectParameters,
+                (resultSet, rowNum) -> new ClaimTarget(
+                        resultSet.getObject("id", UUID.class),
+                        resultSet.getObject("job_definition_id", UUID.class)));
+        if (targets.isEmpty()) {
+            return Optional.empty();
+        }
+
+        ClaimTarget target = targets.get(0);
+        JobDefinition definition = jobDefinitionStore.findByIdForUpdate(target.jobDefinitionId())
+                .orElseThrow(() -> new IllegalStateException(
+                        "JobDefinition not found for JobRun " + target.runId()));
+        if (!definition.sourceDatasourceUseEnabled() || !definition.sinkDatasourceUseEnabled()) {
+            return Optional.empty();
+        }
+
+        List<UUID> datasourceIds = new ArrayList<>(List.of(
+                definition.sourceDatasourceId(), definition.sinkDatasourceId()));
+        datasourceIds = datasourceIds.stream().distinct().sorted().toList();
+        HashMap<UUID, ManagedDataSource> snapshots = new HashMap<>();
+        for (UUID datasourceId : datasourceIds) {
+            ManagedDataSource snapshot = managedDataSourceStore.findByIdForUpdate(datasourceId)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "ManagedDataSource not found: " + datasourceId));
+            snapshots.put(datasourceId, snapshot);
+        }
+
+        LeaseToken leaseToken = LeaseToken.generate();
+        int updated = jdbcTemplate.update("""
+                UPDATE job_run
+                SET status = 'RUNNING', executor_identity = :executorIdentity,
+                    lease_token = :leaseToken,
+                    lease_until = now() + (:leaseSeconds * interval '1 second'),
+                    started_at = now(), heartbeat_at = now(),
+                    resolved_source_datasource_id = :sourceDatasourceId,
+                    resolved_sink_datasource_id = :sinkDatasourceId,
+                    datasources_resolved_at = now()
+                WHERE id = :id AND status = 'PENDING' AND available_at <= now()
+                """, new MapSqlParameterSource()
+                .addValue("id", target.runId())
+                .addValue("executorIdentity", executorIdentity)
+                .addValue("leaseToken", leaseToken.value(), Types.OTHER)
+                .addValue("leaseSeconds", Math.max(1, leaseDuration.toSeconds()))
+                .addValue("sourceDatasourceId", definition.sourceDatasourceId())
+                .addValue("sinkDatasourceId", definition.sinkDatasourceId()));
+        if (updated != 1) {
+            throw new IllegalStateException("Could not claim pending JobRun " + target.runId());
+        }
+
+        JobRun claimed = findById(target.runId()).orElseThrow(() -> new IllegalStateException(
+                "Claimed JobRun could not be loaded: " + target.runId()));
+        return Optional.of(new ClaimedRunPreparation(claimed, definition,
+                snapshots.get(definition.sourceDatasourceId()),
+                snapshots.get(definition.sinkDatasourceId())));
     }
 
     @Transactional
@@ -176,7 +285,8 @@ public class JobRunRepository implements JobRunStore {
                        r.executor_identity, r.lease_until, r.heartbeat_at, r.created_at,
                        r.started_at, r.finished_at, r.rows_processed, r.duration_millis,
                        r.committed_watermark, r.error_message, r.cancellation_warning,
-                       r.available_at, r.lease_token,
+                       r.available_at, r.lease_token, r.resolved_source_datasource_id,
+                       r.resolved_sink_datasource_id, r.datasources_resolved_at,
                        d.max_attempts, d.retry_backoff_seconds, d.automatic_retry_enabled
                 FROM job_run r
                 JOIN job_definition d ON d.id = r.job_definition_id
@@ -288,10 +398,13 @@ public class JobRunRepository implements JobRunStore {
             public JobRunStore.EligibleRunSnapshot findEligibleRunSnapshot(int limit) {
             validateLimit(limit);
             List<Instant> availableAt = jdbcTemplate.query("""
-                SELECT available_at
-                FROM job_run
-                WHERE status = 'PENDING' AND available_at <= now()
-                ORDER BY available_at, created_at, id
+                                SELECT r.available_at
+                                FROM job_run r
+                                JOIN job_definition d ON d.id = r.job_definition_id
+                                WHERE r.status = 'PENDING' AND r.available_at <= now()
+                                    AND d.source_datasource_use_enabled
+                                    AND d.sink_datasource_use_enabled
+                                ORDER BY r.available_at, r.created_at, r.id
                 LIMIT :limit
                 """, Map.of("limit", limit + 1),
                 (resultSet, rowNum) -> resultSet.getTimestamp("available_at").toInstant());
@@ -312,6 +425,27 @@ public class JobRunRepository implements JobRunStore {
         Boolean active = jdbcTemplate.queryForObject(sql,
                 Map.of("jobDefinitionId", jobDefinitionId), Boolean.class);
         return Boolean.TRUE.equals(active);
+    }
+
+    @Override
+    public void requireBindingsEnabled(UUID jobDefinitionId) {
+        if (jobDefinitionId == null) {
+            throw new IllegalArgumentException("jobDefinitionId must not be null");
+        }
+        List<Boolean> enabled = jdbcTemplate.query("""
+                SELECT source_datasource_use_enabled AND sink_datasource_use_enabled
+                FROM job_definition
+                WHERE id = :jobDefinitionId
+                FOR UPDATE
+                """, Map.of("jobDefinitionId", jobDefinitionId),
+                (resultSet, rowNum) -> resultSet.getBoolean(1));
+        if (enabled.isEmpty()) {
+            throw new IllegalArgumentException("JobDefinition not found: " + jobDefinitionId);
+        }
+        if (!enabled.get(0)) {
+            throw new IllegalStateException(
+                    "JobDefinition has a disabled datasource binding: " + jobDefinitionId);
+        }
     }
 
         public JobRunStore.FencedUpdateResult recordProgress(UUID runId, LeaseToken leaseToken,
@@ -427,11 +561,14 @@ public class JobRunRepository implements JobRunStore {
     @Transactional
     @Override
     public JobRun scheduleRetryNow(UUID failedRunId) {
-        JobRun failedRun = findById(failedRunId)
+        JobRun failedRun = findByIdForUpdate(failedRunId)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown JobRun " + failedRunId));
         if (failedRun.status() != JobRunStatus.FAILED) {
             throw new IllegalStateException("Only failed JobRuns can be retried: " + failedRunId);
         }
+        jobDefinitionStore.findByIdForUpdate(failedRun.jobDefinitionId())
+            .orElseThrow(() -> new IllegalStateException(
+                "JobDefinition not found for JobRun " + failedRun.id()));
         JobRunStateMachine.assertLegalTransition(JobRunStatus.FAILED, JobRunStatus.RETRY_SCHEDULED);
 
         int updated = jdbcTemplate.update("""
@@ -447,6 +584,12 @@ public class JobRunRepository implements JobRunStore {
 
     private JobRun insertPendingWithDatabaseTime(UUID jobDefinitionId, UUID previousRunId, int attempt) {
         return insertPendingNow(jobDefinitionId, previousRunId, attempt);
+    }
+
+    private Optional<JobRun> findByIdForUpdate(UUID id) {
+        return jdbcTemplate.query("SELECT " + SELECT_COLUMNS
+                        + " FROM job_run WHERE id = :id FOR UPDATE",
+                Map.of("id", id), rowMapper).stream().findFirst();
     }
 
     private static void validateLimit(int limit) {
@@ -574,6 +717,9 @@ public class JobRunRepository implements JobRunStore {
     }
 
     private record RecoveryCandidate(JobRun run, RetryPolicy retryPolicy) {
+    }
+
+    private record ClaimTarget(UUID runId, UUID jobDefinitionId) {
     }
 
 }

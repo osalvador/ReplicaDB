@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.server.job.application.RunLeaseService;
 import org.replicadb.server.job.config.WorkerRuntimeProperties;
+import org.replicadb.server.job.domain.ClaimedRunPreparation;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.port.JobRunStore;
@@ -16,9 +17,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -145,7 +146,7 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
                 maxConcurrentRuns,
                 0L,
                 TimeUnit.MILLISECONDS,
-                new SynchronousQueue<>(),
+                new LinkedBlockingQueue<>(),
                 new WorkerThreadFactory(),
                 new ThreadPoolExecutor.AbortPolicy());
             this.metrics.updateWorkerCapacity(0, maxConcurrentRuns);
@@ -297,19 +298,20 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
         if (!accepting.get()) {
             return false;
         }
-        Optional<JobRun> claimed = runLeaseService.claimRequested(runId, workerIdentity.value(), leaseDuration);
+        Optional<ClaimedRunPreparation> claimed = runLeaseService.claimAndPrepare(
+            runId, workerIdentity.value(), leaseDuration);
         metrics.recordAdmission(AdmissionLane.DIRECTED, claimed.isPresent() ? "claimed" : "empty");
         if (claimed.isEmpty()) {
-            claimed = runLeaseService.claimFallback(workerIdentity.value(), leaseDuration);
+            claimed = runLeaseService.claimAndPrepare(null, workerIdentity.value(), leaseDuration);
             metrics.recordAdmission(AdmissionLane.FALLBACK, claimed.isPresent() ? "claimed" : "empty");
         }
-        claimed.ifPresent(run -> {
+        claimed.ifPresent(preparation -> {
             if (notificationReceivedNanos != null) {
                 metrics.recordNotificationClaimLatencyNanos(
                         System.nanoTime() - notificationReceivedNanos);
             }
             admissionPolicy.recordSuccessfulClaim();
-            executeClaimedRun(run);
+            executeClaimedRun(preparation);
         });
         if (claimed.isEmpty()) {
             admissionPolicy.recordContention();
@@ -321,7 +323,8 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
         if (!accepting.get()) {
             return false;
         }
-        Optional<JobRun> claimed = runLeaseService.claimNextEligible(workerIdentity.value(), leaseDuration);
+        Optional<ClaimedRunPreparation> claimed = runLeaseService.claimAndPrepare(
+            null, workerIdentity.value(), leaseDuration);
         metrics.recordAdmission(AdmissionLane.GENERIC, claimed.isPresent() ? "claimed" : "empty");
         if (claimed.isPresent()) {
             admissionPolicy.recordSuccessfulClaim();
@@ -332,11 +335,12 @@ public final class WorkerDispatchCoordinator implements AutoCloseable {
         return claimed.isPresent();
     }
 
-    private JobRunOutcome executeClaimedRun(JobRun run) {
+    private JobRunOutcome executeClaimedRun(ClaimedRunPreparation preparation) {
+        JobRun run = preparation.run();
         AtomicReference<RunExecutionHandle> executionHandle = new AtomicReference<>();
         AtomicReference<HeartbeatHandle> heartbeat = new AtomicReference<>();
         try {
-            JobRunOutcome outcome = jobExecutionService.executeClaimedRun(run, handle -> {
+            JobRunOutcome outcome = jobExecutionService.executeClaimedRun(preparation, handle -> {
                 executionHandle.set(handle);
                 if (isCancellationRequested(handle.runId())) {
                     handle.requestCancellation();

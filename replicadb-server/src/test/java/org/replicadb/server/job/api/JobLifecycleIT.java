@@ -146,9 +146,13 @@ class JobLifecycleIT {
         login();
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", "query-only-lifecycle");
-        body.put("sourceConnect", "jdbc:source");
+        UUID sourceDatasourceId = createDatasource("query-source-lifecycle",
+            "jdbc:sqlite:" + tempDirectory.resolve("query-source.db"));
+        UUID sinkDatasourceId = createDatasource("query-sink-lifecycle",
+            "jdbc:sqlite:" + tempDirectory.resolve("query-sink.db"));
+        body.put("sourceDatasourceId", sourceDatasourceId);
         body.put("sourceQuery", "select id from source_table");
-        body.put("sinkConnect", "jdbc:sink");
+        body.put("sinkDatasourceId", sinkDatasourceId);
         body.put("sinkTable", "sink_table");
         body.put("mode", "complete");
         body.put("jobs", 1);
@@ -187,11 +191,13 @@ class JobLifecycleIT {
         }
 
     private JobDefinitionResponse createDefinition(String name, Path source, Path sink) {
+        UUID sourceDatasourceId = createDatasource(name + "-source-datasource", "jdbc:sqlite:" + source);
+        UUID sinkDatasourceId = createDatasource(name + "-sink-datasource", "jdbc:sqlite:" + sink);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("name", name);
-        body.put("sourceConnect", "jdbc:sqlite:" + source);
+        body.put("sourceDatasourceId", sourceDatasourceId);
         body.put("sourceTable", "orders");
-        body.put("sinkConnect", "jdbc:sqlite:" + sink);
+        body.put("sinkDatasourceId", sinkDatasourceId);
         body.put("sinkTable", "orders_copy");
         body.put("mode", "complete");
         body.put("jobs", 1);
@@ -203,6 +209,23 @@ class JobLifecycleIT {
             return objectMapper.readValue(response.getBody(), JobDefinitionResponse.class);
         } catch (Exception exception) {
             throw new AssertionError("Could not parse job definition response", exception);
+        }
+    }
+
+    private UUID createDatasource(String name, String connect) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("name", name);
+        body.put("connectorType", "sqlite");
+        body.put("technicalParams", Map.of());
+        body.put("security", Map.of("connect", connect));
+        body.put("clearSecurityKeys", java.util.List.of());
+        ResponseEntity<String> response = restTemplate.postForEntity(
+                "/api/v1/datasources", new HttpEntity<>(body, authenticatedHeaders(true)), String.class);
+        assertEquals(HttpStatus.CREATED, response.getStatusCode(), response.getBody());
+        try {
+            return UUID.fromString(objectMapper.readTree(response.getBody()).get("id").asText());
+        } catch (Exception exception) {
+            throw new AssertionError("Could not parse datasource response", exception);
         }
     }
 

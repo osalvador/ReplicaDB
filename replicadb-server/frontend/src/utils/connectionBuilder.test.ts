@@ -18,7 +18,10 @@ describe('connectionBuilder', () => {
     { type: 'sqlserver', fields: { host: 'sqlserver.example', port: '1433', database: 'app' } },
     { type: 'denodo', fields: { host: 'denodo.example', port: '9999', database: 'app' } },
     { type: 'file', fields: { filePath: '/var/data/input.csv' } },
-    { type: 'kafka', fields: { kafkaBootstrapServers: 'broker-1:9092,broker-2:9092' } }
+    { type: 'kafka', fields: { kafkaBootstrapServers: 'broker-1:9092,broker-2:9092' } },
+    { type: 's3', fields: { host: 's3.example', port: '443', bucket: 'replicadb', prefix: 'exports' } },
+    { type: 'mongodb', fields: { mongoUri: 'mongodb://host/catalog' } },
+    { type: 'mongodb+srv', fields: { mongoUri: 'mongodb+srv://cluster.example/catalog' } }
   ];
 
   it.each(cases)('round-trips $type connections', ({ type, fields }) => {

@@ -5,6 +5,7 @@ import org.replicadb.server.job.domain.LeaseToken;
 import org.replicadb.server.job.port.JobRunStore;
 import org.replicadb.server.observability.ManagedRuntimeMetrics;
 import org.replicadb.server.job.execution.AdmissionLane;
+import org.replicadb.server.job.domain.ClaimedRunPreparation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -49,6 +50,23 @@ public final class RunLeaseService {
         validateExecutorIdentity(executorIdentity);
         validateLeaseDuration(leaseDuration);
         return claim(null, executorIdentity, leaseDuration, "fallback");
+    }
+
+    public Optional<ClaimedRunPreparation> claimAndPrepare(UUID requestedRunId,
+                                                            String executorIdentity,
+                                                            Duration leaseDuration) {
+        validateExecutorIdentity(executorIdentity);
+        validateLeaseDuration(leaseDuration);
+        try {
+            Optional<ClaimedRunPreparation> result = runStore.claimAndPrepare(
+                    requestedRunId, executorIdentity, leaseDuration);
+            metrics.recordClaim(requestedRunId == null ? "queue" : "directed",
+                    result.isPresent() ? "claimed" : "empty");
+            return result;
+        } catch (RuntimeException exception) {
+            metrics.recordClaim(requestedRunId == null ? "queue" : "directed", "error");
+            throw exception;
+        }
     }
 
     public Optional<JobRun> claimNextEligible(String executorIdentity) {

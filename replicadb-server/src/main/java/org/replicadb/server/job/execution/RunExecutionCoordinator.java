@@ -4,6 +4,7 @@ import jakarta.annotation.PreDestroy;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.replicadb.server.job.application.RunLeaseService;
+import org.replicadb.server.job.domain.ClaimedRunPreparation;
 import org.replicadb.server.job.domain.JobRun;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,9 +55,9 @@ public class RunExecutionCoordinator {
     public void submit(UUID runId, String executorIdentity) {
         executor.submit(() -> {
             try {
-                Optional<JobRun> claimed = runLeaseService.claimRequested(
+                Optional<ClaimedRunPreparation> claimed = runLeaseService.claimAndPrepare(
                         runId, executorIdentity, Duration.ofMinutes(5));
-                claimed.ifPresent(run -> jobExecutionService.executeClaimedRun(run, handle -> { }));
+                claimed.ifPresent(preparation -> jobExecutionService.executeClaimedRun(preparation, handle -> { }));
             } catch (RuntimeException exception) {
                 LOG.error("Managed execution failed for run {}", runId, exception);
             }

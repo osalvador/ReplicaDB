@@ -15,6 +15,8 @@ import org.replicadb.server.job.execution.RunExecutionCoordinator;
 import org.replicadb.server.job.execution.WorkerDispatchCoordinator;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
 import org.replicadb.server.job.persistence.PostgresNotificationPublisher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
@@ -49,6 +51,9 @@ class WorkerProfileContextTest {
     private JobRunRepository jobRunRepository;
 
     @Autowired
+    private ManagedDataSourceRepository managedDataSourceRepository;
+
+    @Autowired
     private PostgresNotificationPublisher notificationPublisher;
 
     @Autowired
@@ -79,9 +84,12 @@ class WorkerProfileContextTest {
 
         PollingFallback polling = applicationContext.getBean(PollingFallback.class);
         polling.stop();
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.source());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.sink());
         JobRun pending = jobRunRepository.insertPendingNow(
                 jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
                         .withName("worker-context-" + java.util.UUID.randomUUID())
+                    .withDefaultDatasourceReferences()
                         .build()).id(), null, 1);
         notificationPublisher.publishRun(pending.id());
 

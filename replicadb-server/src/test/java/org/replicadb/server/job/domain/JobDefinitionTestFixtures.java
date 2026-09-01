@@ -18,6 +18,10 @@ public final class JobDefinitionTestFixtures {
     public static final class Builder {
 
         private UUID id;
+        private UUID sourceDatasourceId;
+        private UUID sinkDatasourceId;
+        private boolean sourceDatasourceUseEnabled = true;
+        private boolean sinkDatasourceUseEnabled = true;
         private String name = "job-" + UUID.randomUUID();
         private String sourceConnect = "jdbc:source";
         private String sourceUser;
@@ -56,6 +60,32 @@ public final class JobDefinitionTestFixtures {
 
         public Builder withName(String value) {
             name = value;
+            return this;
+        }
+
+        public Builder withSourceDatasourceId(UUID value) {
+            sourceDatasourceId = value;
+            return this;
+        }
+
+        public Builder withSinkDatasourceId(UUID value) {
+            sinkDatasourceId = value;
+            return this;
+        }
+
+        public Builder withSourceDatasourceUseEnabled(boolean value) {
+            sourceDatasourceUseEnabled = value;
+            return this;
+        }
+
+        public Builder withSinkDatasourceUseEnabled(boolean value) {
+            sinkDatasourceUseEnabled = value;
+            return this;
+        }
+
+        public Builder withDefaultDatasourceReferences() {
+            sourceDatasourceId = ManagedDataSourceTestFixtures.SOURCE_DATASOURCE_ID;
+            sinkDatasourceId = ManagedDataSourceTestFixtures.SINK_DATASOURCE_ID;
             return this;
         }
 
@@ -205,14 +235,20 @@ public final class JobDefinitionTestFixtures {
         }
 
         public JobDefinition build() {
+            SourceEndpoint source = sourceDatasourceId == null
+                ? new SourceEndpoint(new ConnectionCredentials(sourceConnect, sourceUser, sourcePassword,
+                sourceAuthentication, sourceConnectionParams), sourceTable, sourceColumns, sourceWhere,
+                sourceQuery)
+                : new SourceEndpoint(sourceDatasourceId, sourceTable, sourceColumns, sourceWhere, sourceQuery);
+            SinkEndpoint sink = sinkDatasourceId == null
+                ? new SinkEndpoint(new ConnectionCredentials(sinkConnect, sinkUser, sinkPassword,
+                sinkAuthentication, sinkConnectionParams), sinkTable, sinkColumns, staging,
+                sinkDisableEscape, sinkDisableTruncate)
+                : new SinkEndpoint(sinkDatasourceId, sinkTable, sinkColumns, staging,
+                sinkDisableEscape, sinkDisableTruncate);
             return new JobDefinition(
                     id, name,
-                    new SourceEndpoint(new ConnectionCredentials(sourceConnect, sourceUser, sourcePassword,
-                            sourceAuthentication, sourceConnectionParams), sourceTable, sourceColumns, sourceWhere,
-                            sourceQuery),
-                    new SinkEndpoint(new ConnectionCredentials(sinkConnect, sinkUser, sinkPassword,
-                            sinkAuthentication, sinkConnectionParams), sinkTable, sinkColumns, staging,
-                            sinkDisableEscape, sinkDisableTruncate),
+                source, sink, sourceDatasourceUseEnabled, sinkDatasourceUseEnabled,
                     mode, jobs, incrementalWatermarkColumn, initialWatermarkValue, createdAt, updatedAt,
                         fetchSize, bandwidthThrottling, verbose,
                         retryPolicy == null ? RetryPolicy.defaultsFor(mode) : retryPolicy);

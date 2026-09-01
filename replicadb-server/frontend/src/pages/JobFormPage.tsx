@@ -14,14 +14,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
-import ConnectionSettingsCard, {
-  type ConnectionDraft,
-  type EndpointField,
-  type EndpointValues
-} from '../components/ConnectionSettingsCard';
+import DatasourceSelector from '../components/DatasourceSelector';
 import DataFilteringTabs from '../components/DataFilteringTabs';
 import StagingOptionsTabs from '../components/StagingOptionsTabs';
-import { FileFormatSettings } from '../components/DataFilteringTabs';
 import LoadingState from '../components/LoadingState';
 import PageHeader from '../components/PageHeader';
 import SurfaceSection from '../components/SurfaceSection';
@@ -34,11 +29,14 @@ import {
   type JobDefinitionResponse
 } from '../api/jobsApi';
 import type { components } from '../api/schema';
-import { buildConnectString, parseConnectString, type ConnectionFields } from '../utils/connectionBuilder';
 
 type ReplicationMode = JobDefinitionFormInput['mode'];
 type JobDefinitionRequest = components['schemas']['JobDefinitionRequest'];
 type StringField = Exclude<keyof JobDefinitionFormInput,
+  | 'sourceDatasourceId'
+  | 'sourceDatasourceUseEnabled'
+  | 'sinkDatasourceId'
+  | 'sinkDatasourceUseEnabled'
   | 'jobs'
   | 'mode'
   | 'fetchSize'
@@ -47,37 +45,24 @@ type StringField = Exclude<keyof JobDefinitionFormInput,
   | 'maxAttempts'
   | 'retryBackoffSeconds'
   | 'automaticRetryEnabled'
-  | 'sourceConnectionParams'
-  | 'sinkConnectionParams'
   | 'sinkDisableEscape'
   | 'sinkDisableTruncate'>;
-type FormErrors = Partial<Record<StringField | 'jobs' | 'maxAttempts' | 'retryBackoffSeconds', string>>;
+type FormErrors = Partial<Record<
+  StringField | 'sourceDatasourceId' | 'sinkDatasourceId' | 'jobs' | 'maxAttempts' | 'retryBackoffSeconds',
+  string
+>>;
 
 const emptyForm: JobDefinitionFormInput = {
   name: '',
-  sourceConnect: '',
-  sourceUser: '',
-  sourcePassword: '',
+  sourceDatasourceId: '',
+  sourceDatasourceUseEnabled: true,
   sourceTable: '',
   sourceWhere: '',
-  sourceAuthMode: '',
-  sourceAuthPrincipalId: '',
-  sourceAuthLoginHint: '',
-  sourceAuthClientCertificate: '',
-  sourceAuthClientKey: '',
-  sourceConnectionParams: {},
   sourceColumns: '',
   sourceQuery: '',
-  sinkConnect: '',
-  sinkUser: '',
-  sinkPassword: '',
+  sinkDatasourceId: '',
+  sinkDatasourceUseEnabled: true,
   sinkTable: '',
-  sinkAuthMode: '',
-  sinkAuthPrincipalId: '',
-  sinkAuthLoginHint: '',
-  sinkAuthClientCertificate: '',
-  sinkAuthClientKey: '',
-  sinkConnectionParams: {},
   sinkColumns: '',
   sinkStagingSchema: '',
   sinkStagingTable: '',
@@ -106,29 +91,15 @@ function defaultAutomaticRetry(mode: ReplicationMode): boolean {
 function formFromJob(job: JobDefinitionResponse): JobDefinitionFormInput {
   return {
     name: job.name ?? '',
-    sourceConnect: job.sourceConnect ?? '',
-    sourceUser: job.sourceUser ?? '',
-    sourcePassword: '',
+    sourceDatasourceId: job.sourceDatasourceId ?? '',
+    sourceDatasourceUseEnabled: job.sourceDatasourceUseEnabled ?? true,
     sourceTable: job.sourceTable ?? '',
     sourceWhere: job.sourceWhere ?? '',
-    sourceAuthMode: job.sourceAuthMode ?? '',
-    sourceAuthPrincipalId: job.sourceAuthPrincipalId ?? '',
-    sourceAuthLoginHint: job.sourceAuthLoginHint ?? '',
-    sourceAuthClientCertificate: job.sourceAuthClientCertificate ?? '',
-    sourceAuthClientKey: job.sourceAuthClientKey ?? '',
-    sourceConnectionParams: job.sourceConnectionParams ?? {},
     sourceColumns: job.sourceColumns ?? '',
     sourceQuery: job.sourceQuery ?? '',
-    sinkConnect: job.sinkConnect ?? '',
-    sinkUser: job.sinkUser ?? '',
-    sinkPassword: '',
+    sinkDatasourceId: job.sinkDatasourceId ?? '',
+    sinkDatasourceUseEnabled: job.sinkDatasourceUseEnabled ?? true,
     sinkTable: job.sinkTable ?? '',
-    sinkAuthMode: job.sinkAuthMode ?? '',
-    sinkAuthPrincipalId: job.sinkAuthPrincipalId ?? '',
-    sinkAuthLoginHint: job.sinkAuthLoginHint ?? '',
-    sinkAuthClientCertificate: job.sinkAuthClientCertificate ?? '',
-    sinkAuthClientKey: job.sinkAuthClientKey ?? '',
-    sinkConnectionParams: job.sinkConnectionParams ?? {},
     sinkColumns: job.sinkColumns ?? '',
     sinkStagingSchema: job.sinkStagingSchema ?? '',
     sinkStagingTable: job.sinkStagingTable ?? '',
@@ -154,14 +125,14 @@ function validateForm(form: JobDefinitionFormInput, editMode: boolean): FormErro
   if (!editMode && !form.name.trim()) {
     errors.name = 'Name is required.';
   }
-  if (!form.sourceConnect.trim()) {
-    errors.sourceConnect = 'Source connection is required.';
+  if (!form.sourceDatasourceId.trim()) {
+    errors.sourceDatasourceId = 'Source datasource is required.';
   }
   if (!form.sourceTable.trim() && !form.sourceQuery?.trim()) {
     errors.sourceTable = 'Source table or query is required.';
   }
-  if (!form.sinkConnect.trim()) {
-    errors.sinkConnect = 'Sink connection is required.';
+  if (!form.sinkDatasourceId.trim()) {
+    errors.sinkDatasourceId = 'Sink datasource is required.';
   }
   if (!form.sinkTable.trim()) {
     errors.sinkTable = 'Sink table is required.';
@@ -182,104 +153,12 @@ function mutationErrorMessage(error: unknown): string {
   return error instanceof ApiError ? error.detail : 'Unable to save this job.';
 }
 
-function emptyConnectionDraft(): ConnectionDraft {
-  return { type: 'custom', fields: { raw: '' }, extraParams: '' };
-}
-
-function connectionDraftFromJob(connect: string, params: Record<string, string>): ConnectionDraft {
-  const parsed = parseConnectString(connect);
-  const { type, ...fields } = parsed;
-  const reservedKeys = new Set([
-    'format',
-    'format.delimiter',
-    'format.quote',
-    'format.escape',
-    'format.nullString',
-    'format.firstRecordAsHeader',
-    'format.ignoreEmptyLines',
-    'format.ignoreSurroundingSpaces',
-    'format.trim',
-    'format.recordSeparator',
-    'topic',
-    'partition',
-    'acks'
-  ]);
-  const extraParams = Object.entries(params)
-    .filter(([key]) => !reservedKeys.has(key))
-    .map(([key, value]) => `${key}=${value}`)
-    .join('\n');
-  return { type, fields, extraParams };
-}
-
-function endpointParams(text: string): Record<string, string> {
-  return text.split('\n').reduce<Record<string, string>>((params, line) => {
-    const separator = line.indexOf('=');
-    if (separator > 0) {
-      const key = line.slice(0, separator).trim();
-      const value = line.slice(separator + 1).trim();
-      if (key && value) {
-        params[key] = value;
-      }
-    }
-    return params;
-  }, {});
-}
-
-function composedConnect(draft: ConnectionDraft, fallback: string): string {
-  try {
-    return buildConnectString(draft.type, draft.fields);
-  } catch {
-    return fallback;
-  }
-}
-
-const endpointFieldMap: Record<'source' | 'sink', Record<EndpointField, StringField>> = {
-  source: {
-    connect: 'sourceConnect',
-    user: 'sourceUser',
-    password: 'sourcePassword',
-    authMode: 'sourceAuthMode',
-    authPrincipalId: 'sourceAuthPrincipalId',
-    authLoginHint: 'sourceAuthLoginHint',
-    authClientCertificate: 'sourceAuthClientCertificate',
-    authClientKey: 'sourceAuthClientKey'
-  },
-  sink: {
-    connect: 'sinkConnect',
-    user: 'sinkUser',
-    password: 'sinkPassword',
-    authMode: 'sinkAuthMode',
-    authPrincipalId: 'sinkAuthPrincipalId',
-    authLoginHint: 'sinkAuthLoginHint',
-    authClientCertificate: 'sinkAuthClientCertificate',
-    authClientKey: 'sinkAuthClientKey'
-  }
-};
-
-function endpointValues(form: JobDefinitionFormInput, side: 'source' | 'sink'): EndpointValues {
-  const prefix = side === 'source' ? 'source' : 'sink';
-  return {
-    connect: form[`${prefix}Connect` as 'sourceConnect' | 'sinkConnect'],
-    user: form[`${prefix}User` as 'sourceUser' | 'sinkUser'] ?? '',
-    password: form[`${prefix}Password` as 'sourcePassword' | 'sinkPassword'] ?? '',
-    authMode: form[`${prefix}AuthMode` as 'sourceAuthMode' | 'sinkAuthMode'] ?? '',
-    authPrincipalId: form[`${prefix}AuthPrincipalId` as 'sourceAuthPrincipalId' | 'sinkAuthPrincipalId'] ?? '',
-    authLoginHint: form[`${prefix}AuthLoginHint` as 'sourceAuthLoginHint' | 'sinkAuthLoginHint'] ?? '',
-    authClientCertificate: form[
-      `${prefix}AuthClientCertificate` as 'sourceAuthClientCertificate' | 'sinkAuthClientCertificate'
-    ] ?? '',
-    authClientKey: form[`${prefix}AuthClientKey` as 'sourceAuthClientKey' | 'sinkAuthClientKey'] ?? ''
-  };
-}
-
 export default function JobFormPage() {
   const { id } = useParams<{ id: string }>();
   const editMode = Boolean(id);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<JobDefinitionFormInput>(emptyForm);
-  const [sourceDraft, setSourceDraft] = useState<ConnectionDraft>(emptyConnectionDraft);
-  const [sinkDraft, setSinkDraft] = useState<ConnectionDraft>(emptyConnectionDraft);
   const [errors, setErrors] = useState<FormErrors>({});
   const [errorMessage, setErrorMessage] = useState<string>();
   const [retryPolicyTouched, setRetryPolicyTouched] = useState(false);
@@ -294,10 +173,6 @@ export default function JobFormPage() {
     if (jobQuery.data) {
       setForm(formFromJob(jobQuery.data));
       setRetryPolicyTouched(false);
-      setSourceDraft(connectionDraftFromJob(
-        jobQuery.data.sourceConnect ?? '', jobQuery.data.sourceConnectionParams ?? {}));
-      setSinkDraft(connectionDraftFromJob(
-        jobQuery.data.sinkConnect ?? '', jobQuery.data.sinkConnectionParams ?? {}));
     }
   }, [jobQuery.data]);
 
@@ -330,59 +205,17 @@ export default function JobFormPage() {
     setForm(current => ({ ...current, [field]: event.target.value }));
   };
 
-  const updateEndpointValue = (side: 'source' | 'sink', field: EndpointField, value: string) => {
-    setForm(current => ({ ...current, [endpointFieldMap[side][field]]: value }));
-  };
-
-  const updateSourceConnectionParam = (key: string, value: string) => {
-    setForm(current => {
-      const sourceConnectionParams = { ...(current.sourceConnectionParams ?? {}) };
-      if (value) {
-        sourceConnectionParams[key] = value;
-      } else {
-        delete sourceConnectionParams[key];
-      }
-      return { ...current, sourceConnectionParams };
-    });
-  };
-
-  const updateSinkConnectionParam = (key: string, value: string) => {
-    setForm(current => {
-      const sinkConnectionParams = { ...(current.sinkConnectionParams ?? {}) };
-      if (value) {
-        sinkConnectionParams[key] = value;
-      } else {
-        delete sinkConnectionParams[key];
-      }
-      return { ...current, sinkConnectionParams };
-    });
-  };
-
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const submissionForm: JobDefinitionFormInput = {
-      ...form,
-      sourceConnect: composedConnect(sourceDraft, form.sourceConnect),
-      sinkConnect: composedConnect(sinkDraft, form.sinkConnect),
-      sourceConnectionParams: {
-        ...(form.sourceConnectionParams ?? {}),
-        ...endpointParams(sourceDraft.extraParams)
-      },
-      sinkConnectionParams: {
-        ...(form.sinkConnectionParams ?? {}),
-        ...endpointParams(sinkDraft.extraParams)
-      }
-    };
-    const nextErrors = validateForm(submissionForm, editMode);
+    const nextErrors = validateForm(form, editMode);
     setErrors(nextErrors);
     setErrorMessage(undefined);
     if (Object.keys(nextErrors).length > 0) {
       return;
     }
-    mutation.mutate(toJobDefinitionRequest(submissionForm));
+    mutation.mutate(toJobDefinitionRequest(form));
   };
 
-  const passwordHelperText = editMode ? 'Leave blank to keep the existing value' : undefined;
   const modeWarning = editMode && form.mode === 'complete' ? jobQuery.data?.modeWarning : undefined;
 
   return (
@@ -442,14 +275,28 @@ export default function JobFormPage() {
 
           <SurfaceSection title="Source" description="Choose where ReplicaDB reads data.">
             <Stack spacing={2}>
-                <ConnectionSettingsCard
+                <DatasourceSelector
                   side="source"
-                  draft={sourceDraft}
-                  values={endpointValues(form, 'source')}
-                  onDraftChange={setSourceDraft}
-                  onValueChange={(field, value) => updateEndpointValue('source', field, value)}
-                  connectError={errors.sourceConnect}
-                  passwordHelperText={passwordHelperText}
+                  value={form.sourceDatasourceId}
+                  selectedSummary={jobQuery.data?.sourceDatasource}
+                  onChange={sourceDatasourceId => setForm(current => ({ ...current, sourceDatasourceId }))}
+                  error={errors.sourceDatasourceId}
+                />
+                <FormControlLabel
+                  control={<Checkbox
+                    checked={form.sourceDatasourceUseEnabled}
+                    inputProps={{ 'aria-label': 'Source binding enabled' }}
+                    onChange={event => setForm(current => ({
+                      ...current,
+                      sourceDatasourceUseEnabled: event.target.checked
+                    }))}
+                  />}
+                  label={<Box>
+                    <Typography variant="body2">Source binding enabled</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Disable to block future manual and scheduled runs; active work is not cancelled.
+                    </Typography>
+                  </Box>}
                 />
                 <DataFilteringTabs
                   values={{
@@ -465,9 +312,9 @@ export default function JobFormPage() {
                     sourceWhere: field === 'where' ? value : current.sourceWhere,
                     sourceQuery: field === 'query' ? value : current.sourceQuery
                     }))}
-                  sourceType={sourceDraft.type}
-                  fileParams={form.sourceConnectionParams ?? {}}
-                  onFileParamChange={updateSourceConnectionParam}
+                  sourceType="custom"
+                  fileParams={{}}
+                  onFileParamChange={() => undefined}
                   tableError={errors.sourceTable}
                 />
             </Stack>
@@ -475,16 +322,28 @@ export default function JobFormPage() {
 
           <SurfaceSection title="Sink" description="Choose where ReplicaDB writes data.">
             <Stack spacing={2}>
-                <ConnectionSettingsCard
+                <DatasourceSelector
                   side="sink"
-                  draft={sinkDraft}
-                  values={endpointValues(form, 'sink')}
-                  onDraftChange={setSinkDraft}
-                  onValueChange={(field, value) => updateEndpointValue('sink', field, value)}
-                  connectionParams={form.sinkConnectionParams}
-                  onConnectionParamChange={updateSinkConnectionParam}
-                  connectError={errors.sinkConnect}
-                  passwordHelperText={passwordHelperText}
+                  value={form.sinkDatasourceId}
+                  selectedSummary={jobQuery.data?.sinkDatasource}
+                  onChange={sinkDatasourceId => setForm(current => ({ ...current, sinkDatasourceId }))}
+                  error={errors.sinkDatasourceId}
+                />
+                <FormControlLabel
+                  control={<Checkbox
+                    checked={form.sinkDatasourceUseEnabled}
+                    inputProps={{ 'aria-label': 'Sink binding enabled' }}
+                    onChange={event => setForm(current => ({
+                      ...current,
+                      sinkDatasourceUseEnabled: event.target.checked
+                    }))}
+                  />}
+                  label={<Box>
+                    <Typography variant="body2">Sink binding enabled</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Disable to block future manual and scheduled runs; active work is not cancelled.
+                    </Typography>
+                  </Box>}
                 />
                 <Typography component="h3" variant="subtitle1" fontWeight={700}>
                   Data mapping
@@ -536,15 +395,6 @@ export default function JobFormPage() {
                     label={<Box><Typography variant="body2">Truncate sink table</Typography><Typography variant="caption" color="text.secondary">Clear the sink table before loading</Typography></Box>}
                   />
                 </Box>
-                {sinkDraft.type === 'file' && (
-                  <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 2 }}>
-                    <FileFormatSettings
-                      values={form.sinkConnectionParams ?? {}}
-                      onChange={updateSinkConnectionParam}
-                      includeRecordSeparator
-                    />
-                  </Box>
-                )}
             </Stack>
           </SurfaceSection>
 

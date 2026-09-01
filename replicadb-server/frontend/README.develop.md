@@ -51,6 +51,11 @@ export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD='<local-password>'
 ./replicadb-server/frontend/scripts/start-local.sh
 ```
 
+When `REPLICADB_SECURITY_MASTER_KEY_FILE` is not set, the script creates a
+temporary 256-bit keyring outside the repository and removes it during cleanup.
+Set that variable to a deployment-managed keyring when testing persistence
+across restarts.
+
 El nombre de usuario opcional es `admin` por defecto. Puedes
 personalizarlo sin guardar credenciales en el repositorio:
 
@@ -64,7 +69,7 @@ Cuando el script termine de arrancar:
 
 - Frontend: `http://localhost:5173`
 - API: `http://localhost:8080`
-- El script crea jobs de prueba para Oracle, MySQL, MariaDB, PostgreSQL, DB2 LUW,
+- El script crea perfiles datasource y jobs de prueba para Oracle, MySQL, MariaDB, PostgreSQL, DB2 LUW,
   DB2 for i, SQLite, SQL Server, Denodo y File. Los fixtures cubren los modos
   `complete`, `complete-atomic` e `incremental`; no ejecutan ninguna replicación.
 

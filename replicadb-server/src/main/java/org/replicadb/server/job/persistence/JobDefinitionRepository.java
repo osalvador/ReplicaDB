@@ -1,15 +1,12 @@
 package org.replicadb.server.job.persistence;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.replicadb.server.job.domain.AzureAuthentication;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.port.JobDefinitionStore;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -26,60 +23,47 @@ public class JobDefinitionRepository implements JobDefinitionStore {
 
     private static final String INSERT_SQL = """
             INSERT INTO job_definition (
-                id, name, source_connect, source_user, source_password, source_table, source_where,
-                source_auth_mode, source_auth_principal_id, source_auth_login_hint,
-                source_auth_client_certificate, source_auth_client_key, source_connection_params,
-                source_columns, source_query,
-                sink_connect, sink_user, sink_password, sink_table,
-                sink_auth_mode, sink_auth_principal_id, sink_auth_login_hint,
-                sink_auth_client_certificate, sink_auth_client_key, sink_connection_params,
+                id, name, source_datasource_id, source_table, source_where,
+                source_columns, source_query, sink_datasource_id, sink_table,
                 sink_columns, sink_staging_schema, sink_staging_table,
-                sink_disable_escape, sink_disable_truncate, mode, jobs,
-                incremental_watermark_column, initial_watermark_value, created_at, updated_at,
-                fetch_size, bandwidth_throttling, "verbose",
+                sink_disable_escape, sink_disable_truncate,
+                source_datasource_use_enabled, sink_datasource_use_enabled,
+                mode, jobs, incremental_watermark_column, initial_watermark_value,
+                created_at, updated_at, fetch_size, bandwidth_throttling, "verbose",
                 max_attempts, retry_backoff_seconds, automatic_retry_enabled
             ) VALUES (
-                :id, :name, :sourceConnect, :sourceUser, :sourcePassword, :sourceTable, :sourceWhere,
-                :sourceAuthMode, :sourceAuthPrincipalId, :sourceAuthLoginHint,
-                :sourceAuthClientCertificate, :sourceAuthClientKey, CAST(:sourceConnectionParams AS jsonb),
-                :sourceColumns, :sourceQuery,
-                :sinkConnect, :sinkUser, :sinkPassword, :sinkTable,
-                :sinkAuthMode, :sinkAuthPrincipalId, :sinkAuthLoginHint,
-                :sinkAuthClientCertificate, :sinkAuthClientKey, CAST(:sinkConnectionParams AS jsonb),
+                :id, :name, :sourceDatasourceId, :sourceTable, :sourceWhere,
+                :sourceColumns, :sourceQuery, :sinkDatasourceId, :sinkTable,
                 :sinkColumns, :sinkStagingSchema, :sinkStagingTable,
-                :sinkDisableEscape, :sinkDisableTruncate, :mode, :jobs,
-                :incrementalWatermarkColumn, :initialWatermarkValue, :createdAt, :updatedAt,
-                :fetchSize, :bandwidthThrottling, :verbose,
+                :sinkDisableEscape, :sinkDisableTruncate,
+                :sourceDatasourceUseEnabled, :sinkDatasourceUseEnabled,
+                :mode, :jobs, :incrementalWatermarkColumn, :initialWatermarkValue,
+                :createdAt, :updatedAt, :fetchSize, :bandwidthThrottling, :verbose,
                 :maxAttempts, :retryBackoffSeconds, :automaticRetryEnabled
             )
             """;
 
-    private static final String SELECT_COLUMNS = """
-            id, name, source_connect, source_user, source_password, source_table, source_where,
-            source_auth_mode, source_auth_principal_id, source_auth_login_hint,
-            source_auth_client_certificate, source_auth_client_key, source_connection_params,
-            source_columns, source_query,
-            sink_connect, sink_user, sink_password, sink_table,
-            sink_auth_mode, sink_auth_principal_id, sink_auth_login_hint,
-            sink_auth_client_certificate, sink_auth_client_key, sink_connection_params,
+        private static final String SELECT_COLUMNS = """
+            id, name, source_datasource_id, source_table, source_where,
+            source_columns, source_query, sink_datasource_id, sink_table,
             sink_columns, sink_staging_schema, sink_staging_table,
-            sink_disable_escape, sink_disable_truncate, mode, jobs,
-            incremental_watermark_column, initial_watermark_value, created_at, updated_at,
-            fetch_size, bandwidth_throttling, "verbose",
+            sink_disable_escape, sink_disable_truncate,
+            source_datasource_use_enabled, sink_datasource_use_enabled,
+            mode, jobs, incremental_watermark_column, initial_watermark_value,
+            created_at, updated_at, fetch_size, bandwidth_throttling, "verbose",
             max_attempts, retry_backoff_seconds, automatic_retry_enabled
             """;
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
-    private final ObjectMapper objectMapper;
     private final JobDefinitionRowMapper rowMapper;
 
-    public JobDefinitionRepository(NamedParameterJdbcTemplate jdbcTemplate, ObjectMapper objectMapper) {
+    public JobDefinitionRepository(NamedParameterJdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-        this.objectMapper = objectMapper;
-        this.rowMapper = new JobDefinitionRowMapper(objectMapper);
+        this.rowMapper = new JobDefinitionRowMapper();
     }
 
     public JobDefinition insert(JobDefinition definition) {
+        requireDatasourceReferences(definition);
         UUID id = definition.id() == null ? UUID.randomUUID() : definition.id();
         Instant now = Instant.now();
         Instant createdAt = definition.createdAt() == null ? now : definition.createdAt();
@@ -92,6 +76,12 @@ public class JobDefinitionRepository implements JobDefinitionStore {
 
     public Optional<JobDefinition> findById(UUID id) {
         String sql = "SELECT " + SELECT_COLUMNS + " FROM job_definition WHERE id = :id";
+        return queryOne(sql, Map.of("id", id));
+    }
+
+    @Override
+    public Optional<JobDefinition> findByIdForUpdate(UUID id) {
+        String sql = "SELECT " + SELECT_COLUMNS + " FROM job_definition WHERE id = :id FOR UPDATE";
         return queryOne(sql, Map.of("id", id));
     }
 
@@ -131,30 +121,24 @@ public class JobDefinitionRepository implements JobDefinitionStore {
         }
     }
 
+    @Transactional
     public JobDefinition update(JobDefinition definition) {
+        findByIdForUpdate(definition.id()).orElseThrow(() -> new NoSuchElementException(
+                "JobDefinition not found: " + definition.id()));
+        requireDatasourceReferences(definition);
         String sql = """
                 UPDATE job_definition
-                SET source_connect = :sourceConnect, source_user = :sourceUser,
-                    source_password = :sourcePassword, source_table = :sourceTable,
-                    source_where = :sourceWhere, source_auth_mode = :sourceAuthMode,
-                    source_auth_principal_id = :sourceAuthPrincipalId,
-                    source_auth_login_hint = :sourceAuthLoginHint,
-                    source_auth_client_certificate = :sourceAuthClientCertificate,
-                    source_auth_client_key = :sourceAuthClientKey,
-                    source_connection_params = CAST(:sourceConnectionParams AS jsonb),
+                SET source_datasource_id = :sourceDatasourceId,
+                    source_table = :sourceTable, source_where = :sourceWhere,
                     source_columns = :sourceColumns, source_query = :sourceQuery,
-                    sink_connect = :sinkConnect,
-                    sink_user = :sinkUser, sink_password = :sinkPassword,
-                    sink_table = :sinkTable, sink_auth_mode = :sinkAuthMode,
-                    sink_auth_principal_id = :sinkAuthPrincipalId,
-                    sink_auth_login_hint = :sinkAuthLoginHint,
-                    sink_auth_client_certificate = :sinkAuthClientCertificate,
-                    sink_auth_client_key = :sinkAuthClientKey,
-                    sink_connection_params = CAST(:sinkConnectionParams AS jsonb),
-                    sink_columns = :sinkColumns, sink_staging_schema = :sinkStagingSchema,
+                    sink_datasource_id = :sinkDatasourceId,
+                    sink_table = :sinkTable, sink_columns = :sinkColumns,
+                    sink_staging_schema = :sinkStagingSchema,
                     sink_staging_table = :sinkStagingTable,
                     sink_disable_escape = :sinkDisableEscape,
                     sink_disable_truncate = :sinkDisableTruncate,
+                    source_datasource_use_enabled = :sourceDatasourceUseEnabled,
+                    sink_datasource_use_enabled = :sinkDatasourceUseEnabled,
                     mode = :mode, jobs = :jobs,
                     incremental_watermark_column = :incrementalWatermarkColumn,
                     initial_watermark_value = :initialWatermarkValue, updated_at = now(),
@@ -186,39 +170,23 @@ public class JobDefinitionRepository implements JobDefinitionStore {
     }
 
     private MapSqlParameterSource parameters(JobDefinition definition) {
-        AzureAuthentication sourceAuthentication = definition.sourceAuthentication();
-        AzureAuthentication sinkAuthentication = definition.sinkAuthentication();
         return new MapSqlParameterSource()
                 .addValue("id", definition.id())
                 .addValue("name", definition.name())
-                .addValue("sourceConnect", definition.sourceConnect())
-                .addValue("sourceUser", definition.sourceUser())
-                .addValue("sourcePassword", definition.sourcePassword())
+                .addValue("sourceDatasourceId", definition.sourceDatasourceId())
                 .addValue("sourceTable", definition.sourceTable())
                 .addValue("sourceWhere", definition.sourceWhere())
-                .addValue("sourceAuthMode", sourceAuthentication.mode())
-                .addValue("sourceAuthPrincipalId", sourceAuthentication.principalId())
-                .addValue("sourceAuthLoginHint", sourceAuthentication.loginHint())
-                .addValue("sourceAuthClientCertificate", sourceAuthentication.clientCertificate())
-                .addValue("sourceAuthClientKey", sourceAuthentication.clientKey())
-                .addValue("sourceConnectionParams", serializeConnectionParams(definition.sourceConnectionParams()))
                 .addValue("sourceColumns", definition.sourceColumns())
                 .addValue("sourceQuery", definition.sourceQuery())
-                .addValue("sinkConnect", definition.sinkConnect())
-                .addValue("sinkUser", definition.sinkUser())
-                .addValue("sinkPassword", definition.sinkPassword())
+                .addValue("sinkDatasourceId", definition.sinkDatasourceId())
                 .addValue("sinkTable", definition.sinkTable())
-                .addValue("sinkAuthMode", sinkAuthentication.mode())
-                .addValue("sinkAuthPrincipalId", sinkAuthentication.principalId())
-                .addValue("sinkAuthLoginHint", sinkAuthentication.loginHint())
-                .addValue("sinkAuthClientCertificate", sinkAuthentication.clientCertificate())
-                .addValue("sinkAuthClientKey", sinkAuthentication.clientKey())
-                .addValue("sinkConnectionParams", serializeConnectionParams(definition.sinkConnectionParams()))
                 .addValue("sinkColumns", definition.sinkColumns())
                 .addValue("sinkStagingSchema", definition.sinkStagingSchema())
                 .addValue("sinkStagingTable", definition.sinkStagingTable())
                 .addValue("sinkDisableEscape", definition.sinkDisableEscape())
                 .addValue("sinkDisableTruncate", definition.sinkDisableTruncate())
+                .addValue("sourceDatasourceUseEnabled", definition.sourceDatasourceUseEnabled())
+                .addValue("sinkDatasourceUseEnabled", definition.sinkDatasourceUseEnabled())
                 .addValue("mode", definition.mode().getModeText())
                 .addValue("jobs", definition.jobs())
                 .addValue("incrementalWatermarkColumn", definition.incrementalWatermarkColumn())
@@ -236,17 +204,17 @@ public class JobDefinitionRepository implements JobDefinitionStore {
     private static JobDefinition withPersistenceFields(JobDefinition definition, UUID id,
                                                        Instant createdAt, Instant updatedAt) {
         return new JobDefinition(
-                id, definition.name(), definition.source(), definition.sink(), definition.mode(), definition.jobs(),
+            id, definition.name(), definition.source(), definition.sink(),
+            definition.sourceDatasourceUseEnabled(), definition.sinkDatasourceUseEnabled(),
+            definition.mode(), definition.jobs(),
                 definition.incrementalWatermarkColumn(), definition.initialWatermarkValue(), createdAt, updatedAt,
                 definition.fetchSize(), definition.bandwidthThrottling(), definition.verbose(),
                 definition.retryPolicy());
             }
 
-    private String serializeConnectionParams(Map<String, String> connectionParams) {
-        try {
-            return objectMapper.writeValueAsString(connectionParams);
-        } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("Could not serialize connection parameters", exception);
+    private static void requireDatasourceReferences(JobDefinition definition) {
+        if (definition.sourceDatasourceId() == null || definition.sinkDatasourceId() == null) {
+            throw new IllegalArgumentException("Managed jobs require source and sink datasource references");
         }
     }
 

@@ -10,6 +10,9 @@ export type DbType =
   | 'denodo'
   | 'file'
   | 'kafka'
+  | 's3'
+  | 'mongodb'
+  | 'mongodb+srv'
   | 'custom';
 
 export type OracleFormat = 'service' | 'sid';
@@ -21,6 +24,9 @@ export type ConnectionFields = {
   sqliteFilePath?: string;
   filePath?: string;
   kafkaBootstrapServers?: string;
+  bucket?: string;
+  prefix?: string;
+  mongoUri?: string;
   oracleFormat?: OracleFormat;
   raw?: string;
 };
@@ -67,6 +73,15 @@ export function buildConnectString(type: DbType, fields: ConnectionFields): stri
       return `file://${required(fields, 'filePath')}`;
     case 'kafka':
       return `kafka://${required(fields, 'kafkaBootstrapServers')}`;
+    case 's3': {
+      const endpoint = `${host()}${fields.port === undefined ? '' : `:${port()}`}`;
+      const bucket = required(fields, 'bucket').replace(/^\/+|\/+$/g, '');
+      const prefix = fields.prefix?.trim().replace(/^\/+|\/+$/g, '');
+      return `s3://${endpoint}/${bucket}${prefix ? `/${prefix}` : ''}`;
+    }
+    case 'mongodb':
+    case 'mongodb+srv':
+      return required(fields, 'mongoUri');
     case 'custom':
       return required(fields, 'raw');
   }
@@ -145,6 +160,24 @@ export function parseConnectString(connect: string): ParsedConnection {
   const kafka = connect.match(/^kafka:\/\/(.*)$/);
   if (kafka) {
     return { type: 'kafka', kafkaBootstrapServers: kafka[1] };
+  }
+
+  const s3 = connect.match(/^s3:\/\/([^/]+)\/([^/]+)(?:\/(.*))?$/);
+  if (s3) {
+    return {
+      type: 's3',
+      ...parseAuthority(s3[1]),
+      bucket: s3[2],
+      prefix: s3[3] || undefined
+    };
+  }
+
+  const mongo = connect.match(/^(mongodb(?:\+srv)?:\/\/.*)$/);
+  if (mongo) {
+    return {
+      type: mongo[1].startsWith('mongodb+srv:') ? 'mongodb+srv' : 'mongodb',
+      mongoUri: mongo[1]
+    };
   }
 
   return custom();

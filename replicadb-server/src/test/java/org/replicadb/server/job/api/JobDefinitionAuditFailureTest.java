@@ -5,7 +5,9 @@ import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.audit.domain.AuditEvent;
 import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -42,6 +44,9 @@ class JobDefinitionAuditFailureTest {
     @Autowired
     private JobDefinitionRepository jobDefinitionRepository;
 
+        @Autowired
+        private ManagedDataSourceRepository managedDataSourceRepository;
+
     @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
@@ -50,8 +55,11 @@ class JobDefinitionAuditFailureTest {
 
     @Test
     void auditFailureDoesNotChangeCreateResponseOrPersistence() throws Exception {
-        jdbcTemplate.update("TRUNCATE TABLE job_permission, run_trigger_idempotency, job_run, job_definition, app_user CASCADE",
+        jdbcTemplate.update("TRUNCATE TABLE job_permission, run_trigger_idempotency, job_run, job_definition, "
+                + "app_user, datasource_permission, managed_datasource CASCADE",
                 Map.of());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.source());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.sink());
         doThrow(new RuntimeException("audit insert failed"))
                 .when(auditEventRepository).insert(any(AuditEvent.class));
 
@@ -73,13 +81,9 @@ class JobDefinitionAuditFailureTest {
         return """
                 {
                   "name": "%s",
-                  "sourceConnect": "jdbc:source",
-                  "sourceUser": "source-user",
-                  "sourcePassword": "${env:SOURCE_PASSWORD}",
+                  "sourceDatasourceId": "00000000-0000-0000-0000-000000000001",
                   "sourceTable": "source_table",
-                  "sinkConnect": "jdbc:sink",
-                  "sinkUser": "sink-user",
-                  "sinkPassword": "${env:SINK_PASSWORD}",
+                  "sinkDatasourceId": "00000000-0000-0000-0000-000000000002",
                   "sinkTable": "sink_table",
                   "mode": "complete",
                   "jobs": 1

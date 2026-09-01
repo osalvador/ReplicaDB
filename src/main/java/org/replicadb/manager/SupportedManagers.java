@@ -28,6 +28,10 @@ public enum SupportedManagers {
         return schemePrefix;
     }
 
+    public ManagerCapabilities getCapabilities() {
+        return ManagerCapabilities.forManager(this);
+    }
+
 
     public boolean isTheManagerTypeOf(ToolOptions options, DataSourceType dsType) {
         return (extractScheme(options, dsType)).startsWith(getSchemePrefix());

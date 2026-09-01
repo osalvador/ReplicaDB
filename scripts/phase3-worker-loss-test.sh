@@ -4,6 +4,7 @@ set -euo pipefail
 
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repository_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
+source "$script_dir/phase4-compose-common.sh"
 scenario=${1:-all}
 project_name=${COMPOSE_PROJECT_NAME:-replicadb-phase3-worker-loss-$PPID}
 state_directory="$repository_root/.phase3-compose/$project_name"
@@ -47,6 +48,8 @@ if [[ -z "${REPLICADB_BOOTSTRAP_ADMIN_PASSWORD:-}" ]]; then
     REPLICADB_BOOTSTRAP_ADMIN_PASSWORD=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')
     export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD
 fi
+phase4_require_commands
+phase4_prepare_keyring
 
 compose() {
     docker compose -p "$project_name" -f "$repository_root/docker-compose.server.yml" "$@"
@@ -102,11 +105,11 @@ create_job() {
     local payload
     payload=$(jq -n \
         --arg source_query "$source_query" \
-        --arg source_password '${env:DB_PASSWORD}' \
-        --arg sink_password '${env:DB_PASSWORD}' \
+        --arg source_datasource_id "$phase4_source_datasource_id" \
+        --arg sink_datasource_id "$phase4_sink_datasource_id" \
         --arg mode "$mode" \
         --arg sink_disable_truncate "$sink_disable_truncate" \
-        '{name: ("phase3 worker loss " + $mode), sourceConnect: "jdbc:postgresql://postgres:5432/replicadb", sourceUser: "postgres", sourcePassword: $source_password, sourceTable: "phase3_source", sourceColumns: "id,payload", sourceQuery: $source_query, sinkConnect: "jdbc:postgresql://postgres:5432/replicadb", sinkUser: "postgres", sinkPassword: $sink_password, sinkTable: "phase3_sink", mode: $mode, jobs: 1, sinkDisableTruncate: ($sink_disable_truncate == "true"), maxAttempts: 2, retryBackoffSeconds: 0, automaticRetryEnabled: true}')
+        '{name: ("phase3 worker loss " + $mode), sourceDatasourceId: $source_datasource_id, sourceDatasourceUseEnabled: true, sourceTable: "phase3_source", sourceColumns: "id,payload", sourceQuery: $source_query, sinkDatasourceId: $sink_datasource_id, sinkDatasourceUseEnabled: true, sinkTable: "phase3_sink", mode: $mode, jobs: 1, sinkDisableTruncate: ($sink_disable_truncate == "true"), maxAttempts: 2, retryBackoffSeconds: 0, automaticRetryEnabled: true}')
     curl -fsS -b "$cookie_file" \
         -H 'Content-Type: application/json' \
         -H "X-XSRF-TOKEN: $csrf_token" \
@@ -278,6 +281,7 @@ step 'load fixture'
 load_fixture
 step 'authenticate'
 authenticate "$api_one"
+phase4_create_postgres_datasources "$api_one" "phase3 worker loss"
 
 case "$scenario" in
     copy)

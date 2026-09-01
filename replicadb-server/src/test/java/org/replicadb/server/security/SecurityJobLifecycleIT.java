@@ -113,16 +113,30 @@ class SecurityJobLifecycleIT {
     }
 
     private UUID createJob(Path source, Path sink) throws Exception {
+        UUID sourceDatasourceId = createDatasource("security-source-datasource-" + UUID.randomUUID(),
+            "jdbc:sqlite:" + source);
+        UUID sinkDatasourceId = createDatasource("security-sink-datasource-" + UUID.randomUUID(),
+            "jdbc:sqlite:" + sink);
         ResponseEntity<String> response = post(admin, "/api/v1/jobs", Map.of(
                 "name", "security-job-" + UUID.randomUUID(),
-                "sourceConnect", "jdbc:sqlite:" + source,
+            "sourceDatasourceId", sourceDatasourceId,
                 "sourceTable", "orders",
-                "sinkConnect", "jdbc:sqlite:" + sink,
+            "sinkDatasourceId", sinkDatasourceId,
                 "sinkTable", "orders_copy",
                 "mode", "complete",
                 "jobs", 1), null, HttpStatus.CREATED);
         return UUID.fromString(objectMapper.readTree(response.getBody()).get("id").asText());
     }
+
+        private UUID createDatasource(String name, String connect) throws Exception {
+        ResponseEntity<String> response = post(admin, "/api/v1/datasources", Map.of(
+            "name", name,
+            "connectorType", "sqlite",
+            "technicalParams", Map.of(),
+            "security", Map.of("connect", connect),
+            "clearSecurityKeys", java.util.List.of()), null, HttpStatus.CREATED);
+        return UUID.fromString(objectMapper.readTree(response.getBody()).get("id").asText());
+        }
 
     private void grantPermissions(UUID jobId, UUID userId, String permissions) throws Exception {
         put(admin, "/api/v1/jobs/" + jobId + "/permissions/" + userId,

@@ -10,9 +10,11 @@ import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
 import org.replicadb.server.job.domain.RetryPolicy;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
 import org.replicadb.server.job.persistence.PostgresNotificationPublisher;
 import org.replicadb.server.job.persistence.RunTriggerIdempotencyRepository;
 import org.replicadb.server.job.port.RunNotificationPublisher;
@@ -60,6 +62,9 @@ class RunDispatchServiceIT {
     private JobRunRepository jobRunRepository;
 
     @Autowired
+    private ManagedDataSourceRepository managedDataSourceRepository;
+
+    @Autowired
     private RunTriggerIdempotencyRepository idempotencyRepository;
 
     @Autowired
@@ -74,7 +79,10 @@ class RunDispatchServiceIT {
     @BeforeEach
     void clearState() {
         reset(notificationPublisher);
-        jdbcTemplate.update("TRUNCATE TABLE run_trigger_idempotency, job_run, job_definition CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE run_trigger_idempotency, job_run, job_definition, "
+            + "datasource_permission, managed_datasource CASCADE", Map.of());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.source());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.sink());
     }
 
     @Test
@@ -197,6 +205,67 @@ class RunDispatchServiceIT {
         }
     }
 
+        @Test
+        void rejectsManualAndScheduledDispatchWhenEitherBindingIsDisabled() {
+        JobDefinition definition = jobDefinitionRepository.insert(definition());
+        jdbcTemplate.update("""
+            UPDATE job_definition
+            SET source_datasource_use_enabled = false
+            WHERE id = :id
+            """, Map.of("id", definition.id()));
+
+        assertThrows(IllegalStateException.class,
+            () -> dispatchService.dispatchManual(definition.id(), "disabled-manual"));
+        assertThrows(IllegalStateException.class,
+            () -> dispatchService.dispatchScheduled(definition.id()));
+
+        assertEquals(0, jdbcTemplate.queryForObject("""
+            SELECT COUNT(*) FROM job_run WHERE job_definition_id = :jobDefinitionId
+            """, Map.of("jobDefinitionId", definition.id()), Integer.class));
+        assertTrue(idempotencyRepository.findValidRunId("disabled-manual").isEmpty());
+        }
+
+        @Test
+        void keepsRetryPendingUntilBindingsAreReenabled() {
+        JobDefinition definition = jobDefinitionRepository.insert(definitionWithRetry());
+        JobRun failed = jobRunRepository.claimNextEligible(
+            jobRunRepository.insertPendingNow(definition.id(), null, 1).id(),
+            "failed-worker", Duration.ofMinutes(5)).orElseThrow();
+        jobRunRepository.markFailed(failed.id(), failed.leaseToken(), 0, 0, "temporary");
+        disableBindings(definition.id());
+
+        JobRun replacement = dispatchService.dispatchRetry(failed.id()).run().orElseThrow();
+
+        assertEquals(JobRunStatus.PENDING, replacement.status());
+        assertTrue(jobRunRepository.claimAndPrepare(replacement.id(), "disabled-worker",
+            Duration.ofMinutes(5)).isEmpty());
+
+        enableBindings(definition.id());
+        assertTrue(jobRunRepository.claimAndPrepare(replacement.id(), "enabled-worker",
+            Duration.ofMinutes(5)).isPresent());
+        }
+
+        @Test
+        void keepsRecoveryReplacementPendingUntilBindingsAreReenabled() {
+        JobDefinition definition = jobDefinitionRepository.insert(definitionWithRetry());
+        JobRun claimed = jobRunRepository.claimNextEligible(
+            jobRunRepository.insertPendingNow(definition.id(), null, 1).id(),
+            "expired-worker", Duration.ofMinutes(5)).orElseThrow();
+        disableBindings(definition.id());
+        jdbcTemplate.update("UPDATE job_run SET lease_until = now() - interval '1 second' WHERE id = :id",
+            Map.of("id", claimed.id()));
+
+        JobRun replacement = dispatchService.recoverExpiredRun(claimed.id()).run().orElseThrow();
+
+        assertEquals(JobRunStatus.PENDING, replacement.status());
+        assertTrue(jobRunRepository.claimAndPrepare(replacement.id(), "disabled-worker",
+            Duration.ofMinutes(5)).isEmpty());
+
+        enableBindings(definition.id());
+        assertTrue(jobRunRepository.claimAndPrepare(replacement.id(), "enabled-worker",
+            Duration.ofMinutes(5)).isPresent());
+        }
+
     private RunDispatchResult dispatchAfter(CountDownLatch start, UUID jobDefinitionId, String key)
             throws InterruptedException {
         start.await(5, TimeUnit.SECONDS);
@@ -221,15 +290,35 @@ class RunDispatchServiceIT {
     private static JobDefinition definition() {
         return JobDefinitionTestFixtures.aJobDefinition()
                 .withName("dispatch-job-" + UUID.randomUUID())
+                .withDefaultDatasourceReferences()
                 .build();
     }
 
     private static JobDefinition definitionWithRetry() {
         return JobDefinitionTestFixtures.aJobDefinition()
                 .withName("retry-job-" + UUID.randomUUID())
+            .withDefaultDatasourceReferences()
                 .withMode(ReplicationMode.INCREMENTAL)
                 .withIncrementalWatermarkColumn("updated_at")
                 .withRetryPolicy(new RetryPolicy(3, 0, true))
                 .build();
+    }
+
+    private void disableBindings(UUID jobDefinitionId) {
+        jdbcTemplate.update("""
+                UPDATE job_definition
+                SET source_datasource_use_enabled = false,
+                    sink_datasource_use_enabled = false
+                WHERE id = :id
+                """, Map.of("id", jobDefinitionId));
+    }
+
+    private void enableBindings(UUID jobDefinitionId) {
+        jdbcTemplate.update("""
+                UPDATE job_definition
+                SET source_datasource_use_enabled = true,
+                    sink_datasource_use_enabled = true
+                WHERE id = :id
+                """, Map.of("id", jobDefinitionId));
     }
 }

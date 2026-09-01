@@ -11,19 +11,17 @@ import org.replicadb.server.audit.domain.AuditAction;
 import org.replicadb.server.audit.domain.AuditOutcome;
 import org.replicadb.server.audit.domain.AuditResourceType;
 import org.replicadb.server.job.domain.JobDefinition;
+import org.replicadb.server.job.domain.ClaimedRunPreparation;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.domain.LeaseToken;
 import org.replicadb.server.job.application.RunFinalizationService;
 import org.replicadb.server.job.application.RunLeaseService;
-import org.replicadb.server.job.port.JobDefinitionStore;
+import org.replicadb.server.job.application.RunPreparationService;
 import org.replicadb.server.job.port.JobRunStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Optional;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -34,54 +32,50 @@ public class JobExecutionService {
     private static final Logger LOG = LogManager.getLogger(JobExecutionService.class);
 
     private final JobRunStore jobRunStore;
-    private final JobDefinitionStore jobDefinitionStore;
-    private final RunLeaseService runLeaseService;
+    private final RunPreparationService runPreparationService;
     private final RunFinalizationService runFinalizationService;
-    private final JobDefinitionEnvResolver environmentResolver;
-    private final JobDefinitionOptionsFileWriter optionsFileWriter;
+    private final DatasourceResolutionService datasourceResolutionService;
+    private final ManagedToolOptionsFactory managedToolOptionsFactory;
     private final AuditService auditService;
     private final AuditActorResolver auditActorResolver;
     private final ActiveRunRegistry activeRunRegistry;
 
     @Autowired
     public JobExecutionService(JobRunStore jobRunStore,
-                               JobDefinitionStore jobDefinitionStore,
-                               RunLeaseService runLeaseService,
+                               RunPreparationService runPreparationService,
                                RunFinalizationService runFinalizationService,
-                               JobDefinitionEnvResolver environmentResolver,
-                               JobDefinitionOptionsFileWriter optionsFileWriter,
+                               DatasourceResolutionService datasourceResolutionService,
+                               ManagedToolOptionsFactory managedToolOptionsFactory,
                                AuditService auditService,
                                AuditActorResolver auditActorResolver,
                                ActiveRunRegistry activeRunRegistry) {
         this.jobRunStore = jobRunStore;
-        this.jobDefinitionStore = jobDefinitionStore;
-        this.runLeaseService = runLeaseService;
+        this.runPreparationService = runPreparationService;
         this.runFinalizationService = runFinalizationService;
-        this.environmentResolver = environmentResolver;
-        this.optionsFileWriter = optionsFileWriter;
+        this.datasourceResolutionService = datasourceResolutionService;
+        this.managedToolOptionsFactory = managedToolOptionsFactory;
         this.auditService = auditService;
         this.auditActorResolver = auditActorResolver;
         this.activeRunRegistry = activeRunRegistry;
     }
 
     public Optional<JobRunOutcome> executeNextPending(String executorIdentity) {
-        Optional<JobRun> claimed = runLeaseService.claimNextEligible(executorIdentity,
-                java.time.Duration.ofMinutes(5));
-        return claimed.map(run -> executeClaimedRun(run, handle -> { }));
+        Optional<ClaimedRunPreparation> claimed = runPreparationService.claimNextEligible(executorIdentity,
+            java.time.Duration.ofMinutes(5));
+        return claimed.map(preparation -> executeClaimedRun(preparation, handle -> { }));
     }
 
-    public JobRunOutcome executeClaimedRun(JobRun run, Consumer<RunExecutionHandle> onStarted) {
+        public JobRunOutcome executeClaimedRun(ClaimedRunPreparation preparation,
+                           Consumer<RunExecutionHandle> onStarted) {
+        JobRun run = preparation.run();
         ToolOptions options = null;
         RunExecutionHandle handle = null;
-        Path optionsFile = null;
         try {
-                JobDefinition definition = jobDefinitionStore.findById(run.jobDefinitionId())
-                    .orElseThrow(() -> new IllegalStateException(
-                            "JobDefinition not found for JobRun " + run.id()));
+            JobDefinition definition = preparation.definition();
                 String previousWatermark = jobRunStore.findLastCommittedWatermark(definition.id())
                     .orElse(definition.initialWatermarkValue());
-                optionsFile = optionsFileWriter.write(definition, previousWatermark, environmentResolver::resolve);
-                options = new ToolOptions(new String[]{"--options-file", optionsFile.toString()});
+            options = managedToolOptionsFactory.build(datasourceResolutionService.resolve(preparation),
+                previousWatermark);
                 handle = new RunExecutionHandle(run, options);
                 if (!activeRunRegistry.register(handle)) {
                     throw new IllegalStateException("JobRun is already active locally: " + run.id());
@@ -120,7 +114,6 @@ public class JobExecutionService {
                 recordIfUpdated(result, run, JobRunStatus.FAILED, rowsProcessed, durationMillis, message);
             return new JobRunOutcome(run.id(), JobRunStatus.FAILED, rowsProcessed, durationMillis);
         } finally {
-            deleteOptionsFile(optionsFile);
             if (handle != null) {
                 activeRunRegistry.remove(run.id(), handle);
             }
@@ -129,17 +122,6 @@ public class JobExecutionService {
 
     ActiveRunRegistry activeRunRegistry() {
         return activeRunRegistry;
-    }
-
-    private static void deleteOptionsFile(Path optionsFile) {
-        if (optionsFile == null) {
-            return;
-        }
-        try {
-            Files.deleteIfExists(optionsFile);
-        } catch (IOException exception) {
-            LOG.error("Could not delete temporary job options file", exception);
-        }
     }
 
     private void recordTerminalOutcome(JobRun run, JobRunStatus status, long rowsProcessed,

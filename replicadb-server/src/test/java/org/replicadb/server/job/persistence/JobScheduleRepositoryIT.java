@@ -7,6 +7,7 @@ import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobSchedule;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -34,11 +35,17 @@ class JobScheduleRepositoryIT {
     private JobScheduleRepository repository;
 
     @Autowired
+    private ManagedDataSourceRepository managedDataSourceRepository;
+
+    @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void clearState() {
         jdbcTemplate.update("TRUNCATE TABLE job_schedule, job_run, job_definition CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE datasource_permission, managed_datasource CASCADE", Map.of());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.source());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.sink());
     }
 
     @Test
@@ -89,8 +96,7 @@ class JobScheduleRepositoryIT {
     private static JobDefinition definition() {
         return JobDefinitionTestFixtures.aJobDefinition()
             .withName("schedule-job-" + UUID.randomUUID())
-            .withSourcePassword("${env:SOURCE_PASSWORD}")
-            .withSinkPassword("${env:SINK_PASSWORD}")
+            .withDefaultDatasourceReferences()
             .build();
     }
 

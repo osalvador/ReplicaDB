@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -138,6 +139,26 @@ class RunDispatchServiceTest {
         RunDispatchResult result = service.recoverExpiredRun(expiredRunId);
 
         assertEquals(RunDispatchResult.Outcome.RECOVERY_NOOP, result.outcome());
+        verify(notificationPublisher, never()).publishRun(any(UUID.class));
+    }
+
+    @Test
+    void rejectsManualAndScheduledDispatchWhenBindingsAreDisabled() {
+        UUID jobDefinitionId = UUID.randomUUID();
+        UUID reservedRunId = UUID.randomUUID();
+        when(idempotencyRepository.reserve(eq("disabled-key"), eq(jobDefinitionId), any(UUID.class)))
+                .thenReturn(Optional.of(new RunTriggerIdempotencyRepository.IdempotencyEntry(
+                        jobDefinitionId, reservedRunId)));
+        doThrow(new IllegalStateException("disabled binding"))
+                .when(runStore).requireBindingsEnabled(jobDefinitionId);
+
+        assertThrows(IllegalStateException.class,
+                () -> service.dispatchManual(jobDefinitionId, "disabled-key"));
+        assertThrows(IllegalStateException.class,
+                () -> service.dispatchScheduled(jobDefinitionId));
+
+        verify(runStore, never()).insertPendingNow(any(UUID.class), any(UUID.class), isNull(), eq(1));
+        verify(runStore, never()).insertPendingNow(jobDefinitionId, null, 1);
         verify(notificationPublisher, never()).publishRun(any(UUID.class));
     }
 

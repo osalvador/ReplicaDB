@@ -4,6 +4,7 @@ import org.replicadb.server.job.application.RunRecoveryResult;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.domain.LeaseToken;
+import org.replicadb.server.job.domain.ClaimedRunPreparation;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -22,7 +23,12 @@ public interface JobRunStore {
 
     boolean hasActiveRun(UUID jobDefinitionId);
 
+    void requireBindingsEnabled(UUID jobDefinitionId);
+
     Optional<JobRun> claimNextEligible(UUID requestedRunId, String executorIdentity, Duration leaseDuration);
+
+    Optional<ClaimedRunPreparation> claimAndPrepare(UUID requestedRunId, String executorIdentity,
+                                                     Duration leaseDuration);
 
     LeaseRenewalResult renewLease(UUID runId, LeaseToken leaseToken, Duration leaseDuration);
 

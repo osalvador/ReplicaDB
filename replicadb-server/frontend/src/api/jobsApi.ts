@@ -9,6 +9,10 @@ export type JobDefinitionResponse = Omit<
   incrementalWatermarkColumn?: string | null;
   initialWatermarkValue?: string | null;
   modeWarning?: string | null;
+  sourceDatasourceId?: string | null;
+  sinkDatasourceId?: string | null;
+  sourceDatasource?: GeneratedJobDefinitionResponse['sourceDatasource'] | null;
+  sinkDatasource?: GeneratedJobDefinitionResponse['sinkDatasource'] | null;
 };
 export type JobDefinitionPage = Omit<components['schemas']['PageResponseJobDefinitionResponse'], 'content'> & {
   content?: JobDefinitionResponse[];
@@ -16,29 +20,15 @@ export type JobDefinitionPage = Omit<components['schemas']['PageResponseJobDefin
 
 export type JobDefinitionFormInput = {
   name: string;
-  sourceConnect: string;
-  sourceUser?: string;
-  sourcePassword?: string;
+  sourceDatasourceId: string;
+  sourceDatasourceUseEnabled: boolean;
   sourceTable: string;
   sourceWhere?: string;
-  sourceAuthMode?: string;
-  sourceAuthPrincipalId?: string;
-  sourceAuthLoginHint?: string;
-  sourceAuthClientCertificate?: string;
-  sourceAuthClientKey?: string;
-  sourceConnectionParams?: Record<string, string>;
   sourceColumns?: string;
   sourceQuery?: string;
-  sinkConnect: string;
-  sinkUser?: string;
-  sinkPassword?: string;
+  sinkDatasourceId: string;
+  sinkDatasourceUseEnabled: boolean;
   sinkTable: string;
-  sinkAuthMode?: string;
-  sinkAuthPrincipalId?: string;
-  sinkAuthLoginHint?: string;
-  sinkAuthClientCertificate?: string;
-  sinkAuthClientKey?: string;
-  sinkConnectionParams?: Record<string, string>;
   sinkColumns?: string;
   sinkStagingSchema?: string;
   sinkStagingTable?: string;
@@ -61,45 +51,23 @@ export type JobDefinitionMutationInput =
   | components['schemas']['JobDefinitionRequest'];
 
 const normalizeOptionalString = (value?: string): string | undefined => value === '' ? undefined : value;
-const normalizeOptionalMap = (value?: Record<string, string>): Record<string, string> | undefined => {
-  if (!value || Object.keys(value).length === 0) {
-    return undefined;
-  }
-  return value;
-};
 
 export function toJobDefinitionRequest(
   input: JobDefinitionMutationInput
 ): components['schemas']['JobDefinitionRequest'] {
   const mode = input.mode;
   const sourceQuery = normalizeOptionalString(input.sourceQuery);
-  const sourceSelection = sourceQuery
-    ? { sourceQuery }
-    : { sourceTable: normalizeOptionalString(input.sourceTable) };
+  const sourceTable = normalizeOptionalString(input.sourceTable);
   const request = {
     name: input.name,
-    sourceConnect: input.sourceConnect,
-    sourceUser: normalizeOptionalString(input.sourceUser),
-    sourcePassword: normalizeOptionalString(input.sourcePassword),
+    sourceDatasourceId: input.sourceDatasourceId,
+    sourceDatasourceUseEnabled: input.sourceDatasourceUseEnabled,
     sourceWhere: normalizeOptionalString(input.sourceWhere),
-    sourceAuthMode: normalizeOptionalString(input.sourceAuthMode),
-    sourceAuthPrincipalId: normalizeOptionalString(input.sourceAuthPrincipalId),
-    sourceAuthLoginHint: normalizeOptionalString(input.sourceAuthLoginHint),
-    sourceAuthClientCertificate: normalizeOptionalString(input.sourceAuthClientCertificate),
-    sourceAuthClientKey: normalizeOptionalString(input.sourceAuthClientKey),
-    sourceConnectionParams: normalizeOptionalMap(input.sourceConnectionParams),
     sourceColumns: normalizeOptionalString(input.sourceColumns),
-    ...sourceSelection,
-    sinkConnect: input.sinkConnect,
-    sinkUser: normalizeOptionalString(input.sinkUser),
-    sinkPassword: normalizeOptionalString(input.sinkPassword),
+    ...(sourceQuery ? { sourceQuery } : { sourceTable }),
+    sinkDatasourceId: input.sinkDatasourceId,
+    sinkDatasourceUseEnabled: input.sinkDatasourceUseEnabled,
     sinkTable: input.sinkTable,
-    sinkAuthMode: normalizeOptionalString(input.sinkAuthMode),
-    sinkAuthPrincipalId: normalizeOptionalString(input.sinkAuthPrincipalId),
-    sinkAuthLoginHint: normalizeOptionalString(input.sinkAuthLoginHint),
-    sinkAuthClientCertificate: normalizeOptionalString(input.sinkAuthClientCertificate),
-    sinkAuthClientKey: normalizeOptionalString(input.sinkAuthClientKey),
-    sinkConnectionParams: normalizeOptionalMap(input.sinkConnectionParams),
     sinkColumns: normalizeOptionalString(input.sinkColumns),
     sinkStagingSchema: normalizeOptionalString(input.sinkStagingSchema),
     sinkStagingTable: normalizeOptionalString(input.sinkStagingTable),

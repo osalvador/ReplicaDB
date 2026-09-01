@@ -18,7 +18,7 @@ if [[ -z "${REPLICADB_BOOTSTRAP_ADMIN_PASSWORD:-}" ]]; then
 fi
 export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD
 
-for command_name in mvn npm node curl lsof "$CONTAINER_ENGINE"; do
+for command_name in mvn npm node curl lsof openssl "$CONTAINER_ENGINE"; do
     if ! command -v "$command_name" >/dev/null 2>&1; then
         printf 'Required command not found: %s\n' "$command_name" >&2
         exit 1
@@ -61,6 +61,15 @@ SERVER_LOG="$RUN_DIR/server.log"
 FRONTEND_LOG="$RUN_DIR/frontend.log"
 SERVER_PID=""
 FRONTEND_PID=""
+
+if [[ -z "${REPLICADB_SECURITY_MASTER_KEY_FILE:-}" ]]; then
+    REPLICADB_SECURITY_MASTER_KEY_FILE="$RUN_DIR/replicadb-master-key.json"
+    local_key="$(openssl rand -base64 32)"
+    printf '{"currentVersion":"local","keys":{"local":"%s"}}\n' "$local_key" \
+        >"$REPLICADB_SECURITY_MASTER_KEY_FILE"
+    chmod 600 "$REPLICADB_SECURITY_MASTER_KEY_FILE"
+    export REPLICADB_SECURITY_MASTER_KEY_FILE
+fi
 
 cleanup() {
     local exit_code=$?

@@ -15,6 +15,8 @@ public interface JobDefinitionStore {
 
     Optional<JobDefinition> findById(UUID id);
 
+    Optional<JobDefinition> findByIdForUpdate(UUID id);
+
     Optional<JobDefinition> findByName(String name);
 
     List<JobDefinition> findAll();

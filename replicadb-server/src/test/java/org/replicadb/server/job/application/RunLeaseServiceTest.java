@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.LeaseToken;
 import org.replicadb.server.job.port.JobRunStore;
+import org.replicadb.server.job.domain.ClaimedRunPreparation;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -65,4 +66,35 @@ class RunLeaseServiceTest {
         assertEquals(JobRunStore.LeaseRenewalResult.RENEWED,
                 service.renewLease(runId, token, leaseDuration));
     }
+
+        @Test
+        void delegatesPreparedQueueClaimWithoutRequestedRunId() {
+                Duration leaseDuration = Duration.ofMinutes(5);
+                when(runStore.claimAndPrepare(isNull(), eq("worker-1"), eq(leaseDuration)))
+                                .thenReturn(Optional.empty());
+
+                assertEquals(Optional.empty(), service.claimAndPrepare(null, "worker-1", leaseDuration));
+
+                verify(runStore).claimAndPrepare(isNull(), eq("worker-1"), eq(leaseDuration));
+        }
+
+        @Test
+        void delegatesPreparedDirectedClaimWithRequestedRunId() {
+                UUID runId = UUID.randomUUID();
+                Duration leaseDuration = Duration.ofMinutes(5);
+                when(runStore.claimAndPrepare(runId, "worker-1", leaseDuration))
+                                .thenReturn(Optional.empty());
+
+                assertEquals(Optional.empty(), service.claimAndPrepare(runId, "worker-1", leaseDuration));
+
+                verify(runStore).claimAndPrepare(runId, "worker-1", leaseDuration);
+        }
+
+        @Test
+        void validatesPreparedClaimInputsBeforeCallingStore() {
+                assertThrows(IllegalArgumentException.class,
+                                () -> service.claimAndPrepare(null, "worker", Duration.ZERO));
+                assertThrows(IllegalArgumentException.class,
+                                () -> service.claimAndPrepare(null, " ", Duration.ofMinutes(1)));
+        }
 }

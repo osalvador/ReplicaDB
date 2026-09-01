@@ -76,7 +76,7 @@ public class ToolOptions {
         checkOptions(args);
     }
 
-    private ToolOptions() {
+    ToolOptions() {
     }
 
     public ToolOptions forReplicationTable(ReplicationTable replicationTable) {
