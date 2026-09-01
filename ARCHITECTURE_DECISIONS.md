@@ -12,7 +12,7 @@ The control plane does not resume interrupted work. A run either completes or is
 
 **Date**: August 13, 2026
 **Last decision review**: August 25, 2026
-**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings), Phase 2a/2b/2c (frontend authentication, monitoring, job actions, scheduling, user administration, and job permissions), Phase 3.1 (distributed state contract, leases, retries, and fencing), Phase 3.2 (worker runtime and PostgreSQL dispatch), Phase 3.3 (API high availability, shared throttling, observability, packaging, and process validation), and Phase 3.4 (hybrid worker load distribution and standalone CLI compatibility validation) implemented and validated
+**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings), Phase 2a/2b/2c (frontend authentication, monitoring, job actions, scheduling, user administration, and job permissions), Phase 3.1 (distributed state contract, leases, retries, and fencing), Phase 3.2 (worker runtime and PostgreSQL dispatch), Phase 3.3 (API high availability, shared throttling, observability, packaging, and process validation), and Phase 3.4 (hybrid worker load distribution and standalone CLI compatibility validation) implemented and validated; Phase 4 (reusable managed datasources) approved for planning
 **Owner**: Development Team
 
 ---
@@ -268,9 +268,13 @@ These are decided so that they are not re-litigated per endpoint:
 
 #### Credentials and secret references
 
-Job definitions must contain configuration references, not passwords, tokens, or credential-bearing connection strings. The reference syntax is the existing environment expansion, `${env:VARIABLE}`, resolved by the executor immediately before building `ToolOptions`. Provider-prefixed references such as `${secret:<provider>/<path>#<key>}` are reserved for a later secret-manager integration and are rejected until that integration exists. A resolved secret never enters the state store, the API responses, the audit log, or a dispatch payload.
+The standalone CLI continues to use its existing environment expansion and options-file behavior. The managed server follows a different credential boundary after Phase 4: datasource credentials are submitted over the authenticated TLS API, encrypted by the application before insertion into PostgreSQL, and decrypted only in memory while an attempt is materialized through an additive `ToolOptionsBuilder` API in the root artifact. Managed datasource credentials do not require source or sink passwords to be present in process environment variables, and the managed server does not create an options file for them.
 
-Implemented in Phase 1b at the domain model: `JobDefinition`'s validation rejects a `sourcePassword`/`sinkPassword` that is not `null` or a well-formed `${env:VARIABLE}` reference, and rejects a connection string with embedded credentials (URI user-info or a `password=`-style parameter). `JobDefinitionEnvResolver` performs the resolution and explicitly rejects `${secret:...}`.
+All credential-bearing values use the encrypted datasource security bundle, including JDBC passwords and users where configured, MongoDB connection strings containing URI credentials, S3 access/secret keys, Kafka SASL and keystore secrets, Azure service-principal secrets and certificate/key values, and sensitive arbitrary `*.connect.parameter.*` entries. `connectionParams` is reserved for non-secret technical values. Provider-prefixed references such as `${secret:<provider>/<path>#<key>}` remain reserved for the future Vault/CyberArk provider integration and are not accepted by the initial database-encrypted provider.
+
+The initial managed provider uses application-level envelope encryption with AES-256-GCM. Each datasource security bundle has a fresh data-encryption key, a wrapped key, nonce, ciphertext, encryption algorithm version, and key version. PostgreSQL stores only the envelope and never receives a plaintext credential. The key-encryption key is supplied outside PostgreSQL through a Kubernetes/Docker Secret mounted as a file; it is not a source or sink credential environment variable. The server fails during startup when that key is absent, unreadable, incorrectly sized, or invalid. A provider interface is required so a future KMS, Vault, or CyberArk implementation can replace the initial file-backed key provider without changing job or CLI contracts. The managed execution path keeps decrypted values in memory and passes them directly to `ToolOptionsBuilder`; the existing options-file and redaction rules remain authoritative only for standalone CLI execution.
+
+The current Phase 1b `${env:VARIABLE}` validation is historical managed-job behavior and is removed by the Phase 4 pre-production metadata reset. After the reset, managed API responses, audit events, notifications, metrics, exceptions, and worker payloads never contain password values, key references, resolved credentials, or encrypted bundle contents. Key rotation is performed by re-encrypting bundles under a new key version without exporting plaintext.
 
 #### Identity and permissions
 
@@ -407,6 +411,104 @@ The following are deliberately excluded from the current roadmap:
 - **Universal validation or reconciliation**: source data may change during a run, queries may be non-repeatable, and heterogeneous databases do not provide one equivalent consistency or comparison model. Operational row counters are not proof of source/sink equality.
 - **Schema evolution, mappings, and ETL transformations**: ReplicaDB remains a transport tool. Query-specific conversions stay in `source-query` for now. A future frontend may edit job configuration, but it will not add a transformation engine through this architecture decision.
 
+- **Sharing live JDBC connections or a central connection pool across runs**: A managed datasource reuses connection configuration, users, password references, authentication, and technical parameters. It does not reuse open source or sink connections. The core continues to let each task own its connections and lifecycle.
+
+### Decision 8: Reusable Managed Datasources
+
+**Status**: APPROVED FOR PHASE 4
+
+The managed server will expose a first-class datasource catalog. A datasource is a reusable connection profile, not a new replication engine and not a pool of already-open database connections. Jobs select a source datasource and a sink datasource instead of repeating connection details in every job.
+
+This decision applies only to the managed `api` and `worker` profiles. The standalone `replicadb` artifact, its CLI arguments, its options-file keys, its launchers, and its execution semantics remain unchanged. The existing `source.*` and `sink.*` options continue to be the permanent CLI contract.
+
+#### Datasource scope and domain model
+
+The internal Java name is `ManagedDataSource` to avoid confusion with `javax.sql.DataSource`. The public API and frontend use the term `datasource`. A managed datasource owns:
+
+- A stable identifier and unique display name.
+- A validated connector type or custom scheme classification used for UI and capability checks.
+- A redacted display connection string and non-secret technical `connectionParams`.
+- An encrypted `connect.security` bundle containing the actual connection string when it may contain credentials, user/password values, authentication values, and sensitive `*.connect.parameter.*` entries.
+- File-format and non-secret Kafka producer settings currently carried in the endpoint `technicalParams` map.
+- Creation and update timestamps for temporal audit correlation.
+
+ All credential-bearing values are accepted only through the authenticated API request, encrypted before persistence, and never returned to the client. The server-side `connect.security` namespace uses relative CLI property keys such as `password`, `user`, `connect`, `connect.parameter.secretKey`, `connect.parameter.sasl.jaas.config`, and `auth.client.key`. It is not emitted as a CLI options-file section. During execution the datasource materializer decrypts the namespace and maps it to the existing `source.*` or `sink.*` properties. Raw passwords, key material, encrypted bundle contents, and resolved credentials never enter API responses, audit detail, notifications, metrics, exceptions, or worker payloads. On update, an omitted or blank security value preserves the existing encrypted entry; removal requires an explicit `clearSecurityKeys` list, so editing a datasource never clears a credential accidentally.
+
+The initial provider uses application-level AES-256-GCM envelope encryption. A fresh per-datasource data key is wrapped by a file-backed key-encryption key outside PostgreSQL; every encrypted bundle has a random nonce and explicit algorithm/key versions. A mounted Kubernetes/Docker Secret supplies the key-encryption key, and the server fails during startup when it cannot load or validate it. The provider boundary is extensible to KMS, Vault, or CyberArk without requiring source or sink credentials in process environment variables. The managed execution path keeps decrypted values in memory and passes them directly to `ToolOptionsBuilder`; the existing options-file and redaction rules remain authoritative only for standalone CLI execution.
+
+The managed `JobDefinition` owns replication-specific configuration only:
+
+- `sourceDatasourceId` and `sinkDatasourceId`, both required.
+- `sourceDatasourceUseEnabled` and `sinkDatasourceUseEnabled`, both defaulting to `true` when a binding is created.
+- Source table/query, columns, filters, sink table/columns, staging settings, mode, watermark, retry policy, and execution tuning.
+
+`SourceEndpoint` and `SinkEndpoint` must reference datasource identifiers rather than embedding `ConnectionCredentials`. The execution layer may create an in-memory resolved definition containing the current datasource credentials, but that resolved value is never persisted as job state.
+
+#### Live references and run boundaries
+
+Datasource references are live. An update to a datasource is used by the next run that resolves the job. A `PENDING` run resolves each datasource when it is claimed, not when the run row is inserted. The PostgreSQL claim transaction locks the eligible run, the job binding, and both datasource rows, records the selected datasource IDs and `resolved_at` on the run, and returns the encrypted bundle snapshot for in-memory decryption after commit. If a datasource update commits before the claim, the run uses the new bundle; if the claim commits first, the active attempt uses the old bundle. A retry is a new pending run and resolves the current profiles again. Updating a datasource never mutates an already-resolved attempt.
+
+The first implementation does not version datasource configuration. `JobRun` retains the source/sink datasource identifiers and `datasources_resolved_at` for temporal correlation, but not a complete configuration snapshot or secret material. This is an explicit trade-off: exact historical reconstruction after a datasource update is deferred until a future revision or immutable-version model is justified.
+
+#### Job-datasource use binding
+
+The user ACL and the job binding are separate concerns:
+
+- A datasource ACL grants users `VIEW`, `USE`, and `EDIT`. `VIEW` returns safe metadata, `USE` permits selecting the datasource in a job, and `EDIT` permits changing its configuration. ADMIN retains the global bypass and manages datasource permissions in the first version.
+- The job definition stores `sourceDatasourceUseEnabled` and `sinkDatasourceUseEnabled`. These flags represent whether the job is currently allowed to use each selected datasource.
+- Creating or changing a binding requires job edit permission and datasource `USE` permission for the caller.
+- Manual triggers, scheduled triggers, and worker claims must all require both binding flags to be enabled. Disabling either flag blocks all future executions of that job, regardless of whether the trigger is manual or scheduled.
+- Disabling a binding does not cancel a `RUNNING` attempt. The existing cancellation endpoint remains the explicit mechanism for stopping active work. Pending work must not be claimed after the disabling transaction takes effect, and the implementation must make the flag check and claim boundary race-safe.
+
+The datasource is deleted with `RESTRICT`. A delete request returns a conflict identifying that the datasource is referenced by one or more jobs. No automatic detachment, credential copy, or conversion to inline configuration is performed.
+
+#### Connector capabilities
+
+The server will derive source/sink capability from the connector type and the existing manager contract. Capabilities are not editable JSON stored on a datasource. The catalog must remain aligned with `ManagerFactory`, `SupportedManagers`, and the manager-specific mode restrictions. At minimum, it must represent the existing UI/core distinctions such as Kafka being sink-only and Denodo being source-only; mode-specific restrictions such as a sink that cannot perform `complete-atomic` remain job validation rules.
+
+The connector type is metadata for validation and frontend selection. The connection string remains the value passed to the core, so the server must reject a type/scheme mismatch before persistence or normalize the type from the scheme. A custom connection is allowed only when the catalog can treat its scheme as a supported generic manager; unknown runtime failures must not be disguised as a valid capability.
+
+#### API version and surface
+
+The datasource-only managed contract reuses `/api/v1` because the managed server is not in production and there are no managed jobs or clients that require preservation. This is a documented pre-production reset, not a general exception to Decision 4: after Phase 4, incompatible managed API changes require a new major path segment.
+
+The API adds:
+
+```text
+POST   /api/v1/datasources                         Create a datasource
+GET    /api/v1/datasources                         List safe, visible datasource metadata
+GET    /api/v1/datasources/{id}                    Read safe datasource metadata
+PUT    /api/v1/datasources/{id}                    Update connection profile and settings
+DELETE /api/v1/datasources/{id}                    Delete when no job references it
+GET    /api/v1/datasources/{id}/permissions        Read ADMIN-managed datasource ACLs
+PUT    /api/v1/datasources/{id}/permissions/{userId}
+                                                     Replace a user's datasource permissions
+DELETE /api/v1/datasources/{id}/permissions/{userId}
+                                                     Remove a user's datasource permissions
+```
+
+ `DatasourceRequest` accepts the transient plaintext values needed to create or rotate a datasource over TLS and an explicit `clearSecurityKeys` list for removal. Omitted or blank secret fields preserve their existing encrypted entries on update. `DatasourceResponse` includes the redacted display connection string, connector type, safe technical settings, capability summary, configured-state flags, and caller capability flags, but never returns any security-bundle value, encryption envelope, or key reference. `JobDefinitionRequest` accepts only `sourceDatasourceId` and `sinkDatasourceId` for connection selection; inline source/sink connection fields are removed from the managed API. `JobDefinitionResponse` returns the selected identifiers, resolution metadata when available, and safe datasource summaries without duplicating credentials.
+
+The first datasource slice does not add a public `test-connection` endpoint. Connection validation remains part of job validation and execution; a bounded test operation can be designed separately if operational demand justifies the security and network implications.
+
+#### Persistence and reset policy
+
+PostgreSQL remains the source of truth. The next forward-only migration creates `managed_datasource` and `datasource_permission`, adds the two datasource identifiers and two use flags to `job_definition`, and removes the inline connection columns from the managed schema. It must first assert that `job_definition` contains no rows; if old development state exists, startup fails with an explicit reset instruction rather than silently deleting or backfilling jobs.
+
+There is no dual-read path, no automatic deduplication of old inline connections, and no conversion of old jobs into datasources. The server metadata database is intentionally recreated/reset for this pre-production contract. Foreign keys from jobs to datasources use restrictive deletion semantics. Existing job runs, schedules, permissions, and idempotency rows are also not migrated because the old jobs do not survive the reset.
+
+#### Execution and distributed runtime
+
+`JobExecutionService` and the worker execution path claim and resolve the job and both referenced datasources at one PostgreSQL boundary before calling the additive root-artifact `ToolOptionsBuilder`. The builder sets the same `ToolOptions` values that the CLI/options-file parser produces, but keeps decrypted credentials in memory and never creates a managed options file. No change is required in `ReplicaDB.processReplica(ToolOptions)` or in any core manager.
+
+Manual and Quartz dispatches validate the binding flags before creating a run. Worker claim SQL locks the job binding and datasource rows, excludes disabled bindings, records the resolved datasource IDs on the run, and returns the encrypted profile snapshot, so a pending run cannot bypass a disabled datasource relationship or change configuration halfway through resolution. A worker notification still carries only the run UUID. Datasource updates, permission changes, and binding changes are re-evaluated from PostgreSQL; no API-local or worker-local datasource cache is authoritative.
+
+#### Audit and security boundary
+
+Add datasource resource/action vocabulary for create, update, delete, and permission changes. Audit details contain only datasource id, safe name, connector type, affected permission, binding side, and bounded timestamps. They never contain password references, resolved values, connection strings, connection parameters, or certificate/key contents.
+
+Datasource list visibility and permission checks occur in backend repositories/services before pagination and before a job binding is accepted. Frontend hiding is only an ergonomic aid. A user with job `VIEW` but without datasource `VIEW` must not receive datasource connection metadata; a user without datasource `USE` cannot create or change the binding. Scheduled execution is authorized by the active job binding, not by the identity of the human who originally created the schedule.
+
 ---
 
 ## Implementation Phases
@@ -508,7 +610,7 @@ Delivered as additions to `replicadb-server` plus one small, additive core chang
 
 - **Domain**: `JobDefinition` and `JobRun` Java records under `org.replicadb.server.job.domain`. `JobDefinition` reuses the existing public `org.replicadb.cli.ReplicationMode` enum instead of duplicating it, and its compact constructor enforces Decision 1's one-source/sink-table-pair rule, a positive `jobs` value, and Decision 4's credential-reference rule (`sourcePassword`/`sinkPassword` must be `null` or `${env:VARIABLE}`, and connection strings may not embed credentials). `JobRunStatus` is the 7-value enum from Decision 3, with `isTerminal()` and `fromReplicaExitCode(int)` mapping `ReplicaDB.processReplica`'s `0`/`1`/`2` to `SUCCEEDED`/`FAILED`/`CANCELLED`. `JobRunStateMachine.assertLegalTransition(from, to)` enforces the transition table from Decision 3.
 - **Persistence**: Forward-only Flyway migrations `V1__create_job_definition.sql` and `V2__create_job_run.sql` create the metadata schema, including `job_run`'s `executor_identity`/`lease_until`/`heartbeat_at` columns (populated with simple single-instance values now, ready for Phase 3's lease rules without a later `ALTER TABLE`). `JobDefinitionRepository` and `JobRunRepository` use `NamedParameterJdbcTemplate` (Spring JDBC, not JPA). `JobRunRepository.claimNextPending(executorIdentity, leaseDuration)` runs a `SELECT ... FOR UPDATE SKIP LOCKED` followed by a conditional `UPDATE` in one transaction — real PostgreSQL row locking, not application-level optimistic locking. `scheduleRetry(failedRunId)` implements Decision 3's "no resume" rule as described above. `findLastCommittedWatermark(jobDefinitionId)` returns the last `SUCCEEDED` run's watermark, falling back to the job definition's `initialWatermarkValue`.
-- **Execution service**: `JobDefinitionEnvResolver` resolves `${env:VARIABLE}` references (rejecting `${secret:...}` explicitly, per Decision 4) immediately before `ToolOptionsArgsBuilder` converts the resolved `JobDefinition` into the `String[]` CLI-style args that `ToolOptions`'s only public constructor accepts — this is the concrete mechanism behind "converts a job definition into `ToolOptions`". `JobExecutionService.executeNextPending(executorIdentity)` claims a run, builds `ToolOptions`, calls the unchanged `ReplicaDB.processReplica(options)`, maps the exit code via `JobRunStatus.fromReplicaExitCode(...)`, and persists `rowsProcessed`/`durationMillis` for every outcome and `committedWatermark` only on success. It never logs the resolved connect strings, passwords, or the built args array.
+- **Execution service**: `JobDefinitionEnvResolver` resolves `${env:VARIABLE}` references (rejecting `${secret:...}` explicitly, per Decision 4) immediately before `JobDefinitionOptionsFileWriter` converts the resolved `JobDefinition` into the CLI-compatible temporary options file consumed by `ToolOptions` — this is the concrete mechanism behind "converts a job definition into `ToolOptions`". `JobExecutionService.executeNextPending(executorIdentity)` claims a run, builds `ToolOptions`, calls the unchanged `ReplicaDB.processReplica(options)`, maps the exit code via `JobRunStatus.fromReplicaExitCode(...)`, and persists `rowsProcessed`/`durationMillis` for every outcome and `committedWatermark` only on success. It never logs the resolved connect strings, passwords, or the generated options file contents.
 - **Core widening**: `ReplicationExecutionContext` gained `rowsProcessed`/`durationMillis` accessors, populated unconditionally by `ReplicaDB.executeSingleReplication` right after the parallel tasks finish — unlike the watermark candidate, which stays conditional on `executePostTasks()` succeeding. This is what lets `JobExecutionService` persist row counters and timings for a `FAILED`/`CANCELLED` run, not only a `SUCCEEDED` one.
 - **Runtime alignment**: `replicadb-server` now depends on `spring-boot-starter-log4j2` instead of Spring Boot's default logging bridge, because ReplicaDB core's Sentry initialization requires a Log4j2 `LoggerContext`; without this, `ReplicaDB.processReplica(...)` fails immediately when invoked from the managed runtime.
 - **Testing**: Testcontainers PostgreSQL via Spring Boot's `@ServiceConnection` backs the full-context and repository tests (including the two Phase 1a context tests, updated to boot with the now-mandatory `DataSource`); a dependency-light `FlywayMigrationTest` validates the migrations with a raw `PostgreSQLContainer` before any Spring wiring exists; `JobExecutionServiceIT` exercises a real end-to-end `incremental` run against SQLite source/sink fixture files, asserting the persisted `committedWatermark` and that a failed run leaves the prior committed value unchanged.
@@ -893,6 +995,246 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and provides t
 - Multiple API instances do not duplicate Quartz schedule firings or bypass shared login throttling.
 - The standalone CLI artifact and its no-PostgreSQL execution path remain unchanged.
 
+### Phase 4: Reusable Managed Datasources
+
+**Status**: APPROVED FOR PLANNING; NOT IMPLEMENTED
+
+#### Objective
+
+The managed server currently stores a complete source and sink connection inside every `JobDefinition`. This repeats connection strings, users, passwords, authentication settings, and technical parameters across jobs and makes credential rotation unnecessarily repetitive. Phase 4 introduces reusable managed datasources so a job selects an existing source and sink profile while retaining only replication-specific configuration.
+
+This phase is server-only. The standalone CLI is not converted into a datasource client and does not read the server datasource catalog. Its existing command-line arguments, options-file keys, launchers, exit codes, multi-table behavior, and no-PostgreSQL execution path remain unchanged.
+
+The managed server is not in production and no managed jobs need to survive this change. The new datasource-only contract therefore reuses `/api/v1`, resets the managed metadata state, and removes the old inline connection model. There is no legacy job backfill, no dual-read compatibility path, and no period in which one managed job can contain both inline connections and datasource references.
+
+#### Locked design
+
+- `ManagedDataSource` is the internal Java domain name. The public API and frontend call the resource `datasource`; this avoids ambiguity with `javax.sql.DataSource` without making the product vocabulary less clear.
+- A managed datasource contains safe connection metadata and technical settings: connector type, a redacted display connection string, and non-secret `technicalParams`. Its encrypted `connect.security` bundle contains the actual connection string when it may contain credentials, user/password values, Azure security values, and any sensitive `*.connect.parameter.*` values. File-format and non-secret Kafka producer settings remain in `technicalParams` because the existing CLI parser already consumes them from `source.connect.parameter.*` and `sink.connect.parameter.*`.
+- A managed job contains `sourceDatasourceId` and `sinkDatasourceId`, source/sink tables or queries, filters, columns, staging settings, replication mode, watermark, retry policy, and execution tuning. It contains no source or sink credentials.
+- Datasource references are live. A datasource update applies to the next run. A `PENDING` run resolves both profiles when it is claimed, not when it is inserted. The PostgreSQL claim transaction locks the eligible run, the job binding, and both datasource rows, records the selected IDs and `datasources_resolved_at`, and returns the encrypted bundle snapshot for in-memory decryption after commit. An active attempt keeps that resolution and is not changed halfway through execution.
+- Datasource configuration is not versioned in this phase. Runs and audit events retain datasource identifiers and `datasources_resolved_at` for temporal correlation, but not a complete configuration snapshot or secret material. Exact historical reconstruction after a concurrent update is deferred.
+- A datasource can be selected as source or sink only when the authoritative connector capability catalog permits that role. Capabilities are derived from the connector type and core manager contract, not stored as user-editable JSON.
+- A datasource delete is restricted while any job references it. No automatic detachment, credential copy, or conversion to inline configuration is allowed.
+- The datasource ACL grants users `VIEW`, `USE`, and `EDIT`. ADMIN keeps the global bypass and manages datasource permissions in the first version. `USE` permits a user to select or change a datasource binding; it is not a substitute for the job's own execution permission.
+- `job_definition` stores `source_datasource_use_enabled` and `sink_datasource_use_enabled`. These flags are the job-level use authorization. Disabling either flag blocks new manual runs, scheduled runs, and worker claims for that job. Pending rows remain durable but are not claimable while the binding is disabled; a currently `RUNNING` attempt is not cancelled automatically.
+- A job binding change requires job edit permission and datasource `USE` permission. Manual execution still requires job `EXECUTE`; scheduling and worker execution use the active binding flags as the durable authorization boundary.
+- The server reuses connection configuration, not live JDBC connections. Every core task continues to own its source and sink connection lifecycle.
+- The logical `connect.security` map uses relative CLI property keys: `connect`, `user`, `password`, `auth.*`, and sensitive `connect.parameter.*` entries. It is encrypted as one authenticated bundle in PostgreSQL. `technicalParams` contains only non-secret values such as file format, Kafka topic/partition/acks, S3 mode, or driver tuning; the validator rejects secret-looking keys and values in that map.
+- The initial keyring is loaded from `replicadb.security.master-key-file` (default `/run/secrets/replicadb-master-key`). It contains a current key version and Base64-encoded 256-bit key material, with previous versions available during rotation. No source or sink credential is loaded from process environment variables. If the keyring is missing or invalid, the `api` or `worker` process fails startup.
+- The managed execution path never creates an options file. A server-side resolver decrypts the bundle in memory and calls the additive root-artifact `ToolOptionsBuilder`; only standalone CLI invocations use `OptionsFile` and environment expansion.
+
+#### Target flow
+
+```text
+Datasource catalog                         Job definition
+-------------------                        ------------------------
+ManagedDataSource A -- sourceDatasourceId  tables, query, mode,
+ManagedDataSource B -- sinkDatasourceId    watermark, staging, retry
+                         |                                         |
+                         +-------------------+---------------------+
+                                                                           v
+                                                  resolve at claim time
+                                                                           |
+                                                                           v
+                                         ToolOptionsBuilder in memory
+                                                                           |
+                                                                           v
+                                                  ToolOptions -> ReplicaDB core
+```
+
+#### Persistence model
+
+The canonical managed schema after the pre-production reset is conceptually:
+
+```text
+managed_datasource
+     id, name, connector_type, safe_connect_display
+     technical_params JSONB              -- non-secret only
+     encrypted_security BYTEA            -- connect.security bundle
+     encryption_algorithm, key_version
+     created_at, updated_at
+
+datasource_permission
+     datasource_id, user_id, permission, created_at
+
+job_definition
+     source_datasource_id, sink_datasource_id
+     source_datasource_use_enabled, sink_datasource_use_enabled
+     source/sink endpoint-specific fields
+     mode, watermark, retry policy, execution settings
+
+job_run
+     ... existing run state ...
+     resolved_source_datasource_id, resolved_sink_datasource_id
+     datasources_resolved_at
+```
+
+The next forward-only Flyway migration must create the datasource and ACL tables, add restrictive foreign keys and indexes, add the two datasource references and two use flags to `job_definition`, add the resolved datasource fields to `job_run`, and remove the inline connection/authentication/parameter columns. `managed_datasource` stores only safe display metadata, non-secret technical parameters, and the encrypted `connect.security` envelope; no credential column may remain plaintext. It must first assert that `job_definition` contains no rows. If an existing development database contains managed jobs, migration fails with a reset instruction instead of silently deleting or deduplicating them. A clean database applies the new contract; no old job, run, schedule, permission, or idempotency state is migrated.
+
+#### Capability and validation boundary
+
+The existing core identifies managers from the connection scheme and receives `DataSourceType.SOURCE` or `DataSourceType.SINK`. Phase 4 must expose or reuse an authoritative capability adapter rather than copy a second, editable capability matrix into the server. The capability contract must cover source/sink role support and job-mode restrictions, including the existing Kafka sink-only and Denodo source-only behavior and sink limitations for `complete-atomic`.
+
+The connector type is safe metadata for the API and frontend. The connection string remains the value passed to the core. Creation and update must reject or normalize a connector type that does not match the connection scheme. A custom connection is valid only when the server can classify its scheme as a supported generic manager; a later connection failure must not be represented as a successful capability check.
+
+#### API and frontend boundary
+
+The API adds CRUD and ADMIN-managed datasource permission endpoints under `/api/v1/datasources`. `DatasourceRequest` accepts transient plaintext security values only over authenticated TLS and an explicit `clearSecurityKeys` list; omitted or blank security values preserve existing encrypted entries on update. Datasource responses contain only safe metadata: redacted display connection string, connector type, redacted technical parameters, capability summary, configured-state flags, and caller permissions. They never contain security-bundle values, encryption envelopes, key references, or resolved credentials.
+
+`JobDefinitionRequest` and `JobDefinitionResponse` replace the current inline source/sink connection fields with datasource identifiers and safe datasource summaries. The generated OpenAPI schema remains the only frontend contract. `ConnectionSettingsCard` moves from the job editor to the datasource editor; `JobFormPage` becomes a selector for source and sink datasources and keeps only endpoint-specific replication settings.
+
+Datasource list queries must apply ACL and capability filtering in the backend before pagination. The frontend may disable an unavailable option for usability, but it is never the authorization boundary. A user with job `VIEW` but without datasource `VIEW` must not receive datasource connection metadata.
+
+#### Execution and race semantics
+
+Manual triggers and Quartz triggers reject a job whose source or sink use flag is disabled and do not create a new run. Worker claim SQL must join `job_definition` and exclude disabled bindings, so a pending row cannot bypass a disabled relationship. The disable operation and the claim boundary must be serialized or expressed through conditional database updates so the state transition is race-safe. If a claim has already linearized before the disable, its `RUNNING` attempt may finish; disabling the binding is not implicit cancellation.
+
+`JobExecutionService`, `ScheduledRunTriggerJob`, and the worker execution path load the current datasource records at claim/resolution time before `ToolOptionsBuilder` creates the in-memory options object. The notification payload remains only the run UUID. A datasource update or permission change is read from PostgreSQL on the next relevant operation; no API-local or worker-local datasource cache is authoritative. The managed path does not create an options file; the CLI options-file path remains standalone and unchanged.
+
+#### Phase 4 implementation tasks
+
+##### 1. Define the datasource domain and capability contract
+
+- [ ] **1.1 Add `ManagedDataSource`, connector types, datasource references, and capability classification**
+     Files: `replicadb-server/src/main/java/org/replicadb/server/job/domain/ManagedDataSource.java` (new), `ConnectorType.java` (new), `DataSourceCapabilities.java` (new or equivalent), `DataSourceCapabilityCatalog.java` (new or shared core adapter), `ConnectionCredentials.java`, `SourceEndpoint.java`, `SinkEndpoint.java`, `JobDefinition.java`
+     Changes: Reuse the existing immutable connection value objects where appropriate, but move all managed credential-bearing values into a `connect.security` bundle protected by the datasource encryption service. Replace embedded endpoint credentials in the managed domain with datasource UUID references and source/sink use flags. Keep endpoint-specific fields on `SourceEndpoint`/`SinkEndpoint`. Define lower-case wire values matching the frontend connector builder and classify source/sink support from the existing manager contract. Do not add capability JSON or any CLI datasource concept.
+     Tests: Validate datasource names, connector types, encrypted security-bundle shape, immutable technical parameters, source/sink capability decisions, custom-scheme handling, Kafka/Denodo role restrictions, and mode-specific sink restrictions. Assert that a managed `JobDefinition` cannot be built without both datasource identifiers or with a disabled binding that is treated as executable.
+     Dependencies: None
+
+##### 2. Protect datasource secrets at rest
+
+- [ ] **2.1 Add the encrypted `connect.security` bundle and key-provider boundary**
+     Files: `replicadb-server/src/main/java/org/replicadb/server/security/secret/EncryptedSecurityBundle.java` (new), `SecretProtectionService.java` (new), `KeyEncryptionKeyProvider.java` (new), `FileBackedKeyEncryptionKeyProvider.java` (new), `SecretProtectionProperties.java` (new), `replicadb-server/src/main/resources/application-api.yml`, `application-worker.yml`, server `pom.xml` if a vetted crypto dependency is required
+     Changes: Implement application-level AES-256-GCM envelope encryption for a canonical security map. Generate a fresh 256-bit data-encryption key and random 96-bit nonce per bundle, bind ciphertext with authenticated data containing the datasource UUID and bundle format version, and wrap the data key with the external key-encryption key. Validate a Base64 256-bit key loaded from the configured Kubernetes/Docker Secret file, fail server startup when it is absent/unreadable/invalid, and expose algorithm/key versions for rotation. Keep the provider interface replaceable by KMS, Vault, or CyberArk later. Never log plaintext, ciphertext, keys, or request bodies.
+     Tests: Cover encryption/decryption round trips, unique nonces/data keys, authenticated tamper and wrong-datasource rejection, malformed bundle rejection, key-version selection, missing/invalid key startup failure, file-backed configuration, provider replacement through the interface, and absence of secret material in logs/exceptions.
+     Dependencies: Task 1.1
+
+- [ ] **2.2 Define security-key classification and update semantics**
+     Files: `ManagedDataSource.java`, `DatasourceRequest.java`, `DatasourceMapper.java`, `SecretProtectionService.java`, security/domain tests
+     Changes: Define the logical `connect.security` keys for `connect`, `user`, `password`, Azure security fields, MongoDB credential-bearing URIs, S3 `accessKey`/`secretKey`, Kafka SASL/SSL secrets, and sensitive arbitrary `connect.parameter.*` values. Keep non-secret driver/file/Kafka tuning values in `technical_params`. Reject secret-looking entries in technical parameters and reject embedded credentials in any unencrypted display value. On update, omitted or blank security fields preserve the existing encrypted entries; an explicit `clearSecurityKeys` list removes selected entries. Responses expose only configured booleans and redacted display metadata.
+     Tests: Verify every supported manager's sensitive keys are classified into the encrypted bundle, MongoDB full-URI handling, S3/Kafka/Azure security mapping, technical-parameter rejection, blank-preservation, explicit clearing, redaction, and no secret values in DTOs or audit details.
+     Dependencies: Task 2.1
+
+##### 3. Define live-resolution and safe JobRun semantics
+
+- [ ] **3.1 Define claim-time datasource resolution and run correlation**
+     Files: `replicadb-server/src/main/java/org/replicadb/server/job/domain/ResolvedJobDefinition.java` (new or equivalent), `JobRun.java`, `JobRunRepository.java`, `JobRunStore.java` or a new preparation port, resolution tests
+     Changes: Define the in-memory value created by resolving a job's current datasources at claim time. Lock the eligible run, binding, and both datasource rows in one PostgreSQL transaction; record `resolved_source_datasource_id`, `resolved_sink_datasource_id`, and `datasources_resolved_at`; return the encrypted bundle snapshot; then decrypt after commit. If an update commits first, the pending run uses the new bundle; if the claim commits first, the active attempt uses the snapshot read by that claim. A retry resolves again. Do not persist a complete configuration or secret.
+     Tests: With concurrent PostgreSQL transactions, prove update-vs-claim ordering, pending-run claim-time resolution, active-attempt immutability, retry re-resolution, persisted ID/timestamp correlation, and no secret material in `JobRun` or notifications.
+     Dependencies: Tasks 1.1, 2.1, and 2.2
+
+##### 4. Replace managed inline connection persistence
+
+- [ ] **4.1 Add the datasource schema and pre-production reset migration**
+     Files: `replicadb-server/src/main/resources/db/migration/V17__create_managed_datasource.sql` (new or next migration), `V18__replace_inline_job_connections.sql` (new or equivalent), migration tests
+     Changes: Create `managed_datasource` with unique names, safe display metadata, JSONB non-secret technical parameters, encrypted security-bundle storage, algorithm/key-version metadata, and `datasource_permission`. Add `source_datasource_id`, `sink_datasource_id`, `source_datasource_use_enabled`, and `sink_datasource_use_enabled` to `job_definition`, plus the resolved datasource IDs and resolution timestamp to `job_run`, with restrictive foreign keys and lookup indexes. Assert no existing `job_definition` rows before dropping the old inline connection/auth/parameter columns. Do not backfill, deduplicate, or silently delete jobs. Keep Flyway forward-only and make a non-empty development database fail with an actionable reset message.
+     Tests: Run the complete migration chain in PostgreSQL Testcontainers, verify the clean-schema shape, restrictive delete behavior, name uniqueness, permission constraints, indexes, no inline connection columns, and an explicit failure when old managed jobs are present. Verify no root CLI table or dependency is involved.
+     Dependencies: Task 1.1
+
+- [ ] **4.2 Update repositories and application ports**
+     Files: `ManagedDataSourceRepository.java` (new), `DataSourcePermissionRepository.java` (new), `JobDefinitionRepository.java`, `JobDefinitionRowMapper.java`, `JobDefinitionStore.java` or new datasource port, related integration tests
+     Changes: Persist and load encrypted security bundles through a dedicated `SecretProtectionService`, serialize only non-secret technical parameters through the existing ObjectMapper JSONB pattern, map only datasource IDs and use flags in `JobDefinition`, and implement page/count queries with backend visibility and capability restrictions before pagination. Return explicit outcomes for not found, forbidden, invalid ciphertext, and referenced-on-delete cases.
+     Tests: Round-trip datasource metadata, encrypted credentials, and parameters; preserve blank-secret update semantics; prove decrypt/re-encrypt behavior and key-version handling; prove restricted deletes; verify concurrent datasource reads/updates; and prove non-admin list results cannot include unauthorized profiles or bypass capability filters.
+     Dependencies: Tasks 1.1, 2.1, 2.2, and 4.1
+
+##### 5. Replace the managed REST contract
+
+- [ ] **5.1 Add datasource CRUD and safe mapping**
+     Files: `DatasourceController.java` (new), `DatasourceRequest.java` (new), `DatasourceResponse.java` (new), `DatasourceMapper.java` (new), `GlobalExceptionHandler.java`, OpenAPI/controller tests
+     Changes: Add `POST`, paginated `GET`, `GET {id}`, `PUT`, and restrictive `DELETE` under `/api/v1/datasources`. Use RFC 7807 errors, redacted connection strings/parameters, password-configured booleans, blank-password preservation on update, capability summaries, and caller permission flags. Return `409` when a datasource is referenced by jobs. Do not add a public connection-test endpoint in this phase.
+     Tests: Cover validation, redaction, create/update/delete, pagination, duplicate names, referenced delete conflicts, forbidden access, admin bypass, and absence of password references/resolved values from every response and problem detail.
+     Dependencies: Tasks 1.1, 2.1, 2.2, and 4.2
+
+- [ ] **5.2 Convert job endpoints to datasource-only references**
+     Files: `JobDefinitionRequest.java`, `JobDefinitionResponse.java`, `JobDefinitionMapper.java`, `JobDefinitionController.java`, `JobDefinitionRepository.java`, OpenAPI tests
+     Changes: Remove managed inline source/sink connection fields from request/response/domain mapping and require `sourceDatasourceId` and `sinkDatasourceId`. Validate datasource existence, role capability, caller `USE`, and active binding flags. Return selected IDs and safe summaries without duplicating connection credentials. Reuse `/api/v1` under the explicit pre-production reset rule.
+     Tests: Assert datasource-only create/update behavior, missing or incompatible datasource errors, source/sink capability checks, binding permission checks, safe responses, and no acceptance of the old inline payload shape.
+     Dependencies: Tasks 4.2 and 5.1
+
+##### 6. Add datasource authorization and audit coverage
+
+- [ ] **6.1 Add datasource ACLs and binding authorization**
+     Files: `DataSourcePermissionType.java` (new), `DataSourceAccessService.java` (new), `DataSourcePermissionController.java` (new), `DataSourcePermissionRepository.java`, `JobAccessService.java`, security tests
+     Changes: Implement `VIEW`, `USE`, and `EDIT` user permissions, ADMIN bypass, backend filtering before pagination, and ADMIN-managed permission replacement/removal endpoints. Require datasource `USE` plus job `EDIT` for binding changes. Store the job-level source/sink use flags and expose an explicit operation to disable or re-enable each binding. Manual triggers require job `EXECUTE`; scheduled and worker execution require both active binding flags.
+     Tests: Exercise the full user/job/datasource permission matrix, including a user who can view a job but cannot see datasource metadata, a user who can view but not use a datasource, binding disablement blocking manual and scheduled runs, and ADMIN bypass behavior.
+     Dependencies: Tasks 4.2 and 5.2
+
+- [ ] **6.2 Extend audit actions and safe operational detail**
+     Files: `AuditAction.java`, `AuditResourceType.java`, datasource controllers/services, audit tests
+     Changes: Add datasource create/update/delete and permission-change vocabulary. Audit only datasource id, safe name, connector type, binding side, permission, outcome, and bounded timestamps. Never audit password references, connection strings, connection parameters, resolved options, or certificate/key contents. Preserve audit retention and fail-open behavior.
+     Tests: Verify every state-changing datasource and binding operation emits the expected event, deletion conflicts do not claim success, user deletion preserves actor text, and secret-like values are absent from persisted JSONB details and API audit responses.
+     Dependencies: Tasks 5.1 and 6.1
+
+##### 7. Resolve datasources in every managed execution path
+
+- [ ] **7.1 Add the programmatic `ToolOptionsBuilder` without changing the CLI parser**
+     Files: `src/main/java/org/replicadb/cli/ToolOptionsBuilder.java` (new), `src/main/java/org/replicadb/cli/ToolOptions.java`, `src/test/java/org/replicadb/cli/ToolOptionsBuilderTest.java` (new), root CLI compatibility tests
+     Changes: Add an additive builder/factory in the root artifact for programmatic construction of a valid `ToolOptions` object. Support every field required by the managed job and datasource contract, including source/sink connect strings, users/passwords, Azure authentication, connection parameter maps, tables/query/filters, staging, modes, watermark, fetch size, throttling, flags, and verbosity. Build directly in memory with defensive copies and the same validation/default semantics as the CLI. Keep the CLI constructor, Commons CLI parsing, options-file expansion, accepted keys, multi-table behavior, exit codes, and root dependency graph unchanged; do not log builder values.
+     Tests: Round-trip all programmatic fields through getters, verify required/mode/default validation, immutable parameter copies, Azure and manager-specific security properties, no options-file creation, unchanged CLI/options-file tests, and packaged root artifact absence of Spring Boot/server dependencies.
+     Dependencies: None
+
+- [ ] **7.2 Resolve profiles before in-memory ToolOptions construction**
+     Files: `JobExecutionService.java`, `JobDefinitionOptionsFileWriter.java` (remove from managed path), `ToolOptionsBuilder.java`, `ScheduledRunTriggerJob.java`, `RunExecutionCoordinator.java`, worker execution services, new resolution service and tests
+     Changes: Load both datasource records at the claim/resolution boundary, verify binding flags and connector capabilities, record resolved datasource IDs and timestamp on the run, decrypt the security bundle in memory, construct an in-memory resolved definition, and pass it to `ToolOptionsBuilder`. Do not create or delete a managed options file. Do not change `ReplicaDB.processReplica(ToolOptions)` or core manager connection ownership. Keep the old CLI options-file path unchanged for standalone invocations.
+     Tests: Run successful, failed, cancelled, retry, and worker executions through encrypted datasource references; verify current profiles are used by later claims, active attempts keep their initial resolution, missing/disabled profiles and decryption failures stop before core execution, no temporary managed file is created, and no resolved configuration is logged or persisted.
+     Dependencies: Tasks 3.1, 4.2, 5.2, and 7.1
+
+- [ ] **7.3 Make dispatch and claims honor binding disablement atomically**
+     Files: `JobRunRepository.java`, `JobRunStore.java`, `RunLeaseService.java`, `JobRunController.java`, `ScheduledRunTriggerJob.java`, worker claim/recovery paths, state/integration tests
+     Changes: Prevent manual and scheduled trigger insertion when either job-datasource use flag is disabled. Make eligible worker claims join the job definition and exclude disabled bindings. Serialize flag changes and claim decisions at the database boundary. Keep pending rows durable but unclaimable while disabled, allow explicit cancellation, and do not automatically cancel a running attempt. Ensure retries and lease-recovery replacements re-check the binding flags.
+     Tests: Use concurrent PostgreSQL transactions to prove a disabled binding cannot be bypassed by manual trigger, Quartz trigger, worker polling, notification, retry, or lease recovery. Prove a run already claimed before disablement can finish, and re-enabling makes still-pending work eligible again without creating a duplicate run.
+     Dependencies: Tasks 6.1 and 7.2
+
+##### 8. Replace connection editing with datasource selection in the frontend
+
+- [ ] **8.1 Add datasource API modules and generated contract coverage**
+     Files: `replicadb-server/frontend/src/api/datasourcesApi.ts` (new), `datasourcesApi.test.ts` (new), generated `schema.ts`, `schema.test.ts`
+     Changes: Add typed CRUD, pagination, safe permission/capability fields, and datasource-permission API methods using the generated OpenAPI types. Use TanStack Query keys scoped to datasource lists/details/permissions and invalidate them after mutations. Do not duplicate DTO definitions or include password/reference fields in frontend state.
+     Tests: Assert request normalization, blank-password omission, redacted response typing, pagination, capability filtering, permission mutations, RFC 7807 errors, and generated schema drift checks.
+     Dependencies: Tasks 5.1 and 6.1
+
+- [ ] **8.2 Build datasource list, editor, and permission screens**
+     Files: `replicadb-server/frontend/src/pages/DatasourcesPage.tsx` (new), `DatasourceFormPage.tsx` (new), `DatasourcePermissionsPage.tsx` (new), routes, `AppLayout.tsx`, reused `ConnectionSettingsCard.tsx`, frontend tests and Playwright flows
+     Changes: Move connector selection, connection builder, authentication, file settings, Kafka settings, and technical parameters into the datasource editor. Show only safe redacted values in detail/list screens. Add datasource ACL management under the ADMIN route and clear disabled/in-use states. Reuse existing MUI, TanStack Query, protected-route, and error patterns.
+     Tests: Cover create/edit/password preservation, type-specific fields, source/sink capability display, forbidden screens, ACL changes, delete conflicts, responsive layout, and an ADMIN browser flow without credentials in fixtures.
+     Dependencies: Task 8.1
+
+- [ ] **8.3 Convert job editor and detail views to datasource pickers**
+     Files: `JobFormPage.tsx`, `JobDetailPage.tsx`, `jobsApi.ts`, job page tests, route/e2e tests
+     Changes: Replace source/sink connection fields with datasource selectors filtered by capability and user `USE`. Keep tables, queries, filters, staging, modes, watermarks, retry policy, and execution settings in the job form. Show datasource names and connector types in job details without exposing connection values. Expose binding enable/disable actions according to backend permissions and explain that disabling blocks future manual and scheduled runs.
+     Tests: Assert no inline password/connection controls remain in the job editor, selected IDs are sent, unauthorized or wrong-role profiles cannot be submitted, binding disablement is reflected in the UI, and existing job/run workflows remain usable.
+     Dependencies: Tasks 5.2, 6.1, and 8.1
+
+##### 9. Preserve the standalone CLI boundary
+
+- [ ] **9.1 Prove datasource work does not alter the CLI artifact or options contract**
+     Files: root `pom.xml`, root CLI tests, `ToolOptions`/`OptionsFile` compatibility tests, `NoSpringBootOnClasspathTest.java`, `CliOfflineExecutionTest.java`, packaging/CLI scripts
+     Changes: Keep all datasource domain, API, PostgreSQL, and frontend dependencies inside `replicadb-server`. Do not add datasource IDs or server lookups to CLI options. Re-run the packaged Spring-free artifact inspection, exit-code tests, options-file precedence, legacy single-table properties, incremental watermark properties, multi-table options, and SQLite execution with metadata unavailable.
+     Tests: Assert the root artifact has no Spring Boot or datasource-catalog dependency, accepts every existing connection property unchanged, runs without PostgreSQL, and preserves exit codes `0`, `1`, and `2`.
+     Dependencies: Tasks 7.2 and 8.3
+
+##### 10. Document and validate the end-to-end contract
+
+- [ ] **10.1 Add integration, worker, frontend, and operational acceptance gates**
+     Files: `ARCHITECTURE_DECISIONS.md`, `DEPLOYMENT.md`, `README.md`, server/frontend test suites, Testcontainers fixtures, Compose or validation scripts
+     Changes: Document the datasource lifecycle, ACL matrix, live-reference boundary, reset requirement, restrictive deletion, binding flags, capability catalog, no-pooling rule, secret handling, and the separation from CLI configuration. Validate API and worker profiles, Quartz dispatch, remote cancellation, retries, watermarks, audit retention, and packaging with datasource references.
+     Tests: Run migration, repository, MockMvc, security, worker, distributed PostgreSQL, frontend unit, Playwright, packaged CLI, Compose, documentation, and `git diff --check` gates. Include a sustained scenario proving a datasource update affects the next run, binding disablement blocks every future trigger path, and a referenced datasource cannot be deleted.
+     Dependencies: Tasks 4.1 through 9.1
+
+#### Phase 4 exit criteria
+
+- Every managed job uses required source and sink datasource identifiers; no managed API or database path accepts inline connection credentials.
+- A datasource owns connection/authentication/technical settings once, and jobs retain only endpoint-specific replication settings.
+- All credential-bearing values, including MongoDB URI credentials, S3 keys, Kafka security parameters, and Azure security values, are encrypted before PostgreSQL persistence in the `connect.security` bundle. The AES-256-GCM key-encryption key is external to PostgreSQL and loaded from the configured mounted Secret; missing or invalid key material prevents startup.
+- Live updates affect the next claim, while an active attempt uses one atomically resolved in-memory configuration. `JobRun` records only the datasource IDs and resolution timestamp, and no plaintext or encrypted secret bundle is persisted or emitted outside the datasource store.
+- Datasource ACLs are enforced in the backend, datasource `USE` is required for binding changes, and job-level use flags block manual, scheduled, retry, recovery, and worker execution when disabled.
+- Source/sink and mode capabilities are derived from the authoritative core manager contract, with no editable capability matrix in PostgreSQL.
+- Deletion is rejected while referenced, with no automatic detachment or credential duplication.
+- Multiple API instances and workers use the same PostgreSQL datasource state without local authoritative caches, notification payloads, or connection sharing.
+- The frontend edits datasources in a dedicated section and jobs select safe datasource summaries; generated OpenAPI types remain synchronized.
+- The standalone CLI artifact, options-file contract, exit codes, multi-table behavior, and no-metadata-database execution remain unchanged.
+
 ## Implementation Priorities
 
 ### Priority 1: Core and State Contract
@@ -934,6 +1276,14 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and provides t
 - [x] **Phase 3.3.** Add Quartz JDBC clustering for multiple API instances, shared login throttling, health/metrics, deployment documentation, multi-node integration tests, and reproducible load/chaos checks. **Completed and validated on August 25, 2026; GitHub Actions passed the server, integration, frontend, multinode, and release gates.**
 - [x] **Phase 3.4.** Add hybrid worker load distribution: directed notifications with one bounded fallback, free-slot refill, wake-up coalescing, bounded jitter, success cooldown, decaying contention backoff, and normalized busy-slot observability. Preserve PostgreSQL claim/fencing semantics and validate approximate fairness under sustained backlog. **Completed and validated on August 26, 2026.**
 - [x] Preserve the CLI artifact, CLI exit codes, options-file contract, and no-metadata-database execution path throughout all Phase 3 slices. **Completed and validated with packaged Spring-free JAR inspection, SQLite execution, and exit-code tests.**
+
+### Priority 5: Reusable Managed Datasources
+
+- [ ] **Phase 4.1.** Replace managed inline source/sink connection data with reusable `ManagedDataSource` profiles and required `sourceDatasourceId`/`sinkDatasourceId` job references. Derive connector capabilities from the core manager contract and preserve per-task connection ownership.
+- [ ] **Phase 4.2.** Add AES-256-GCM envelope encryption with an external mounted key, the pre-production PostgreSQL reset migration, datasource repositories, restrictive foreign keys, datasource ACLs (`VIEW`/`USE`/`EDIT`), job-level binding-use flags, and race-safe claim/trigger enforcement.
+- [ ] **Phase 4.3.** Replace the managed REST contract and frontend connection fields with datasource CRUD, safe datasource summaries, datasource permission administration, and source/sink datasource selectors. Reuse `/api/v1` under the explicit pre-production reset rule and keep generated OpenAPI types authoritative.
+- [ ] **Phase 4.4.** Resolve live datasource references at claim time, retain only temporal datasource correlation in run/audit state, construct `ToolOptions` through the additive root-artifact builder without a managed options file, and preserve worker UUID-only dispatch and secret redaction.
+- [ ] **Phase 4.5.** Validate datasource update visibility on the next run, binding disablement across manual/scheduled/retry/recovery/worker paths, restrictive deletion, capability enforcement, distributed execution, frontend behavior, and standalone CLI compatibility.
 
 ---
 
@@ -984,6 +1334,18 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and provides t
 - **Met:** Shared login throttling behaves consistently across API instances.
 - **Met:** Notification latency, polling lag, lease recovery, executor capacity, and concurrency limits are measured from reproducible tests.
 
+### Phase 4
+
+- Every managed job uses source and sink datasource identifiers, and no managed request, domain record, database row, worker payload, audit event, or API response contains inline connection credentials.
+- A datasource update is visible to the next run while an already-running attempt retains one resolved in-memory configuration; no datasource update mutates active core tasks.
+- Datasource ACLs and job binding flags are enforced server-side. Revoking or disabling either binding blocks manual, scheduled, retry, recovery, and worker execution without implicitly cancelling an already-running attempt.
+- Connector capabilities are derived from the authoritative core manager contract, and incompatible source/sink or mode combinations are rejected before persistence or claim.
+- A referenced datasource cannot be deleted, and no automatic detachment, credential duplication, or hidden fallback to inline configuration occurs.
+- Datasource and binding changes have safe audit records with no password references, resolved values, connection strings, technical secret-like parameters, or certificate/key contents.
+- API and worker instances resolve the same PostgreSQL-backed datasource state without local authoritative caches, shared live JDBC connections, or credential-bearing notifications.
+- The frontend provides a dedicated datasource section and job selectors, while generated OpenAPI types remain synchronized and legacy connection controls are absent from the managed job editor.
+- The standalone CLI artifact, options-file contract, multi-table behavior, exit codes, and no-metadata-database execution remain unchanged.
+
 ---
 
 ## Constraints and Limitations
@@ -1015,7 +1377,7 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and provides t
 
 ### Deployment
 
-- PostgreSQL is mandatory for the `api` and `worker` profiles; the CLI does not use it. **Implemented in Phase 1b and extended through Phase 3.4**: `application-api.yml` and `application-worker.yml` wire `spring.datasource`/`spring.flyway`, and the `job_definition`, `job_run`, `job_schedule`, `audit_event`, cancellation-warning, retry-policy, eligibility, lease-fencing, Quartz, and login-throttle schema plus supporting indexes are versioned by Flyway migrations V1 through V16. The worker dispatch, hybrid admission, Quartz JDBC clustering, and shared throttle runtime remain isolated from the CLI artifact.
+- PostgreSQL is mandatory for the `api` and `worker` profiles; the CLI does not use it. **Implemented through Phase 3.4**: `application-api.yml` and `application-worker.yml` wire `spring.datasource`/`spring.flyway`, and the current `job_definition`, `job_run`, `job_schedule`, `audit_event`, cancellation-warning, retry-policy, eligibility, lease-fencing, Quartz, and login-throttle schema plus supporting indexes are versioned by Flyway migrations V1 through V16. **Planned for Phase 4**: the managed datasource catalog, datasource ACLs, job datasource references, and binding-use flags are added by forward-only migrations V17 and later under the explicit pre-production reset rule. The worker dispatch, hybrid admission, Quartz JDBC clustering, shared throttle runtime, and future datasource catalog remain isolated from the CLI artifact.
 - SQLite is limited to isolated CLI fixtures or unit tests.
 - The CLI remains available in every implementation phase and deployment model.
 - The `api` profile may run as multiple stateless instances; Quartz uses PostgreSQL JDBC clustering in Phase 3.
@@ -1031,9 +1393,15 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and provides t
 - Every job operation must enforce ACLs in the backend, independently of frontend visibility.
 - The first administrator requires a controlled bootstrap flow with no default password.
 - The frontend is served by the `api` profile; workers expose no public login or UI.
-- Secrets are resolved by the executor and never transported as job data.
+- Managed datasource secrets are encrypted before PostgreSQL persistence, decrypted only in memory at claim-time execution, and never transported as job data. The mounted key-encryption key is external to PostgreSQL; Vault, CyberArk, and KMS providers remain future implementations behind the provider interface.
 - More workers increase source and sink contention; scaling limits must be measured.
 - Worker load distribution is approximate; normalized busy-slot time is the fairness measure and raw run count is only a secondary signal.
+- Managed datasources reuse unresolved connection configuration, not live JDBC connections. Each core task continues to open, use, and close its own source and sink connections.
+- Managed datasource references are live and intentionally unversioned in Phase 4. Runs retain datasource identifiers and timestamps for temporal audit correlation, but not a complete historical configuration snapshot.
+- A datasource ACL (`VIEW`/`USE`/`EDIT`) protects users, while source/sink binding-use flags on the job control whether any future execution is allowed. Frontend visibility is never sufficient authorization.
+- Phase 4's migration is pre-production destructive with respect to managed metadata: a non-empty existing `job_definition` table causes an actionable failure, and no old jobs, runs, schedules, permissions, or idempotency rows are backfilled.
+- Datasource deletion is restrictive while referenced by a job. The server does not detach jobs, copy credentials, or convert them back to inline connection configuration.
+- Datasource capability metadata is derived from connector type and the core manager contract rather than stored as editable JSON. The server must keep this catalog synchronized with manager support and mode restrictions.
 
 ---
 
@@ -1054,6 +1422,8 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and provides t
 - `src/main/java/org/replicadb/manager/ConnManager.java` - Per-run staging-table name access and cancellation helpers.
 - `src/main/java/org/replicadb/manager/file/FileManager.java` - Per-run temporary-file access and cancellation helper.
 - `replicadb-server/src/main/java/org/replicadb/server/job/domain/JobDefinition.java` - Validated job definition record (one source/sink table pair, `${env:VARIABLE}`-only credential references).
+- `replicadb-server/src/main/java/org/replicadb/server/job/domain/ConnectionCredentials.java` - Current managed credential validation and technical-parameter boundary; Phase 4 moves this value into `ManagedDataSource`.
+- `replicadb-server/src/main/java/org/replicadb/server/job/domain/SourceEndpoint.java`, `SinkEndpoint.java` - Current endpoint-specific replication fields; Phase 4 retains these fields while replacing embedded connection values with datasource references.
 - `replicadb-server/src/main/java/org/replicadb/server/job/domain/JobRun.java` - Job run record: status, attempt, lease/heartbeat, counters, committed watermark, error message.
 - `replicadb-server/src/main/java/org/replicadb/server/job/api/JobRunResponse.java` - HTTP representation of a run, including the persisted cancellation warning.
 - `replicadb-server/src/main/java/org/replicadb/server/job/domain/JobRunStatus.java` - The 7 job-run states, `isTerminal()`, and `fromReplicaExitCode(...)`.
@@ -1063,7 +1433,8 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and provides t
 - `replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobDefinitionRepository.java` - Spring JDBC persistence for job definitions.
 - `replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobRunRepository.java` - Row-locking claim (`FOR UPDATE SKIP LOCKED`), state transitions, `scheduleRetry(...)`, and watermark lookup.
 - `replicadb-server/src/main/java/org/replicadb/server/job/execution/JobDefinitionEnvResolver.java` - `${env:VARIABLE}` resolution; rejects `${secret:...}`.
-- `replicadb-server/src/main/java/org/replicadb/server/job/execution/ToolOptionsArgsBuilder.java` - Converts a `JobDefinition` into the `String[]` args `ToolOptions` expects.
+- `replicadb-server/src/main/java/org/replicadb/server/job/execution/JobDefinitionOptionsFileWriter.java` - Historical managed adapter that Phase 4 removes from the server execution path; standalone CLI options-file parsing remains unchanged.
+- `src/main/java/org/replicadb/cli/ToolOptionsBuilder.java` - Planned additive programmatic factory for constructing managed `ToolOptions` in memory without changing CLI parsing or options-file behavior.
 - `replicadb-server/src/main/java/org/replicadb/server/job/execution/JobExecutionService.java` - Claims a run, invokes `ReplicaDB.processReplica(ToolOptions)`, and persists the outcome.
 - `replicadb-server/src/main/resources/db/migration/V1__create_job_definition.sql`, `V2__create_job_run.sql` - Forward-only Flyway migrations for the initial metadata schema.
 - `.ai/archive/phase-1b-state-layer.plan.md` - Phase 1b implementation plan and execution retrospective.
@@ -1082,6 +1453,12 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and provides t
 - `replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobScheduleRepository.java` - PostgreSQL persistence for recurring schedules.
 - `replicadb-server/src/main/java/org/replicadb/server/job/execution/ScheduledRunTriggerJob.java`, `QuartzScheduleService.java`, `ScheduleReconciler.java` - Quartz trigger execution, lifecycle, and startup reconciliation.
 - `replicadb-server/src/main/java/org/replicadb/server/job/execution/RunExecutionCoordinator.java` - Current single-instance execution coordinator to replace or narrow behind the Phase 3 shared dispatch path.
+- `replicadb-server/frontend/src/components/ConnectionSettingsCard.tsx`, `replicadb-server/frontend/src/utils/connectionBuilder.ts` - Current connection editor and connector-string builder to move into the Phase 4 datasource editor.
+- `replicadb-server/frontend/src/pages/JobFormPage.tsx`, `replicadb-server/frontend/src/api/jobsApi.ts` - Current managed job connection fields and API mapping to replace with datasource selectors in Phase 4.
+- `replicadb-server/src/main/java/org/replicadb/server/job/domain/ManagedDataSource.java`, `DataSourceCapabilities.java`, `DataSourceCapabilityCatalog.java` - Planned Phase 4 datasource domain and authoritative capability boundary.
+- `replicadb-server/src/main/java/org/replicadb/server/job/api/DatasourceController.java`, `DatasourceMapper.java`, `DatasourceResponse.java` - Planned Phase 4 datasource REST contract and safe response mapping.
+- `replicadb-server/src/main/java/org/replicadb/server/job/persistence/ManagedDataSourceRepository.java`, `DataSourcePermissionRepository.java` - Planned Phase 4 PostgreSQL adapters for datasource state and ACLs.
+- `replicadb-server/src/main/resources/db/migration/V17__create_managed_datasource.sql` - Planned Phase 4 datasource schema migration and pre-production reset boundary.
 - `replicadb-server/src/main/resources/application.yml`, `application-api.yml` - Current single-instance Quartz/API configuration and the Phase 3 profile boundaries.
 - `replicadb-server/src/main/java/org/replicadb/server/job/api/JobScheduleController.java` - Schedule management endpoints under `/api/v1/jobs/{id}/schedule`.
 - `replicadb-server/src/main/resources/db/migration/V5__create_job_schedule.sql`, `V6__add_job_run_definition_created_index.sql` - Schedule persistence and job-history query index migrations.
@@ -1105,6 +1482,6 @@ Plan 3.1 is a prerequisite for Plan 3.2. Plan 3.3 depends on both and provides t
 
 ---
 
-**Document Version**: 4.3
+**Document Version**: 4.4
 **Last Updated**: August 26, 2026
-**Next Review**: After the next distributed-runtime or standalone-artifact change
+**Next Review**: After the Phase 4 datasource plan or implementation

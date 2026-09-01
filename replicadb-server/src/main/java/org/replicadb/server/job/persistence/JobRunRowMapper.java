@@ -34,7 +34,10 @@ public final class JobRunRowMapper implements RowMapper<JobRun> {
                 resultSet.getString("error_message"),
                 resultSet.getString("cancellation_warning"),
                 toInstant(resultSet.getTimestamp("available_at")),
-                leaseTokenValue == null ? null : new LeaseToken(leaseTokenValue));
+                leaseTokenValue == null ? null : new LeaseToken(leaseTokenValue),
+                resultSet.getObject("resolved_source_datasource_id", UUID.class),
+                resultSet.getObject("resolved_sink_datasource_id", UUID.class),
+                toInstant(resultSet.getTimestamp("datasources_resolved_at")));
     }
 
     private static Instant toInstant(Timestamp timestamp) {

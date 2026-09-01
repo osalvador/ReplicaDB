@@ -6,6 +6,8 @@ import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
 import org.replicadb.server.security.domain.AppUser;
 import org.replicadb.server.security.domain.GlobalRole;
 import org.replicadb.server.security.domain.JobPermission;
@@ -39,11 +41,17 @@ class JobPermissionRepositoryIT {
     private org.replicadb.server.job.persistence.JobDefinitionRepository jobDefinitionRepository;
 
     @Autowired
+    private ManagedDataSourceRepository managedDataSourceRepository;
+
+    @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void clearState() {
         jdbcTemplate.update("TRUNCATE TABLE job_permission, job_run, job_definition, app_user CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE datasource_permission, managed_datasource CASCADE", Map.of());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.source());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.sink());
     }
 
     @Test
@@ -129,10 +137,7 @@ class JobPermissionRepositoryIT {
     private static JobDefinition definition(String name) {
         return JobDefinitionTestFixtures.aJobDefinition()
             .withName(name)
-            .withSourceUser("source-user")
-            .withSourcePassword("${env:SOURCE_PASSWORD}")
-            .withSinkUser("sink-user")
-            .withSinkPassword("${env:SINK_PASSWORD}")
+            .withDefaultDatasourceReferences()
             .withJobs(2)
             .build();
     }

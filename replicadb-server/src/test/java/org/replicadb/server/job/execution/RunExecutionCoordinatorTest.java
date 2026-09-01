@@ -7,13 +7,18 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
+import org.replicadb.server.job.api.DatasourceMapper;
+import org.replicadb.server.job.api.DatasourceRequest;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
+import org.replicadb.server.job.domain.ConnectorType;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
 import org.replicadb.server.job.application.RunLeaseService;
+import org.replicadb.server.security.secret.SecretProtectionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -28,6 +33,7 @@ import java.sql.Statement;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -51,6 +57,15 @@ class RunExecutionCoordinatorTest {
     private JobRunRepository jobRunRepository;
 
     @Autowired
+    private ManagedDataSourceRepository dataSourceRepository;
+
+    @Autowired
+    private DatasourceMapper datasourceMapper;
+
+    @Autowired
+    private SecretProtectionService protectionService;
+
+    @Autowired
     private JobExecutionService jobExecutionService;
 
     @Autowired
@@ -63,7 +78,8 @@ class RunExecutionCoordinatorTest {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE job_run, job_definition CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE audit_event, datasource_permission, job_run, job_definition, "
+            + "managed_datasource CASCADE", Map.of());
         coordinator = new RunExecutionCoordinator(new RunLeaseService(jobRunRepository), jobExecutionService,
             jobExecutionService.activeRunRegistry(), 1);
     }
@@ -114,7 +130,7 @@ class RunExecutionCoordinatorTest {
         JobRunRepository repository = Mockito.mock(JobRunRepository.class);
         JobExecutionService executionService = Mockito.mock(JobExecutionService.class);
         CountDownLatch taskStarted = new CountDownLatch(1);
-        when(repository.claimNextEligible(any(), anyString(), any(Duration.class))).thenAnswer(invocation -> {
+        when(repository.claimAndPrepare(any(), anyString(), any(Duration.class))).thenAnswer(invocation -> {
             taskStarted.countDown();
             return Optional.empty();
         });
@@ -168,14 +184,26 @@ class RunExecutionCoordinatorTest {
         return database;
     }
 
-    private static JobDefinition jobDefinition(Path sourceDatabase, Path sinkDatabase, ReplicationMode mode) {
+    private JobDefinition jobDefinition(Path sourceDatabase, Path sinkDatabase, ReplicationMode mode) {
+        UUID sourceId = insertDatasource("source-" + UUID.randomUUID(), "jdbc:sqlite:" + sourceDatabase);
+        UUID sinkId = insertDatasource("sink-" + UUID.randomUUID(), "jdbc:sqlite:" + sinkDatabase);
         return JobDefinitionTestFixtures.aJobDefinition()
             .withName("job-" + UUID.randomUUID())
-            .withSourceConnect("jdbc:sqlite:" + sourceDatabase)
+            .withSourceDatasourceId(sourceId)
             .withSourceTable("orders")
-            .withSinkConnect("jdbc:sqlite:" + sinkDatabase)
+            .withSinkDatasourceId(sinkId)
             .withSinkTable("orders_copy")
             .withMode(mode)
             .build();
     }
+
+        private UUID insertDatasource(String name, String connect) {
+        UUID id = UUID.randomUUID();
+        DatasourceRequest request = new DatasourceRequest(name, ConnectorType.SQLITE.getWireValue(), Map.of(),
+            Map.of("connect", connect), Set.of());
+        var bundle = protectionService.encrypt(id, request.security());
+        dataSourceRepository.insert(datasourceMapper.toDataSource(id, request, request.security(), bundle,
+            protectionService.serialize(bundle), null, null));
+        return id;
+        }
 }

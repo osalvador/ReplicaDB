@@ -9,6 +9,8 @@ import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.domain.LeaseToken;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
+import org.replicadb.server.job.domain.ClaimedRunPreparation;
 import org.replicadb.server.job.domain.RetryPolicy;
 import org.replicadb.server.job.application.RunRecoveryResult;
 import org.replicadb.server.job.port.JobRunStore;
@@ -26,6 +28,7 @@ import java.sql.Statement;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -34,6 +37,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -52,6 +56,9 @@ class JobRunRepositoryIT {
     private JobRunRepository jobRunRepository;
 
     @Autowired
+    private ManagedDataSourceRepository managedDataSourceRepository;
+
+    @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
     @Autowired
@@ -60,6 +67,9 @@ class JobRunRepositoryIT {
     @BeforeEach
     void clearState() {
         jdbcTemplate.update("TRUNCATE TABLE job_run, job_definition CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE datasource_permission, managed_datasource CASCADE", Map.of());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.source());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.sink());
     }
 
     @Test
@@ -205,6 +215,7 @@ class JobRunRepositoryIT {
         @Test
         void recoversExpiredRunAsANewBackoffAttempt() {
         JobDefinition definition = jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
+            .withDefaultDatasourceReferences()
             .withMode(ReplicationMode.INCREMENTAL)
             .withIncrementalWatermarkColumn("updated_at")
             .withRetryPolicy(new RetryPolicy(3, 10, true))
@@ -235,6 +246,7 @@ class JobRunRepositoryIT {
         @Test
         void recoversAnExpiredRunOnlyOnceWhenScansRace() throws Exception {
         JobDefinition definition = jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
+            .withDefaultDatasourceReferences()
             .withMode(ReplicationMode.INCREMENTAL)
             .withIncrementalWatermarkColumn("updated_at")
             .withRetryPolicy(new RetryPolicy(3, 0, true))
@@ -269,7 +281,8 @@ class JobRunRepositoryIT {
         @Test
         void marksExpiredRunsFailedWhenRetryIsDisabledOrExhausted() {
         JobDefinition completeDefinition = jobDefinitionRepository.insert(
-            JobDefinitionTestFixtures.aJobDefinition().withMode(ReplicationMode.COMPLETE).build());
+            JobDefinitionTestFixtures.aJobDefinition().withDefaultDatasourceReferences()
+                .withMode(ReplicationMode.COMPLETE).build());
         JobRun completePending = jobRunRepository.insertPendingNow(completeDefinition.id(), null, 1);
         JobRun completeClaimed = jobRunRepository.claimNextEligible(completePending.id(), "worker-1",
             Duration.ofMinutes(5)).orElseThrow();
@@ -284,6 +297,7 @@ class JobRunRepositoryIT {
             jobRunRepository.findById(completeClaimed.id()).orElseThrow().errorMessage());
 
         JobDefinition exhaustedDefinition = jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
+            .withDefaultDatasourceReferences()
             .withMode(ReplicationMode.INCREMENTAL)
             .withIncrementalWatermarkColumn("updated_at")
             .withRetryPolicy(new RetryPolicy(1, 0, true))
@@ -379,6 +393,7 @@ class JobRunRepositoryIT {
         @Test
         void fencesProgressTerminalWritesAndWatermarksAfterRecovery() {
         JobDefinition definition = jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
+            .withDefaultDatasourceReferences()
             .withMode(ReplicationMode.INCREMENTAL)
             .withIncrementalWatermarkColumn("updated_at")
             .withRetryPolicy(new RetryPolicy(3, 0, true))
@@ -499,6 +514,105 @@ class JobRunRepositoryIT {
                 jobRunRepository.findById(first.id()).orElseThrow().status());
         assertEquals(JobRunStatus.RUNNING, claimed.status());
     }
+
+        @Test
+        void claimsAndPreparesEncryptedDatasourceSnapshotsAtClaimTime() {
+        JobDefinition definition = jobDefinitionRepository.insert(definition());
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
+
+        ClaimedRunPreparation preparation = jobRunRepository.claimAndPrepare(
+            pending.id(), "worker-prepared", Duration.ofMinutes(5)).orElseThrow();
+
+        assertEquals(pending.id(), preparation.run().id());
+        assertEquals(definition.id(), preparation.definition().id());
+        assertEquals(ManagedDataSourceTestFixtures.SOURCE_DATASOURCE_ID,
+            preparation.sourceDataSource().id());
+        assertEquals(ManagedDataSourceTestFixtures.SINK_DATASOURCE_ID,
+            preparation.sinkDataSource().id());
+        assertArrayEquals(new byte[]{1, 2, 3}, preparation.sourceDataSource().encryptedSecurity());
+        assertArrayEquals(new byte[]{1, 2, 3}, preparation.sinkDataSource().encryptedSecurity());
+        assertEquals(ManagedDataSourceTestFixtures.SOURCE_DATASOURCE_ID,
+            preparation.run().resolvedSourceDatasourceId());
+        assertEquals(ManagedDataSourceTestFixtures.SINK_DATASOURCE_ID,
+            preparation.run().resolvedSinkDatasourceId());
+        assertNotNull(preparation.run().datasourcesResolvedAt());
+        assertEquals(preparation.run(), jobRunRepository.findById(pending.id()).orElseThrow());
+        }
+
+        @Test
+        void doesNotClaimAJobWithADisabledDatasourceBinding() {
+        JobDefinition definition = jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
+            .withDefaultDatasourceReferences()
+            .withSourceDatasourceUseEnabled(false)
+            .build());
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
+
+        assertTrue(jobRunRepository.claimAndPrepare(pending.id(), "worker-disabled",
+            Duration.ofMinutes(5)).isEmpty());
+        assertEquals(JobRunStatus.PENDING, jobRunRepository.findById(pending.id()).orElseThrow().status());
+        }
+
+        @Test
+        void excludesDisabledBindingsFromEveryEligibilityPathUntilReenabled() {
+        JobDefinition definition = jobDefinitionRepository.insert(definition());
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
+        jdbcTemplate.update("""
+            UPDATE job_definition
+            SET source_datasource_use_enabled = false,
+                sink_datasource_use_enabled = false
+            WHERE id = :id
+            """, Map.of("id", definition.id()));
+
+        assertTrue(jobRunRepository.claimNextEligible(pending.id(), "worker-disabled",
+            Duration.ofMinutes(5)).isEmpty());
+        assertTrue(jobRunRepository.claimAndPrepare(pending.id(), "worker-disabled",
+            Duration.ofMinutes(5)).isEmpty());
+        assertEquals(0, jobRunRepository.findEligibleRunSnapshot(10).eligibleCount());
+        assertEquals(JobRunStatus.PENDING, jobRunRepository.findById(pending.id()).orElseThrow().status());
+
+        jdbcTemplate.update("""
+            UPDATE job_definition
+            SET source_datasource_use_enabled = true,
+                sink_datasource_use_enabled = true
+            WHERE id = :id
+            """, Map.of("id", definition.id()));
+
+        assertTrue(jobRunRepository.claimAndPrepare(pending.id(), "worker-enabled",
+            Duration.ofMinutes(5)).isPresent());
+        }
+
+        @Test
+        void concurrentlyPreparesRunsSharingDatasourceRows() throws Exception {
+        JobDefinition firstDefinition = jobDefinitionRepository.insert(definition());
+        JobDefinition secondDefinition = jobDefinitionRepository.insert(definition());
+        JobRun first = jobRunRepository.insertPendingNow(firstDefinition.id(), null, 1);
+        JobRun second = jobRunRepository.insertPendingNow(secondDefinition.id(), null, 1);
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        try {
+            Future<Optional<ClaimedRunPreparation>> firstFuture = executor.submit(() -> {
+            start.await(2, TimeUnit.SECONDS);
+            return jobRunRepository.claimAndPrepare(first.id(), "worker-one", Duration.ofMinutes(5));
+            });
+            Future<Optional<ClaimedRunPreparation>> secondFuture = executor.submit(() -> {
+            start.await(2, TimeUnit.SECONDS);
+            return jobRunRepository.claimAndPrepare(second.id(), "worker-two", Duration.ofMinutes(5));
+            });
+            start.countDown();
+
+            ClaimedRunPreparation firstPreparation = firstFuture.get(5, TimeUnit.SECONDS).orElseThrow();
+            ClaimedRunPreparation secondPreparation = secondFuture.get(5, TimeUnit.SECONDS).orElseThrow();
+
+            assertNotEquals(firstPreparation.run().id(), secondPreparation.run().id());
+            assertEquals(JobRunStatus.RUNNING,
+                jobRunRepository.findById(first.id()).orElseThrow().status());
+            assertEquals(JobRunStatus.RUNNING,
+                jobRunRepository.findById(second.id()).orElseThrow().status());
+        } finally {
+            executor.shutdownNow();
+        }
+        }
 
     @Test
     void returnsEmptyWhenRequestedRunIsNotPendingOrDoesNotExist() {
@@ -664,6 +778,29 @@ class JobRunRepositoryIT {
     }
 
     @Test
+    void roundTripsResolvedDatasourceCorrelationFields() {
+        JobDefinition definition = jobDefinitionRepository.insert(definition());
+        JobRun pending = jobRunRepository.insertPendingNow(definition.id(), null, 1);
+        JobRun claimed = jobRunRepository.claimNextEligible(pending.id(), "worker-1", Duration.ofMinutes(5))
+                .orElseThrow();
+
+        jdbcTemplate.update("""
+                UPDATE job_run
+                SET resolved_source_datasource_id = :sourceId,
+                    resolved_sink_datasource_id = :sinkId,
+                    datasources_resolved_at = now()
+                WHERE id = :id
+                """, Map.of("sourceId", ManagedDataSourceTestFixtures.SOURCE_DATASOURCE_ID,
+                "sinkId", ManagedDataSourceTestFixtures.SINK_DATASOURCE_ID, "id", claimed.id()));
+
+        JobRun found = jobRunRepository.findById(claimed.id()).orElseThrow();
+
+        assertEquals(ManagedDataSourceTestFixtures.SOURCE_DATASOURCE_ID, found.resolvedSourceDatasourceId());
+        assertEquals(ManagedDataSourceTestFixtures.SINK_DATASOURCE_ID, found.resolvedSinkDatasourceId());
+        assertNotNull(found.datasourcesResolvedAt());
+    }
+
+    @Test
     void schedulesRetryAsANewPendingRun() {
         JobDefinition definition = jobDefinitionRepository.insert(definition());
         jobRunRepository.insertPendingNow(definition.id(), null, 1);
@@ -702,8 +839,7 @@ class JobRunRepositoryIT {
     private static JobDefinition definition() {
         return JobDefinitionTestFixtures.aJobDefinition()
             .withName("job-" + UUID.randomUUID())
-            .withSourcePassword("${env:SOURCE_PASSWORD}")
-            .withSinkPassword("${env:SINK_PASSWORD}")
+            .withDefaultDatasourceReferences()
             .withMode(ReplicationMode.INCREMENTAL)
             .withIncrementalWatermarkColumn("updated_at")
             .withInitialWatermarkValue("0")

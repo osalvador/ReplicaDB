@@ -25,6 +25,14 @@ forbidden_text() {
 
 require_text DEPLOYMENT.md 'V15: Quartz JDBC PostgreSQL tables'
 require_text DEPLOYMENT.md 'V16: shared login-attempt reservations'
+require_text DEPLOYMENT.md 'V17: managed datasource profiles'
+require_text DEPLOYMENT.md 'V18: datasource-only job bindings'
+require_text DEPLOYMENT.md 'V19: claim-time resolved datasource identifiers'
+require_text DEPLOYMENT.md 'Datasource key management'
+require_text DEPLOYMENT.md 'Base64-encoded 256-bit AES keys'
+require_text DEPLOYMENT.md 'authenticated TLS'
+require_text DEPLOYMENT.md 'technical_params'
+require_text DEPLOYMENT.md 'resolved datasource UUIDs'
 require_text DEPLOYMENT.md 'spring.datasource.hikari.maximum-pool-size >= max-concurrent-runs + 4'
 require_text DEPLOYMENT.md 'REPLICADB_WORKER_ADMISSION_JITTER_MAX'
 require_text DEPLOYMENT.md 'busy-slot-seconds / max-concurrent-runs'
@@ -50,6 +58,20 @@ require_text replicadb-server/src/main/resources/application-api.yml 'initialize
 require_text replicadb-server/src/main/resources/application-worker.yml 'web-application-type: servlet'
 require_text replicadb-server/src/main/resources/application-worker.yml 'port: -1'
 require_text docker-compose.server.yml 'REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED: "false"'
+require_text docker-compose.server.yml 'replicadb-master-key'
+require_text DEPLOYMENT.md 'scripts/phase4-acceptance.sh'
+
+for script in \
+    scripts/phase3-compose-smoke.sh \
+    scripts/phase3-load-test.sh \
+    scripts/phase3-resilience-test.sh \
+    scripts/phase3-worker-loss-test.sh \
+    scripts/phase3-fairness-test.sh; do
+    forbidden_text "$script" 'sourceConnect'
+    forbidden_text "$script" 'sinkConnect'
+    forbidden_text "$script" 'sourcePassword'
+    forbidden_text "$script" 'sinkPassword'
+done
 
 if grep -Ein '(^|["[:space:]])(password|token)(["[:space:]]*[:=]["[:space:]]*)[[:alnum:]]' \
         "$repository_root/DEPLOYMENT.md" "$repository_root/docker-compose.server.yml" \
@@ -58,4 +80,4 @@ if grep -Ein '(^|["[:space:]])(password|token)(["[:space:]]*[:=]["[:space:]]*)[[
     exit 1
 fi
 
-printf 'phase3 documentation checks passed\n'
+printf 'datasource documentation checks passed\n'

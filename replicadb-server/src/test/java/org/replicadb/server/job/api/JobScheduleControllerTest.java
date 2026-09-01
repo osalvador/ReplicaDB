@@ -14,7 +14,9 @@ import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobSchedule;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
 import org.replicadb.server.job.persistence.JobScheduleRepository;
 import org.replicadb.server.job.execution.QuartzScheduleService;
 import org.replicadb.server.security.WithMockReplicaDbUser;
@@ -63,6 +65,9 @@ class JobScheduleControllerTest {
     @Autowired
     private JobDefinitionRepository jobDefinitionRepository;
 
+        @Autowired
+        private ManagedDataSourceRepository managedDataSourceRepository;
+
     @Autowired
     private JobScheduleRepository jobScheduleRepository;
 
@@ -83,8 +88,12 @@ class JobScheduleControllerTest {
 
     @BeforeEach
     void clearState() {
-                jdbcTemplate.update("TRUNCATE TABLE audit_event, job_permission, job_schedule, run_trigger_idempotency, job_run, job_definition, app_user CASCADE",
+                                jdbcTemplate.update("TRUNCATE TABLE audit_event, job_permission, job_schedule, "
+                                                + "run_trigger_idempotency, job_run, job_definition, app_user, datasource_permission, "
+                                                + "managed_datasource CASCADE",
                 Map.of());
+                managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.source());
+                managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.sink());
     }
 
     @Test
@@ -247,8 +256,7 @@ class JobScheduleControllerTest {
     private JobDefinition insertDefinition() {
         return jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
                 .withName("schedule-api-job-" + UUID.randomUUID())
-                .withSourcePassword("${env:SOURCE_PASSWORD}")
-                .withSinkPassword("${env:SINK_PASSWORD}")
+                                .withDefaultDatasourceReferences()
                 .build());
     }
 

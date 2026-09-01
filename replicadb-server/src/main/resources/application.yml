@@ -19,6 +19,8 @@ management:
       probes:
         enabled: true
 replicadb:
+  security:
+    master-key-file: ${REPLICADB_SECURITY_MASTER_KEY_FILE:/run/secrets/replicadb-master-key}
   server:
     execution:
       pool-size: 4

@@ -13,22 +13,26 @@ import org.replicadb.server.job.application.RunDispatchService;
 import org.replicadb.server.job.application.RunFinalizationService;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
+import org.replicadb.server.job.domain.ConnectorType;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
 import org.replicadb.server.job.domain.RetryPolicy;
+import org.replicadb.server.job.domain.ManagedDataSourceTestSupport;
+import org.replicadb.server.job.domain.TestKeyring;
 import org.replicadb.server.job.execution.RunExecutionCoordinator;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
 import org.replicadb.server.job.persistence.PostgresNotificationPublisher;
 import org.replicadb.server.job.port.JobRunStore;
 import org.replicadb.server.job.port.RunNotificationPublisher;
+import org.replicadb.server.security.secret.SecretProtectionService;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.session.SessionRepository;
-import org.springframework.web.context.WebApplicationContext;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -37,6 +41,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -70,6 +75,7 @@ class DistributedWorkerLifecycleIT {
     private static ConfigurableApplicationContext apiContext;
     private static ConfigurableApplicationContext firstWorkerContext;
     private static ConfigurableApplicationContext secondWorkerContext;
+    private static Path keyringPath;
 
     @TempDir
     Path tempDirectory;
@@ -79,6 +85,7 @@ class DistributedWorkerLifecycleIT {
         schema = PostgresTestcontainersConfig.isolatedSchema();
         PostgresTestcontainersConfig.migrate(POSTGRES, schema);
         metadataUrl = PostgresTestcontainersConfig.jdbcUrl(POSTGRES, schema);
+        keyringPath = TestKeyring.create();
         apiContext = application(API_PROFILE, null);
         firstWorkerContext = application("worker", FIRST_WORKER);
         secondWorkerContext = application("worker", SECOND_WORKER);
@@ -90,12 +97,14 @@ class DistributedWorkerLifecycleIT {
         close(firstWorkerContext);
         close(apiContext);
         PostgresTestcontainersConfig.dropSchema(POSTGRES, schema);
+        Files.deleteIfExists(keyringPath);
     }
 
     @BeforeEach
     void clearState() {
         apiContext.getBean(NamedParameterJdbcTemplate.class).update(
-                "TRUNCATE TABLE audit_event, run_trigger_idempotency, job_run, job_definition CASCADE", Map.of());
+            "TRUNCATE TABLE audit_event, run_trigger_idempotency, job_run, job_definition, "
+                + "datasource_permission, managed_datasource CASCADE", Map.of());
     }
 
     @Test
@@ -173,8 +182,8 @@ class DistributedWorkerLifecycleIT {
 
     @Test
     void workerContextsHaveNoHttpSecurityOrQuartzSurface() {
-        assertFalse(firstWorkerContext instanceof WebApplicationContext);
-        assertFalse(secondWorkerContext instanceof WebApplicationContext);
+        assertEquals(-1, firstWorkerContext.getEnvironment().getProperty("server.port", Integer.class));
+        assertEquals(-1, secondWorkerContext.getEnvironment().getProperty("server.port", Integer.class));
         assertTrue(firstWorkerContext.getBeansOfType(SecurityFilterChain.class).isEmpty());
         assertTrue(firstWorkerContext.getBeansOfType(SessionRepository.class).isEmpty());
         assertTrue(firstWorkerContext.getBeansOfType(RunExecutionCoordinator.class).isEmpty());
@@ -191,7 +200,9 @@ class DistributedWorkerLifecycleIT {
             "--spring.datasource.username=" + POSTGRES.getUsername(),
             "--spring.datasource.password=" + POSTGRES.getPassword(),
             "--spring.flyway.enabled=false",
-            "--server.port=0",
+            "--replicadb.security.master-key-file=" + keyringPath,
+            "--server.port=" + ("worker".equals(profile) ? "-1" : "0"),
+            "--management.server.port=0",
             "--replicadb.server.local-execution.enabled=false",
             "--replicadb.worker.identity=" + (workerIdentity == null ? "" : workerIdentity),
             "--replicadb.worker.max-concurrent-runs=1",
@@ -230,14 +241,20 @@ class DistributedWorkerLifecycleIT {
                 Map.of("jobDefinitionId", jobDefinitionId), Long.class);
     }
 
-    private static JobDefinition definition(Path source, Path sink, ReplicationMode mode,
-                                            String watermarkColumn, String initialWatermark,
-                                            RetryPolicy retryPolicy) {
+        private JobDefinition definition(Path source, Path sink, ReplicationMode mode,
+                         String watermarkColumn, String initialWatermark,
+                         RetryPolicy retryPolicy) {
+        ManagedDataSourceRepository dataSources = apiContext.getBean(ManagedDataSourceRepository.class);
+        SecretProtectionService protectionService = apiContext.getBean(SecretProtectionService.class);
+        UUID sourceId = ManagedDataSourceTestSupport.insert(dataSources, protectionService,
+            "distributed-source-" + UUID.randomUUID(), ConnectorType.SQLITE, "jdbc:sqlite:" + source);
+        UUID sinkId = ManagedDataSourceTestSupport.insert(dataSources, protectionService,
+            "distributed-sink-" + UUID.randomUUID(), ConnectorType.SQLITE, "jdbc:sqlite:" + sink);
         return JobDefinitionTestFixtures.aJobDefinition()
                 .withName("distributed-definition-" + UUID.randomUUID())
-                .withSourceConnect("jdbc:sqlite:" + source)
+            .withSourceDatasourceId(sourceId)
                 .withSourceTable("orders")
-                .withSinkConnect("jdbc:sqlite:" + sink)
+            .withSinkDatasourceId(sinkId)
                 .withSinkTable("orders_copy")
                 .withMode(mode)
                 .withIncrementalWatermarkColumn(watermarkColumn)

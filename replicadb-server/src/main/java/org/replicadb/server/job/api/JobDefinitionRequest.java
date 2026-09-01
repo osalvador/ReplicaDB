@@ -1,36 +1,26 @@
 package org.replicadb.server.job.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
-import java.util.Map;
+import java.util.UUID;
 
+@JsonIgnoreProperties(ignoreUnknown = false)
 public record JobDefinitionRequest(
         @NotBlank(groups = Create.class)
         String name,
-        @NotBlank String sourceConnect,
-        String sourceUser,
-        String sourcePassword,
+        @NotNull UUID sourceDatasourceId,
+        Boolean sourceDatasourceUseEnabled,
         String sourceTable,
         String sourceWhere,
-        String sourceAuthMode,
-        String sourceAuthPrincipalId,
-        String sourceAuthLoginHint,
-        String sourceAuthClientCertificate,
-        String sourceAuthClientKey,
-        Map<String, String> sourceConnectionParams,
         String sourceColumns,
         String sourceQuery,
-        @NotBlank String sinkConnect,
-        String sinkUser,
-        String sinkPassword,
+        @NotNull UUID sinkDatasourceId,
+        Boolean sinkDatasourceUseEnabled,
         @NotBlank String sinkTable,
-        String sinkAuthMode,
-        String sinkAuthPrincipalId,
-        String sinkAuthLoginHint,
-        String sinkAuthClientCertificate,
-        String sinkAuthClientKey,
-        Map<String, String> sinkConnectionParams,
         String sinkColumns,
         String sinkStagingSchema,
         String sinkStagingTable,
@@ -47,18 +37,11 @@ public record JobDefinitionRequest(
         @Min(0) Long retryBackoffSeconds,
         Boolean automaticRetryEnabled) {
 
-    public JobDefinitionRequest(String name, String sourceConnect, String sourceUser, String sourcePassword,
-                                 String sourceTable, String sourceWhere, String sinkConnect, String sinkUser,
-                                 String sinkPassword, String sinkTable, String mode, int jobs,
-                                 String incrementalWatermarkColumn, String initialWatermarkValue) {
-        this(name, sourceConnect, sourceUser, sourcePassword, sourceTable, sourceWhere,
-                null, null, null, null, null, Map.of(), null, null,
-                sinkConnect, sinkUser, sinkPassword, sinkTable,
-                null, null, null, null, null, Map.of(), null, null, null, null, null,
-                mode, jobs, incrementalWatermarkColumn, initialWatermarkValue,
-                null, null, null, null, null, null);
+    public interface Create {
     }
 
-    public interface Create {
+    @JsonAnySetter
+    public void rejectUnknownProperty(String property, Object value) {
+        throw new IllegalArgumentException("Unknown job request field: " + property);
     }
 }

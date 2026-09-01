@@ -352,6 +352,11 @@ jobs:
         REPLICADB_SERVER_LOCAL_SEEDING_ENABLED: 'true'
       run: |
         set -euo pipefail
+        keyring_file=/tmp/replicadb-master-key.json
+        printf '{"currentVersion":"ci","keys":{"ci":"%s"}}\n' "$(openssl rand -base64 32)" > "$keyring_file"
+        chmod 600 "$keyring_file"
+        export REPLICADB_SECURITY_MASTER_KEY_FILE="$keyring_file"
+        echo "REPLICADB_SECURITY_MASTER_KEY_FILE=$keyring_file" >> "$GITHUB_ENV"
         nohup java -Dspring.profiles.active=api -Dreplicadb.server.local-seeding.enabled=true -jar replicadb-server/target/replicadb-server-0.1.0-SNAPSHOT.jar > /tmp/replicadb-server-e2e.log 2>&1 &
         echo $! > /tmp/replicadb-server-e2e.pid
     - name: Wait for API health
@@ -390,6 +395,7 @@ jobs:
         if [ -f /tmp/replicadb-server-e2e.pid ]; then
           kill "$(cat /tmp/replicadb-server-e2e.pid)" || true
         fi
+        rm -f /tmp/replicadb-master-key.json
 
   package:
     runs-on: ubuntu-latest

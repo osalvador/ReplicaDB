@@ -81,6 +81,7 @@ public class RunDispatchService {
             return new RunDispatchResult(Optional.of(replay), RunDispatchResult.Outcome.REPLAYED);
         }
 
+        runStore.requireBindingsEnabled(jobDefinitionId);
         JobRun pending = runStore.insertPendingNow(runId, jobDefinitionId, null, 1);
         if (localSeedRequested) {
             JobRunStore.CancellationResult cancellation = runStore.cancelPending(
@@ -101,6 +102,7 @@ public class RunDispatchService {
     @Transactional
     public RunDispatchResult dispatchScheduled(UUID jobDefinitionId) {
         Objects.requireNonNull(jobDefinitionId, "jobDefinitionId must not be null");
+        runStore.requireBindingsEnabled(jobDefinitionId);
         JobRun pending = runStore.insertPendingNow(jobDefinitionId, null, 1);
         notificationPublisher.publishRun(pending.id());
         metrics.recordDispatch("scheduled", "created");

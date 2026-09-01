@@ -3,6 +3,7 @@ import { ThemeProvider } from '@mui/material';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as datasourcesApi from '../api/datasourcesApi';
 import { ApiError } from '../api/client';
 import * as jobsApi from '../api/jobsApi';
 import type { JobDefinitionResponse } from '../api/jobsApi';
@@ -19,17 +20,41 @@ vi.mock('../api/jobsApi', async () => {
   };
 });
 
+vi.mock('../api/datasourcesApi', async () => {
+  const actual = await vi.importActual<typeof import('../api/datasourcesApi')>('../api/datasourcesApi');
+  return { ...actual, listDatasources: vi.fn() };
+});
+
 const mockedJobsApi = vi.mocked(jobsApi);
+const mockedDatasourcesApi = vi.mocked(datasourcesApi);
+
+const sourceDatasource = {
+  id: 'source-1',
+  name: 'Source database',
+  connectorType: 'postgres',
+  safeConnectDisplay: 'jdbc:postgresql://[REDACTED]/source',
+  canUse: true
+};
+
+const sinkDatasource = {
+  id: 'sink-1',
+  name: 'Sink database',
+  connectorType: 'postgres',
+  safeConnectDisplay: 'jdbc:postgresql://[REDACTED]/sink',
+  canUse: true
+};
 
 const baseJob: JobDefinitionResponse = {
   id: 'job-1',
   name: 'Orders replication',
-  sourceConnect: 'jdbc:postgresql://source/db',
-  sourceUser: 'source_user',
+  sourceDatasourceId: 'source-1',
+  sourceDatasource: sourceDatasource,
+  sourceDatasourceUseEnabled: true,
   sourceTable: 'orders',
   sourceWhere: 'region = north',
-  sinkConnect: 'jdbc:postgresql://sink/db',
-  sinkUser: 'sink_user',
+  sinkDatasourceId: 'sink-1',
+  sinkDatasource: sinkDatasource,
+  sinkDatasourceUseEnabled: true,
   sinkTable: 'warehouse_orders',
   mode: 'incremental',
   jobs: 4,
@@ -37,8 +62,6 @@ const baseJob: JobDefinitionResponse = {
   initialWatermarkValue: '0',
   createdAt: '2026-08-18T10:00:00Z',
   updatedAt: '2026-08-18T11:00:00Z',
-  sourcePasswordConfigured: true,
-  sinkPasswordConfigured: true,
   maxAttempts: 5,
   retryBackoffSeconds: 90,
   automaticRetryEnabled: true,
@@ -70,21 +93,17 @@ function renderForm(path: string) {
   );
 }
 
-function fillRequiredFields(includeSourceTable = true) {
+async function selectDatasource(label: string, name: string) {
+  const input = await screen.findByRole('combobox', { name });
+  fireEvent.mouseDown(input);
+  fireEvent.change(input, { target: { value: label } });
+  fireEvent.click(await screen.findByRole('option', { name: new RegExp(label) }));
+}
+
+async function fillRequiredFields(includeSourceTable = true) {
   fireEvent.change(screen.getByLabelText(/^Name/), { target: { value: 'New job' } });
-  fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Source data source type' }));
-  fireEvent.click(screen.getByRole('option', { name: 'PostgreSQL' }));
-  fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Sink data source type' }));
-  fireEvent.click(screen.getAllByRole('option', { name: 'PostgreSQL' })[0]);
-  const hosts = screen.getAllByLabelText('Host');
-  const ports = screen.getAllByLabelText('Port');
-  const databases = screen.getAllByLabelText('Database / SID or Service Name');
-  fireEvent.change(hosts[0], { target: { value: 'source.example' } });
-  fireEvent.change(ports[0], { target: { value: '5432' } });
-  fireEvent.change(databases[0], { target: { value: 'source_db' } });
-  fireEvent.change(hosts[1], { target: { value: 'sink.example' } });
-  fireEvent.change(ports[1], { target: { value: '5432' } });
-  fireEvent.change(databases[1], { target: { value: 'sink_db' } });
+  await selectDatasource('Source', 'Source datasource');
+  await selectDatasource('Sink', 'Sink datasource');
   if (includeSourceTable) {
     fireEvent.change(screen.getByLabelText(/^Table/), { target: { value: 'source_table' } });
   }
@@ -95,6 +114,12 @@ function fillRequiredFields(includeSourceTable = true) {
 describe('JobFormPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedDatasourcesApi.listDatasources.mockImplementation(async (_page, _size, role) => ({
+      content: role === 'source' ? [sourceDatasource] : [sinkDatasource],
+      page: 0,
+      size: 200,
+      totalElements: 1
+    }));
   });
 
   it('creates a job with a normalized payload and navigates to the returned job', async () => {
@@ -105,16 +130,18 @@ describe('JobFormPage', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Source' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Sink' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Watermark and execution' })).toBeInTheDocument();
-    fillRequiredFields();
+    await fillRequiredFields();
     fireEvent.click(screen.getByRole('button', { name: 'Create job' }));
 
     await waitFor(() => expect(mockedJobsApi.createJob).toHaveBeenCalledTimes(1));
     const [request] = mockedJobsApi.createJob.mock.calls[0];
     expect(request).toMatchObject({
       name: 'New job',
-      sourceConnect: 'jdbc:postgresql://source.example:5432/source_db',
+      sourceDatasourceId: 'source-1',
+      sourceDatasourceUseEnabled: true,
       sourceTable: 'source_table',
-      sinkConnect: 'jdbc:postgresql://sink.example:5432/sink_db',
+      sinkDatasourceId: 'sink-1',
+      sinkDatasourceUseEnabled: true,
       sinkTable: 'sink_table',
       mode: 'complete',
       jobs: 2,
@@ -122,8 +149,10 @@ describe('JobFormPage', () => {
       retryBackoffSeconds: 60,
       automaticRetryEnabled: false
     });
-    expect(request.sourceUser).toBeUndefined();
-    expect(request.sourcePassword).toBeUndefined();
+    expect(request).not.toHaveProperty('sourceConnect');
+    expect(request).not.toHaveProperty('sinkConnect');
+    expect(request).not.toHaveProperty('sourcePassword');
+    expect(request).not.toHaveProperty('sinkPassword');
     expect(request).not.toHaveProperty('incrementalWatermarkColumn');
     expect(request).not.toHaveProperty('initialWatermarkValue');
     expect(await screen.findByText('Saved job-new')).toBeInTheDocument();
@@ -135,12 +164,12 @@ describe('JobFormPage', () => {
     renderForm('/jobs/job-1/edit');
 
     expect(await screen.findByDisplayValue('Orders replication')).toBeDisabled();
-    expect(screen.getByLabelText(/^Source connection/)).toHaveValue(baseJob.sourceConnect);
-    expect(screen.getByLabelText(/^Source user/)).toHaveValue(baseJob.sourceUser);
+    expect(screen.getByRole('combobox', { name: 'Source datasource' })).toHaveValue('Source database (postgres)');
+    expect(screen.getByRole('checkbox', { name: 'Source binding enabled' })).toBeChecked();
     expect(screen.getByLabelText(/^Table/)).toHaveValue(baseJob.sourceTable);
     expect(screen.getByLabelText(/^Where/)).toHaveValue(baseJob.sourceWhere);
-    expect(screen.getByLabelText(/^Sink connection/)).toHaveValue(baseJob.sinkConnect);
-    expect(screen.getByLabelText(/^Sink user/)).toHaveValue(baseJob.sinkUser);
+    expect(screen.getByRole('combobox', { name: 'Sink datasource' })).toHaveValue('Sink database (postgres)');
+    expect(screen.getByRole('checkbox', { name: 'Sink binding enabled' })).toBeChecked();
     expect(screen.getByLabelText(/^Sink table/)).toHaveValue(baseJob.sinkTable);
     expect(screen.getByRole('combobox', { name: 'Mode' })).toHaveTextContent(baseJob.mode ?? '');
     expect(screen.getByLabelText(/^Parallel tasks/)).toHaveValue(baseJob.jobs);
@@ -151,13 +180,19 @@ describe('JobFormPage', () => {
     expect(screen.getByLabelText(/^Initial watermark value/)).toHaveValue(baseJob.initialWatermarkValue);
   });
 
-  it('shows the keep-existing helper next to both edit password fields', async () => {
+  it('does not render inline credential or connection parameter controls', async () => {
     mockedJobsApi.getJob.mockResolvedValue(baseJob);
 
     renderForm('/jobs/job-1/edit');
 
     await screen.findByDisplayValue('Orders replication');
-    expect(screen.getAllByText('Leave blank to keep the existing value')).toHaveLength(2);
+    expect(screen.queryByLabelText(/^Source connection/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Sink connection/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Source user/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Sink user/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Source password/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Sink password/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Extra JDBC parameters')).not.toBeInTheDocument();
   });
 
   it('shows the complete-mode warning while editing an existing job', async () => {
@@ -174,40 +209,38 @@ describe('JobFormPage', () => {
     );
   });
 
-  it('prefills recognized connection fields and keeps unknown parameters in the extra editor', async () => {
-    mockedJobsApi.getJob.mockResolvedValue({
-      ...baseJob,
-      sourceConnect: 'jdbc:postgresql://source.example:5432/warehouse',
-      sourceConnectionParams: { 'custom.option': 'enabled', format: 'RFC4180' },
-      sinkConnect: 'kafka://broker.example:9092',
-      sinkConnectionParams: { topic: 'orders', acks: 'all' }
-    });
+  it('loads source and sink datasource options from role-filtered USE queries', async () => {
+    renderForm('/jobs/new');
 
-    renderForm('/jobs/job-1/edit');
+    expect(await screen.findByRole('combobox', { name: 'Source datasource' })).toBeInTheDocument();
+    expect(await screen.findByRole('combobox', { name: 'Sink datasource' })).toBeInTheDocument();
+    expect(mockedDatasourcesApi.listDatasources).toHaveBeenCalledWith(0, 200, 'source');
+    expect(mockedDatasourcesApi.listDatasources).toHaveBeenCalledWith(0, 200, 'sink');
 
-    await screen.findByDisplayValue('Orders replication');
-    expect(screen.getByRole('combobox', { name: 'Source data source type' })).toHaveTextContent('PostgreSQL');
-    expect(screen.getByLabelText('Host')).toHaveValue('source.example');
-    expect(screen.getByLabelText('Port')).toHaveValue(5432);
-    expect(screen.getByLabelText('Database / SID or Service Name')).toHaveValue('warehouse');
-    expect(screen.getAllByLabelText('Extra JDBC parameters')[0]).toHaveValue('custom.option=enabled');
-    expect(screen.getByLabelText('Bootstrap servers')).toHaveValue('broker.example:9092');
-    expect(screen.getByLabelText('Topic name')).toHaveValue('orders');
-    expect(screen.getByRole('combobox', { name: 'ACKs' })).toHaveTextContent('all');
+    await selectDatasource('Source', 'Source datasource');
+    expect(screen.getByRole('combobox', { name: 'Source datasource' })).toHaveValue('Source database (postgres)');
+    expect(screen.queryByLabelText(/^Source password/)).not.toBeInTheDocument();
   });
 
-  it('falls back to a custom connection string for an unknown scheme', async () => {
+  it('keeps a disabled current binding visible without making unavailable datasources bindable', async () => {
     mockedJobsApi.getJob.mockResolvedValue({
       ...baseJob,
-      sourceConnect: 'jdbc:custom://source.example/database',
-      sourceConnectionParams: {}
+      sourceDatasourceUseEnabled: false,
+      sourceDatasource: { ...sourceDatasource, id: 'source-1' }
     });
+    mockedDatasourcesApi.listDatasources.mockImplementation(async (_page, _size, role) => ({
+      content: role === 'source' ? [{ ...sourceDatasource, canUse: false }] : [sinkDatasource],
+      page: 0,
+      size: 200,
+      totalElements: 1
+    }));
 
     renderForm('/jobs/job-1/edit');
 
-    await screen.findByDisplayValue('Orders replication');
-    expect(screen.getByRole('combobox', { name: 'Source data source type' })).toHaveTextContent('Custom');
-    expect(screen.getByDisplayValue('jdbc:custom://source.example/database')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('Orders replication')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Source datasource' })).toHaveValue('Source database (postgres)');
+    expect(screen.getByRole('checkbox', { name: 'Source binding enabled' })).not.toBeChecked();
+    expect(screen.getByText(/cannot be re-enabled until you have USE access/)).toBeInTheDocument();
   });
 
   it.each(['complete', 'complete-atomic'] as const)(
@@ -253,7 +286,7 @@ describe('JobFormPage', () => {
     mockedJobsApi.createJob.mockResolvedValue({ id: 'job-new', name: 'New job' });
 
     renderForm('/jobs/new');
-    fillRequiredFields();
+    await fillRequiredFields();
     fireEvent.change(screen.getByLabelText(/^Maximum automatic attempts/), { target: { value: '0' } });
     fireEvent.change(screen.getByLabelText(/^Retry backoff/), { target: { value: '-1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create job' }));
@@ -267,7 +300,7 @@ describe('JobFormPage', () => {
     mockedJobsApi.createJob.mockRejectedValue(new ApiError(400, 'Invalid job', 'The source table is required.'));
 
     renderForm('/jobs/new');
-    fillRequiredFields();
+    await fillRequiredFields();
     fireEvent.click(screen.getByRole('button', { name: 'Create job' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('The source table is required.');
@@ -279,7 +312,7 @@ describe('JobFormPage', () => {
     mockedJobsApi.createJob.mockResolvedValue({ id: 'job-new', name: 'New job' });
 
     renderForm('/jobs/new');
-    fillRequiredFields(false);
+    await fillRequiredFields(false);
     fireEvent.click(screen.getByRole('button', { name: 'Create job' }));
 
     expect(await screen.findByText('Source table or query is required.')).toBeInTheDocument();

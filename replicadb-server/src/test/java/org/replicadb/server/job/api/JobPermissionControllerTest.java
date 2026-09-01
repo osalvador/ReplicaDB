@@ -11,6 +11,8 @@ import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.security.WithMockReplicaDbUser;
 import org.replicadb.server.security.domain.AppUser;
@@ -54,6 +56,9 @@ class JobPermissionControllerTest {
     @Autowired
     private JobDefinitionRepository jobDefinitionRepository;
 
+        @Autowired
+        private ManagedDataSourceRepository managedDataSourceRepository;
+
     @Autowired
     private AppUserRepository appUserRepository;
 
@@ -68,8 +73,11 @@ class JobPermissionControllerTest {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE audit_event, job_permission, job_run, job_definition, app_user CASCADE",
+        jdbcTemplate.update("TRUNCATE TABLE audit_event, job_permission, job_run, job_definition, app_user, "
+                + "datasource_permission, managed_datasource CASCADE",
                 Map.of());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.source());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.sink());
     }
 
     @Test
@@ -176,6 +184,7 @@ class JobPermissionControllerTest {
     }
 
     private static JobDefinition definition(String name) {
-                return JobDefinitionTestFixtures.aJobDefinition().withName(name).build();
+                                return JobDefinitionTestFixtures.aJobDefinition().withName(name)
+                                                .withDefaultDatasourceReferences().build();
     }
 }

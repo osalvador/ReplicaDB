@@ -10,6 +10,13 @@ cookie_file="$state_directory/cookies.txt"
 
 mkdir -p "$state_directory"
 
+for required_command in docker curl awk sed tail tr openssl; do
+    command -v "$required_command" >/dev/null 2>&1 || {
+        printf 'Required command not found: %s\n' "$required_command" >&2
+        exit 2
+    }
+done
+
 if [[ -z "${POSTGRES_PASSWORD:-}" ]]; then
     POSTGRES_PASSWORD=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')
     export POSTGRES_PASSWORD
@@ -20,6 +27,15 @@ export REPLICADB_BOOTSTRAP_ADMIN_USERNAME=${REPLICADB_BOOTSTRAP_ADMIN_USERNAME:-
 if [[ -z "${REPLICADB_BOOTSTRAP_ADMIN_PASSWORD:-}" ]]; then
     REPLICADB_BOOTSTRAP_ADMIN_PASSWORD=$(od -An -N24 -tx1 /dev/urandom | tr -d ' \n')
     export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD
+fi
+
+if [[ -z "${REPLICADB_SECURITY_MASTER_KEY_FILE:-}" ]]; then
+    REPLICADB_SECURITY_MASTER_KEY_FILE="$state_directory/replicadb-master-key.json"
+    key_material=$(openssl rand -base64 32)
+    printf '{"currentVersion":"local","keys":{"local":"%s"}}\n' "$key_material" \
+        >"$REPLICADB_SECURITY_MASTER_KEY_FILE"
+    chmod 600 "$REPLICADB_SECURITY_MASTER_KEY_FILE"
+    export REPLICADB_SECURITY_MASTER_KEY_FILE
 fi
 
 compose() {
@@ -83,13 +99,37 @@ curl -fsS -c "$cookie_file" -b "$cookie_file" \
     --data "{\"username\":\"$REPLICADB_BOOTSTRAP_ADMIN_USERNAME\",\"password\":\"$REPLICADB_BOOTSTRAP_ADMIN_PASSWORD\"}" \
     "$api_one/api/v1/auth/login" >/dev/null
 
+step 'create source datasource'
+source_datasource_response=$(curl -fsS -b "$cookie_file" \
+    -H 'Content-Type: application/json' \
+    -H "X-XSRF-TOKEN: $csrf_token" \
+    --data-binary @- "$api_one/api/v1/datasources" <<EOF
+{"name":"phase3 compose source","connectorType":"postgres","technicalParams":{},"security":{"connect":"jdbc:postgresql://postgres:5432/$POSTGRES_DB","user":"$POSTGRES_USER","password":"$POSTGRES_PASSWORD"},"clearSecurityKeys":[]}
+EOF
+)
+source_datasource_id=$(printf '%s' "$source_datasource_response" | sed -nE 's/.*"id":"([^\"]+)".*/\1/p')
+test -n "$source_datasource_id"
+
+step 'create sink datasource'
+sink_datasource_response=$(curl -fsS -b "$cookie_file" \
+    -H 'Content-Type: application/json' \
+    -H "X-XSRF-TOKEN: $csrf_token" \
+    --data-binary @- "$api_one/api/v1/datasources" <<EOF
+{"name":"phase3 compose sink","connectorType":"postgres","technicalParams":{},"security":{"connect":"jdbc:postgresql://postgres:5432/$POSTGRES_DB","user":"$POSTGRES_USER","password":"$POSTGRES_PASSWORD"},"clearSecurityKeys":[]}
+EOF
+)
+sink_datasource_id=$(printf '%s' "$sink_datasource_response" | sed -nE 's/.*"id":"([^\"]+)".*/\1/p')
+test -n "$sink_datasource_id"
+
 step 'create job'
 job_response=$(curl -fsS -b "$cookie_file" \
     -H 'Content-Type: application/json' \
     -H "X-XSRF-TOKEN: $csrf_token" \
-    --data '{"name":"phase3 compose smoke","sourceConnect":"jdbc:postgresql://postgres:5432/replicadb","sourceUser":"postgres","sourcePassword":"${env:DB_PASSWORD}","sourceTable":"phase3_source","sinkConnect":"jdbc:postgresql://postgres:5432/replicadb","sinkUser":"postgres","sinkPassword":"${env:DB_PASSWORD}","sinkTable":"phase3_sink","mode":"complete-atomic","jobs":1}' \
-    "$api_one/api/v1/jobs")
-job_id=$(printf '%s' "$job_response" | sed -nE 's/.*"id":"([^"]+)".*/\1/p')
+    --data-binary @- "$api_one/api/v1/jobs" <<EOF
+{"name":"phase3 compose smoke","sourceDatasourceId":"$source_datasource_id","sourceDatasourceUseEnabled":true,"sourceTable":"phase3_source","sinkDatasourceId":"$sink_datasource_id","sinkDatasourceUseEnabled":true,"sinkTable":"phase3_sink","mode":"complete-atomic","jobs":1}
+EOF
+)
+job_id=$(printf '%s' "$job_response" | jq -er '.id')
 test -n "$job_id"
 
 step 'share schedule'

@@ -5,8 +5,10 @@ import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.AzureAuthentication;
 import org.replicadb.server.job.domain.ConnectionCredentials;
+import org.replicadb.server.job.domain.ConnectorType;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
+import org.replicadb.server.job.domain.ManagedDataSource;
 import org.replicadb.server.job.domain.RetryPolicy;
 import org.replicadb.server.job.domain.SinkEndpoint;
 import org.replicadb.server.job.domain.SourceEndpoint;
@@ -35,15 +37,23 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @Import(PostgresTestcontainersConfig.class)
 class JobDefinitionRepositoryIT {
 
+    private static final UUID SOURCE_DATASOURCE_ID = UUID.randomUUID();
+    private static final UUID SINK_DATASOURCE_ID = UUID.randomUUID();
+
     @Autowired
     private JobDefinitionRepository repository;
+
+    @Autowired
+    private ManagedDataSourceRepository managedDataSourceRepository;
 
     @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE job_run, job_definition CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE datasource_permission, managed_datasource CASCADE", Map.of());
+        managedDataSourceRepository.insert(dataSource(SOURCE_DATASOURCE_ID, "source-profile", ConnectorType.POSTGRES));
+        managedDataSourceRepository.insert(dataSource(SINK_DATASOURCE_ID, "sink-profile", ConnectorType.POSTGRES));
     }
 
     @Test
@@ -55,6 +65,8 @@ class JobDefinitionRepositoryIT {
         assertEquals(inserted, found);
         assertNotNull(found.createdAt());
         assertNotNull(found.updatedAt());
+        assertTrue(found.source().connection() == null);
+        assertTrue(found.sink().connection() == null);
         assertEquals(3, found.maxAttempts());
         assertEquals(60, found.retryBackoffSeconds());
         assertFalse(found.automaticRetryEnabled());
@@ -121,14 +133,10 @@ class JobDefinitionRepositoryIT {
         JobDefinition replacement = JobDefinitionTestFixtures.aJobDefinition()
             .withId(inserted.id())
             .withName(inserted.name())
-            .withSourceConnect("jdbc:updated-source")
-            .withSourceUser("updated-source-user")
-            .withSourcePassword("${env:UPDATED_SOURCE_PASSWORD}")
+            .withSourceDatasourceId(SOURCE_DATASOURCE_ID)
             .withSourceTable("updated_source_table")
             .withSourceWhere("id > 10")
-            .withSinkConnect("jdbc:updated-sink")
-            .withSinkUser("updated-sink-user")
-            .withSinkPassword("${env:UPDATED_SINK_PASSWORD}")
+            .withSinkDatasourceId(SINK_DATASOURCE_ID)
             .withSinkTable("updated_sink_table")
             .withMode(ReplicationMode.INCREMENTAL)
             .withJobs(4)
@@ -141,14 +149,10 @@ class JobDefinitionRepositoryIT {
 
         JobDefinition updated = repository.update(replacement);
 
-        assertEquals(replacement.sourceConnect(), updated.sourceConnect());
-        assertEquals(replacement.sourceUser(), updated.sourceUser());
-        assertEquals(replacement.sourcePassword(), updated.sourcePassword());
+        assertEquals(replacement.sourceDatasourceId(), updated.sourceDatasourceId());
         assertEquals(replacement.sourceTable(), updated.sourceTable());
         assertEquals(replacement.sourceWhere(), updated.sourceWhere());
-        assertEquals(replacement.sinkConnect(), updated.sinkConnect());
-        assertEquals(replacement.sinkUser(), updated.sinkUser());
-        assertEquals(replacement.sinkPassword(), updated.sinkPassword());
+        assertEquals(replacement.sinkDatasourceId(), updated.sinkDatasourceId());
         assertEquals(replacement.sinkTable(), updated.sinkTable());
         assertEquals(replacement.mode(), updated.mode());
         assertEquals(replacement.jobs(), updated.jobs());
@@ -168,14 +172,10 @@ class JobDefinitionRepositoryIT {
             JobDefinition unknown = JobDefinitionTestFixtures.aJobDefinition()
                 .withId(UUID.randomUUID())
                 .withName(template.name())
-                .withSourceConnect(template.sourceConnect())
-                .withSourceUser(template.sourceUser())
-                .withSourcePassword(template.sourcePassword())
+                .withSourceDatasourceId(template.sourceDatasourceId())
                 .withSourceTable(template.sourceTable())
                 .withSourceWhere(template.sourceWhere())
-                .withSinkConnect(template.sinkConnect())
-                .withSinkUser(template.sinkUser())
-                .withSinkPassword(template.sinkPassword())
+                .withSinkDatasourceId(template.sinkDatasourceId())
                 .withSinkTable(template.sinkTable())
                 .withMode(template.mode())
                 .withJobs(template.jobs())
@@ -193,27 +193,22 @@ class JobDefinitionRepositoryIT {
         JobDefinition original = new JobDefinition(
             null, "advanced-" + UUID.randomUUID(),
             new SourceEndpoint(
-                new ConnectionCredentials("jdbc:source", "source-user", "${env:SOURCE_PASSWORD}",
-                    new AzureAuthentication("ActiveDirectoryDefault", "source-client", "source-login",
-                        "source-cert", "source-key"),
-                    Map.of("ApplicationName", "ReplicaDB", "sslmode", "require")),
+                SOURCE_DATASOURCE_ID,
                 null, "id, name", "id > 10", "select id, name from source_table"),
             new SinkEndpoint(
-                new ConnectionCredentials("jdbc:sink", "sink-user", null,
-                    new AzureAuthentication("ActiveDirectoryManagedIdentity", "sink-client", null,
-                        null, null),
-                    Map.of("batch.size", "100")),
+                SINK_DATASOURCE_ID,
                 "sink_table", "id, name", new org.replicadb.server.job.domain.StagingOptions(
                     "staging", "sink_stage"), true, true),
-            ReplicationMode.INCREMENTAL, 3, "updated_at", "0", null, null, 250, 512, true);
+            true, true, ReplicationMode.INCREMENTAL, 3, "updated_at", "0", null, null, 250, 512, true,
+            new RetryPolicy(3, 60, true));
 
         JobDefinition inserted = repository.insert(original);
         JobDefinition found = repository.findById(inserted.id()).orElseThrow();
 
         assertEquals(inserted, found);
         assertEquals("select id, name from source_table", found.sourceQuery());
-        assertEquals(Map.of("ApplicationName", "ReplicaDB", "sslmode", "require"),
-            found.sourceConnectionParams());
+        assertEquals(SOURCE_DATASOURCE_ID, found.sourceDatasourceId());
+        assertEquals(SINK_DATASOURCE_ID, found.sinkDatasourceId());
         assertEquals("staging", found.sinkStagingSchema());
         assertEquals("sink_stage", found.sinkStagingTable());
         assertTrue(found.sinkDisableEscape());
@@ -226,11 +221,15 @@ class JobDefinitionRepositoryIT {
     private static JobDefinition definition(String name) {
         return JobDefinitionTestFixtures.aJobDefinition()
             .withName(name)
-            .withSourceUser("source-user")
-            .withSourcePassword("${env:SOURCE_PASSWORD}")
-            .withSinkUser("sink-user")
-            .withSinkPassword("${env:SINK_PASSWORD}")
+            .withSourceDatasourceId(SOURCE_DATASOURCE_ID)
+            .withSinkDatasourceId(SINK_DATASOURCE_ID)
             .withJobs(2)
             .build();
+    }
+
+    private static ManagedDataSource dataSource(UUID id, String name, ConnectorType connectorType) {
+        return new ManagedDataSource(id, name, connectorType,
+                "jdbc:postgresql://host/db", Map.of("sslmode", "require"), new byte[]{1, 2, 3},
+                1, "AES-256-GCM", "test", null, null);
     }
 }

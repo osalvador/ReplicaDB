@@ -9,11 +9,14 @@ import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.application.RunFinalizationService;
 import org.replicadb.server.job.application.RunLeaseService;
 import org.replicadb.server.job.config.WorkerRuntimeProperties;
+import org.replicadb.server.job.domain.ClaimedRunPreparation;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
 import org.replicadb.server.observability.ManagedRuntimeMetrics;
 import org.replicadb.server.observability.WorkerBusySlotTracker;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +58,9 @@ class HybridWorkerDistributionIT {
     private JobRunRepository jobRunRepository;
 
     @Autowired
+    private ManagedDataSourceRepository managedDataSourceRepository;
+
+    @Autowired
     private RunLeaseService runLeaseService;
 
     @Autowired
@@ -67,7 +73,10 @@ class HybridWorkerDistributionIT {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE job_run, job_definition CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE job_run, job_definition, datasource_permission, "
+            + "managed_datasource CASCADE", Map.of());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.source());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.sink());
     }
 
     @AfterEach
@@ -82,6 +91,7 @@ class HybridWorkerDistributionIT {
         for (int index = 0; index < 18; index++) {
             UUID definitionId = jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
                     .withName("hybrid-distribution-" + UUID.randomUUID())
+                    .withDefaultDatasourceReferences()
                     .build()).id();
             pendingRuns.add(jobRunRepository.insertPendingNow(definitionId, null, 1));
         }
@@ -106,7 +116,7 @@ class HybridWorkerDistributionIT {
                 .map(JobRun::status)
                 .map(JobRunStatus::isTerminal)
                 .orElse(false)));
-        await(() -> firstTracker.activeSlots() == 0 && secondTracker.activeSlots() == 0
+        awaitStable(() -> firstTracker.activeSlots() == 0 && secondTracker.activeSlots() == 0
             && first.availableCapacity() == first.maxConcurrentRuns()
             && second.availableCapacity() == second.maxConcurrentRuns());
 
@@ -154,7 +164,8 @@ class HybridWorkerDistributionIT {
                                                  AtomicInteger executionCount) {
         JobExecutionService executionService = mock(JobExecutionService.class);
         doAnswer(invocation -> {
-            JobRun run = invocation.getArgument(0);
+            ClaimedRunPreparation preparation = invocation.getArgument(0);
+            JobRun run = preparation.run();
             RunExecutionHandle handle = new RunExecutionHandle(run, options());
             registry.register(handle);
             Consumer<RunExecutionHandle> onStarted = invocation.getArgument(1);
@@ -199,6 +210,17 @@ class HybridWorkerDistributionIT {
             Thread.sleep(20);
         }
         assertTrue(check.completed());
+    }
+
+    private static void awaitStable(Check check) throws Exception {
+        AtomicInteger stableSamples = new AtomicInteger();
+        await(() -> {
+            if (check.completed()) {
+                return stableSamples.incrementAndGet() >= 5;
+            }
+            stableSamples.set(0);
+            return false;
+        });
     }
 
     @FunctionalInterface

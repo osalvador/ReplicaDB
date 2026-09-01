@@ -3,7 +3,6 @@ package org.replicadb.server.job.execution;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.Mockito;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.audit.AuditActorResolver;
 import org.replicadb.server.audit.AuditService;
@@ -13,35 +12,41 @@ import org.replicadb.server.audit.domain.AuditResourceType;
 import org.replicadb.server.audit.persistence.AuditEventFilter;
 import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
-import org.replicadb.server.job.domain.ConnectionCredentials;
+import org.replicadb.server.job.api.DatasourceMapper;
+import org.replicadb.server.job.api.DatasourceRequest;
+import org.replicadb.server.job.application.RunFinalizationService;
+import org.replicadb.server.job.application.RunLeaseService;
+import org.replicadb.server.job.application.RunPreparationService;
+import org.replicadb.server.job.domain.ClaimedRunPreparation;
+import org.replicadb.server.job.domain.ConnectorType;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
-import org.replicadb.server.job.domain.SinkEndpoint;
-import org.replicadb.server.job.domain.SourceEndpoint;
+import org.replicadb.server.job.domain.ManagedDataSource;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
-import org.replicadb.server.job.application.RunFinalizationService;
-import org.replicadb.server.job.application.RunLeaseService;
-import org.replicadb.server.job.port.JobDefinitionStore;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
 import org.replicadb.server.job.port.JobRunStore;
+import org.replicadb.server.security.secret.EncryptedSecurityBundle;
+import org.replicadb.server.security.secret.SecretProtectionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.nio.file.Path;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -51,11 +56,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -74,20 +79,27 @@ class JobExecutionServiceIT {
     private JobRunRepository jobRunRepository;
 
     @Autowired
+    private ManagedDataSourceRepository dataSourceRepository;
+
+    @Autowired
+    private DatasourceMapper datasourceMapper;
+
+    @Autowired
+    private SecretProtectionService protectionService;
+
+    @Autowired
     private AuditEventRepository auditEventRepository;
 
     @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
-
-    @SpyBean
-    private JobDefinitionOptionsFileWriter optionsFileWriter;
 
     @TempDir
     Path tempDirectory;
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE audit_event, job_run, job_definition CASCADE", Map.of());
+        jdbcTemplate.update("TRUNCATE TABLE audit_event, datasource_permission, job_run, job_definition, "
+                + "managed_datasource CASCADE", Map.of());
     }
 
     @Test
@@ -109,6 +121,9 @@ class JobExecutionServiceIT {
         assertEquals("20", jobRunRepository.findLastCommittedWatermark(persistedDefinition.id()).orElseThrow());
         assertEquals(2, countRows(sinkDatabase, "orders_copy"));
         assertNotNull(persistedRun.finishedAt());
+        assertEquals(persistedDefinition.sourceDatasourceId(), persistedRun.resolvedSourceDatasourceId());
+        assertEquals(persistedDefinition.sinkDatasourceId(), persistedRun.resolvedSinkDatasourceId());
+        assertNotNull(persistedRun.datasourcesResolvedAt());
         AuditEvent event = terminalEvent(AuditAction.RUN_SUCCEEDED, pending.id());
         assertEquals(Long.toString(persistedRun.rowsProcessed()), event.detail().get("rowsProcessed"));
         assertTrue(event.actor().username().startsWith("system:"));
@@ -122,11 +137,11 @@ class JobExecutionServiceIT {
         JobDefinition definition = jobDefinition(sourceDatabase, sinkDatabase,
                 "orders", "missing_sink", ReplicationMode.INCREMENTAL, "updated_at", "0");
         JobDefinition persistedDefinition = jobDefinitionRepository.insert(definition);
-        jobRunRepository.insertPendingNow(persistedDefinition.id(), null, 1);
-        JobRun previousRunning = jobRunRepository.claimNextEligible(null, "previous-worker", java.time.Duration.ofMinutes(5))
-                .orElseThrow();
-        jobRunRepository.markSucceeded(previousRunning.id(), previousRunning.leaseToken(), 2, 10, "15");
-        JobRun pending = jobRunRepository.insertPendingNow(persistedDefinition.id(), previousRunning.id(), 2);
+        JobRun firstPending = jobRunRepository.insertPendingNow(persistedDefinition.id(), null, 1);
+        ClaimedRunPreparation previous = jobRunRepository.claimAndPrepare(firstPending.id(), "previous-worker",
+                Duration.ofMinutes(5)).orElseThrow();
+        jobRunRepository.markSucceeded(previous.run().id(), previous.run().leaseToken(), 2, 10, "15");
+        JobRun pending = jobRunRepository.insertPendingNow(persistedDefinition.id(), firstPending.id(), 2);
 
         JobRunOutcome outcome = executionService.executeNextPending("integration-worker").orElseThrow();
         JobRun persistedRun = jobRunRepository.findById(pending.id()).orElseThrow();
@@ -142,13 +157,22 @@ class JobExecutionServiceIT {
     }
 
     @Test
-    void missingEnvironmentReferenceFailsWithoutPersistingResolvedSecrets() {
-        JobDefinition definition = JobDefinitionTestFixtures.aJobDefinition()
-            .withName("missing-env-" + UUID.randomUUID())
-            .withSourceConnect("${env:UNSET_SOURCE_CONNECT}")
-            .withSourceTable("orders")
-            .withSinkTable("orders_copy")
-            .build();
+    void tamperedDatasourceBundleFailsBeforeCoreWithoutPersistingSecrets() throws Exception {
+        Path sourceDatabase = createDatabase("source-tampered.db", true, "orders");
+        Path sinkDatabase = createDatabase("sink-tampered.db", true, "orders_copy");
+        JobDefinition definition = jobDefinition(sourceDatabase, sinkDatabase,
+                "orders", "orders_copy", ReplicationMode.COMPLETE, null, null);
+        ManagedDataSource source = dataSourceRepository.findById(definition.sourceDatasourceId()).orElseThrow();
+        EncryptedSecurityBundle bundle = protectionService.deserialize(source.encryptedSecurity());
+        byte[] tamperedCiphertext = bundle.ciphertext();
+        tamperedCiphertext[tamperedCiphertext.length - 1] ^= 1;
+        byte[] tamperedEnvelope = protectionService.serialize(new EncryptedSecurityBundle(
+                bundle.formatVersion(), bundle.algorithm(), bundle.keyVersion(),
+                bundle.wrappedDataKey(), bundle.nonce(), tamperedCiphertext));
+        dataSourceRepository.update(new ManagedDataSource(source.id(), source.name(), source.connectorType(),
+                source.safeConnectDisplay(), source.technicalParams(), tamperedEnvelope,
+                source.securityFormatVersion(), source.encryptionAlgorithm(), source.keyVersion(),
+                source.createdAt(), source.updatedAt()));
         JobDefinition persistedDefinition = jobDefinitionRepository.insert(definition);
         JobRun pending = jobRunRepository.insertPendingNow(persistedDefinition.id(), null, 1);
 
@@ -156,90 +180,71 @@ class JobExecutionServiceIT {
         JobRun persistedRun = jobRunRepository.findById(pending.id()).orElseThrow();
 
         assertEquals(JobRunStatus.FAILED, outcome.status());
-        assertEquals(JobRunStatus.FAILED, persistedRun.status());
-        assertEquals("Missing environment variable: UNSET_SOURCE_CONNECT", persistedRun.errorMessage());
-        assertFalse(persistedRun.errorMessage().contains("jdbc:sink"));
+        assertTrue(persistedRun.errorMessage().contains("Could not decrypt datasource security bundle"));
+        assertFalse(persistedRun.errorMessage().contains("jdbc:sqlite:"));
     }
 
     @Test
     void emptyQueueDoesNotMarkAnyRun() {
-        JobRunStore runStore = Mockito.mock(JobRunStore.class);
-        JobDefinitionStore definitions = Mockito.mock(JobDefinitionStore.class);
-        when(runStore.claimNextEligible(isNull(), eq("integration-worker"), any())).thenReturn(Optional.empty());
-        JobExecutionService service = new JobExecutionService(runStore, definitions,
-            new RunLeaseService(runStore), new RunFinalizationService(runStore),
-            new JobDefinitionEnvResolver(), new JobDefinitionOptionsFileWriter(),
-            Mockito.mock(AuditService.class), Mockito.mock(AuditActorResolver.class), new ActiveRunRegistry());
+        JobRunStore runStore = mock(JobRunStore.class);
+        when(runStore.claimAndPrepare(isNull(), anyString(), any())).thenReturn(Optional.empty());
+        JobExecutionService service = new JobExecutionService(runStore,
+                new RunPreparationService(new RunLeaseService(runStore)),
+                new RunFinalizationService(runStore),
+                new DatasourceResolutionService(protectionService), new ManagedToolOptionsFactory(),
+                mock(AuditService.class), new AuditActorResolver(), new ActiveRunRegistry());
 
         assertTrue(service.executeNextPending("integration-worker").isEmpty());
-        verify(runStore, never()).markSucceeded(any(), any(), any(Long.class), any(Long.class), any());
-        verify(runStore, never()).markFailed(any(), any(), any(Long.class), any(Long.class), anyString());
-        verify(runStore, never()).markCancelled(any(), any(), any(Long.class), any(Long.class));
+        verify(runStore, never()).markSucceeded(any(), any(), anyLong(), anyLong(), any());
+        verify(runStore, never()).markFailed(any(), any(), anyLong(), anyLong(), anyString());
+        verify(runStore, never()).markCancelled(any(), any(), anyLong(), anyLong());
     }
 
-        @Test
-        void invokesStartedCallbackWithOptionsBeforeReturningOutcome() throws Exception {
+    @Test
+    void invokesStartedCallbackWithOptionsBeforeCoreExecution() throws Exception {
         Path sourceDatabase = createDatabase("source-callback.db", true, "orders");
         Path sinkDatabase = createDatabase("sink-callback.db", true, "orders_copy");
         JobDefinition definition = jobDefinitionWithConnectionParams(sourceDatabase, sinkDatabase);
         JobDefinition persistedDefinition = jobDefinitionRepository.insert(definition);
         JobRun pending = jobRunRepository.insertPendingNow(persistedDefinition.id(), null, 1);
-        JobRun claimed = jobRunRepository.claimNextEligible(null, "callback-worker", java.time.Duration.ofMinutes(5))
-            .orElseThrow();
+        ClaimedRunPreparation claimed = jobRunRepository.claimAndPrepare(pending.id(), "callback-worker",
+                Duration.ofMinutes(5)).orElseThrow();
         AtomicInteger callbackCount = new AtomicInteger();
         AtomicReference<RunExecutionHandle> startedHandle = new AtomicReference<>();
 
         JobRunOutcome outcome = executionService.executeClaimedRun(claimed, handle -> {
             callbackCount.incrementAndGet();
             startedHandle.set(handle);
-            assertTrue(executionService.activeRunRegistry().find(claimed.id()).isPresent());
+            assertTrue(executionService.activeRunRegistry().find(claimed.run().id()).isPresent());
         });
 
-        assertEquals(claimed.id(), outcome.runId());
+        assertEquals(claimed.run().id(), outcome.runId());
         assertEquals(1, callbackCount.get());
-        assertTrue(startedHandle.get() != null);
-        assertEquals(claimed.id(), startedHandle.get().runId());
-        assertEquals(claimed.leaseToken(), startedHandle.get().leaseToken());
+        assertNotNull(startedHandle.get());
+        assertEquals(claimed.run().leaseToken(), startedHandle.get().leaseToken());
         assertEquals("ReplicaDB", startedHandle.get().toolOptions()
-            .getSourceConnectionParams().getProperty("ApplicationName"));
+                .getSourceConnectionParams().getProperty("ApplicationName"));
         assertEquals("100", startedHandle.get().toolOptions()
-            .getSinkConnectionParams().getProperty("batch.size"));
-        assertTrue(executionService.activeRunRegistry().find(claimed.id()).isEmpty());
-        assertEquals(JobRunStatus.SUCCEEDED, jobRunRepository.findById(claimed.id()).orElseThrow().status());
-        }
+                .getSinkConnectionParams().getProperty("batch.size"));
+        assertTrue(executionService.activeRunRegistry().find(claimed.run().id()).isEmpty());
+        assertEquals(JobRunStatus.SUCCEEDED, jobRunRepository.findById(claimed.run().id()).orElseThrow().status());
+    }
 
     @Test
-    void deletesOptionsFileAfterSuccessfulAndFailedRuns() throws Exception {
-        AtomicReference<Path> writtenPath = new AtomicReference<>();
-        doAnswer(invocation -> {
-            Path path = (Path) invocation.callRealMethod();
-            writtenPath.set(path);
-            return path;
-        }).when(optionsFileWriter).write(any(JobDefinition.class), any(), any());
-
-        Path sourceDatabase = createDatabase("source-cleanup.db", true, "orders");
-        Path sinkDatabase = createDatabase("sink-cleanup.db", true, "orders_copy");
-        JobDefinition successfulDefinition = jobDefinition(sourceDatabase, sinkDatabase,
+    void doesNotCreateManagedOptionsFiles() throws Exception {
+        Path sourceDatabase = createDatabase("source-no-options.db", true, "orders");
+        Path sinkDatabase = createDatabase("sink-no-options.db", true, "orders_copy");
+        JobDefinition definition = jobDefinition(sourceDatabase, sinkDatabase,
                 "orders", "orders_copy", ReplicationMode.COMPLETE, null, null);
-        JobDefinition persistedSuccessful = jobDefinitionRepository.insert(successfulDefinition);
-        JobRun successfulRun = jobRunRepository.insertPendingNow(persistedSuccessful.id(), null, 1);
-        executionService.executeNextPending("cleanup-worker").orElseThrow();
-        Path successfulPath = writtenPath.get();
+        JobDefinition persistedDefinition = jobDefinitionRepository.insert(definition);
+        JobRun run = jobRunRepository.insertPendingNow(persistedDefinition.id(), null, 1);
 
-        assertNotNull(successfulPath);
-        assertFalse(Files.exists(successfulPath));
+        executionService.executeNextPending("no-options-worker").orElseThrow();
 
-        Path failingSink = tempDirectory.resolve("sink-cleanup-failure.db");
-        JobDefinition failingDefinition = jobDefinition(sourceDatabase, failingSink,
-                "orders", "missing_sink", ReplicationMode.COMPLETE, null, null);
-        JobDefinition persistedFailing = jobDefinitionRepository.insert(failingDefinition);
-        jobRunRepository.insertPendingNow(persistedFailing.id(), null, 1);
-        executionService.executeNextPending("cleanup-worker").orElseThrow();
-        Path failingPath = writtenPath.get();
-
-        assertNotNull(failingPath);
-        assertFalse(Files.exists(failingPath));
-        assertEquals(JobRunStatus.SUCCEEDED, jobRunRepository.findById(successfulRun.id()).orElseThrow().status());
+        assertEquals(JobRunStatus.SUCCEEDED, jobRunRepository.findById(run.id()).orElseThrow().status());
+        try (var paths = Files.list(tempDirectory)) {
+            assertTrue(paths.noneMatch(path -> path.getFileName().toString().startsWith("replicadb-job-")));
+        }
     }
 
     private Path createDatabase(String filename, boolean createTable, String tableName) throws SQLException {
@@ -270,29 +275,45 @@ class JobExecutionServiceIT {
                 AuditResourceType.JOB_RUN, runId.toString(), null, null), 0, 50).get(0);
     }
 
-    private static JobDefinition jobDefinition(Path sourceDatabase, Path sinkDatabase,
-                                                String sourceTable, String sinkTable,
-                                                ReplicationMode mode, String watermarkColumn,
-                                                String initialWatermarkValue) {
+    private JobDefinition jobDefinition(Path sourceDatabase, Path sinkDatabase,
+                                        String sourceTable, String sinkTable,
+                                        ReplicationMode mode, String watermarkColumn,
+                                        String initialWatermarkValue) {
+        UUID sourceId = insertDatasource("source-" + UUID.randomUUID(), "jdbc:sqlite:" + sourceDatabase, Map.of());
+        UUID sinkId = insertDatasource("sink-" + UUID.randomUUID(), "jdbc:sqlite:" + sinkDatabase, Map.of());
         return JobDefinitionTestFixtures.aJobDefinition()
-            .withName("job-" + UUID.randomUUID())
-            .withSourceConnect("jdbc:sqlite:" + sourceDatabase)
-            .withSourceTable(sourceTable)
-            .withSinkConnect("jdbc:sqlite:" + sinkDatabase)
-            .withSinkTable(sinkTable)
-            .withMode(mode)
-            .withIncrementalWatermarkColumn(watermarkColumn)
-            .withInitialWatermarkValue(initialWatermarkValue)
-            .build();
+                .withName("job-" + UUID.randomUUID())
+                .withSourceDatasourceId(sourceId)
+                .withSourceTable(sourceTable)
+                .withSinkDatasourceId(sinkId)
+                .withSinkTable(sinkTable)
+                .withMode(mode)
+                .withIncrementalWatermarkColumn(watermarkColumn)
+                .withInitialWatermarkValue(initialWatermarkValue)
+                .build();
     }
 
-            private static JobDefinition jobDefinitionWithConnectionParams(Path sourceDatabase, Path sinkDatabase) {
-            return new JobDefinition(
-                null, "job-" + UUID.randomUUID(),
-                new SourceEndpoint(new ConnectionCredentials("jdbc:sqlite:" + sourceDatabase, null, null, null,
-                    Map.of("ApplicationName", "ReplicaDB")), "orders", null, null, null),
-                new SinkEndpoint(new ConnectionCredentials("jdbc:sqlite:" + sinkDatabase, null, null, null,
-                    Map.of("batch.size", "100")), "orders_copy", null, null, false, false),
-                ReplicationMode.COMPLETE, 1, null, null, null, null, 100, 0, false);
-            }
+    private JobDefinition jobDefinitionWithConnectionParams(Path sourceDatabase, Path sinkDatabase) {
+        UUID sourceId = insertDatasource("source-params-" + UUID.randomUUID(), "jdbc:sqlite:" + sourceDatabase,
+                Map.of("ApplicationName", "ReplicaDB"));
+        UUID sinkId = insertDatasource("sink-params-" + UUID.randomUUID(), "jdbc:sqlite:" + sinkDatabase,
+                Map.of("batch.size", "100"));
+        return JobDefinitionTestFixtures.aJobDefinition()
+                .withName("job-params-" + UUID.randomUUID())
+                .withSourceDatasourceId(sourceId)
+                .withSourceTable("orders")
+                .withSinkDatasourceId(sinkId)
+                .withSinkTable("orders_copy")
+                .build();
+    }
+
+    private UUID insertDatasource(String name, String connect, Map<String, String> technicalParams) {
+        UUID id = UUID.randomUUID();
+        DatasourceRequest request = new DatasourceRequest(name, ConnectorType.SQLITE.getWireValue(), technicalParams,
+                Map.of("connect", connect), Set.of());
+        var bundle = protectionService.encrypt(id, request.security());
+        dataSourceRepository.insert(datasourceMapper.toDataSource(id, request, request.security(), bundle,
+                protectionService.serialize(bundle), null, null));
+        return id;
+    }
 }

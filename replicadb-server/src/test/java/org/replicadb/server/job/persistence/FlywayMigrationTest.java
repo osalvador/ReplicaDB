@@ -2,6 +2,7 @@ package org.replicadb.server.job.persistence;
 
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.configuration.FluentConfiguration;
+import org.flywaydb.core.api.FlywayException;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
@@ -17,6 +18,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Testcontainers
@@ -28,6 +30,7 @@ class FlywayMigrationTest {
 
     @Test
     void appliesAndValidatesMetadataMigrations() throws Exception {
+        resetPublicSchema();
         Flyway initialFlyway = flyway().target("12").load();
         initialFlyway.migrate();
 
@@ -80,10 +83,9 @@ class FlywayMigrationTest {
             statement.executeUpdate();
         }
 
-        Flyway leaseFlyway = flyway().load();
+        Flyway leaseFlyway = flyway().target("16").load();
         assertEquals(3, leaseFlyway.migrate().migrationsExecuted);
         assertEquals(16, leaseFlyway.info().applied().length);
-        assertEquals(16, leaseFlyway.info().all().length);
         assertEquals(0, leaseFlyway.info().pending().length);
         leaseFlyway.validate();
 
@@ -138,9 +140,146 @@ class FlywayMigrationTest {
         }
     }
 
+    @Test
+    void appliesDatasourceMigrationsOnAnEmptyManagedSchema() throws Exception {
+        String schema = isolatedSchema();
+        createSchema(schema);
+        try {
+            Flyway flyway = flyway(schema).load();
+            assertEquals(19, flyway.migrate().migrationsExecuted);
+            assertEquals(19, flyway.info().applied().length);
+            assertEquals(0, flyway.info().pending().length);
+            flyway.validate();
+
+            assertTrue(hasTable(schema, "managed_datasource"));
+            assertTrue(hasTable(schema, "datasource_permission"));
+            assertTrue(hasColumn(schema, "managed_datasource", "encrypted_security"));
+            assertTrue(hasColumn(schema, "managed_datasource", "technical_params"));
+            assertTrue(hasColumn(schema, "job_definition", "source_datasource_id"));
+            assertTrue(hasColumn(schema, "job_definition", "sink_datasource_id"));
+            assertTrue(hasColumn(schema, "job_definition", "source_datasource_use_enabled"));
+            assertTrue(hasColumn(schema, "job_definition", "sink_datasource_use_enabled"));
+            assertTrue(hasColumn(schema, "job_run", "resolved_source_datasource_id"));
+            assertTrue(hasColumn(schema, "job_run", "resolved_sink_datasource_id"));
+            assertTrue(hasColumn(schema, "job_run", "datasources_resolved_at"));
+            assertFalse(hasColumn(schema, "job_definition", "source_connect"));
+            assertFalse(hasColumn(schema, "job_definition", "sink_connect"));
+            assertTrue(hasIndex(schema, "idx_job_definition_source_datasource"));
+            assertTrue(hasIndex(schema, "idx_job_definition_sink_datasource"));
+            assertTrue(hasIndex(schema, "idx_job_run_resolved_source_datasource"));
+            assertTrue(hasIndex(schema, "idx_job_run_resolved_sink_datasource"));
+
+            UUID datasourceId = UUID.randomUUID();
+            UUID jobId = UUID.randomUUID();
+            try (Connection connection = connection(schema);
+                 PreparedStatement datasource = connection.prepareStatement("""
+                         INSERT INTO managed_datasource
+                             (id, name, connector_type, safe_connect_display, technical_params,
+                              encrypted_security, security_format_version, encryption_algorithm, key_version)
+                         VALUES (?, 'source', 'postgres', 'jdbc:postgresql://[REDACTED]', '{}'::jsonb,
+                                 ?, 1, 'AES/GCM/NoPadding', 'test')
+                         """)) {
+                datasource.setObject(1, datasourceId);
+                datasource.setBytes(2, new byte[]{1});
+                datasource.executeUpdate();
+            }
+
+            try (Connection connection = connection(schema);
+                 PreparedStatement job = connection.prepareStatement("""
+                         INSERT INTO job_definition
+                             (id, name, source_datasource_id, sink_datasource_id,
+                              source_table, sink_table, mode, jobs)
+                         VALUES (?, 'bound-job', ?, ?, 'source_table', 'sink_table', 'complete', 1)
+                         """)) {
+                job.setObject(1, jobId);
+                job.setObject(2, datasourceId);
+                job.setObject(3, datasourceId);
+                job.executeUpdate();
+            }
+
+            try (Connection connection = connection(schema);
+                 PreparedStatement delete = connection.prepareStatement(
+                         "DELETE FROM managed_datasource WHERE id = ?")) {
+                delete.setObject(1, datasourceId);
+                assertThrows(java.sql.SQLException.class, delete::executeUpdate);
+            }
+        } finally {
+            dropSchema(schema);
+        }
+    }
+
+    @Test
+    void rejectsDatasourceMigrationWhenLegacyManagedStateExists() throws Exception {
+        String schema = isolatedSchema();
+        createSchema(schema);
+        try {
+            Flyway initial = flyway(schema).target("16").load();
+            initial.migrate();
+
+            UUID legacyId = UUID.randomUUID();
+            try (Connection connection = connection(schema);
+                 PreparedStatement statement = connection.prepareStatement("""
+                         INSERT INTO job_definition
+                             (id, name, source_connect, source_table, sink_connect, sink_table, mode, jobs)
+                         VALUES (?, 'legacy-job', 'jdbc:source', 'source_table', 'jdbc:sink', 'sink_table', 'complete', 1)
+                         """)) {
+                statement.setObject(1, legacyId);
+                statement.executeUpdate();
+            }
+
+            Flyway phase4 = flyway(schema).load();
+            FlywayException exception = assertThrows(FlywayException.class, phase4::migrate);
+            assertTrue(exception.getMessage().contains("empty managed metadata state"));
+            assertTrue(hasTable(schema, "managed_datasource"));
+            assertTrue(hasColumn(schema, "job_definition", "source_connect"));
+            assertFalse(hasColumn(schema, "job_definition", "source_datasource_id"));
+        } finally {
+            dropSchema(schema);
+        }
+    }
+
     private static FluentConfiguration flyway() {
         return Flyway.configure()
-                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+                .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .locations("classpath:db/migration");
+    }
+
+    private static FluentConfiguration flyway(String schema) {
+        return flyway().schemas(schema).defaultSchema(schema);
+    }
+
+    private static String isolatedSchema() {
+        return "replicadb_phase4_" + UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private static void createSchema(String schema) throws Exception {
+        try (Connection connection = DriverManager.getConnection(POSTGRES.getJdbcUrl(),
+                POSTGRES.getUsername(), POSTGRES.getPassword());
+             Statement statement = connection.createStatement()) {
+            statement.execute("CREATE SCHEMA " + schema);
+        }
+    }
+
+    private static void dropSchema(String schema) throws Exception {
+        try (Connection connection = DriverManager.getConnection(POSTGRES.getJdbcUrl(),
+                POSTGRES.getUsername(), POSTGRES.getPassword());
+             Statement statement = connection.createStatement()) {
+            statement.execute("DROP SCHEMA IF EXISTS " + schema + " CASCADE");
+        }
+    }
+
+    private static void resetPublicSchema() throws Exception {
+        try (Connection connection = DriverManager.getConnection(POSTGRES.getJdbcUrl(),
+                POSTGRES.getUsername(), POSTGRES.getPassword());
+             Statement statement = connection.createStatement()) {
+            statement.execute("DROP SCHEMA public CASCADE");
+            statement.execute("CREATE SCHEMA public");
+        }
+    }
+
+    private static Connection connection(String schema) throws Exception {
+        return DriverManager.getConnection(POSTGRES.getJdbcUrl() + "&currentSchema=" + schema,
+                POSTGRES.getUsername(), POSTGRES.getPassword());
     }
 
     private static void insertLegacyDefinition(PreparedStatement statement, UUID id,
@@ -204,12 +343,60 @@ class FlywayMigrationTest {
         }
     }
 
+    private static boolean hasIndex(String schema, String indexName) throws Exception {
+        try (Connection connection = connection(schema);
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = ? AND indexname = ?)")) {
+            statement.setString(1, schema);
+            statement.setString(2, indexName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getBoolean(1);
+            }
+        }
+    }
+
     private static boolean hasTable(String tableName) throws Exception {
         try (Connection connection = DriverManager.getConnection(POSTGRES.getJdbcUrl(),
                 POSTGRES.getUsername(), POSTGRES.getPassword());
              PreparedStatement statement = connection.prepareStatement(
                      "SELECT to_regclass(?) IS NOT NULL")) {
             statement.setString(1, tableName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getBoolean(1);
+            }
+        }
+    }
+
+    private static boolean hasTable(String schema, String tableName) throws Exception {
+        try (Connection connection = connection(schema);
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT EXISTS (
+                         SELECT 1 FROM information_schema.tables
+                         WHERE table_schema = ? AND table_name = ?
+                     )
+                     """)) {
+            statement.setString(1, schema);
+            statement.setString(2, tableName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getBoolean(1);
+            }
+        }
+    }
+
+    private static boolean hasColumn(String schema, String tableName, String columnName) throws Exception {
+        try (Connection connection = connection(schema);
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT EXISTS (
+                         SELECT 1 FROM information_schema.columns
+                         WHERE table_schema = ? AND table_name = ? AND column_name = ?
+                     )
+                     """)) {
+            statement.setString(1, schema);
+            statement.setString(2, tableName);
+            statement.setString(3, columnName);
             try (ResultSet resultSet = statement.executeQuery()) {
                 resultSet.next();
                 return resultSet.getBoolean(1);

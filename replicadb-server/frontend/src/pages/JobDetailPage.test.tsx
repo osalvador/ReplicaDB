@@ -14,7 +14,8 @@ import JobDetailPage from './JobDetailPage';
 
 vi.mock('../api/jobsApi', () => ({
   getJob: vi.fn(),
-  listJobs: vi.fn()
+  listJobs: vi.fn(),
+  updateJob: vi.fn()
 }));
 
 vi.mock('../api/runsApi', () => ({
@@ -32,12 +33,24 @@ const mockedRunsApi = vi.mocked(runsApi);
 const baseJob: JobDefinitionResponse = {
   id: 'job-1',
   name: 'Orders replication',
-  sourceConnect: 'jdbc:postgresql://source/db',
-  sourceUser: 'source_user',
+  sourceDatasourceId: 'source-1',
+  sourceDatasource: {
+    id: 'source-1',
+    name: 'Orders source',
+    connectorType: 'postgres',
+    safeConnectDisplay: 'jdbc:postgresql://[REDACTED]/source'
+  },
+  sourceDatasourceUseEnabled: true,
   sourceTable: 'orders',
   sourceWhere: 'region = north',
-  sinkConnect: 'jdbc:postgresql://sink/db',
-  sinkUser: 'sink_user',
+  sinkDatasourceId: 'sink-1',
+  sinkDatasource: {
+    id: 'sink-1',
+    name: 'Warehouse sink',
+    connectorType: 'postgres',
+    safeConnectDisplay: 'jdbc:postgresql://[REDACTED]/sink'
+  },
+  sinkDatasourceUseEnabled: true,
   sinkTable: 'warehouse_orders',
   mode: 'complete-atomic',
   jobs: 4,
@@ -45,8 +58,6 @@ const baseJob: JobDefinitionResponse = {
   initialWatermarkValue: null,
   createdAt: '2026-08-18T10:00:00Z',
   updatedAt: '2026-08-18T11:00:00Z',
-  sourcePasswordConfigured: true,
-  sinkPasswordConfigured: true,
   modeWarning: null
 };
 
@@ -93,6 +104,9 @@ describe('JobDetailPage', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Sink' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Execution' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: 'Lifecycle' })).toBeInTheDocument();
+    expect(screen.getByText('Orders source (postgres)')).toBeInTheDocument();
+    expect(screen.getByText('Warehouse sink (postgres)')).toBeInTheDocument();
+    expect(screen.getAllByText('Enabled')).toHaveLength(2);
     expect(screen.getByText('orders')).toBeInTheDocument();
     expect(screen.getByText('warehouse_orders')).toBeInTheDocument();
     expect(screen.getByText('complete-atomic')).toBeInTheDocument();
@@ -113,16 +127,14 @@ describe('JobDetailPage', () => {
       modeWarning: 'Complete mode clears the sink before loading. If the run is interrupted or retried, the sink may be empty or partially populated. Use complete-atomic for an all-or-nothing load when supported.'
     });
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Use complete-atomic for an all-or-nothing load when supported.'
-    );
+    expect(await screen.findByText(/Use complete-atomic for an all-or-nothing load when supported/)).toBeInTheDocument();
   });
 
   it('does not show a warning for complete-atomic mode', async () => {
     renderDetail();
 
     await screen.findByRole('heading', { name: 'Orders replication' });
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Complete mode clears the sink before loading.')).not.toBeInTheDocument();
   });
 
   it('renders advanced definition fields without exposing connection parameters', async () => {
@@ -130,8 +142,6 @@ describe('JobDetailPage', () => {
       ...baseJob,
       sourceColumns: 'id, payload',
       sourceQuery: 'select id, payload from orders',
-      sourceAuthMode: 'ActiveDirectoryDefault',
-      sourceConnectionParams: { clientId: '[REDACTED]' },
       sinkColumns: 'payload, id',
       sinkStagingSchema: 'staging',
       sinkStagingTable: 'staging.orders',
@@ -144,12 +154,12 @@ describe('JobDetailPage', () => {
 
     expect(await screen.findByText('id, payload')).toBeInTheDocument();
     expect(screen.getByText('select id, payload from orders')).toBeInTheDocument();
-    expect(screen.getByText('ActiveDirectoryDefault')).toBeInTheDocument();
     expect(screen.getByText('staging.orders')).toBeInTheDocument();
     expect(screen.getByText('Disabled')).toBeInTheDocument();
-    expect(screen.getAllByText('Enabled')).toHaveLength(2);
+    expect(screen.getAllByText('Enabled')).toHaveLength(4);
     expect(screen.getByText('250')).toBeInTheDocument();
     expect(screen.getByText('512')).toBeInTheDocument();
+    expect(screen.queryByText('source_user')).not.toBeInTheDocument();
     expect(screen.queryByText('clientId')).not.toBeInTheDocument();
   });
 
@@ -188,8 +198,48 @@ describe('JobDetailPage', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Trigger run' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('This job already has an active run.');
+    expect(await screen.findByText('This job already has an active run.')).toBeInTheDocument();
     expect(screen.queryByText('Run destination')).not.toBeInTheDocument();
+  });
+
+  it('disables a datasource binding with a datasource-only update and invalidates the job', async () => {
+    mockedJobsApi.updateJob.mockResolvedValue({ ...baseJob, sourceDatasourceUseEnabled: false });
+    const { queryClient } = renderDetail();
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Disable binding' }))[0]);
+
+    await waitFor(() => expect(mockedJobsApi.updateJob).toHaveBeenCalledWith(
+      'job-1',
+      expect.objectContaining({
+        sourceDatasourceId: 'source-1',
+        sourceDatasourceUseEnabled: false,
+        sinkDatasourceId: 'sink-1',
+        sinkDatasourceUseEnabled: true
+      })
+    ));
+    const [, request] = mockedJobsApi.updateJob.mock.calls[0];
+    expect(request).not.toHaveProperty('sourceConnect');
+    expect(request).not.toHaveProperty('sinkConnect');
+    expect(request).not.toHaveProperty('sourcePassword');
+    await waitFor(() => expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['jobs', 'job-1'] }));
+  });
+
+  it('offers re-enable for disabled bindings and surfaces backend authorization errors', async () => {
+    const disabledJob = {
+      ...baseJob,
+      sourceDatasourceUseEnabled: false,
+      sinkDatasourceUseEnabled: false
+    };
+    mockedJobsApi.updateJob.mockRejectedValue(
+      new ApiError(403, 'Forbidden', 'You do not have permission to re-enable this datasource binding.')
+    );
+    renderDetail(disabledJob);
+
+    expect(await screen.findAllByRole('button', { name: 'Enable binding' })).toHaveLength(2);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Enable binding' })[0]);
+    expect(await screen.findByText('You do not have permission to re-enable this datasource binding.'))
+      .toBeInTheDocument();
   });
 
   it('shows the permissions action for admins', async () => {

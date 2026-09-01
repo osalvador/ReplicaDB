@@ -75,6 +75,24 @@ The managed server listens on the API port, persists control-plane state in Post
 
 The distributed worker runtime uses the Phase 3.4 hybrid admission policy for approximate load distribution. The standalone CLI artifact remains Spring-free, accepts its existing options-file contract, and does not require the managed metadata database.
 
+### Managed datasource profiles
+
+The managed server keeps reusable source and sink profiles in its encrypted
+datasource catalog. Jobs reference datasource UUIDs and retain only
+replication settings such as tables, modes, watermarks, retry policy, and
+tuning. Connection credentials, full credential-bearing MongoDB URIs, S3 keys,
+Kafka security values, and Azure authentication material are submitted through
+the authenticated API, encrypted before PostgreSQL persistence, and never
+returned to the frontend.
+
+Non-secret connector settings belong to `technicalParams`; sensitive values
+belong to the datasource security bundle. Blank security fields preserve an
+existing value during an update, while `clearSecurityKeys` explicitly removes
+one. The mounted keyring is configured with
+`REPLICADB_SECURITY_MASTER_KEY_FILE` and is required by both API and worker
+profiles. See [DEPLOYMENT.md](DEPLOYMENT.md) for TLS, key rotation, backup, and
+API/worker operations.
+
 If Maven reports that `org.replicadb:ReplicaDB` cannot be resolved, run `mvn install -DskipTests` from the repository root first. The sibling server project resolves the CLI artifact from the local Maven repository rather than from a reactor build.
 
 ## Stand Alone

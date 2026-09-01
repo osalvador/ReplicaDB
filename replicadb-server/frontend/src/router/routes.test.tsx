@@ -5,6 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import * as jobsApi from '../api/jobsApi';
 import * as jobPermissionsApi from '../api/jobPermissionsApi';
+import * as datasourcesApi from '../api/datasourcesApi';
 import * as usersApi from '../api/usersApi';
 import { AuthContext } from '../auth/AuthContext';
 import { theme } from '../theme/theme';
@@ -21,12 +22,28 @@ vi.mock('../api/jobPermissionsApi', () => ({
   listJobPermissions: vi.fn()
 }));
 
+vi.mock('../api/datasourcesApi', async () => {
+  const actual = await vi.importActual<typeof import('../api/datasourcesApi')>('../api/datasourcesApi');
+  return {
+    ...actual,
+    createDatasource: vi.fn(),
+    deleteDatasource: vi.fn(),
+    getDatasource: vi.fn(),
+    listDatasourcePermissions: vi.fn(),
+    listDatasources: vi.fn(),
+    replaceDatasourcePermission: vi.fn(),
+    revokeDatasourcePermission: vi.fn(),
+    updateDatasource: vi.fn()
+  };
+});
+
 vi.mock('../api/usersApi', () => ({
   listUsers: vi.fn()
 }));
 
 const mockedJobsApi = vi.mocked(jobsApi);
 const mockedJobPermissionsApi = vi.mocked(jobPermissionsApi);
+const mockedDatasourcesApi = vi.mocked(datasourcesApi);
 const mockedUsersApi = vi.mocked(usersApi);
 
 function renderAt(path: string, role: 'ADMIN' | 'OPERATOR' | 'VIEWER' = 'OPERATOR') {
@@ -71,6 +88,23 @@ describe('route shell', () => {
     expect(screen.getByRole('heading', { name: 'New job' })).toBeInTheDocument();
   });
 
+  it('renders the datasource catalog at the protected route', async () => {
+    mockedDatasourcesApi.listDatasources.mockResolvedValue({ content: [], page: 0, size: 25, totalElements: 0 });
+    renderAt('/datasources');
+
+    expect(await screen.findByRole('heading', { name: 'Datasources' })).toBeInTheDocument();
+  });
+
+  it('renders datasource creation and permissions routes for admins', async () => {
+    renderAt('/datasources/new', 'ADMIN');
+    expect(screen.getByRole('heading', { name: 'New datasource' })).toBeInTheDocument();
+
+    mockedDatasourcesApi.getDatasource.mockResolvedValue({ id: 'datasource-1', name: 'Warehouse' });
+    mockedDatasourcesApi.listDatasourcePermissions.mockResolvedValue([]);
+    renderAt('/datasources/datasource-1/permissions', 'ADMIN');
+    expect(await screen.findByRole('heading', { name: 'Warehouse permissions' })).toBeInTheDocument();
+  });
+
   it('renders the job form at the edit route', async () => {
     mockedJobsApi.getJob.mockResolvedValue({ id: 'job-1', name: 'Existing job' });
     renderAt('/jobs/job-1/edit');
@@ -93,7 +127,7 @@ describe('route shell', () => {
     expect(await screen.findByRole('heading', { name: 'Orders replication permissions' })).toBeInTheDocument();
   });
 
-  it.each(['/users', '/jobs/job-1/permissions'])('blocks %s for non-admin users', path => {
+  it.each(['/users', '/jobs/job-1/permissions', '/datasources/new', '/datasources/datasource-1/permissions'])('blocks %s for non-admin users', path => {
     renderAt(path, 'OPERATOR');
 
     expect(screen.getByRole('heading', { name: 'Not authorized' })).toBeInTheDocument();

@@ -82,4 +82,9 @@ done
 REPLICADB_BOOTSTRAP_ADMIN_USERNAME="$ADMIN_USERNAME" \
 REPLICADB_BOOTSTRAP_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
 PLAYWRIGHT_BASE_URL="http://localhost:$FRONTEND_PORT" \
-npm --prefix "$FRONTEND_DIR" run test:e2e -- e2e/admin-management.spec.ts
+npm --prefix "$FRONTEND_DIR" run test:e2e -- e2e/admin-management.spec.ts e2e/datasource-management.spec.ts
+
+OPENAPI_SCHEMA_OUTPUT="$RUN_DIR/schema.ts" \
+OPENAPI_SCHEMA_URL="http://localhost:$API_PORT/v3/api-docs" \
+npm --prefix "$FRONTEND_DIR" run generate:api-types
+diff -u "$FRONTEND_DIR/src/api/schema.ts" "$RUN_DIR/schema.ts"

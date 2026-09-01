@@ -59,7 +59,16 @@ API settings include:
 - `REPLICADB_BOOTSTRAP_ADMIN_USERNAME` and
   `REPLICADB_BOOTSTRAP_ADMIN_PASSWORD` supplied by the secret manager during
   bootstrap
+- `REPLICADB_SECURITY_MASTER_KEY_FILE` when the keyring is mounted somewhere
+  other than `/run/secrets/replicadb-master-key`
 - `MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,metrics,prometheus`
+
+Datasource security values are submitted over authenticated TLS and encrypted
+by the API before PostgreSQL persistence. Database credentials above are for
+the metadata PostgreSQL connection and bootstrap only; source and sink
+credentials belong to managed datasource profiles and must not be supplied as
+source/sink environment variables. The API returns only redacted connection
+metadata and configured-category flags.
 
 Worker settings include:
 
@@ -107,6 +116,42 @@ proportionally different raw work while their normalized utilization remains
 comparable. Queue age and polling lag are operational signals and do not bypass
 cooldown.
 
+## Datasource key management
+
+The API and worker both require the same external keyring. The default path is
+`/run/secrets/replicadb-master-key`; Compose mounts the file at that path. A
+keyring has a current version and one or more Base64-encoded 256-bit AES keys:
+
+```json
+{
+  "currentVersion": "v2",
+  "keys": {
+    "v2": "<base64-encoded-32-byte-key>",
+    "v1": "<previous-base64-encoded-32-byte-key>"
+  }
+}
+```
+
+Create the file in the deployment secret manager, restrict it to the runtime
+user, and do not commit it or put it in PostgreSQL. Startup fails when the file
+is missing, unreadable, malformed, or has no valid current 256-bit key. Keep
+previous key versions available while any datasource bundle still references
+them.
+
+For rotation, add the new key version while retaining the old version, deploy
+the updated keyring to every API and worker, and run the controlled datasource
+re-encryption maintenance operation through `SecretProtectionService`. It
+decrypts and re-encrypts in memory under the current version and persists only
+the new envelope metadata and ciphertext. Verify that no rows still reference
+the old version before removing it from the keyring. Never export plaintext
+security values during rotation. Back up and restore the keyring separately
+from PostgreSQL; a database backup without the matching key versions cannot
+decrypt datasource profiles.
+
+Production API traffic must use HTTPS at the service or its authenticated TLS
+terminating ingress. The Compose cookie setting is intended for its local
+HTTP-only smoke topology and must not be copied to a public deployment.
+
 ## PostgreSQL migrations
 
 Flyway is enabled for both managed profiles and schema initialization is
@@ -117,10 +162,27 @@ cluster:
   and dispatch state.
 - V15: Quartz JDBC PostgreSQL tables and scheduler lock rows.
 - V16: shared login-attempt reservations and cleanup indexes.
+- V17: managed datasource profiles and datasource ACLs.
+- V18: datasource-only job bindings with restrictive foreign keys.
+- V19: claim-time resolved datasource identifiers and timestamps.
 
 Do not run Quartz's automatic schema initializer. Do not edit or remove an
 applied migration. PostgreSQL is the only durable source of truth for product
 schedules and run state.
+
+Datasource security is stored in an application-encrypted envelope. The
+`technical_params` JSON contains non-secret manager settings only; credential-
+bearing values such as connection strings with user-info, passwords, S3 keys,
+Kafka security values, and Azure authentication material belong to the
+encrypted security bundle. Datasource deletion is restrictive while a job
+binding references it.
+
+Pending runs resolve the current datasource profiles when claimed. The claim
+records only resolved datasource UUIDs and a timestamp, releases PostgreSQL
+locks before decrypting or running ReplicaDB, and keeps the in-memory profile
+stable for that attempt. A later datasource update affects the next claim, not
+an already running attempt. Job binding flags block future manual, scheduled,
+retry, recovery, and worker claims without cancelling active work.
 
 ## Quartz rollout
 
@@ -216,11 +278,25 @@ mvn -B -f replicadb-server/pom.xml package -DskipTests
 scripts/phase3-compose-smoke.sh
 ```
 
-The smoke harness creates an isolated Compose project, loads non-secret source
-and sink fixtures after Flyway completes, exercises login/CSRF, creates a job,
-checks schedule visibility from the second API, triggers a run, and verifies
-that the worker writes the expected rows. The worker management port is
-internal-only in this topology.
+For the complete Phase 4 acceptance sequence, run the single orchestrator
+after Docker and Java 17 are available:
+
+```bash
+scripts/phase4-acceptance.sh
+```
+
+It runs the full server and frontend gates, the standalone CLI check, image
+and Compose checks, distributed resilience/fairness scenarios, and the
+authenticated datasource browser smoke. The stress scenarios can be shortened
+for a local run with `PHASE4_LOAD_RUNS` and `PHASE4_FAIRNESS_RUNS`; the release
+gate should keep their defaults.
+
+The smoke harness creates an isolated Compose project, mounts the externally
+created keyring, creates non-secret datasource profiles after Flyway completes,
+binds a job by datasource UUID, exercises login/CSRF, checks schedule
+visibility from the second API, triggers a run, and verifies that the worker
+writes the expected rows. The worker management port is internal-only in this
+topology.
 
 Process-level worker-loss, PostgreSQL-restart, fairness, load, and chaos
 validation is a separate Phase 3.4 release gate. The standalone CLI

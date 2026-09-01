@@ -11,6 +11,8 @@ public record JobDefinition(
         String name,
         SourceEndpoint source,
         SinkEndpoint sink,
+        boolean sourceDatasourceUseEnabled,
+        boolean sinkDatasourceUseEnabled,
         ReplicationMode mode,
         int jobs,
         String incrementalWatermarkColumn,
@@ -56,15 +58,25 @@ public record JobDefinition(
                         sinkTable, null, null, false, false),
                 mode, jobs, incrementalWatermarkColumn, initialWatermarkValue,
                 createdAt, updatedAt, 100, 0, false);
-            }
+    }
 
-            public JobDefinition(UUID id, String name, SourceEndpoint source, SinkEndpoint sink,
+    public JobDefinition(UUID id, String name, SourceEndpoint source, SinkEndpoint sink,
                      ReplicationMode mode, int jobs, String incrementalWatermarkColumn,
                      String initialWatermarkValue, Instant createdAt, Instant updatedAt,
                      int fetchSize, int bandwidthThrottling, boolean verbose) {
-            this(id, name, source, sink, mode, jobs, incrementalWatermarkColumn, initialWatermarkValue,
+            this(id, name, source, sink, true, true, mode, jobs, incrementalWatermarkColumn, initialWatermarkValue,
                 createdAt, updatedAt, fetchSize, bandwidthThrottling, verbose,
                 RetryPolicy.defaultsFor(mode));
+    }
+
+    public JobDefinition(UUID id, String name, SourceEndpoint source, SinkEndpoint sink,
+                         ReplicationMode mode, int jobs, String incrementalWatermarkColumn,
+                         String initialWatermarkValue, Instant createdAt, Instant updatedAt,
+                         int fetchSize, int bandwidthThrottling, boolean verbose,
+                         RetryPolicy retryPolicy) {
+        this(id, name, source, sink, true, true, mode, jobs, incrementalWatermarkColumn,
+                initialWatermarkValue, createdAt, updatedAt, fetchSize, bandwidthThrottling,
+                verbose, retryPolicy);
     }
 
     private static void requireNonBlank(String fieldName, String value) {
@@ -74,15 +86,15 @@ public record JobDefinition(
     }
 
     public String sourceConnect() {
-        return source.connection().connect();
+        return source.connection() == null ? null : source.connection().connect();
     }
 
     public String sourceUser() {
-        return source.connection().user();
+        return source.connection() == null ? null : source.connection().user();
     }
 
     public String sourcePassword() {
-        return source.connection().password();
+        return source.connection() == null ? null : source.connection().password();
     }
 
     public String sourceTable() {
@@ -102,23 +114,23 @@ public record JobDefinition(
     }
 
     public AzureAuthentication sourceAuthentication() {
-        return source.connection().authentication();
+        return source.connection() == null ? null : source.connection().authentication();
     }
 
     public java.util.Map<String, String> sourceConnectionParams() {
-        return source.connection().connectionParams();
+        return source.connection() == null ? java.util.Map.of() : source.connection().connectionParams();
     }
 
     public String sinkConnect() {
-        return sink.connection().connect();
+        return sink.connection() == null ? null : sink.connection().connect();
     }
 
     public String sinkUser() {
-        return sink.connection().user();
+        return sink.connection() == null ? null : sink.connection().user();
     }
 
     public String sinkPassword() {
-        return sink.connection().password();
+        return sink.connection() == null ? null : sink.connection().password();
     }
 
     public String sinkTable() {
@@ -130,11 +142,11 @@ public record JobDefinition(
     }
 
     public AzureAuthentication sinkAuthentication() {
-        return sink.connection().authentication();
+        return sink.connection() == null ? null : sink.connection().authentication();
     }
 
     public java.util.Map<String, String> sinkConnectionParams() {
-        return sink.connection().connectionParams();
+        return sink.connection() == null ? java.util.Map.of() : sink.connection().connectionParams();
     }
 
     public String sinkStagingSchema() {
@@ -151,6 +163,14 @@ public record JobDefinition(
 
     public boolean sinkDisableTruncate() {
         return sink.disableTruncate();
+    }
+
+    public UUID sourceDatasourceId() {
+        return source.datasourceId();
+    }
+
+    public UUID sinkDatasourceId() {
+        return sink.datasourceId();
     }
 
     public int maxAttempts() {

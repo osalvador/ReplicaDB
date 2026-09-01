@@ -12,10 +12,15 @@ import org.replicadb.server.audit.persistence.AuditEventRepository;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
+import org.replicadb.server.job.domain.ConnectorType;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
+import org.replicadb.server.job.domain.ManagedDataSourceTestSupport;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
+import org.replicadb.server.security.secret.SecretProtectionService;
 import org.replicadb.server.security.WithMockReplicaDbUser;
 import org.replicadb.server.security.domain.AppUser;
 import org.replicadb.server.security.domain.GlobalRole;
@@ -73,6 +78,12 @@ class JobRunControllerTest {
     private JobRunRepository jobRunRepository;
 
     @Autowired
+    private ManagedDataSourceRepository managedDataSourceRepository;
+
+    @Autowired
+    private SecretProtectionService protectionService;
+
+    @Autowired
     private AppUserRepository appUserRepository;
 
     @Autowired
@@ -92,8 +103,11 @@ class JobRunControllerTest {
 
     @BeforeEach
     void clearState() {
-        jdbcTemplate.update("TRUNCATE TABLE audit_event, job_permission, run_trigger_idempotency, job_run, job_definition, app_user CASCADE",
+        jdbcTemplate.update("TRUNCATE TABLE audit_event, job_permission, run_trigger_idempotency, job_run, "
+                + "job_definition, app_user, datasource_permission, managed_datasource CASCADE",
             Map.of());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.source());
+        managedDataSourceRepository.insert(ManagedDataSourceTestFixtures.sink());
     }
 
     @Test
@@ -254,12 +268,14 @@ class JobRunControllerTest {
             JobDefinition complete = jobDefinitionRepository.insert(definition("complete-warning"));
             JobDefinition incremental = jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
                 .withName("incremental-warning")
+                .withDefaultDatasourceReferences()
                 .withMode(ReplicationMode.INCREMENTAL)
                 .withIncrementalWatermarkColumn("updated_at")
                 .withInitialWatermarkValue("0")
                 .build());
             JobDefinition atomic = jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
                 .withName("atomic-warning")
+                .withDefaultDatasourceReferences()
                 .withMode(ReplicationMode.COMPLETE_ATOMIC)
                 .build());
             JobRun completeRun = jobRunRepository.insertPendingNow(complete.id(), null, 1);
@@ -422,17 +438,22 @@ class JobRunControllerTest {
     }
 
     private static JobDefinition definition(String name) {
-        return JobDefinitionTestFixtures.aJobDefinition().withName(name).build();
+        return JobDefinitionTestFixtures.aJobDefinition().withName(name)
+                .withDefaultDatasourceReferences().build();
     }
 
     private JobDefinition runtimeDefinition(String name, ReplicationMode mode, int rowCount) throws SQLException {
         Path source = createDatabase(name + "-source.db", rowCount);
         Path sink = createDatabase(name + "-sink.db", 0);
+        UUID sourceId = ManagedDataSourceTestSupport.insert(managedDataSourceRepository, protectionService,
+            name + "-source-datasource", ConnectorType.SQLITE, "jdbc:sqlite:" + source);
+        UUID sinkId = ManagedDataSourceTestSupport.insert(managedDataSourceRepository, protectionService,
+            name + "-sink-datasource", ConnectorType.SQLITE, "jdbc:sqlite:" + sink);
         return jobDefinitionRepository.insert(JobDefinitionTestFixtures.aJobDefinition()
             .withName(name)
-            .withSourceConnect("jdbc:sqlite:" + source)
+            .withSourceDatasourceId(sourceId)
             .withSourceTable("orders")
-            .withSinkConnect("jdbc:sqlite:" + sink)
+            .withSinkDatasourceId(sinkId)
             .withSinkTable("orders_copy")
             .withMode(mode)
             .build());

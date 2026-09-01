@@ -38,6 +38,14 @@ export type EndpointField =
 
 export type EndpointValues = Record<EndpointField, string>;
 
+export type DatasourceSecurityField =
+  | 'accessKey'
+  | 'secretKey'
+  | 'saslUsername'
+  | 'saslPassword'
+  | 'sslTruststorePassword'
+  | 'sslKeystorePassword';
+
 type ConnectionSettingsCardProps = {
   side: 'source' | 'sink';
   draft: ConnectionDraft;
@@ -46,6 +54,9 @@ type ConnectionSettingsCardProps = {
   onValueChange: (field: EndpointField, value: string) => void;
   connectionParams?: Record<string, string>;
   onConnectionParamChange?: (key: string, value: string) => void;
+  securityValues?: Partial<Record<DatasourceSecurityField, string>>;
+  onSecurityValueChange?: (field: DatasourceSecurityField, value: string) => void;
+  labelPrefix?: string;
   connectError?: string;
   passwordHelperText?: string;
 };
@@ -60,7 +71,10 @@ const databaseTypes: Array<{ value: Exclude<DbType, 'custom' | 'kafka'>; label: 
   { value: 'sqlite', label: 'SQLite' },
   { value: 'sqlserver', label: 'SQL Server' },
   { value: 'denodo', label: 'Denodo' },
-  { value: 'file', label: 'File' }
+  { value: 'file', label: 'File' },
+  { value: 's3', label: 'Amazon S3' },
+  { value: 'mongodb', label: 'MongoDB' },
+  { value: 'mongodb+srv', label: 'MongoDB Atlas (SRV)' }
 ];
 
 const authModes = [
@@ -102,6 +116,9 @@ export default function ConnectionSettingsCard({
   onValueChange,
   connectionParams = {},
   onConnectionParamChange = () => undefined,
+  securityValues = {},
+  onSecurityValueChange = () => undefined,
+  labelPrefix,
   connectError,
   passwordHelperText
 }: ConnectionSettingsCardProps) {
@@ -109,11 +126,14 @@ export default function ConnectionSettingsCard({
   const isKafka = draft.type === 'kafka';
   const isFile = draft.type === 'file';
   const isSqlite = draft.type === 'sqlite';
+  const isS3 = draft.type === 's3';
+  const isMongo = draft.type === 'mongodb' || draft.type === 'mongodb+srv';
   const isCustom = draft.type === 'custom';
   const isSqlServer = draft.type === 'sqlserver';
   const isOracle = draft.type === 'oracle';
   const authPanelId = useId();
-  const options = side === 'sink'
+  const prefix = labelPrefix ?? (side === 'source' ? 'Source' : 'Sink');
+  const options = labelPrefix || side === 'sink'
     ? [...databaseTypes, { value: 'kafka' as const, label: 'Apache Kafka' }]
     : databaseTypes;
   const preview = previewConnection(draft);
@@ -122,7 +142,7 @@ export default function ConnectionSettingsCard({
     <Stack spacing={2}>
       <Box>
         <Typography component="h3" variant="subtitle1">
-          {side === 'source' ? 'Source connection' : 'Sink connection'}
+          {labelPrefix ? `${labelPrefix} connection` : `${prefix} connection`}
         </Typography>
         <Typography variant="body2" color="text.secondary">
           Select a connector and provide its connection details.
@@ -130,7 +150,7 @@ export default function ConnectionSettingsCard({
       </Box>
       <TextField
         select
-        label={`${side === 'source' ? 'Source' : 'Sink'} data source type`}
+        label={`${prefix} data source type`}
         value={draft.type}
         onChange={event => onDraftChange({
           ...draft,
@@ -145,7 +165,7 @@ export default function ConnectionSettingsCard({
 
       {isCustom && (
         <TextField
-          label={`${side === 'source' ? 'Source' : 'Sink'} connection`}
+          label={`${prefix} connection`}
           value={draft.fields.raw ?? values.connect}
           onChange={event => {
             onDraftChange(updateField(draft, 'raw', event.target.value));
@@ -158,7 +178,7 @@ export default function ConnectionSettingsCard({
         />
       )}
 
-      {!isCustom && !isSqlite && !isFile && !isKafka && (
+      {!isCustom && !isSqlite && !isFile && !isKafka && !isS3 && !isMongo && (
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 3fr) minmax(120px, 1fr)' }, gap: 2 }}>
           <TextField
             label="Host"
@@ -176,7 +196,7 @@ export default function ConnectionSettingsCard({
         </Box>
       )}
 
-      {!isCustom && !isSqlite && !isFile && !isKafka && (
+      {!isCustom && !isSqlite && !isFile && !isKafka && !isS3 && !isMongo && (
         <TextField
           label="Database / SID or Service Name"
           value={draft.fields.database ?? ''}
@@ -204,6 +224,55 @@ export default function ConnectionSettingsCard({
           label="Database file path"
           value={draft.fields.sqliteFilePath ?? ''}
           onChange={event => onDraftChange(updateField(draft, 'sqliteFilePath', event.target.value))}
+          fullWidth
+        />
+      )}
+
+      {isS3 && (
+        <Stack spacing={2}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 3fr) minmax(120px, 1fr)' }, gap: 2 }}>
+            <TextField
+              label="S3 endpoint"
+              value={draft.fields.host ?? ''}
+              onChange={event => onDraftChange(updateField(draft, 'host', event.target.value))}
+              fullWidth
+            />
+            <TextField
+              label="Port"
+              type="number"
+              value={draft.fields.port ?? ''}
+              onChange={event => onDraftChange(updateField(draft, 'port', event.target.value))}
+              fullWidth
+            />
+          </Box>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+            <TextField
+              label="Bucket"
+              value={draft.fields.bucket ?? ''}
+              onChange={event => onDraftChange(updateField(draft, 'bucket', event.target.value))}
+              fullWidth
+            />
+            <TextField
+              label="Prefix"
+              value={draft.fields.prefix ?? ''}
+              onChange={event => onDraftChange(updateField(draft, 'prefix', event.target.value))}
+              fullWidth
+            />
+          </Box>
+        </Stack>
+      )}
+
+      {isMongo && (
+        <TextField
+          label={`${prefix} MongoDB URI`}
+          value={draft.fields.mongoUri ?? values.connect}
+          onChange={event => {
+            onDraftChange(updateField(draft, 'mongoUri', event.target.value));
+            onValueChange('connect', event.target.value);
+          }}
+          error={Boolean(connectError)}
+          helperText={connectError ?? 'Credentials in this URI are write-only and never loaded from the server'}
+          required
           fullWidth
         />
       )}
@@ -258,7 +327,7 @@ export default function ConnectionSettingsCard({
 
       {!isCustom && (
         <TextField
-          label={`${side === 'source' ? 'Source' : 'Sink'} connection`}
+          label={`${prefix} connection`}
           value={preview}
           inputProps={{ readOnly: true, 'aria-readonly': 'true' }}
           error={Boolean(connectError)}
@@ -267,22 +336,76 @@ export default function ConnectionSettingsCard({
         />
       )}
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+      {!isS3 && !isKafka && !isMongo && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
         <TextField
-          label={`${side === 'source' ? 'Source' : 'Sink'} user`}
+          label={`${prefix} user`}
           value={values.user}
           onChange={event => onValueChange('user', event.target.value)}
           fullWidth
         />
         <TextField
-          label={`${side === 'source' ? 'Source' : 'Sink'} password`}
+          label={`${prefix} password`}
           type="password"
           value={values.password}
           onChange={event => onValueChange('password', event.target.value)}
           helperText={passwordHelperText}
           fullWidth
         />
-      </Box>
+      </Box>}
+
+      {isS3 && (
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+          <TextField
+            label="S3 access key"
+            value={securityValues.accessKey ?? ''}
+            onChange={event => onSecurityValueChange('accessKey', event.target.value)}
+            fullWidth
+          />
+          <TextField
+            label="S3 secret key"
+            type="password"
+            value={securityValues.secretKey ?? ''}
+            onChange={event => onSecurityValueChange('secretKey', event.target.value)}
+            fullWidth
+          />
+        </Box>
+      )}
+
+      {isKafka && (
+        <Stack spacing={2}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+            <TextField
+              label="SASL username"
+              value={securityValues.saslUsername ?? ''}
+              onChange={event => onSecurityValueChange('saslUsername', event.target.value)}
+              fullWidth
+            />
+            <TextField
+              label="SASL password"
+              type="password"
+              value={securityValues.saslPassword ?? ''}
+              onChange={event => onSecurityValueChange('saslPassword', event.target.value)}
+              fullWidth
+            />
+          </Box>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+            <TextField
+              label="SSL truststore password"
+              type="password"
+              value={securityValues.sslTruststorePassword ?? ''}
+              onChange={event => onSecurityValueChange('sslTruststorePassword', event.target.value)}
+              fullWidth
+            />
+            <TextField
+              label="SSL keystore password"
+              type="password"
+              value={securityValues.sslKeystorePassword ?? ''}
+              onChange={event => onSecurityValueChange('sslKeystorePassword', event.target.value)}
+              fullWidth
+            />
+          </Box>
+        </Stack>
+      )}
 
       {isSqlServer && (
         <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 1 }}>

@@ -103,6 +103,30 @@ describe('ConnectionSettingsCard', () => {
     expect(screen.queryByLabelText('Host')).not.toBeInTheDocument();
   });
 
+  it('reveals S3 endpoint, bucket, prefix, and write-only key fields', () => {
+    render(<Harness />);
+    selectType('Source data source type', 'Amazon S3');
+
+    fireEvent.change(screen.getByLabelText('S3 endpoint'), { target: { value: 's3.example' } });
+    fireEvent.change(screen.getByLabelText('Port'), { target: { value: '443' } });
+    fireEvent.change(screen.getByLabelText('Bucket'), { target: { value: 'replica' } });
+    fireEvent.change(screen.getByLabelText('Prefix'), { target: { value: 'exports' } });
+    expect(screen.getByLabelText('S3 access key')).toBeInTheDocument();
+    expect(screen.getByLabelText('S3 secret key')).toHaveAttribute('type', 'password');
+    expect(screen.getByLabelText('Source connection')).toHaveValue('s3://s3.example:443/replica/exports');
+  });
+
+  it('supports MongoDB and MongoDB SRV full URI fields', () => {
+    render(<Harness />);
+    selectType('Source data source type', 'MongoDB');
+    const uri = screen.getByLabelText(/^Source MongoDB URI/);
+    fireEvent.change(uri, { target: { value: 'mongodb://host/catalog' } });
+    expect(screen.getByLabelText('Source connection')).toHaveValue('mongodb://host/catalog');
+
+    selectType('Source data source type', 'MongoDB Atlas (SRV)');
+    expect(screen.getByLabelText(/^Source MongoDB URI/)).toBeInTheDocument();
+  });
+
   it('allows extra parameters to be edited as key-value lines', () => {
     render(<Harness />);
     const field = screen.getByLabelText('Extra JDBC parameters');

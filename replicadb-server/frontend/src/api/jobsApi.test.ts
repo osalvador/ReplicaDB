@@ -17,14 +17,15 @@ describe('jobsApi mutations', () => {
   it('normalizes blank optional strings', () => {
     const request = toJobDefinitionRequest(formInput('complete'));
 
-    expect(request.sourceUser).toBeUndefined();
-    expect(request.sourcePassword).toBeUndefined();
     expect(request.sourceWhere).toBeUndefined();
-    expect(request.sinkUser).toBeUndefined();
-    expect(request.sinkPassword).toBeUndefined();
     expect(request.sourceColumns).toBeUndefined();
     expect(request.sinkStagingTable).toBeUndefined();
-    expect(request.sourceConnectionParams).toBeUndefined();
+    expect(request.sourceDatasourceId).toBe('source-1');
+    expect(request.sinkDatasourceId).toBe('sink-1');
+    expect(request).not.toHaveProperty('sourceConnect');
+    expect(request).not.toHaveProperty('sinkConnect');
+    expect(request).not.toHaveProperty('sourceUser');
+    expect(request).not.toHaveProperty('sinkUser');
     expect(request.maxAttempts).toBe(3);
     expect(request.retryBackoffSeconds).toBe(60);
     expect(request.automaticRetryEnabled).toBe(false);
@@ -36,11 +37,9 @@ describe('jobsApi mutations', () => {
       sourceTable: 'source_table',
       sourceQuery: 'select * from source_table',
       sourceColumns: 'id, name',
-      sourceConnectionParams: { format: 'RFC4180' },
       sinkColumns: 'name, id',
       sinkStagingSchema: 'staging',
       sinkStagingTable: 'sink_stage',
-      sinkConnectionParams: { topic: 'orders' },
       fetchSize: 250,
       bandwidthThrottling: 512,
       verbose: true
@@ -48,8 +47,10 @@ describe('jobsApi mutations', () => {
 
     expect(request).not.toHaveProperty('sourceTable');
     expect(request.sourceQuery).toBe('select * from source_table');
-    expect(request.sourceConnectionParams).toEqual({ format: 'RFC4180' });
-    expect(request.sinkConnectionParams).toEqual({ topic: 'orders' });
+    expect(request).not.toHaveProperty('sourceConnectionParams');
+    expect(request).not.toHaveProperty('sinkConnectionParams');
+    expect(request).not.toHaveProperty('sourceConnect');
+    expect(request).not.toHaveProperty('sinkConnect');
     expect(request.fetchSize).toBe(250);
     expect(request.bandwidthThrottling).toBe(512);
     expect(request.verbose).toBe(true);
@@ -130,29 +131,15 @@ describe('jobsApi mutations', () => {
 function formInput(mode: JobDefinitionFormInput['mode']): JobDefinitionFormInput {
   return {
     name: 'job-1',
-    sourceConnect: 'jdbc:source',
-    sourceUser: '',
-    sourcePassword: '',
+    sourceDatasourceId: 'source-1',
+    sourceDatasourceUseEnabled: true,
+    sinkDatasourceId: 'sink-1',
+    sinkDatasourceUseEnabled: true,
     sourceTable: 'source_table',
     sourceWhere: '',
-    sinkConnect: 'jdbc:sink',
-    sinkUser: '',
-    sinkPassword: '',
     sinkTable: 'sink_table',
-    sourceAuthMode: '',
-    sourceAuthPrincipalId: '',
-    sourceAuthLoginHint: '',
-    sourceAuthClientCertificate: '',
-    sourceAuthClientKey: '',
-    sourceConnectionParams: {},
     sourceColumns: '',
     sourceQuery: '',
-    sinkAuthMode: '',
-    sinkAuthPrincipalId: '',
-    sinkAuthLoginHint: '',
-    sinkAuthClientCertificate: '',
-    sinkAuthClientKey: '',
-    sinkConnectionParams: {},
     sinkColumns: '',
     sinkStagingSchema: '',
     sinkStagingTable: '',

@@ -84,6 +84,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/datasources/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_4"];
+        put: operations["update_2"];
+        post?: never;
+        delete: operations["delete_2"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasources/{datasourceId}/permissions/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["replace_1"];
+        post?: never;
+        delete: operations["revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users": {
         parameters: {
             query?: never;
@@ -158,6 +190,22 @@ export interface paths {
         get: operations["listForJob"];
         put?: never;
         post: operations["trigger"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_4"];
+        put?: never;
+        post: operations["create_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -260,6 +308,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/datasources/{datasourceId}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_5"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/me": {
         parameters: {
             query?: never;
@@ -299,7 +363,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_4"];
+        get: operations["list_6"];
         put?: never;
         post?: never;
         delete?: never;
@@ -361,33 +425,17 @@ export interface components {
         };
         JobDefinitionRequest: {
             name: string;
-            sourceConnect: string;
-            sourceUser?: string;
-            sourcePassword?: string;
+            /** Format: uuid */
+            sourceDatasourceId: string;
+            sourceDatasourceUseEnabled?: boolean;
             sourceTable?: string;
             sourceWhere?: string;
-            sourceAuthMode?: string;
-            sourceAuthPrincipalId?: string;
-            sourceAuthLoginHint?: string;
-            sourceAuthClientCertificate?: string;
-            sourceAuthClientKey?: string;
-            sourceConnectionParams?: {
-                [key: string]: string;
-            };
             sourceColumns?: string;
             sourceQuery?: string;
-            sinkConnect: string;
-            sinkUser?: string;
-            sinkPassword?: string;
+            /** Format: uuid */
+            sinkDatasourceId: string;
+            sinkDatasourceUseEnabled?: boolean;
             sinkTable: string;
-            sinkAuthMode?: string;
-            sinkAuthPrincipalId?: string;
-            sinkAuthLoginHint?: string;
-            sinkAuthClientCertificate?: string;
-            sinkAuthClientKey?: string;
-            sinkConnectionParams?: {
-                [key: string]: string;
-            };
             sinkColumns?: string;
             sinkStagingSchema?: string;
             sinkStagingTable?: string;
@@ -409,35 +457,30 @@ export interface components {
             retryBackoffSeconds?: number;
             automaticRetryEnabled?: boolean;
         };
+        DatasourceSummaryResponse: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            connectorType?: string;
+            safeConnectDisplay?: string;
+        };
         JobDefinitionResponse: {
             /** Format: uuid */
             id?: string;
             name?: string;
-            sourceConnect?: string;
-            sourceUser?: string;
+            /** Format: uuid */
+            sourceDatasourceId?: string;
+            sourceDatasource?: components["schemas"]["DatasourceSummaryResponse"];
+            sourceDatasourceUseEnabled?: boolean;
             sourceTable?: string;
             sourceWhere?: string;
-            sourceAuthMode?: string;
-            sourceAuthPrincipalId?: string;
-            sourceAuthLoginHint?: string;
-            sourceAuthClientCertificate?: string;
-            sourceAuthClientKey?: string;
-            sourceConnectionParams?: {
-                [key: string]: string;
-            };
             sourceColumns?: string;
             sourceQuery?: string;
-            sinkConnect?: string;
-            sinkUser?: string;
+            /** Format: uuid */
+            sinkDatasourceId?: string;
+            sinkDatasource?: components["schemas"]["DatasourceSummaryResponse"];
+            sinkDatasourceUseEnabled?: boolean;
             sinkTable?: string;
-            sinkAuthMode?: string;
-            sinkAuthPrincipalId?: string;
-            sinkAuthLoginHint?: string;
-            sinkAuthClientCertificate?: string;
-            sinkAuthClientKey?: string;
-            sinkConnectionParams?: {
-                [key: string]: string;
-            };
             sinkColumns?: string;
             sinkStagingSchema?: string;
             sinkStagingTable?: string;
@@ -457,14 +500,59 @@ export interface components {
             /** Format: int32 */
             bandwidthThrottling?: number;
             verbose?: boolean;
-            sourcePasswordConfigured?: boolean;
-            sinkPasswordConfigured?: boolean;
             /** Format: int32 */
             maxAttempts?: number;
             /** Format: int64 */
             retryBackoffSeconds?: number;
             automaticRetryEnabled?: boolean;
             modeWarning?: string;
+        };
+        DatasourceRequest: {
+            name: string;
+            connectorType: string;
+            technicalParams?: {
+                [key: string]: string;
+            };
+            security?: {
+                [key: string]: string;
+            };
+            clearSecurityKeys?: string[];
+        };
+        DatasourceCapabilitiesResponse: {
+            sourceCapable?: boolean;
+            sinkCapable?: boolean;
+            sourceModes?: string[];
+            sinkModes?: string[];
+            sourceQuery?: boolean;
+            singleJobOnly?: boolean;
+        };
+        DatasourceResponse: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            connectorType?: string;
+            safeConnectDisplay?: string;
+            technicalParams?: {
+                [key: string]: string;
+            };
+            securityConfigured?: boolean;
+            capabilities?: components["schemas"]["DatasourceCapabilitiesResponse"];
+            canView?: boolean;
+            canUse?: boolean;
+            canEdit?: boolean;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        DatasourcePermissionRequest: {
+            permissions: ("VIEW" | "USE" | "EDIT")[];
+        };
+        DatasourcePermissionResponse: {
+            /** Format: uuid */
+            userId?: string;
+            username?: string;
+            permissions?: ("VIEW" | "USE" | "EDIT")[];
         };
         UserRequest: {
             username: string;
@@ -554,6 +642,15 @@ export interface components {
             /** Format: int64 */
             totalElements?: number;
         };
+        PageResponseDatasourceResponse: {
+            content?: components["schemas"]["DatasourceResponse"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+        };
         CsrfTokenResponse: {
             headerName?: string;
             parameterName?: string;
@@ -569,9 +666,9 @@ export interface components {
             actorUsername?: string;
             sourceAddress?: string;
             /** @enum {string} */
-            action?: "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "USER_CREATED" | "USER_UPDATED" | "USER_PASSWORD_CHANGED" | "JOB_CREATED" | "JOB_UPDATED" | "JOB_PERMISSION_REPLACED" | "JOB_PERMISSION_REVOKED" | "JOB_SCHEDULE_UPSERTED" | "JOB_SCHEDULE_DELETED" | "RUN_TRIGGERED" | "RUN_CANCEL_REQUESTED" | "RUN_RETRIED" | "RUN_SUCCEEDED" | "RUN_FAILED" | "RUN_CANCELLED";
+            action?: "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "USER_CREATED" | "USER_UPDATED" | "USER_PASSWORD_CHANGED" | "DATASOURCE_CREATED" | "DATASOURCE_UPDATED" | "DATASOURCE_DELETED" | "DATASOURCE_PERMISSION_REPLACED" | "DATASOURCE_PERMISSION_REVOKED" | "JOB_CREATED" | "JOB_UPDATED" | "JOB_DATASOURCE_BINDING_REPLACED" | "JOB_DATASOURCE_BINDING_ENABLED" | "JOB_DATASOURCE_BINDING_DISABLED" | "JOB_PERMISSION_REPLACED" | "JOB_PERMISSION_REVOKED" | "JOB_SCHEDULE_UPSERTED" | "JOB_SCHEDULE_DELETED" | "RUN_TRIGGERED" | "RUN_CANCEL_REQUESTED" | "RUN_RETRIED" | "RUN_SUCCEEDED" | "RUN_FAILED" | "RUN_CANCELLED";
             /** @enum {string} */
-            resourceType?: "USER" | "JOB_DEFINITION" | "JOB_RUN" | "SESSION";
+            resourceType?: "USER" | "DATASOURCE" | "JOB_DEFINITION" | "JOB_RUN" | "SESSION";
             resourceId?: string;
             /** @enum {string} */
             outcome?: "SUCCESS" | "FAILURE";
@@ -835,6 +932,122 @@ export interface operations {
             };
         };
     };
+    get_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DatasourceResponse"];
+                };
+            };
+        };
+    };
+    update_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasourceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DatasourceResponse"];
+                };
+            };
+        };
+    };
+    delete_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    replace_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                datasourceId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasourcePermissionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DatasourcePermissionResponse"];
+                };
+            };
+        };
+    };
+    revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                datasourceId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     list: {
         parameters: {
             query?: {
@@ -1022,6 +1235,54 @@ export interface operations {
             };
         };
     };
+    list_4: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+                role?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseDatasourceResponse"];
+                };
+            };
+        };
+    };
+    create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasourceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DatasourceResponse"];
+                };
+            };
+        };
+    };
     logout: {
         parameters: {
             query?: never;
@@ -1154,6 +1415,28 @@ export interface operations {
             };
         };
     };
+    list_5: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                datasourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DatasourcePermissionResponse"][];
+                };
+            };
+        };
+    };
     me: {
         parameters: {
             query?: never;
@@ -1194,7 +1477,7 @@ export interface operations {
             };
         };
     };
-    list_4: {
+    list_6: {
         parameters: {
             query?: {
                 actorUserId?: string;

@@ -11,13 +11,19 @@ import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.application.RunDispatchResult;
 import org.replicadb.server.job.application.RunDispatchService;
 import org.replicadb.server.job.application.RunLeaseService;
+import org.replicadb.server.job.domain.ConnectorType;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
 import org.replicadb.server.job.domain.JobRun;
 import org.replicadb.server.job.domain.JobRunStatus;
+import org.replicadb.server.job.domain.ManagedDataSource;
+import org.replicadb.server.job.domain.TestKeyring;
 import org.replicadb.server.job.domain.RetryPolicy;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
+import org.replicadb.server.security.secret.EncryptedSecurityBundle;
+import org.replicadb.server.security.secret.SecretProtectionService;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -27,6 +33,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -52,6 +59,7 @@ class WorkerExecutionIT {
     private static String schema;
     private static String metadataUrl;
     private static ConfigurableApplicationContext workerContext;
+    private static Path keyringPath;
 
     @TempDir
     Path tempDirectory;
@@ -61,6 +69,7 @@ class WorkerExecutionIT {
         schema = PostgresTestcontainersConfig.isolatedSchema();
         PostgresTestcontainersConfig.migrate(POSTGRES, schema);
         metadataUrl = PostgresTestcontainersConfig.jdbcUrl(POSTGRES, schema);
+        keyringPath = TestKeyring.create();
         workerContext = new SpringApplicationBuilder(ReplicaDbServerApplication.class)
                 .profiles("worker")
                 .run(
@@ -68,6 +77,7 @@ class WorkerExecutionIT {
                         "--spring.datasource.username=" + POSTGRES.getUsername(),
                         "--spring.datasource.password=" + POSTGRES.getPassword(),
                         "--spring.flyway.enabled=false",
+                        "--replicadb.security.master-key-file=" + keyringPath,
                         "--replicadb.worker.identity=" + WORKER_IDENTITY,
                         "--replicadb.worker.max-concurrent-runs=1",
                         "--replicadb.worker.lease-duration=5s",
@@ -85,12 +95,14 @@ class WorkerExecutionIT {
             workerContext.close();
         }
         PostgresTestcontainersConfig.dropSchema(POSTGRES, schema);
+        Files.deleteIfExists(keyringPath);
     }
 
     @BeforeEach
     void clearState() {
         workerContext.getBean(NamedParameterJdbcTemplate.class).update(
-                "TRUNCATE TABLE audit_event, run_trigger_idempotency, job_run, job_definition CASCADE", Map.of());
+            "TRUNCATE TABLE audit_event, run_trigger_idempotency, job_run, job_definition, "
+                + "managed_datasource CASCADE", Map.of());
     }
 
     @Test
@@ -168,20 +180,33 @@ class WorkerExecutionIT {
                 Map.of("jobDefinitionId", jobDefinitionId), Long.class);
     }
 
-    private static JobDefinition definition(Path source, Path sink, ReplicationMode mode,
-                                            String watermarkColumn, String initialWatermark,
-                                            RetryPolicy retryPolicy) {
+        private JobDefinition definition(Path source, Path sink, ReplicationMode mode,
+                         String watermarkColumn, String initialWatermark,
+                         RetryPolicy retryPolicy) {
+        UUID sourceId = insertDatasource("worker-source-" + UUID.randomUUID(), "jdbc:sqlite:" + source);
+        UUID sinkId = insertDatasource("worker-sink-" + UUID.randomUUID(), "jdbc:sqlite:" + sink);
         return JobDefinitionTestFixtures.aJobDefinition()
                 .withName("worker-execution-" + UUID.randomUUID())
-                .withSourceConnect("jdbc:sqlite:" + source)
+            .withSourceDatasourceId(sourceId)
                 .withSourceTable("orders")
-                .withSinkConnect("jdbc:sqlite:" + sink)
+            .withSinkDatasourceId(sinkId)
                 .withSinkTable("orders_copy")
                 .withMode(mode)
                 .withIncrementalWatermarkColumn(watermarkColumn)
                 .withInitialWatermarkValue(initialWatermark)
                 .withRetryPolicy(retryPolicy)
                 .build();
+    }
+
+    private UUID insertDatasource(String name, String connect) {
+        SecretProtectionService protectionService = workerContext.getBean(SecretProtectionService.class);
+        ManagedDataSourceRepository dataSources = workerContext.getBean(ManagedDataSourceRepository.class);
+        UUID id = UUID.randomUUID();
+        EncryptedSecurityBundle bundle = protectionService.encrypt(id, Map.of("connect", connect));
+        dataSources.insert(new ManagedDataSource(id, name, ConnectorType.SQLITE, connect, Map.of(),
+                protectionService.serialize(bundle), bundle.formatVersion(), bundle.algorithm(),
+                bundle.keyVersion(), null, null));
+        return id;
     }
 
     private Path createDatabase(String filename, int rowCount, boolean incremental) throws SQLException {
