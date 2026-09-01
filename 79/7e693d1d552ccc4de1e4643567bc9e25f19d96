@@ -1,0 +1,31 @@
+replicadb-server/frontend/src/api/schema.ts
+  s_c64c824f92790a::t_48f9d8b92d9548 87-118,199-214,311-326,366,428-430,435-437,460-466,471-474,479-482,510-556,645-653,669,671,935-1050,1238-1285,1418-1439,1480
+replicadb-server/src/main/java/org/replicadb/server/job/api/DatasourceCapabilitiesResponse.java
+  s_277854e6f9c22c::t_e0bfdeccf03fe9 1-12
+replicadb-server/src/main/java/org/replicadb/server/job/api/DatasourceResponse.java
+  s_277854e6f9c22c::t_e73ee89b4d4687 1-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "797e693d1d552ccc4de1e4643567bc9e25f19d96",
+  "prompts": {},
+  "sessions": {
+    "s_277854e6f9c22c": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "39df155d-423c-4e05-88a3-6d7fc830e919",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    },
+    "s_c64c824f92790a": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "793784e8-e82f-452e-972d-0c11ef5af53b",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
