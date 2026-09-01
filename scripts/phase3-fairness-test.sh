@@ -7,6 +7,7 @@ repository_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
 source "$script_dir/phase4-compose-common.sh"
 project_name=${COMPOSE_PROJECT_NAME:-replicadb-phase3-fairness-$PPID}
 state_directory="$repository_root/.phase3-compose/$project_name"
+diagnostics_directory="$repository_root/.phase3-logs/$project_name"
 cookie_file="$state_directory/cookies.txt"
 run_file="$state_directory/runs.txt"
 jobs_to_run=${PHASE3_FAIRNESS_RUNS:-24}
@@ -75,10 +76,11 @@ compose() {
 cleanup() {
     local exit_code=$?
     if [[ "$exit_code" -ne 0 ]]; then
-        compose ps > "$state_directory/compose-status.txt" 2>/dev/null || true
-        compose logs --no-color worker-one worker-two > "$state_directory/worker-diagnostics.log" 2>/dev/null || true
+        mkdir -p "$diagnostics_directory"
+        compose ps > "$diagnostics_directory/compose-status.txt" 2>/dev/null || true
+        compose logs --no-color api-one api-two worker-one worker-two > "$diagnostics_directory/service-diagnostics.log" 2>/dev/null || true
         sed -Ei 's/(password|token|jdbc:[^[:space:]]+)/[redacted]/Ig' \
-            "$state_directory/worker-diagnostics.log" 2>/dev/null || true
+            "$diagnostics_directory/service-diagnostics.log" 2>/dev/null || true
     fi
     compose down --volumes --remove-orphans >/dev/null 2>&1 || true
     rm -rf "$state_directory"

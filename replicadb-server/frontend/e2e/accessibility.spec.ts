@@ -74,7 +74,9 @@ test('authenticated controls expose keyboard and semantic accessibility contract
   await expect(page.getByRole('combobox', { name: 'Source datasource' })).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Sink datasource' })).toBeVisible();
 
-  await page.goto('/datasources/new');
+  await page.getByRole('link', { name: 'Datasources' }).click();
+  await expect(page.getByRole('heading', { name: 'Datasources' })).toBeVisible();
+  await page.getByRole('link', { name: 'New datasource' }).click();
   await expect(page.getByRole('heading', { name: 'New datasource' })).toBeVisible();
   await page.getByRole('combobox', { name: 'Datasource data source type' }).click();
   await page.getByRole('option', { name: 'SQL Server' }).click();
