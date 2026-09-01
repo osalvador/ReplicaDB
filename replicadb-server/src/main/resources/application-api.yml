@@ -24,6 +24,8 @@ spring:
     jdbc:
       initialize-schema: never
     timeout: 30m
+logging:
+  config: classpath:log4j2-spring.xml
 server:
   servlet:
     session:

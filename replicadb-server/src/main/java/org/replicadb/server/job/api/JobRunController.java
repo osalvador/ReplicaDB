@@ -16,6 +16,7 @@ import org.replicadb.server.job.application.RunDispatchService;
 import org.replicadb.server.job.execution.RunExecutionCoordinator;
 import org.replicadb.server.job.port.JobDefinitionStore;
 import org.replicadb.server.job.port.JobRunStore;
+import org.replicadb.server.job.port.RunLogStore;
 import org.replicadb.server.security.JobAccessService;
 import org.replicadb.server.security.domain.JobPermissionType;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
@@ -48,6 +49,7 @@ import java.util.UUID;
 public class JobRunController {
 
     private final JobRunStore jobRunStore;
+    private final Optional<RunLogStore> runLogStore;
     private final JobDefinitionStore jobDefinitionStore;
     private final RunCancellationService runCancellationService;
     private final RunDispatchService runDispatchService;
@@ -59,6 +61,7 @@ public class JobRunController {
     private final boolean localExecutionEnabled;
 
     public JobRunController(JobRunStore jobRunStore,
+                            Optional<RunLogStore> runLogStore,
                             JobDefinitionStore jobDefinitionStore,
                             RunCancellationService runCancellationService,
                             RunDispatchService runDispatchService,
@@ -69,6 +72,7 @@ public class JobRunController {
                             @Value("${replicadb.server.local-seeding.enabled:false}") boolean localSeedingEnabled,
                             @Value("${replicadb.server.local-execution.enabled:true}") boolean localExecutionEnabled) {
         this.jobRunStore = jobRunStore;
+        this.runLogStore = runLogStore;
         this.jobDefinitionStore = jobDefinitionStore;
         this.runCancellationService = runCancellationService;
         this.runDispatchService = runDispatchService;
@@ -117,7 +121,9 @@ public class JobRunController {
     public RunLogResponse log(@PathVariable UUID id, Authentication authentication) {
         JobRun run = findRun(id);
         jobAccessService.require(authentication, run.jobDefinitionId(), JobPermissionType.VIEW);
-        return new RunLogResponse(run.id(), run.errorMessage() == null ? "" : run.errorMessage());
+        return runLogStore.flatMap(store -> store.findByRunId(run.id()))
+            .map(RunLogResponse::from)
+            .orElseGet(() -> RunLogResponse.empty(run.id()));
     }
 
     @PostMapping("/jobs/{jobDefinitionId}/runs")
@@ -261,9 +267,6 @@ public class JobRunController {
         } catch (IllegalArgumentException exception) {
             throw new IllegalArgumentException("Unknown run status: " + status, exception);
         }
-    }
-
-    public record RunLogResponse(UUID runId, String excerpt) {
     }
 
     public record CancellationResponse(UUID runId, JobRunStatus status, String warning) {

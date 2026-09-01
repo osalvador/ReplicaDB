@@ -16,6 +16,7 @@ public final class ReplicationExecutionContext {
     private static final Logger LOG = LogManager.getLogger(ReplicationExecutionContext.class.getName());
 
     private final String runId = UUID.randomUUID().toString();
+    private final ReplicationDiagnosticCollector diagnosticCollector = new ReplicationDiagnosticCollector.Bounded();
     private final Map<Integer, String> tempFilesPath = new ConcurrentHashMap<>();
     private final AtomicBoolean cancellationRequested = new AtomicBoolean(false);
     private final Set<Statement> activeStatements = ConcurrentHashMap.newKeySet();
@@ -26,6 +27,10 @@ public final class ReplicationExecutionContext {
 
     public String getRunId() {
         return runId;
+    }
+
+    public ReplicationDiagnosticCollector getDiagnosticCollector() {
+        return diagnosticCollector;
     }
 
     public String getSinkStagingTableName() {

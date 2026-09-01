@@ -57,6 +57,15 @@ class CredentialRedactorTest {
     }
 
     @Test
+    void redactsEnvironmentPlaceholdersAndPemBlocks() {
+        String redacted = CredentialRedactor.redactMessage(
+                "${env:MASTER_KEY} -----BEGIN PRIVATE KEY-----key-----END PRIVATE KEY-----");
+
+        assertFalse(redacted.contains("MASTER_KEY"));
+        assertFalse(redacted.contains("PRIVATE KEY"));
+    }
+
+    @Test
     void redactsSentryMessagesContextsExceptionsAndBreadcrumbs() {
         SentryEvent event = new SentryEvent(new IllegalStateException("password=event-secret"));
         Message message = new Message();

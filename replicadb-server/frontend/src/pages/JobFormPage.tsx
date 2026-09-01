@@ -140,6 +140,9 @@ function validateForm(form: JobDefinitionFormInput, editMode: boolean): FormErro
   if (form.jobs < 1) {
     errors.jobs = 'Parallelism must be at least 1.';
   }
+  if (form.mode === 'incremental' && !form.incrementalWatermarkColumn?.trim()) {
+    errors.incrementalWatermarkColumn = 'Watermark column is required for incremental mode.';
+  }
   if (!Number.isFinite(form.maxAttempts) || form.maxAttempts < 1) {
     errors.maxAttempts = 'Maximum attempts must be at least 1.';
   }
@@ -497,6 +500,9 @@ export default function JobFormPage() {
                   value={form.incrementalWatermarkColumn ?? ''}
                   onChange={updateStringField('incrementalWatermarkColumn')}
                   disabled={form.mode !== 'incremental'}
+                  required={form.mode === 'incremental'}
+                  error={Boolean(errors.incrementalWatermarkColumn)}
+                  helperText={errors.incrementalWatermarkColumn}
                   fullWidth
                 />
                 <TextField

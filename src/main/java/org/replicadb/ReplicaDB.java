@@ -14,6 +14,9 @@ import org.replicadb.cli.ReplicationTable;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.config.CredentialRedactor;
 import org.replicadb.execution.ReplicationCancelledException;
+import org.replicadb.execution.ReplicationDiagnosticCollector;
+import org.replicadb.execution.ReplicationDiagnosticEvent;
+import org.replicadb.execution.ReplicationLogContext;
 import org.replicadb.manager.ConnManager;
 import org.replicadb.manager.DataSourceType;
 import org.replicadb.manager.ManagerFactory;
@@ -26,6 +29,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 
 import static org.replicadb.config.Sentry.SentryInit;
@@ -188,11 +192,16 @@ public class ReplicaDB {
 		ConnManager sinkDs = null;
 		ExecutorService preSinkTasksExecutor = null;
 		ExecutorService replicaTasksService = null;
+		ReplicationLogContext.Scope logContext = ReplicationLogContext.bind(options.getExecutionContext());
 
 		try {
 			managerFactory.validateAzureAuthenticationConfiguration(options);
 		} catch (final IllegalArgumentException e) {
+			recordDiagnostic(options, ReplicationDiagnosticEvent.Stage.VALIDATION,
+				ReplicationDiagnosticEvent.Category.VALIDATION, "configuration",
+				"Replication configuration validation failed", e);
 			LOG.error("Invalid Azure authentication configuration: {}", e.getMessage());
+			logContext.close();
 			return ERROR;
 		}
 
@@ -206,7 +215,8 @@ public class ReplicaDB {
 			sinkDs = managers.sinkDs;
 
 			preSinkTasksExecutor = Executors.newSingleThreadExecutor();
-			final Future<Integer> preSinkTasksFuture = executePreTasks(sourceDs, sinkDs, preSinkTasksExecutor);
+			final Future<Integer> preSinkTasksFuture = executePreTasks(sourceDs, sinkDs, preSinkTasksExecutor,
+				options.getExecutionContext().getDiagnosticCollector());
 
 			final ReplicationTasksResult replicationTasksResult = executeReplicationTasks(options, managerFactory);
 			replicaTasksService = replicationTasksResult.executor();
@@ -214,13 +224,16 @@ public class ReplicaDB {
 			options.getExecutionContext().setDurationMillis(replicationTasksResult.summary().maxDurationMillis());
 
 			waitForTaskCompletion(preSinkTasksFuture);
-			executePostTasks(sourceDs, sinkDs);
+			executePostTasks(sourceDs, sinkDs, options.getExecutionContext().getDiagnosticCollector());
 			if (options.getIncrementalWatermarkColumn() != null) {
 				options.getExecutionContext().setWatermarkCandidate(replicationTasksResult.summary().watermarkCandidate());
 			}
 			shutdownExecutors(preSinkTasksExecutor, replicaTasksService);
 
 		} catch (final InterruptedException e) {
+			recordDiagnostic(options, ReplicationDiagnosticEvent.Stage.INTERRUPTION,
+				ReplicationDiagnosticEvent.Category.CANCELLATION, "replication",
+				"Replication was interrupted", e);
 			LOG.error("Replication was interrupted: {}", CredentialRedactor.redactMessage(e.getMessage()));
 			Thread.currentThread().interrupt(); // Restore interrupted status
 			Sentry.captureException(e);
@@ -228,14 +241,23 @@ public class ReplicaDB {
 			transaction.setStatus(SpanStatus.INTERNAL_ERROR);
 			exitCode = ERROR;
 		} catch (final ReplicationCancelledException e) {
+			recordDiagnostic(options, ReplicationDiagnosticEvent.Stage.CANCELLATION,
+				ReplicationDiagnosticEvent.Category.CANCELLATION, "replication",
+				"Replication was cancelled", e);
 			LOG.info("Replication was cancelled: {}", CredentialRedactor.redactMessage(e.getMessage()));
 			exitCode = CANCELLED;
 		} catch (final Exception e) {
 			if (options.getExecutionContext().isCancellationRequested()) {
+				recordDiagnostic(options, ReplicationDiagnosticEvent.Stage.CANCELLATION,
+					ReplicationDiagnosticEvent.Category.CANCELLATION, "replication",
+					"Replication was cancelled after an interrupted operation", e);
 				LOG.info("Replication was cancelled after an operation was interrupted: {}",
 						CredentialRedactor.redactMessage(e.getMessage()));
 				exitCode = CANCELLED;
 			} else {
+				recordDiagnostic(options, ReplicationDiagnosticEvent.Stage.AGGREGATION,
+					ReplicationDiagnosticEvent.Category.FAILURE, "replication",
+					"Replication failed", e);
 				LOG.error("Got exception running ReplicaDB: {} ({})",
 						CredentialRedactor.redactMessage(e.getMessage()), e.getClass().getName());
 				Sentry.captureException(e);
@@ -245,7 +267,9 @@ public class ReplicaDB {
 			}
 		} finally {
 			transaction.finish();
-			cleanupResources(sourceDs, sinkDs, preSinkTasksExecutor, replicaTasksService);
+			cleanupResources(sourceDs, sinkDs, preSinkTasksExecutor, replicaTasksService,
+				options.getExecutionContext().getDiagnosticCollector());
+			logContext.close();
 		}
 
 		return exitCode;
@@ -299,10 +323,25 @@ public class ReplicaDB {
 	 *             if pre-tasks fail
 	 */
 	private static Future<Integer> executePreTasks(ConnManager sourceDs, ConnManager sinkDs,
-			ExecutorService preSinkTasksExecutor) throws Exception {
+			ExecutorService preSinkTasksExecutor, ReplicationDiagnosticCollector diagnostics) throws Exception {
+		try {
 		sourceDs.preSourceTasks();
+		} catch (Exception e) {
+			diagnostics.record(ReplicationDiagnosticEvent.Stage.PRE_TASK, ReplicationDiagnosticEvent.Category.LIFECYCLE,
+				ReplicationDiagnosticEvent.Severity.ERROR, null, "source", "Source pre-task failed", e);
+			throw e;
+		}
+		try {
 		final Future<Integer> preSinkTasksFuture = sinkDs.preSinkTasks(preSinkTasksExecutor);
+			return awaitPreSink(preSinkTasksFuture);
+		} catch (Exception e) {
+			diagnostics.record(ReplicationDiagnosticEvent.Stage.PRE_TASK, ReplicationDiagnosticEvent.Category.LIFECYCLE,
+				ReplicationDiagnosticEvent.Severity.ERROR, null, "sink", "Sink pre-task failed", e);
+			throw e;
+		}
+	}
 
+	private static Future<Integer> awaitPreSink(Future<Integer> preSinkTasksFuture) throws Exception {
 		// Handle pre-sink task timeout
 		if (preSinkTasksFuture != null) {
 			try {
@@ -329,8 +368,9 @@ public class ReplicaDB {
 	private static ReplicationTasksResult executeReplicationTasks(ToolOptions options, ManagerFactory managerFactory)
 			throws InterruptedException, ExecutionException, SQLException {
 		final List<ReplicaTask> replicaTasks = new ArrayList<>();
+		final Map<String, String> parentLogContext = ReplicationLogContext.capture();
 		for (int i = 0; i < options.getJobs(); i++) {
-			replicaTasks.add(new ReplicaTask(i, options, managerFactory));
+			replicaTasks.add(new ReplicaTask(i, options, managerFactory, parentLogContext));
 		}
 
 		final ExecutorService replicaTasksService = Executors.newFixedThreadPool(options.getJobs());
@@ -345,6 +385,10 @@ public class ReplicaDB {
 				try {
 					results.add(future.get());
 				} catch (final ExecutionException e) {
+					options.getExecutionContext().getDiagnosticCollector().record(
+							ReplicationDiagnosticEvent.Stage.AGGREGATION, ReplicationDiagnosticEvent.Category.FAILURE,
+							ReplicationDiagnosticEvent.Severity.ERROR, null, "replication",
+							"Replication task failed", e.getCause());
 					if (e.getCause() instanceof ReplicationCancelledException cancellation) {
 						for (final Future<ReplicaTaskResult> sibling : futures) {
 							if (sibling != future) {
@@ -412,9 +456,22 @@ public class ReplicaDB {
 	 * @throws Exception
 	 *             if post-tasks fail
 	 */
-	private static void executePostTasks(ConnManager sourceDs, ConnManager sinkDs) throws Exception {
-		sourceDs.postSourceTasks();
-		sinkDs.postSinkTasks();
+	private static void executePostTasks(ConnManager sourceDs, ConnManager sinkDs,
+			ReplicationDiagnosticCollector diagnostics) throws Exception {
+		try {
+			sourceDs.postSourceTasks();
+		} catch (Exception e) {
+			diagnostics.record(ReplicationDiagnosticEvent.Stage.POST_TASK, ReplicationDiagnosticEvent.Category.LIFECYCLE,
+				ReplicationDiagnosticEvent.Severity.ERROR, null, "source", "Source post-task failed", e);
+			throw e;
+		}
+		try {
+			sinkDs.postSinkTasks();
+		} catch (Exception e) {
+			diagnostics.record(ReplicationDiagnosticEvent.Stage.POST_TASK, ReplicationDiagnosticEvent.Category.LIFECYCLE,
+				ReplicationDiagnosticEvent.Severity.ERROR, null, "sink", "Sink post-task failed", e);
+			throw e;
+		}
 	}
 
 	/**
@@ -447,18 +504,22 @@ public class ReplicaDB {
 	 *            executor for replication tasks
 	 */
 	private static void cleanupResources(ConnManager sourceDs, ConnManager sinkDs, ExecutorService preSinkTasksExecutor,
-			ExecutorService replicaTasksService) {
+			ExecutorService replicaTasksService, ReplicationDiagnosticCollector diagnostics) {
 		Exception cleanupFailure = null;
 
 		if (sinkDs != null) {
 			try {
 				sinkDs.cleanUp();
 			} catch (final Exception e) {
+				diagnostics.record(ReplicationDiagnosticEvent.Stage.CLEANUP, ReplicationDiagnosticEvent.Category.CLEANUP,
+					ReplicationDiagnosticEvent.Severity.ERROR, null, "sink", "Sink cleanup failed", e);
 				cleanupFailure = addCleanupFailure(cleanupFailure, e);
 			}
 			try {
 				sinkDs.close();
 			} catch (final Exception e) {
+				diagnostics.record(ReplicationDiagnosticEvent.Stage.CLEANUP, ReplicationDiagnosticEvent.Category.CLEANUP,
+					ReplicationDiagnosticEvent.Severity.ERROR, null, "sink", "Sink close failed", e);
 				cleanupFailure = addCleanupFailure(cleanupFailure, e);
 			}
 		}
@@ -466,6 +527,8 @@ public class ReplicaDB {
 			try {
 				sourceDs.close();
 			} catch (final Exception e) {
+				diagnostics.record(ReplicationDiagnosticEvent.Stage.CLEANUP, ReplicationDiagnosticEvent.Category.CLEANUP,
+					ReplicationDiagnosticEvent.Severity.ERROR, null, "source", "Source close failed", e);
 				cleanupFailure = addCleanupFailure(cleanupFailure, e);
 			}
 		}
@@ -482,6 +545,14 @@ public class ReplicaDB {
 					CredentialRedactor.redactMessage(cleanupFailure.getMessage()),
 					cleanupFailure.getClass().getName());
 		}
+	}
+
+	private static void recordDiagnostic(ToolOptions options, ReplicationDiagnosticEvent.Stage stage,
+			ReplicationDiagnosticEvent.Category category, String component, String message, Throwable throwable) {
+		options.getExecutionContext().getDiagnosticCollector().record(stage, category,
+				throwable instanceof ReplicationCancelledException ? ReplicationDiagnosticEvent.Severity.INFO
+						: ReplicationDiagnosticEvent.Severity.ERROR,
+				null, component, message, throwable);
 	}
 
 	private static Exception addCleanupFailure(Exception currentFailure, Exception cleanupFailure) {

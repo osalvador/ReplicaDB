@@ -11,14 +11,10 @@ API_PORT="${REPLICADB_API_PORT:-8080}"
 FRONTEND_PORT="${REPLICADB_FRONTEND_PORT:-5173}"
 CONTAINER_ENGINE="${CONTAINER_ENGINE:-docker}"
 ADMIN_USERNAME="${REPLICADB_BOOTSTRAP_ADMIN_USERNAME:-admin}"
+export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD="${REPLICADB_BOOTSTRAP_ADMIN_PASSWORD:-replicadb-local-admin}"
+export REPLICADB_LOCAL_MASTER_KEY="${REPLICADB_LOCAL_MASTER_KEY:-cmVwbGljYWRiLWxvY2FsLWRldi1rZXktbWF0ZXJpYWw=}"
 
-if [[ -z "${REPLICADB_BOOTSTRAP_ADMIN_PASSWORD:-}" ]]; then
-    printf '%s\n' 'REPLICADB_BOOTSTRAP_ADMIN_PASSWORD must be set.' >&2
-    exit 1
-fi
-export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD
-
-for command_name in mvn npm node curl lsof openssl "$CONTAINER_ENGINE"; do
+for command_name in mvn npm node curl lsof "$CONTAINER_ENGINE"; do
     if ! command -v "$command_name" >/dev/null 2>&1; then
         printf 'Required command not found: %s\n' "$command_name" >&2
         exit 1
@@ -64,8 +60,7 @@ FRONTEND_PID=""
 
 if [[ -z "${REPLICADB_SECURITY_MASTER_KEY_FILE:-}" ]]; then
     REPLICADB_SECURITY_MASTER_KEY_FILE="$RUN_DIR/replicadb-master-key.json"
-    local_key="$(openssl rand -base64 32)"
-    printf '{"currentVersion":"local","keys":{"local":"%s"}}\n' "$local_key" \
+    printf '{"currentVersion":"local","keys":{"local":"%s"}}\n' "$REPLICADB_LOCAL_MASTER_KEY" \
         >"$REPLICADB_SECURITY_MASTER_KEY_FILE"
     chmod 600 "$REPLICADB_SECURITY_MASTER_KEY_FILE"
     export REPLICADB_SECURITY_MASTER_KEY_FILE
