@@ -109,7 +109,7 @@ create_job() {
         --arg sink_datasource_id "$phase4_sink_datasource_id" \
         --arg mode "$mode" \
         --arg sink_disable_truncate "$sink_disable_truncate" \
-        '{name: ("phase3 worker loss " + $mode), sourceDatasourceId: $source_datasource_id, sourceDatasourceUseEnabled: true, sourceTable: "phase3_source", sourceColumns: "id,payload", sourceQuery: $source_query, sinkDatasourceId: $sink_datasource_id, sinkDatasourceUseEnabled: true, sinkTable: "phase3_sink", mode: $mode, jobs: 1, sinkDisableTruncate: ($sink_disable_truncate == "true"), maxAttempts: 2, retryBackoffSeconds: 0, automaticRetryEnabled: true}')
+        '{name: ("phase3 worker loss " + $mode), sourceDatasourceId: $source_datasource_id, sourceDatasourceUseEnabled: true, sourceTable: "phase3_source", sourceColumns: "id,payload", sourceQuery: $source_query, sinkDatasourceId: $sink_datasource_id, sinkDatasourceUseEnabled: true, sinkTable: "phase3_sink", mode: $mode, jobs: 1, sinkDisableTruncate: ($sink_disable_truncate == "true"), incrementalWatermarkColumn: (if $mode == "incremental" then "id" else null end), initialWatermarkValue: (if $mode == "incremental" then "0" else null end), maxAttempts: 2, retryBackoffSeconds: 0, automaticRetryEnabled: true}')
     curl -fsS -b "$cookie_file" \
         -H 'Content-Type: application/json' \
         -H "X-XSRF-TOKEN: $csrf_token" \

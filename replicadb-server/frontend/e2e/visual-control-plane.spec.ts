@@ -93,7 +93,7 @@ for (const viewport of viewports) {
       await page.waitForURL(/\/runs\/[^/]+$/);
       await expect(page.getByRole('heading', { name: 'Run detail' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Run metrics' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Log excerpt' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Detailed log' })).toBeVisible();
       await expect(page.getByRole('status', { name: /Run status:/ })).toBeVisible();
       await expectContained(page);
 

@@ -135,12 +135,12 @@ for (const viewport of viewports) {
       await page.getByRole('button', { name: 'Trigger run' }).click();
       await page.waitForURL(/\/runs\/[^/]+$/);
       await expect(page.getByRole('heading', { name: 'Run detail' })).toBeVisible();
-      await expect(page.getByRole('heading', { name: 'Log excerpt' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Detailed log' })).toBeVisible();
       await assertNoPageOverflow(page);
       await assertInsideViewport(page, page.getByRole('heading', { name: 'Run detail' }));
-      await assertInsideViewport(page, page.getByRole('heading', { name: 'Log excerpt' }));
+      await assertInsideViewport(page, page.getByRole('heading', { name: 'Detailed log' }));
 
-      const logSection = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Log excerpt' }) });
+      const logSection = page.locator('section').filter({ has: page.getByRole('heading', { name: 'Detailed log' }) });
       const logContent = logSection.locator('pre');
       if (await logContent.count()) {
         expect(await logContent.evaluate(element => getComputedStyle(element).overflowX)).toBe('auto');
