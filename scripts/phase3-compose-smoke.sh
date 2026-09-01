@@ -6,6 +6,7 @@ script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repository_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
 project_name=${COMPOSE_PROJECT_NAME:-replicadb-phase3-$PPID}
 state_directory="$repository_root/.phase3-compose/$project_name"
+diagnostics_directory="$repository_root/.phase3-logs/$project_name"
 cookie_file="$state_directory/cookies.txt"
 
 mkdir -p "$state_directory"
@@ -67,8 +68,17 @@ assert_worker_topology() {
 }
 
 cleanup() {
+    local exit_code=$?
+    if [[ "$exit_code" -ne 0 ]]; then
+        mkdir -p "$diagnostics_directory"
+        compose ps > "$diagnostics_directory/compose-status.txt" 2>/dev/null || true
+        compose logs --no-color > "$diagnostics_directory/compose.log" 2>/dev/null || true
+        sed -Ei 's/(password|token|jdbc:[^[:space:]]+)/[redacted]/Ig' \
+            "$diagnostics_directory/compose.log" 2>/dev/null || true
+    fi
     compose down --volumes --remove-orphans >/dev/null 2>&1 || true
     rm -rf "$state_directory"
+    return "$exit_code"
 }
 trap cleanup EXIT
 

@@ -76,7 +76,8 @@ for (const viewport of viewports) {
       await expect(page.getByRole('heading', { name: 'Sink', exact: true })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Execution' })).toBeVisible();
       await expect(page.getByRole('heading', { name: 'Lifecycle' })).toBeVisible();
-      await expect(page.getByRole('alert')).toContainText('Complete mode clears the sink');
+      await expect(page.getByRole('alert').filter({ hasText: 'Complete mode clears the sink' }))
+        .toContainText('Complete mode clears the sink');
       await expectContained(page);
 
       await page.getByRole('link', { name: 'Edit' }).click();
