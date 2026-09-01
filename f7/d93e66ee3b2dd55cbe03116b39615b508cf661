@@ -1,0 +1,25 @@
+replicadb-server/frontend/e2e/accessibility.spec.ts
+  s_83e0d0e0e2a17b::t_84a0f6db6cfec0 77-79
+replicadb-server/frontend/e2e/visual-control-plane.spec.ts
+  s_83e0d0e0e2a17b::t_584c752d33a5c1 79-80
+scripts/phase3-compose-smoke.sh
+  s_83e0d0e0e2a17b::t_263bb578d3bc0c 9,71-78,81
+scripts/phase3-fairness-test.sh
+  s_83e0d0e0e2a17b::t_0101420dbdcdef 10,79-81,83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "f7d93e66ee3b2dd55cbe03116b39615b508cf661",
+  "prompts": {},
+  "sessions": {
+    "s_83e0d0e0e2a17b": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "71b2a4ef-7c23-4f1a-bf52-2e35acaa8fcd",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
