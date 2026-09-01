@@ -184,6 +184,14 @@ jobs:
     - name: Smoke-test server image
       run: scripts/phase3-image-smoke.sh
 
+    - name: Create ephemeral master keyring
+      run: |
+        set -euo pipefail
+        keyring_file=/tmp/replicadb-master-key.json
+        printf '{"currentVersion":"ci","keys":{"ci":"%s"}}\n' "$(openssl rand -base64 32)" > "$keyring_file"
+        chmod 600 "$keyring_file"
+        echo "REPLICADB_SECURITY_MASTER_KEY_FILE=$keyring_file" >> "$GITHUB_ENV"
+
     - name: Validate Compose configuration
       env:
         POSTGRES_PASSWORD: ci-placeholder
