@@ -242,6 +242,7 @@ jobs:
         path: |
           .phase3-logs
           replicadb-server/target/surefire-reports
+        include-hidden-files: true
 
   phase3_4:
     runs-on: ubuntu-latest
@@ -280,6 +281,7 @@ jobs:
         path: |
           .phase3-logs
           replicadb-server/target/surefire-reports
+        include-hidden-files: true
 
   cli_compatibility:
     runs-on: ubuntu-latest

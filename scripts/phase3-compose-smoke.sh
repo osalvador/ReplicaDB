@@ -83,7 +83,12 @@ cleanup() {
 trap cleanup EXIT
 
 step 'start services'
-compose up -d --build --wait >/dev/null
+if ! compose up -d --build --wait >/dev/null; then
+    compose logs --no-color 2>/dev/null \
+        | sed -E 's/(password|token|jdbc:[^[:space:]]+)/[redacted]/Ig' \
+        | tail -200 >&2 || true
+    exit 1
+fi
 
 api_one_port=$(compose port api-one 8080 | awk -F: '{print $NF}')
 api_two_port=$(compose port api-two 8080 | awk -F: '{print $NF}')
