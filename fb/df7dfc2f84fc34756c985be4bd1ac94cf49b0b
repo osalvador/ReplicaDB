@@ -1,0 +1,113 @@
+.ai/archive/per-run-replication-diagnostics-with-bounded-logs.plan.md
+  s_83e0d0e0e2a17b::t_da9f145c250295 1-283
+DEPLOYMENT.md
+  s_916c5e4379f8a0::t_71ad65403851d3 220-241
+README.md
+  s_916c5e4379f8a0::t_8c0633b83d39b7 13-17
+replicadb-server/frontend/scripts/start-local.sh
+  s_916c5e4379f8a0::t_5e841345debc21 14-15,17,63
+replicadb-server/frontend/src/api/schema.ts
+  s_916c5e4379f8a0::t_4e303d66d36274 634-643
+replicadb-server/frontend/src/components/RunLogViewer.test.tsx
+  s_916c5e4379f8a0::t_1156217122d149 1-22
+replicadb-server/frontend/src/components/RunLogViewer.tsx
+  s_916c5e4379f8a0::t_c6a74afc4a7d4f 1-44
+replicadb-server/frontend/src/pages/RunDetailPage.test.tsx
+  s_916c5e4379f8a0::t_ff87241e3e26d3 48-54,86,91
+replicadb-server/frontend/src/pages/RunDetailPage.tsx
+  s_916c5e4379f8a0::t_ccda4f313db071 14,147-148
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobRunController.java
+  s_916c5e4379f8a0::t_caf2c70796517b 19,52,64,75,124-126
+replicadb-server/src/main/java/org/replicadb/server/job/api/RunLogResponse.java
+  s_916c5e4379f8a0::t_58761387dbf1c4 1-19
+replicadb-server/src/main/java/org/replicadb/server/job/config/RunLogRetentionConfiguration.java
+  s_916c5e4379f8a0::t_947d221528d5b6 1-32
+replicadb-server/src/main/java/org/replicadb/server/job/domain/RunLog.java
+  s_916c5e4379f8a0::t_91c73ed88a0e26 1-30
+replicadb-server/src/main/java/org/replicadb/server/job/execution/JobExecutionService.java
+  s_916c5e4379f8a0::t_179d1a9d73f9c1 22-24,31,46,56-57,66,80-82,89,110-112,117,129,132-133,140-145,188
+replicadb-server/src/main/java/org/replicadb/server/job/execution/RunLogCaptureRegistry.java
+  s_916c5e4379f8a0::t_e2b04aec696b78 1-124
+replicadb-server/src/main/java/org/replicadb/server/job/execution/RunLogRetentionTask.java
+  s_916c5e4379f8a0::t_9510af6b997f5d 1-35
+replicadb-server/src/main/java/org/replicadb/server/job/persistence/RunLogRepository.java
+  s_916c5e4379f8a0::t_01535ca948770b 1-84
+replicadb-server/src/main/java/org/replicadb/server/job/port/RunLogStore.java
+  s_916c5e4379f8a0::t_e04e454177bf1f 1-13
+replicadb-server/src/main/resources/application-worker.yml
+  s_916c5e4379f8a0::t_71560c48e628ea 23-24
+replicadb-server/src/main/resources/application.yml
+  s_916c5e4379f8a0::t_983fafa5d6a34d 29-31
+replicadb-server/src/main/resources/db/migration/V20__create_run_log.sql
+  s_916c5e4379f8a0::t_cfe50f48be0c95 1-10
+replicadb-server/src/main/resources/log4j2-spring.xml
+  s_916c5e4379f8a0::t_c47e4f7790ccd0 1-15
+replicadb-server/src/test/java/org/replicadb/server/job/api/JobRunControllerTest.java
+  s_916c5e4379f8a0::t_ad2cee4dac90dc 146,157-159,162-163
+replicadb-server/src/test/java/org/replicadb/server/job/domain/RunLogTest.java
+  s_916c5e4379f8a0::t_40270f5be318e8 1-42
+replicadb-server/src/test/java/org/replicadb/server/job/execution/JobExecutionServiceIT.java
+  s_916c5e4379f8a0::t_2baa23281f07da 30,32,86-88,124,158-159,203
+replicadb-server/src/test/java/org/replicadb/server/job/execution/RunLogRetentionTaskTest.java
+  s_916c5e4379f8a0::t_a765168a97bebc 1-32
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/FlywayMigrationTest.java
+  s_916c5e4379f8a0::t_2578b04377fdf1 149-150,171-173
+src/main/java/org/replicadb/ReplicaDB.java
+  s_916c5e4379f8a0::t_c4db46cc947c81 17-19,32,195,200-202,204,218-219,227,234-236,244-246,251-253,258-260,270-272,326-327,329-334,336-342,344,371,373,388-391,459-474,507,514-515,521-522,530-531,550-557
+src/main/java/org/replicadb/ReplicaTask.java
+  s_916c5e4379f8a0::t_9a7b30a38a3c7d 7-10,19,28,32,36-39,43,48-54,57,73-75,84-86,96-98,110-112,121-123,133-141,146-155
+src/main/java/org/replicadb/config/CredentialRedactor.java
+  s_916c5e4379f8a0::t_a460327cf0d8af 55-59,72-75
+src/main/java/org/replicadb/execution/ReplicationDiagnosticCollector.java
+  s_916c5e4379f8a0::t_f61124efd6a50a 1-113
+src/main/java/org/replicadb/execution/ReplicationDiagnosticEvent.java
+  s_916c5e4379f8a0::t_f8b3ba081f7e94 1-53
+src/main/java/org/replicadb/execution/ReplicationExecutionContext.java
+  s_916c5e4379f8a0::t_877541e0511db6 19,32-35
+src/main/java/org/replicadb/execution/ReplicationLogContext.java
+  s_916c5e4379f8a0::t_519484d3112eb4 1-61
+src/main/java/org/replicadb/manager/ConnManager.java
+  s_916c5e4379f8a0::t_1ecab9b1d203da 7,312-316
+src/test/java/org/replicadb/ReplicaTaskAuthenticationFailureTest.java
+  s_916c5e4379f8a0::t_eb44f8035577a1 9,37-38,54-55,87-88,104-105
+src/test/java/org/replicadb/config/CredentialRedactorTest.java
+  s_916c5e4379f8a0::t_6db2daa9b7df6c 59-67
+src/test/java/org/replicadb/execution/ReplicationDiagnosticCollectorTest.java
+  s_916c5e4379f8a0::t_35714d348b45b7 1-79
+src/test/java/org/replicadb/execution/ReplicationLogContextTest.java
+  s_916c5e4379f8a0::t_538296952713e1 1-58
+replicadb-server/frontend/src/api/jobsApi.ts
+  s_83e0d0e0e2a17b::t_365c646f9fda81 54-57,93-94
+replicadb-server/frontend/src/pages/JobFormPage.test.tsx
+  s_83e0d0e0e2a17b::t_4bee01c224fc7a 285-297
+replicadb-server/frontend/src/pages/JobFormPage.tsx
+  s_83e0d0e0e2a17b::t_d201f46ae1adf4 143-145,503-505
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobDefinitionMapper.java
+  s_83e0d0e0e2a17b::t_3291a4ce382ce8 40-44,56-57,59-66
+replicadb-server/src/test/java/org/replicadb/server/job/api/JobDefinitionMapperTest.java
+  s_83e0d0e0e2a17b::t_17d18b71a31591 16,105-120
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "fbdf7dfc2f84fc34756c985be4bd1ac94cf49b0b",
+  "prompts": {},
+  "sessions": {
+    "s_83e0d0e0e2a17b": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "71b2a4ef-7c23-4f1a-bf52-2e35acaa8fcd",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    },
+    "s_916c5e4379f8a0": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "01b0af04-4907-4579-8376-5cd6dd342016",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
