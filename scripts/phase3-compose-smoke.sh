@@ -35,7 +35,7 @@ if [[ -z "${REPLICADB_SECURITY_MASTER_KEY_FILE:-}" ]]; then
     key_material=$(openssl rand -base64 32)
     printf '{"currentVersion":"local","keys":{"local":"%s"}}\n' "$key_material" \
         >"$REPLICADB_SECURITY_MASTER_KEY_FILE"
-    chmod 600 "$REPLICADB_SECURITY_MASTER_KEY_FILE"
+    chmod 644 "$REPLICADB_SECURITY_MASTER_KEY_FILE"
     export REPLICADB_SECURITY_MASTER_KEY_FILE
 fi
 
