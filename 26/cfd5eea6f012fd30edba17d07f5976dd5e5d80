@@ -1,0 +1,23 @@
+replicadb-server/frontend/e2e/responsive-layout.spec.ts
+  s_83e0d0e0e2a17b::t_4b011c9fff84cf 138,141,143
+replicadb-server/frontend/e2e/visual-control-plane.spec.ts
+  s_83e0d0e0e2a17b::t_e4461e702d162e 96
+scripts/phase3-worker-loss-test.sh
+  s_83e0d0e0e2a17b::t_c10dde4a74d2fa 112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "26cfd5eea6f012fd30edba17d07f5976dd5e5d80",
+  "prompts": {},
+  "sessions": {
+    "s_83e0d0e0e2a17b": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "71b2a4ef-7c23-4f1a-bf52-2e35acaa8fcd",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
