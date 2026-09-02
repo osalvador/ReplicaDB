@@ -318,7 +318,7 @@
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongodb-driver-sync</artifactId>
-            <version>5.5.1</version>
+            <version>5.11.0</version>
         </dependency>
 
         <!-- Add explicit Snappy dependency with ARM64 support -->
