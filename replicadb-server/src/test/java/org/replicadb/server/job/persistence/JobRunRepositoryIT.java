@@ -775,6 +775,13 @@ class JobRunRepositoryIT {
         jobRunRepository.markSucceeded(running.id(), running.leaseToken(), 4, 12, "42");
 
         assertEquals("42", jobRunRepository.findLastCommittedWatermark(definition.id()).orElseThrow());
+
+        JobRun completeRun = jobRunRepository.insertPendingNow(definition.id(), running.id(), 2);
+        JobRun claimedCompleteRun = jobRunRepository.claimNextEligible(completeRun.id(), "worker-1", Duration.ofMinutes(5))
+                .orElseThrow();
+        jobRunRepository.markSucceeded(claimedCompleteRun.id(), claimedCompleteRun.leaseToken(), 4, 12, null);
+
+        assertEquals("42", jobRunRepository.findLastCommittedWatermark(definition.id()).orElseThrow());
     }
 
     @Test

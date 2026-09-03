@@ -603,6 +603,7 @@ public class JobRunRepository implements JobRunStore {
                 SELECT committed_watermark
                 FROM job_run
                 WHERE job_definition_id = :jobDefinitionId AND status = 'SUCCEEDED'
+                  AND committed_watermark IS NOT NULL
                 ORDER BY finished_at DESC NULLS LAST, created_at DESC
                 LIMIT 1
                 """;
