@@ -1,0 +1,81 @@
+.impeccable/critique/2026-09-02T13-40-43Z__replicadb-server-frontend-src-pages-loginpage-tsx.md
+  s_6e71ca0aea8d8a::t_dff4b88eb64c3d 1-100
+.impeccable/critique/2026-09-02T14-01-49Z__eplicadb-server-frontend-src-pages-jobformpage-tsx.md
+  s_6e71ca0aea8d8a::t_0e9cdbb7a1fd8d 1-130
+.impeccable/critique/2026-09-02T15-45-28Z__eplicadb-server-frontend-src-pages-jobformpage-tsx.md
+  s_6e71ca0aea8d8a::t_b5df3ad2307604 1-121
+.impeccable/critique/2026-09-03T06-03-53Z__db-server-frontend-src-components-runlogviewer-tsx.md
+  s_6e71ca0aea8d8a::t_485a6c4028326a 1-134
+.impeccable/critique/2026-09-03T06-36-58Z__db-server-frontend-src-components-runlogviewer-tsx.md
+  s_6e71ca0aea8d8a::t_64e7df80eef640 1-123
+replicadb-server/frontend/.gitignore
+  s_c0c2b4b5eb1945::t_3fcb5f20514f23 5-37
+replicadb-server/frontend/README.develop.md
+  s_c0c2b4b5eb1945::t_970725703b80be 73-77
+replicadb-server/frontend/index.html
+  s_c0c2b4b5eb1945::t_e638f5f924a3e2 6
+replicadb-server/frontend/scripts/seed-local-jobs.mjs
+  s_c0c2b4b5eb1945::t_d22ace76d321f6 9-14,17-29,112-114,123-126,137,140-141,144-146,290-317,378-420,481-491,515-528,548-565,571-573
+replicadb-server/frontend/scripts/seed-local-jobs.test.mjs
+  s_c0c2b4b5eb1945::t_3e14c0a4814273 8-9,52-70,75-76,102-106,112-114,117-120,136,138-139,141-142,182-212
+replicadb-server/frontend/scripts/start-local.sh
+  s_c0c2b4b5eb1945::t_70e95fd7e7f9a1 14,114-131,172-180
+replicadb-server/frontend/src/api/authApi.ts
+  s_c0c2b4b5eb1945::t_59e56e1d6b8c2d 7-8,19,21-23
+replicadb-server/frontend/src/api/client.ts
+  s_c0c2b4b5eb1945::t_772c8baaa26563 17-20
+replicadb-server/frontend/src/components/DatasourceSelector.tsx
+  s_c0c2b4b5eb1945::t_63846bf103c62f 120-121
+replicadb-server/frontend/src/components/RunLogViewer.test.tsx
+  s_c0c2b4b5eb1945::t_c3b68e1c703e76 1-2,7-15,17-78,83-84
+replicadb-server/frontend/src/components/RunLogViewer.tsx
+  s_c0c2b4b5eb1945::t_0a55fe0b7736bc 1-4,9-10,15-16,19-21,23-25,27-36,38-42,44,46-70,74-75,79,81-85,88,90-252
+replicadb-server/frontend/src/components/StagingOptionsTabs.test.tsx
+  s_c0c2b4b5eb1945::t_08de259388cf2b 19,21,23,25-27,30-40
+replicadb-server/frontend/src/components/StagingOptionsTabs.tsx
+  s_c0c2b4b5eb1945::t_22eea8b62cb2a4 4-5,10-11,14-22,25-29,35-38,41-43,48,54,58,64,71,74
+replicadb-server/frontend/src/pages/DashboardPage.test.tsx
+  s_c0c2b4b5eb1945::t_1eee7e589d4cbd 85-111
+replicadb-server/frontend/src/pages/DashboardPage.tsx
+  s_c0c2b4b5eb1945::t_e7c979396c05bc 36-47
+replicadb-server/frontend/src/pages/JobFormPage.test.tsx
+  s_c0c2b4b5eb1945::t_cf59b414f01fb0 114-117,171-172,180,183-184,231-250,281-283,300-301,305,310,314-333,339,352,354
+replicadb-server/frontend/src/pages/JobFormPage.tsx
+  s_c0c2b4b5eb1945::t_aa01b85d73feec 2,7,9,17,22,38-54,111-128,206-208,220,258-260,264,268,293,299,306-309,322-331,430-431,434-435,463,465,500-623
+replicadb-server/frontend/src/pages/LoginPage.test.tsx
+  s_c0c2b4b5eb1945::t_9c8a33c13513a6 3,43,70-74,78-110
+replicadb-server/frontend/src/pages/LoginPage.tsx
+  s_c0c2b4b5eb1945::t_0d127b23d02d9f 5,9-52,58,63,70,76-79,115-126,152-154
+replicadb-server/frontend/src/pages/RunDetailPage.test.tsx
+  s_c0c2b4b5eb1945::t_6f1328b7002434 43,48-58,181-200
+replicadb-server/frontend/src/pages/RunDetailPage.tsx
+  s_c0c2b4b5eb1945::t_236dc3ba944876 148-154
+replicadb-server/frontend/src/theme/theme.test.ts
+  s_c0c2b4b5eb1945::t_8f38563c2582ea 75-91
+replicadb-server/frontend/src/theme/theme.ts
+  s_c0c2b4b5eb1945::t_a7afbfbf1d3a95 346-420
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "8a9f52a42d099188fe200fd41eb8ef84153501c1",
+  "prompts": {},
+  "sessions": {
+    "s_6e71ca0aea8d8a": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "d0a925fe-0421-489e-99c0-8bac2c1cafca",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    },
+    "s_c0c2b4b5eb1945": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "b2193703-8e22-4933-b121-23064d86842a",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
