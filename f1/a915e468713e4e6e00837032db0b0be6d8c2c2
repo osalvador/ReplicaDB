@@ -1,0 +1,19 @@
+scripts/check-phase3-docs.sh
+  s_c0c2b4b5eb1945::t_02df7c422a0789 47-48,54-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "f1a915e468713e4e6e00837032db0b0be6d8c2c2",
+  "prompts": {},
+  "sessions": {
+    "s_c0c2b4b5eb1945": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "b2193703-8e22-4933-b121-23064d86842a",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
