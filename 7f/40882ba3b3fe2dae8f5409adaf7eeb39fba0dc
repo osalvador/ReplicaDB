@@ -1,0 +1,19 @@
+.github/workflows/CT_Push.yml
+  s_c0c2b4b5eb1945::t_e44c633b15c501 379-399
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "7f40882ba3b3fe2dae8f5409adaf7eeb39fba0dc",
+  "prompts": {},
+  "sessions": {
+    "s_c0c2b4b5eb1945": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "b2193703-8e22-4933-b121-23064d86842a",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
