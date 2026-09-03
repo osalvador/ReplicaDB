@@ -1,0 +1,21 @@
+replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobRunRepository.java
+  s_c0c2b4b5eb1945::t_6af627f4143d31 606
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/JobRunRepositoryIT.java
+  s_c0c2b4b5eb1945::t_69bc6b384f4d03 778-784
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "4d58116d7116c0ba501ca047e8011277033547f9",
+  "prompts": {},
+  "sessions": {
+    "s_c0c2b4b5eb1945": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "b2193703-8e22-4933-b121-23064d86842a",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
