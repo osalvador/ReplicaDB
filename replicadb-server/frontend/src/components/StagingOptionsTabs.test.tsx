@@ -16,18 +16,27 @@ function Harness() {
 describe('StagingOptionsTabs', () => {
   it('preserves schema and table values when switching modes', () => {
     render(<Harness />);
-    expect(screen.getByRole('tab', { name: 'Schema' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Create in schema' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', expect.stringContaining('schema-tab'));
-    fireEvent.click(screen.getByRole('tab', { name: 'Table' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Use existing table' }));
 
-    expect(screen.getByRole('tab', { name: 'Table' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Use existing table' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', expect.stringContaining('table-tab'));
-    expect(screen.getByLabelText('Staging table')).toHaveValue('');
-    fireEvent.change(screen.getByLabelText('Staging table'), { target: { value: 'staging.orders' } });
-    fireEvent.click(screen.getByRole('tab', { name: 'Schema' }));
+    expect(screen.getByLabelText('Existing staging table')).toHaveValue('');
+    fireEvent.change(screen.getByLabelText('Existing staging table'), { target: { value: 'staging.orders' } });
+    fireEvent.click(screen.getByRole('tab', { name: 'Create in schema' }));
 
     expect(screen.getByLabelText('Staging schema')).toHaveValue('staging');
-    fireEvent.click(screen.getByRole('tab', { name: 'Table' }));
-    expect(screen.getByLabelText('Staging table')).toHaveValue('staging.orders');
+    fireEvent.click(screen.getByRole('tab', { name: 'Use existing table' }));
+    expect(screen.getByLabelText('Existing staging table')).toHaveValue('staging.orders');
+  });
+
+  it('explains the two staging target choices', () => {
+    render(<Harness />);
+
+    expect(screen.getByText(/Choose one staging target/)).toBeInTheDocument();
+    expect(screen.getByText('ReplicaDB creates a staging table in this schema.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: 'Use existing table' }));
+    expect(screen.getByText('Use a qualified staging table that already exists.')).toBeInTheDocument();
   });
 });

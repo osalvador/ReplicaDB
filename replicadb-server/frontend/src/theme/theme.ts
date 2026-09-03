@@ -343,6 +343,81 @@ export const theme = createTheme({
         }
       }
     },
+    MuiMenu: {
+      styleOverrides: {
+        paper: {
+          border: '1px solid rgba(80, 98, 93, 0.2)',
+          borderRadius: visualTokens.section.radius,
+          backgroundColor: visualTokens.surface.paper,
+          boxShadow: elevationShadows[2]
+        },
+        list: {
+          padding: 4
+        }
+      }
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          minHeight: 44,
+          marginInline: 0,
+          borderRadius: 6,
+          padding: '8px 12px',
+          '& .MuiListItemText-root': {
+            margin: 0
+          },
+          '&:hover': {
+            backgroundColor: 'rgba(11, 110, 105, 0.08)'
+          },
+          '&&.Mui-selected': {
+            backgroundColor: 'rgba(11, 110, 105, 0.12)'
+          },
+          '&&.Mui-selected:hover': {
+            backgroundColor: 'rgba(11, 110, 105, 0.16)'
+          },
+          '&&.Mui-focusVisible': {
+            backgroundColor: 'rgba(11, 110, 105, 0.08)'
+          },
+          '&&.Mui-selected.Mui-focusVisible': {
+            backgroundColor: 'rgba(11, 110, 105, 0.16)'
+          }
+        }
+      }
+    },
+    MuiAutocomplete: {
+      styleOverrides: {
+        paper: {
+          border: '1px solid rgba(80, 98, 93, 0.2)',
+          borderRadius: visualTokens.section.radius,
+          backgroundColor: visualTokens.surface.paper,
+          boxShadow: elevationShadows[2]
+        },
+        listbox: {
+          padding: 4,
+          '& .MuiAutocomplete-option': {
+            minHeight: 44,
+            borderRadius: 6,
+            padding: '8px 12px',
+            color: visualTokens.text.primary,
+            '& .MuiListItemText-root': {
+              margin: 0
+            },
+            '&:hover': {
+              backgroundColor: 'rgba(11, 110, 105, 0.08)'
+            },
+            '&.Mui-focused': {
+              backgroundColor: 'rgba(11, 110, 105, 0.08)'
+            },
+            '&[aria-selected="true"]': {
+              backgroundColor: 'rgba(11, 110, 105, 0.12)'
+            },
+            '&[aria-selected="true"].Mui-focused': {
+              backgroundColor: 'rgba(11, 110, 105, 0.16)'
+            }
+          }
+        }
+      }
+    },
     MuiPaper: {
       styleOverrides: {
         root: {

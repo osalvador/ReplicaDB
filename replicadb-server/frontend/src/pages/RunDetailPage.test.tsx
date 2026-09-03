@@ -40,18 +40,22 @@ const baseRun: JobRunResponse = {
   cancellationWarning: null
 };
 
-function renderDetail(run: JobRunResponse = baseRun) {
+function renderDetail(run: JobRunResponse = baseRun, logQuerySetup?: () => void) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } }
   });
   mockedRunsApi.getRun.mockResolvedValue(run);
-  mockedRunsApi.getRunLog.mockResolvedValue({
-    runId: run.id,
-    content: 'run log excerpt',
-    truncated: false,
-    capturedSize: 15,
-    formatVersion: 1
-  });
+  if (logQuerySetup) {
+    logQuerySetup();
+  } else {
+    mockedRunsApi.getRunLog.mockResolvedValue({
+      runId: run.id,
+      content: 'run log excerpt',
+      truncated: false,
+      capturedSize: 15,
+      formatVersion: 1
+    });
+  }
 
   const view = render(
     <ThemeProvider theme={theme}>
@@ -173,5 +177,25 @@ describe('RunDetailPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Retry was rejected.');
     expect(screen.queryByText('Retry destination')).not.toBeInTheDocument();
+  });
+
+  it('retries loading the detailed log', async () => {
+    renderDetail(baseRun, () => {
+      mockedRunsApi.getRunLog
+        .mockRejectedValueOnce(new ApiError(503, 'Unavailable', 'Run log unavailable.'))
+        .mockResolvedValueOnce({
+          runId: baseRun.id,
+          content: 'run log after retry',
+          truncated: false,
+          capturedSize: 20,
+          formatVersion: 1
+        });
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load the run log.');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByText('run log after retry')).toBeInTheDocument();
+    expect(mockedRunsApi.getRunLog).toHaveBeenCalledTimes(2);
   });
 });

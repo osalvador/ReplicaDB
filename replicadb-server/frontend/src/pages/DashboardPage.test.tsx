@@ -82,6 +82,33 @@ describe('DashboardPage', () => {
     expect(screen.queryByText(/Complete mode clears the sink/)).not.toBeInTheDocument();
   });
 
+  it('offers a retry when jobs cannot be loaded', async () => {
+    mockedJobsApi.listJobs
+      .mockRejectedValueOnce(new Error('Network Error'))
+      .mockResolvedValueOnce({ content: jobs, page: 0, size: 50, totalElements: 2 });
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } }
+    });
+
+    render(
+      <ThemeProvider theme={theme}>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter>
+            <DashboardPage />
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ThemeProvider>
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Unable to load jobs. Check the server connection and try again.'
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByText('Orders replication')).toBeInTheDocument();
+    expect(mockedJobsApi.listJobs).toHaveBeenCalledTimes(2);
+  });
+
   it('requests the next page when pagination advances', async () => {
     renderDashboard({ content: fullPageJobs, page: 0, size: 50, totalElements: 100 });
 

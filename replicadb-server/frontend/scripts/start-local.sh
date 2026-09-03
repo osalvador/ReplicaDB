@@ -11,6 +11,7 @@ API_PORT="${REPLICADB_API_PORT:-8080}"
 FRONTEND_PORT="${REPLICADB_FRONTEND_PORT:-5173}"
 CONTAINER_ENGINE="${CONTAINER_ENGINE:-docker}"
 ADMIN_USERNAME="${REPLICADB_BOOTSTRAP_ADMIN_USERNAME:-admin}"
+PG2PG_EXPECTED_ROWS="${PG2PG_EXPECTED_ROWS:-3}"
 export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD="${REPLICADB_BOOTSTRAP_ADMIN_PASSWORD:-replicadb-local-admin}"
 export REPLICADB_LOCAL_MASTER_KEY="${REPLICADB_LOCAL_MASTER_KEY:-cmVwbGljYWRiLWxvY2FsLWRldi1rZXktbWF0ZXJpYWw=}"
 
@@ -110,6 +111,24 @@ for attempt in $(seq 1 60); do
     sleep 1
 done
 
+printf '%s\n' 'Preparing isolated pg2pg integration tables...'
+"$CONTAINER_ENGINE" exec -i "$POSTGRES_CONTAINER" psql -v ON_ERROR_STOP=1 -U postgres -d replicadb <<SQL
+CREATE SCHEMA IF NOT EXISTS pg2pg;
+CREATE TABLE IF NOT EXISTS pg2pg.pg2pg_source_orders (
+    id BIGINT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS pg2pg.pg2pg_destination_orders (
+    id BIGINT PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+TRUNCATE TABLE pg2pg.pg2pg_source_orders, pg2pg.pg2pg_destination_orders;
+INSERT INTO pg2pg.pg2pg_source_orders (id, payload) VALUES
+    (1, 'one'),
+    (2, 'two'),
+    (3, 'three');
+SQL
+
 printf '%s\n' 'Installing the CLI artifact in the local Maven repository...'
 mvn -B -DskipTests install --file "$ROOT_DIR/pom.xml"
 
@@ -149,6 +168,15 @@ REPLICADB_API_URL="http://localhost:$API_PORT" \
 REPLICADB_BOOTSTRAP_ADMIN_USERNAME="$ADMIN_USERNAME" \
 REPLICADB_POSTGRES_PORT="$POSTGRES_PORT" \
 node "$FRONTEND_DIR/scripts/seed-local-jobs.mjs"
+
+PG2PG_ACTUAL_ROWS="$($CONTAINER_ENGINE exec "$POSTGRES_CONTAINER" psql -U postgres -d replicadb -Atc \
+    'SELECT count(*) FROM pg2pg.pg2pg_destination_orders')"
+if [[ "$PG2PG_ACTUAL_ROWS" != "$PG2PG_EXPECTED_ROWS" ]]; then
+    printf 'pg2pg destination row count mismatch: expected %s, got %s.\n' \
+        "$PG2PG_EXPECTED_ROWS" "$PG2PG_ACTUAL_ROWS" >&2
+    exit 1
+fi
+printf 'pg2pg integration verified: %s rows replicated.\n' "$PG2PG_ACTUAL_ROWS"
 
 printf '%s\n' 'Installing frontend dependencies...'
 (cd "$FRONTEND_DIR" && npm ci)
