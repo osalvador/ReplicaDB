@@ -1,0 +1,29 @@
+.ai/archive/local-pg2pg-integration-fixture.plan.md
+  s_31bd5994534c38::t_dae4f5560fe735 1-176
+ARCHITECTURE_DECISIONS.md
+  s_c0c2b4b5eb1945::t_d737c49b350d99 14-15,238,419,421,493,513-574,1061,1063,1162,1170,1176,1184,1192,1198,1206,1212,1220,1226,1234,1240,1246,1254,1260,1266,1274,1282,1288,1345-1349,1402-1410,1443,1468-1470,1491-1492,1502-1503,1522-1527,1551-1553
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "0e6328dc1e758cac6fbbcc0ace85a72b9e1d04cf",
+  "prompts": {},
+  "sessions": {
+    "s_31bd5994534c38": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "0460bd23-79c7-4092-a83e-e4f9ad6b5c75",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    },
+    "s_c0c2b4b5eb1945": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "b2193703-8e22-4933-b121-23064d86842a",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
