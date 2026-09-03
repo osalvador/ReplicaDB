@@ -376,6 +376,27 @@ jobs:
           cat /tmp/replicadb-server-e2e.log
           exit 1
         }
+    - name: Prepare local PostgreSQL fixture
+      env:
+        POSTGRES_CONTAINER_ID: ${{ job.services.postgres.id }}
+      run: |
+        set -euo pipefail
+        docker exec -i "$POSTGRES_CONTAINER_ID" psql -v ON_ERROR_STOP=1 -U postgres -d replicadb <<'SQL'
+        CREATE SCHEMA IF NOT EXISTS pg2pg;
+        CREATE TABLE IF NOT EXISTS pg2pg.pg2pg_source_orders (
+            id BIGINT PRIMARY KEY,
+            payload TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS pg2pg.pg2pg_destination_orders (
+            id BIGINT PRIMARY KEY,
+            payload TEXT NOT NULL
+        );
+        TRUNCATE TABLE pg2pg.pg2pg_source_orders, pg2pg.pg2pg_destination_orders;
+        INSERT INTO pg2pg.pg2pg_source_orders (id, payload) VALUES
+            (1, 'one'),
+            (2, 'two'),
+            (3, 'three');
+        SQL
     - name: Seed frontend fixtures
       working-directory: replicadb-server/frontend
       env:
