@@ -6,8 +6,27 @@ const DEFAULT_POSTGRES_PORT = process.env.REPLICADB_POSTGRES_PORT ?? '5432';
 export const MINIMUM_RUNS_PER_JOB = 5;
 const RUN_CLEANUP_ATTEMPTS = 40;
 const RUN_CLEANUP_DELAY_MS = 100;
+const LOCAL_INTEGRATION_POLL_INTERVAL_MS = Number.parseInt(
+  process.env.REPLICADB_LOCAL_INTEGRATION_POLL_INTERVAL_MS ?? '500', 10
+);
+const LOCAL_INTEGRATION_TIMEOUT_SECONDS = Number.parseInt(
+  process.env.REPLICADB_LOCAL_INTEGRATION_TIMEOUT_SECONDS ?? '120', 10
+);
 const ACTIVE_RUN_STATUSES = new Set(['PENDING', 'RUNNING', 'CANCEL_REQUESTED']);
 const TERMINAL_RUN_STATUSES = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED', 'RETRY_SCHEDULED']);
+export const PG2PG_FIXTURE = {
+  key: 'pg2pg',
+  label: 'pg2pg',
+  datasourceName: 'Pglocal',
+  connectorType: 'postgres',
+  connect: `jdbc:postgresql://localhost:${DEFAULT_POSTGRES_PORT}/replicadb?currentSchema=pg2pg`,
+  user: 'postgres',
+  sourceTable: 'pg2pg.pg2pg_source_orders',
+  sinkTable: 'pg2pg.pg2pg_destination_orders',
+  columns: 'id, payload',
+  mode: 'complete',
+  expectedRows: 3
+};
 
 export const SOURCE_FIXTURES = [
   {
@@ -90,6 +109,9 @@ export const SINK_FIXTURE = {
 };
 
 export function buildDatasourceName(fixture, role = 'source') {
+  if (fixture.datasourceName) {
+    return fixture.datasourceName;
+  }
   return `Develop / ${fixture.label} ${role} datasource`;
 }
 
@@ -98,7 +120,10 @@ export function buildDatasourcePayload(fixture, role = 'source') {
     name: buildDatasourceName(fixture, role),
     connectorType: fixture.connectorType,
     technicalParams: {},
-    security: { connect: fixture.connect },
+    security: {
+      connect: fixture.connect,
+      ...(fixture.user ? { user: fixture.user } : {})
+    },
     clearSecurityKeys: []
   };
 }
@@ -109,15 +134,16 @@ export function buildJobPayload(fixture, sourceDatasourceId, sinkDatasourceId) {
   }
 
   const payload = {
-    name: `Develop / ${fixture.label} source`,
+    name: fixture.jobName ?? `Develop / ${fixture.label} source`,
     sourceDatasourceId,
     sourceDatasourceUseEnabled: true,
-    sourceTable: DEFAULT_TABLE,
-    sourceColumns: 'id, payload',
+    sourceTable: fixture.sourceTable ?? DEFAULT_TABLE,
+    sourceColumns: fixture.columns ?? 'id, payload',
     sinkDatasourceId,
     sinkDatasourceUseEnabled: true,
-    sinkTable: `sample_${fixture.key}_orders`,
-    sinkColumns: 'id, payload',
+    sinkTable: fixture.sinkTable ?? `sample_${fixture.key}_orders`,
+    sinkColumns: fixture.columns ?? 'id, payload',
+    ...(fixture.stagingSchema ? { sinkStagingSchema: fixture.stagingSchema } : {}),
     mode: fixture.mode,
     jobs: 1,
     fetchSize: 100,
@@ -261,6 +287,34 @@ async function ensureDatasource({
   return { datasource, created: true };
 }
 
+async function ensureJob({
+  fetchImpl,
+  cookieJar,
+  apiUrl,
+  existingJobs,
+  fixture,
+  sourceDatasourceId,
+  sinkDatasourceId,
+  csrfToken
+}) {
+  const payload = buildJobPayload(fixture, sourceDatasourceId, sinkDatasourceId);
+  const existing = existingJobs.get(payload.name);
+  if (existing?.id) {
+    return { job: existing, created: false };
+  }
+
+  const job = await requestJson(fetchImpl, cookieJar, apiUrl, '/api/v1/jobs', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(payload)
+  }, csrfToken);
+  if (!job?.id) {
+    throw new Error(`The API did not return a job ID for ${payload.name}.`);
+  }
+  existingJobs.set(payload.name, job);
+  return { job, created: true };
+}
+
 async function waitForRunToBecomeTerminal({
   fetchImpl,
   cookieJar,
@@ -319,6 +373,49 @@ async function triggerSeededRun({ fetchImpl, cookieJar, apiUrl, jobId, csrfToken
   }
 
   throw new Error(`Could not create a seeded run for job ${jobId} because another run stayed active.`);
+}
+
+export async function runRealIntegration({
+  fetchImpl,
+  cookieJar,
+  apiUrl,
+  jobId,
+  csrfToken,
+  pollIntervalMs = LOCAL_INTEGRATION_POLL_INTERVAL_MS,
+  timeoutSeconds = LOCAL_INTEGRATION_TIMEOUT_SECONDS
+}) {
+  const run = await requestJson(fetchImpl, cookieJar, apiUrl, `/api/v1/jobs/${jobId}/runs`, {
+    method: 'POST',
+    headers: {
+      'Idempotency-Key': `local-integration-${jobId}-${Date.now()}`
+    }
+  }, csrfToken);
+  if (!run?.id) {
+    throw new Error(`The API did not return a run ID for integration job ${jobId}.`);
+  }
+
+  const attempts = Math.max(1, Math.ceil((timeoutSeconds * 1000) / pollIntervalMs));
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const current = await requestJson(fetchImpl, cookieJar, apiUrl, `/api/v1/runs/${run.id}`);
+    if (current?.status === 'SUCCEEDED') {
+      return current;
+    }
+    if (TERMINAL_RUN_STATUSES.has(current?.status)) {
+      const detail = current.errorMessage ? `: ${current.errorMessage}` : '.';
+      let logDetail = '';
+      try {
+        const log = await requestJson(fetchImpl, cookieJar, apiUrl, `/api/v1/runs/${run.id}/log`);
+        const excerpt = typeof log?.excerpt === 'string' ? log.excerpt : log?.content;
+        if (excerpt) {
+          logDetail = ` Log: ${excerpt.slice(-2000)}`;
+        }
+      } catch {}
+      throw new Error(`Integration run ${run.id} for job ${jobId} finished with ${current.status}${detail}${logDetail}`);
+    }
+    await wait(pollIntervalMs);
+  }
+
+  throw new Error(`Integration run ${run.id} for job ${jobId} did not succeed within ${timeoutSeconds} seconds.`);
 }
 
 export async function seedJobRunHistory({
@@ -381,6 +478,17 @@ export async function seedLocalJobs({
   });
   datasourcesCreated += sinkResult.created ? 1 : 0;
 
+  const localDatasourceResult = await ensureDatasource({
+    fetchImpl,
+    cookieJar,
+    apiUrl,
+    existingDatasources,
+    fixture: PG2PG_FIXTURE,
+    role: 'local',
+    csrfToken
+  });
+  datasourcesCreated += localDatasourceResult.created ? 1 : 0;
+
   const sourceDatasources = new Map();
   for (const fixture of SOURCE_FIXTURES) {
     const result = await ensureDatasource({
@@ -404,24 +512,22 @@ export async function seedLocalJobs({
 
   for (const fixture of SOURCE_FIXTURES) {
     const sourceDatasource = sourceDatasources.get(fixture.key);
-    const payload = buildJobPayload(fixture, sourceDatasource?.id, sinkResult.datasource.id);
-    const existingJob = existingJobs.get(payload.name);
-    if (existingJob) {
-      jobs.push(existingJob);
+    const result = await ensureJob({
+      fetchImpl,
+      cookieJar,
+      apiUrl,
+      existingJobs,
+      fixture,
+      sourceDatasourceId: sourceDatasource?.id,
+      sinkDatasourceId: sinkResult.datasource.id,
+      csrfToken
+    });
+    jobs.push(result.job);
+    if (result.created) {
+      created += 1;
+    } else {
       skipped += 1;
-      continue;
     }
-
-    const job = await requestJson(fetchImpl, cookieJar, apiUrl, '/api/v1/jobs', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload)
-    }, csrfToken);
-    if (!job?.id) {
-      throw new Error(`The API did not return a job ID for ${payload.name}.`);
-    }
-    jobs.push(job);
-    created += 1;
   }
 
   let runsCreated = 0;
@@ -439,12 +545,32 @@ export async function seedLocalJobs({
     });
   }
 
+  const integrationJobResult = await ensureJob({
+    fetchImpl,
+    cookieJar,
+    apiUrl,
+    existingJobs,
+    fixture: PG2PG_FIXTURE,
+    sourceDatasourceId: localDatasourceResult.datasource.id,
+    sinkDatasourceId: localDatasourceResult.datasource.id,
+    csrfToken
+  });
+  const integrationRun = await runRealIntegration({
+    fetchImpl,
+    cookieJar,
+    apiUrl,
+    jobId: integrationJobResult.job.id,
+    csrfToken
+  });
+
   return {
     created,
     skipped,
     runsCreated,
     datasourcesCreated,
-    total: SOURCE_FIXTURES.length
+    total: SOURCE_FIXTURES.length,
+    integrationJobCreated: integrationJobResult.created,
+    integrationRunId: integrationRun.id
   };
 }
 

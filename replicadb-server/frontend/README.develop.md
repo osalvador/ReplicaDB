@@ -70,8 +70,11 @@ Cuando el script termine de arrancar:
 - Frontend: `http://localhost:5173`
 - API: `http://localhost:8080`
 - El script crea perfiles datasource y jobs de prueba para Oracle, MySQL, MariaDB, PostgreSQL, DB2 LUW,
-  DB2 for i, SQLite, SQL Server, Denodo y File. Los fixtures cubren los modos
-  `complete`, `complete-atomic` e `incremental`; no ejecutan ninguna replicación.
+  DB2 for i, SQLite, SQL Server, Denodo y File. También crea el datasource `Pglocal`, las tablas
+  `pg2pg_source_orders` y `pg2pg_destination_orders`, y el job `pg2pg`. Tras crear los fixtures,
+  ejecuta una replicación real PostgreSQL a PostgreSQL y verifica que las tres filas llegan al destino.
+  Los fixtures cubren los modos `complete`, `complete-atomic` e `incremental`; solo el job `pg2pg`
+  ejecuta una replicación durante el arranque.
 
 Pulsa `Ctrl+C` para detener API y Vite y eliminar el contenedor PostgreSQL.
 El script requiere libres los puertos `5432`, `8080` y `5173`; no detiene

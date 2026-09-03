@@ -33,7 +33,18 @@ export default function DashboardPage() {
   }
 
   if (jobsQuery.isError) {
-    return <Alert severity="error">Unable to load jobs.</Alert>;
+    return (
+      <Alert
+        severity="error"
+        action={(
+          <Button color="inherit" size="small" onClick={() => void jobsQuery.refetch()}>
+            Try again
+          </Button>
+        )}
+      >
+        Unable to load jobs. Check the server connection and try again.
+      </Alert>
+    );
   }
 
   const jobs = jobsQuery.data.content ?? [];

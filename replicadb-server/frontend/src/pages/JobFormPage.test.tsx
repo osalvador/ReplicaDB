@@ -111,6 +111,10 @@ async function fillRequiredFields(includeSourceTable = true) {
   fireEvent.change(screen.getByLabelText(/^Parallel tasks/), { target: { value: '2' } });
 }
 
+function openAdvancedOptions() {
+  fireEvent.click(screen.getByRole('button', { name: 'Advanced options' }));
+}
+
 describe('JobFormPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -164,6 +168,8 @@ describe('JobFormPage', () => {
     renderForm('/jobs/job-1/edit');
 
     expect(await screen.findByDisplayValue('Orders replication')).toBeDisabled();
+    expect(screen.getByText('Job names cannot be changed after creation.')).toBeInTheDocument();
+    openAdvancedOptions();
     expect(screen.getByRole('combobox', { name: 'Source datasource' })).toHaveValue('Source database (postgres)');
     expect(screen.getByRole('checkbox', { name: 'Source binding enabled' })).toBeChecked();
     expect(screen.getByLabelText(/^Table/)).toHaveValue(baseJob.sourceTable);
@@ -171,11 +177,11 @@ describe('JobFormPage', () => {
     expect(screen.getByRole('combobox', { name: 'Sink datasource' })).toHaveValue('Sink database (postgres)');
     expect(screen.getByRole('checkbox', { name: 'Sink binding enabled' })).toBeChecked();
     expect(screen.getByLabelText(/^Sink table/)).toHaveValue(baseJob.sinkTable);
-    expect(screen.getByRole('combobox', { name: 'Mode' })).toHaveTextContent(baseJob.mode ?? '');
+    expect(screen.getByRole('combobox', { name: 'Mode' })).toHaveTextContent('Incremental mode');
     expect(screen.getByLabelText(/^Parallel tasks/)).toHaveValue(baseJob.jobs);
     expect(screen.getByLabelText(/^Maximum automatic attempts/)).toHaveValue(5);
-    expect(screen.getByLabelText(/^Retry backoff/)).toHaveValue(90);
-    expect(screen.getByLabelText('Automatic retry after lease expiry')).toBeChecked();
+    expect(screen.getByLabelText(/^Retry delay after lease expiry/)).toHaveValue(90);
+    expect(screen.getByLabelText('Retry automatically after a worker lease expires')).toBeChecked();
     expect(screen.getByLabelText(/^Incremental watermark column/)).toHaveValue(baseJob.incrementalWatermarkColumn);
     expect(screen.getByLabelText(/^Initial watermark value/)).toHaveValue(baseJob.initialWatermarkValue);
   });
@@ -222,6 +228,26 @@ describe('JobFormPage', () => {
     expect(screen.queryByLabelText(/^Source password/)).not.toBeInTheDocument();
   });
 
+  it('preserves inactive staging values and submits only the selected target', async () => {
+    mockedJobsApi.createJob.mockResolvedValue({ id: 'job-new', name: 'New job' });
+
+    renderForm('/jobs/new');
+    await fillRequiredFields();
+    fireEvent.change(screen.getByLabelText('Staging schema'), { target: { value: 'staging' } });
+    fireEvent.click(screen.getByRole('tab', { name: 'Use existing table' }));
+    fireEvent.change(screen.getByLabelText('Existing staging table'), { target: { value: 'staging.orders' } });
+    fireEvent.click(screen.getByRole('tab', { name: 'Create in schema' }));
+    expect(screen.getByLabelText('Staging schema')).toHaveValue('staging');
+    fireEvent.click(screen.getByRole('tab', { name: 'Use existing table' }));
+    expect(screen.getByLabelText('Existing staging table')).toHaveValue('staging.orders');
+    fireEvent.click(screen.getByRole('button', { name: 'Create job' }));
+
+    await waitFor(() => expect(mockedJobsApi.createJob).toHaveBeenCalledTimes(1));
+    const [request] = mockedJobsApi.createJob.mock.calls[0];
+    expect(request).toMatchObject({ sinkStagingTable: 'staging.orders' });
+    expect(request).not.toHaveProperty('sinkStagingSchema');
+  });
+
   it('keeps a disabled current binding visible without making unavailable datasources bindable', async () => {
     mockedJobsApi.getJob.mockResolvedValue({
       ...baseJob,
@@ -252,7 +278,9 @@ describe('JobFormPage', () => {
       renderForm('/jobs/job-1/edit');
       await screen.findByDisplayValue('Orders replication');
       fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Mode' }));
-      fireEvent.click(await screen.findByRole('option', { name: mode }));
+      fireEvent.click(await screen.findByRole('option', {
+        name: mode === 'complete' ? /Complete mode/ : /Complete atomic mode/
+      }));
 
       expect(screen.getByLabelText(/^Incremental watermark column/)).toBeDisabled();
       expect(screen.getByLabelText(/^Initial watermark value/)).toBeDisabled();
@@ -269,17 +297,38 @@ describe('JobFormPage', () => {
   it('applies mode defaults and preserves an explicit retry choice', async () => {
     renderForm('/jobs/new');
 
-    const automaticRetry = screen.getByLabelText('Automatic retry after lease expiry');
+    openAdvancedOptions();
+    const automaticRetry = screen.getByLabelText('Retry automatically after a worker lease expires');
     expect(automaticRetry).not.toBeChecked();
 
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Mode' }));
-    fireEvent.click(await screen.findByRole('option', { name: 'incremental' }));
+    fireEvent.click(await screen.findByRole('option', { name: /Incremental mode/ }));
     expect(automaticRetry).toBeChecked();
 
     fireEvent.click(automaticRetry);
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Mode' }));
-    fireEvent.click(await screen.findByRole('option', { name: 'complete' }));
+    fireEvent.click(await screen.findByRole('option', { name: /Complete mode/ }));
     expect(automaticRetry).not.toBeChecked();
+  });
+
+  it('explains the consequences of each replication mode', async () => {
+    renderForm('/jobs/new');
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Mode' }));
+
+    expect(await screen.findByRole('option', { name: /Replaces the sink before loading/ })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /All-or-nothing load when supported/ })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Loads changes from a watermark column/ })).toBeInTheDocument();
+  });
+
+  it('keeps advanced execution tuning collapsed with a visible summary', () => {
+    renderForm('/jobs/new');
+
+    expect(screen.queryByLabelText('Fetch size')).not.toBeInTheDocument();
+    expect(screen.getByText(/Fetch size 100 \| Unlimited bandwidth \| 3 total attempts \| Automatic retry off/)).toBeInTheDocument();
+
+    openAdvancedOptions();
+    expect(screen.getByLabelText('Fetch size')).toBeInTheDocument();
+    expect(screen.getByText('Optional tuning for performance, diagnostics, and lease recovery.')).toBeInTheDocument();
   });
 
   it('requires a watermark column before submitting incremental mode', async () => {
@@ -287,7 +336,7 @@ describe('JobFormPage', () => {
     renderForm('/jobs/new');
     await fillRequiredFields();
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Mode' }));
-    fireEvent.click(await screen.findByRole('option', { name: 'incremental' }));
+    fireEvent.click(await screen.findByRole('option', { name: /Incremental mode/ }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Create job' }));
 
@@ -300,8 +349,9 @@ describe('JobFormPage', () => {
 
     renderForm('/jobs/new');
     await fillRequiredFields();
+    openAdvancedOptions();
     fireEvent.change(screen.getByLabelText(/^Maximum automatic attempts/), { target: { value: '0' } });
-    fireEvent.change(screen.getByLabelText(/^Retry backoff/), { target: { value: '-1' } });
+    fireEvent.change(screen.getByLabelText(/^Retry delay after lease expiry/), { target: { value: '-1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create job' }));
 
     expect(await screen.findByText('Maximum attempts must be at least 1.')).toBeInTheDocument();

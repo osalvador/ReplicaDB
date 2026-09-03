@@ -117,6 +117,8 @@ export default function DatasourceSelector({
             <ListItemText
               primary={option.name ?? 'Unnamed datasource'}
               secondary={option.connectorType ?? 'Unknown connector'}
+              primaryTypographyProps={{ fontWeight: 500, color: 'text.primary' }}
+              secondaryTypographyProps={{ color: 'text.secondary' }}
             />
           </li>
         )}

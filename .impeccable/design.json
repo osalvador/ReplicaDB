@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-03T05:55:16Z",
+  "title": "Design System: ReplicaDB Control Plane",
+  "extensions": {
+    "colorMeta": {
+      "brand-teal": {
+        "role": "primary",
+        "displayName": "Deep Teal",
+        "canonical": "#0B6E69",
+        "tonalRamp": ["#063634", "#084945", "#0B6E69", "#3C8984", "#6BA5A0", "#99C0BC", "#C4DAD6", "#E8F0ED"]
+      },
+      "terracotta": {
+        "role": "secondary",
+        "displayName": "Terracotta",
+        "canonical": "#B15C38",
+        "tonalRamp": ["#4F2416", "#71321F", "#93472B", "#B15C38", "#C47A5D", "#D5A08B", "#E6C4B7", "#F4E8E3"]
+      },
+      "page-green": {
+        "role": "neutral",
+        "displayName": "Cool Page Green",
+        "canonical": "#F3F6F4",
+        "tonalRamp": ["#1A2824", "#304943", "#547069", "#819A92", "#A8BBB5", "#C5D4CF", "#DFE9E5", "#F3F6F4"]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "canonical": "#FFFFFF",
+        "tonalRamp": ["#1B2926", "#44534F", "#697671", "#8E9894", "#B0B8B4", "#CDD2D0", "#E6E9E8", "#FFFFFF"]
+      },
+      "mist-green": {
+        "role": "neutral",
+        "displayName": "Mist Green",
+        "canonical": "#E8F0ED",
+        "tonalRamp": ["#18332D", "#315D50", "#4F8B76", "#72AE96", "#9BC8B3", "#BAD8C8", "#D4E7DE", "#E8F0ED"]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1B2926",
+        "tonalRamp": ["#050908", "#0B1210", "#1B2926", "#384743", "#5D6A66", "#818C88", "#AEB6B3", "#E3E7E5"]
+      },
+      "muted-ink": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#50625D",
+        "tonalRamp": ["#0D1412", "#202E2B", "#50625D", "#6F7E79", "#8E9A96", "#ADB6B3", "#C9D0CE", "#E9EDEC"]
+      },
+      "success": {
+        "role": "tertiary",
+        "displayName": "Success Green",
+        "canonical": "#216E4A",
+        "tonalRamp": ["#092317", "#10472C", "#216E4A", "#4A8F6A", "#77AE8C", "#A4C9B2", "#C8DED0", "#EDF6F0"]
+      },
+      "info": {
+        "role": "tertiary",
+        "displayName": "Information Blue",
+        "canonical": "#1769AA",
+        "tonalRamp": ["#061B31", "#0B3A61", "#1769AA", "#4A8CC1", "#78AAD1", "#A4C7E0", "#CBDDEB", "#EFF6FB"]
+      },
+      "warning": {
+        "role": "tertiary",
+        "displayName": "Warning Ochre",
+        "canonical": "#8A4B08",
+        "tonalRamp": ["#2A1603", "#512C06", "#8A4B08", "#AD6E21", "#C99551", "#DEB985", "#EDDBC0", "#FAF2E8"]
+      },
+      "error": {
+        "role": "tertiary",
+        "displayName": "Error Red",
+        "canonical": "#B3261E",
+        "tonalRamp": ["#2C0504", "#5C0F0C", "#B3261E", "#C9554D", "#D98079", "#E3A7A2", "#F0CBC8", "#FCEDEC"]
+      }
+    },
+    "typographyMeta": {
+      "display": {"displayName": "Editorial Display", "purpose": "Primary page-level orientation."},
+      "body": {"displayName": "Operational Sans", "purpose": "Values, controls, descriptions, and navigation."},
+      "mono": {"displayName": "Diagnostic Mono", "purpose": "Captured multiline run logs only."}
+    },
+    "shadows": [
+      {"name": "resting-surface", "value": "none", "purpose": "Default for sections, cards, buttons, and navigation."},
+      {"name": "low-ambient", "value": "0 1px 2px 0 rgba(27, 41, 38, 0.08)", "purpose": "Optional subtle transient lift."},
+      {"name": "dialog-lift", "value": "0 2px 8px 0 rgba(27, 41, 38, 0.12)", "purpose": "Separate modal surfaces from the working canvas."},
+      {"name": "field-focus-wash", "value": "0 0 0 3px rgba(11, 110, 105, 0.16)", "purpose": "Make focused outlined fields visibly active."}
+    ],
+    "motion": [
+      {"name": "state-transition", "value": "150ms ease", "purpose": "Short color and focus transitions for navigation and actions."}
+    ],
+    "breakpoints": [
+      {"name": "sm", "value": "600px"},
+      {"name": "md", "value": "900px"},
+      {"name": "lg", "value": "1200px"},
+      {"name": "xl", "value": "1536px"}
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main action for a page or operational section.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Trigger run</button>",
+      "css": ".ds-btn-primary { appearance: none; border: 0; border-radius: 8px; background: #0B6E69; color: #FFFFFF; min-height: 40px; padding: 8px 16px; font-family: Avenir Next, Helvetica Neue, sans-serif; font-size: 14px; font-weight: 700; line-height: 18px; cursor: pointer; transition: background-color 150ms ease, box-shadow 150ms ease; } .ds-btn-primary:hover { background: rgba(11, 110, 105, 0.9); } .ds-btn-primary:focus-visible { outline: 3px solid #0B6E69; outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.58; cursor: default; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A contained alternative action that stays visually secondary.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">Edit</button>",
+      "css": ".ds-btn-secondary { appearance: none; border: 1px solid rgba(11, 110, 105, 0.55); border-radius: 8px; background: #FFFFFF; color: #0B6E69; min-height: 40px; padding: 8px 16px; font-family: Avenir Next, Helvetica Neue, sans-serif; font-size: 14px; font-weight: 700; line-height: 18px; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease; } .ds-btn-secondary:hover { border-color: #0B6E69; background: rgba(11, 110, 105, 0.08); } .ds-btn-secondary:focus-visible { outline: 3px solid #0B6E69; outline-offset: 2px; }"
+    },
+    {
+      "name": "Outlined Input",
+      "kind": "input",
+      "refersTo": "input-outlined",
+      "description": "A compact field for credentials and replication configuration.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Username</span><input class=\"ds-input\" type=\"text\" /></label>",
+      "css": ".ds-field { display: grid; gap: 6px; color: #1B2926; font-family: Avenir Next, Helvetica Neue, sans-serif; font-size: 14px; line-height: 20px; } .ds-field-label { font-weight: 700; } .ds-input { box-sizing: border-box; width: 100%; min-height: 40px; border: 1px solid rgba(80, 98, 93, 0.42); border-radius: 6px; background: #FFFFFF; color: #1B2926; padding: 8px 14px; font: inherit; outline: 0; transition: border-color 150ms ease, box-shadow 150ms ease; } .ds-input:hover { border-color: #0B6E69; } .ds-input:focus-visible { border: 2px solid #0B6E69; box-shadow: 0 0 0 3px rgba(11, 110, 105, 0.16); } .ds-input:disabled { background: #E8F0ED; }"
+    },
+    {
+      "name": "Dropdown Option List",
+      "kind": "custom",
+      "refersTo": "dropdown-option",
+      "description": "Shared option treatment for selects and autocomplete resource lists.",
+      "html": "<div class=\"ds-dropdown-paper\"><div class=\"ds-dropdown-option ds-dropdown-option-selected\"><span class=\"ds-dropdown-primary\">Complete atomic mode</span><span class=\"ds-dropdown-secondary\">All-or-nothing load when supported.</span></div><div class=\"ds-dropdown-option\"><span class=\"ds-dropdown-primary\">Incremental mode</span><span class=\"ds-dropdown-secondary\">Loads changes from a watermark column.</span></div></div>",
+      "css": ".ds-dropdown-paper { width: 320px; border: 1px solid rgba(80, 98, 93, 0.2); border-radius: 8px; background: #FFFFFF; padding: 4px; box-shadow: 0 1px 3px 0 rgba(27, 41, 38, 0.1); font-family: Avenir Next, Helvetica Neue, sans-serif; } .ds-dropdown-option { display: grid; gap: 0; min-height: 44px; border-radius: 6px; padding: 8px 12px; color: #1B2926; cursor: pointer; } .ds-dropdown-option:hover, .ds-dropdown-option:focus-visible { background: rgba(11, 110, 105, 0.08); outline: none; } .ds-dropdown-option-selected { background: rgba(11, 110, 105, 0.12); } .ds-dropdown-option-selected:hover { background: rgba(11, 110, 105, 0.16); } .ds-dropdown-primary { font-size: 16px; font-weight: 500; line-height: 24px; } .ds-dropdown-secondary { color: #50625D; font-size: 14px; font-weight: 400; line-height: 20px; }"
+    },
+    {
+      "name": "Top Navigation",
+      "kind": "nav",
+      "refersTo": "navigation-bar",
+      "description": "The persistent desktop-first navigation and identity bar.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Primary\"><a class=\"ds-nav-brand\" href=\"/\">ReplicaDB</a><a class=\"ds-nav-link\" href=\"/datasources\">Datasources</a></nav>",
+      "css": ".ds-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; min-height: 40px; padding: 8px 32px; border-bottom: 1px solid rgba(80, 98, 93, 0.18); background: #FFFFFF; color: #1B2926; font-family: Avenir Next, Helvetica Neue, sans-serif; } .ds-nav-brand { border-radius: 8px; color: #0B6E69; padding: 4px 8px; font-size: 18px; font-weight: 700; line-height: 25px; text-decoration: none; } .ds-nav-link { border-radius: 8px; color: #0B6E69; padding: 8px; font-size: 14px; font-weight: 700; line-height: 18px; text-decoration: none; } .ds-nav-brand:hover, .ds-nav-link:hover { background: rgba(11, 110, 105, 0.08); } .ds-nav-brand:focus-visible, .ds-nav-link:focus-visible { outline: 3px solid #0B6E69; outline-offset: 2px; }"
+    },
+    {
+      "name": "Surface Section",
+      "kind": "card",
+      "refersTo": "surface-section",
+      "description": "A framed work area for a coherent operational group.",
+      "html": "<section class=\"ds-surface\" aria-labelledby=\"ds-surface-title\"><h2 id=\"ds-surface-title\" class=\"ds-surface-title\">Jobs</h2><p class=\"ds-surface-description\">Jobs available to your account.</p></section>",
+      "css": ".ds-surface { border: 1px solid rgba(80, 98, 93, 0.2); border-radius: 8px; background: #FFFFFF; color: #1B2926; padding: 16px 24px; } .ds-surface-title { margin: 0; font-family: Georgia, Times New Roman, serif; font-size: 24px; font-weight: 600; line-height: 31px; } .ds-surface-description { margin: 4px 0 0; color: #50625D; font-family: Avenir Next, Helvetica Neue, sans-serif; font-size: 14px; line-height: 20px; }"
+    },
+    {
+      "name": "Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "A compact semantic state label for a replication run.",
+      "html": "<span class=\"ds-chip ds-chip-success\" role=\"status\">SUCCEEDED</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; min-height: 28px; border-radius: 6px; padding: 0 10px; font-family: Avenir Next, Helvetica Neue, sans-serif; font-size: 14px; font-weight: 700; line-height: 18px; } .ds-chip-success { background: #E8F0ED; color: #216E4A; } .ds-chip-error { background: #FCEDEC; color: #B3261E; } .ds-chip-warning { background: #FAF2E8; color: #8A4B08; }"
+    },
+    {
+      "name": "Operational Table",
+      "kind": "custom",
+      "refersTo": "surface-section",
+      "description": "A dense, locally scrollable table for jobs, datasources, or runs.",
+      "html": "<div class=\"ds-table-wrap\"><table class=\"ds-table\"><thead><tr><th>Name</th><th>Status</th></tr></thead><tbody><tr><td>Nightly sync</td><td><span class=\"ds-chip ds-chip-success\">SUCCEEDED</span></td></tr></tbody></table></div>",
+      "css": ".ds-table-wrap { max-width: 100%; overflow-x: auto; } .ds-table { width: 100%; min-width: 640px; border-collapse: collapse; background: #FFFFFF; color: #1B2926; font-family: Avenir Next, Helvetica Neue, sans-serif; font-size: 14px; line-height: 20px; } .ds-table th, .ds-table td { border-bottom: 1px solid rgba(80, 98, 93, 0.16); padding: 12px 16px; text-align: left; } .ds-table th { background: #E8F0ED; color: #50625D; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; } .ds-table tbody tr:hover { background: rgba(11, 110, 105, 0.05); }"
+    },
+    {
+      "name": "Run Log",
+      "kind": "custom",
+      "refersTo": "surface-section",
+      "description": "A contained diagnostic surface with complete/partial state, Captured at metadata, preserved log lines, copy, and retryable loading errors.",
+      "html": "<pre class=\"ds-log\">2026-09-02 10:15:23 INFO Starting run</pre>",
+      "css": ".ds-log { max-width: 100%; margin: 0; overflow-x: auto; overflow-y: auto; border: 1px solid rgba(80, 98, 93, 0.16); border-radius: 6px; background: #F3F6F4; color: #1B2926; padding: 12px 16px; white-space: pre; font-family: monospace; font-size: 14px; line-height: 22px; tab-size: 4; } .ds-log-meta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; color: #50625D; font-family: Avenir Next, Helvetica Neue, sans-serif; font-size: 14px; line-height: 20px; } .ds-log-partial { border: 1px solid rgba(138, 75, 8, 0.35); border-radius: 8px; background: #FAF2E8; color: #8A4B08; padding: 8px 12px; } .ds-log-copy { min-height: 40px; border: 1px solid rgba(11, 110, 105, 0.55); border-radius: 8px; background: #FFFFFF; color: #0B6E69; padding: 8px 16px; font-family: Avenir Next, Helvetica Neue, sans-serif; font-size: 14px; font-weight: 700; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Engineering Ledger",
+    "overview": "ReplicaDB's control plane reads as a working ledger for data movement: composed, dependable, and easy to audit. The system uses an editorial serif for orientation and a sans-serif workhorse for values, controls, and status. It gives dense operational material a clear frame without turning infrastructure into spectacle.\n\nTeal is the primary signal, terracotta is a secondary counterpoint, and semantic colors are reserved for state. White surfaces sit on a pale green-gray page; borders do the routine structural work and shadows arrive only for genuinely lifted layers such as dialogs. The visual language is assured, pragmatic, and human: technical enough for repeated operations, warm enough to keep the interface legible under pressure. It avoids sterile enterprise gloss and unexplained jargon.",
+    "keyCharacteristics": ["Quietly structured, scan-first surfaces", "Editorial headings over operational sans-serif detail", "Teal-led actions with terracotta as a secondary signal", "Restrained corners, visible focus, and semantic state color", "Flat resting surfaces with purposeful elevation"],
+    "rules": [
+      {"name": "The Ledger Before Theater Rule", "body": "Every visual decision serves confident configuration, scanning, or diagnosis; calmness comes from clarity rather than decoration.", "section": "overview"},
+      {"name": "The Teal/Rust Division Rule", "body": "Teal carries primary action and focus; terracotta carries secondary emphasis; semantic colors communicate state, not decoration.", "section": "colors"},
+      {"name": "The Heading/Body Handshake Rule", "body": "Georgia headings provide editorial orientation; Avenir carries operational copy and controls.", "section": "typography"},
+      {"name": "The Flat Resting Surface Rule", "body": "White sections are flat at rest; shadow appears only where a dialog needs separation.", "section": "elevation"},
+      {"name": "The Contained Corner Rule", "body": "Keep radii restrained and repeat the 8px section/control silhouette; inputs and chips tighten to 6px and pagination to 4px.", "section": "shapes"},
+      {"name": "The Context-Carrying Action Rule", "body": "Actions stay beside the work they change; desktop navigation remains top-aligned, with no default bottom navigation.", "section": "components"}
+    ],
+    "dos": ["Do use the teal role for primary actions, links, selected indicators, and focus.", "Do use terracotta as a secondary signal rather than a competing primary brand color.", "Do keep operational tables dense but locally scrollable and readable.", "Do preserve visible focus, semantic status colors, and accessible roles.", "Do use serif headings with sans-serif operational detail.", "Do keep standard surfaces flat and let borders establish structure."],
+    "donts": ["Don't introduce purple, decorative gradients, remote fonts, or ornamental effects that compete with job and run state.", "Don't use large marketing-style hero compositions for control-plane screens.", "Don't add bottom navigation as a default mobile pattern.", "Don't use shadows as decoration on ordinary sections, cards, or buttons.", "Don't expose credentials or sensitive connector values in visual output.", "Don't replace clear operational language with unexplained jargon."]
+  }
+}

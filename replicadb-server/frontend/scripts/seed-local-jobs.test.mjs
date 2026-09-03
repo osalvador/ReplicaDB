@@ -5,6 +5,8 @@ import {
   buildJobPayload,
   getMissingRunCount,
   MINIMUM_RUNS_PER_JOB,
+  PG2PG_FIXTURE,
+  runRealIntegration,
   seedLocalJobs,
   seedJobRunHistory,
   SOURCE_FIXTURES
@@ -47,10 +49,31 @@ test('builds datasource profiles with connector metadata and transient connectio
   });
 });
 
+test('builds the isolated local PostgreSQL datasource and job payload', () => {
+  const datasource = buildDatasourcePayload(PG2PG_FIXTURE);
+  const job = buildJobPayload(PG2PG_FIXTURE, 'pglocal-id', 'pglocal-id');
+
+  assert.equal(datasource.name, 'Pglocal');
+  assert.equal(datasource.connectorType, 'postgres');
+  assert.equal(datasource.security.user, 'postgres');
+  assert.equal(datasource.security.password, undefined);
+  assert.equal(job.name, 'Develop / pg2pg source');
+  assert.equal(job.sourceDatasourceId, 'pglocal-id');
+  assert.equal(job.sinkDatasourceId, 'pglocal-id');
+  assert.equal(job.sourceTable, 'pg2pg.pg2pg_source_orders');
+  assert.equal(job.sinkTable, 'pg2pg.pg2pg_destination_orders');
+  assert.equal(job.sourceColumns, 'id, payload');
+  assert.equal(job.sinkColumns, 'id, payload');
+  assert.equal(job.mode, 'complete');
+  assert.equal(job.jobs, 1);
+});
+
 test('creates datasource profiles before datasource-only jobs', async () => {
   const calls = [];
   let datasourceCount = 0;
   let jobCount = 0;
+  let realJobId;
+  let realRunReads = 0;
   const fetchImpl = async (url, options = {}) => {
     calls.push({ url, options });
     if (url.endsWith('/api/v1/auth/csrf')) {
@@ -76,13 +99,24 @@ test('creates datasource profiles before datasource-only jobs', async () => {
     }
     if (url.endsWith('/api/v1/jobs')) {
       jobCount += 1;
-      return jsonResponse({ id: `job-${jobCount}`, name: JSON.parse(options.body).name }, 201);
+      const payload = JSON.parse(options.body);
+      if (payload.name === 'Develop / pg2pg source') {
+        realJobId = `job-${jobCount}`;
+      }
+      return jsonResponse({ id: `job-${jobCount}`, name: payload.name }, 201);
     }
     if (url.includes('/runs?page=0&size=100')) {
       return jsonResponse({ content: [], totalElements: 0 });
     }
     if (url.endsWith('/runs')) {
+      if (!options.headers.get('X-ReplicaDB-Local-Seed')) {
+        return jsonResponse({ id: 'run-real', status: 'PENDING' }, 202);
+      }
       return jsonResponse({ id: `seed-run-${calls.length}`, status: 'CANCELLED' }, 202);
+    }
+    if (url.endsWith('/api/v1/runs/run-real')) {
+      realRunReads += 1;
+      return jsonResponse({ id: 'run-real', status: realRunReads === 1 ? 'RUNNING' : 'SUCCEEDED' });
     }
     throw new Error(`Unexpected request: ${url}`);
   };
@@ -99,11 +133,13 @@ test('creates datasource profiles before datasource-only jobs', async () => {
     && call.url.endsWith('/api/v1/datasources'));
   const jobPosts = calls.filter(call => call.options.method === 'POST'
     && call.url.endsWith('/api/v1/jobs'));
-  assert.equal(result.datasourcesCreated, SOURCE_FIXTURES.length + 1);
+  assert.equal(result.datasourcesCreated, SOURCE_FIXTURES.length + 2);
   assert.equal(result.created, SOURCE_FIXTURES.length);
+  assert.equal(result.integrationJobCreated, true);
+  assert.equal(result.integrationRunId, 'run-real');
   assert.equal(result.runsCreated, 0);
-  assert.equal(datasourcePosts.length, SOURCE_FIXTURES.length + 1);
-  assert.equal(jobPosts.length, SOURCE_FIXTURES.length);
+  assert.equal(datasourcePosts.length, SOURCE_FIXTURES.length + 2);
+  assert.equal(jobPosts.length, SOURCE_FIXTURES.length + 1);
   assert.equal(calls.findIndex(call => call.url.endsWith('/api/v1/datasources'))
     < calls.findIndex(call => call.url.endsWith('/api/v1/jobs')), true);
   for (const call of jobPosts) {
@@ -141,6 +177,37 @@ test('keeps at least five run history entries per job', () => {
   assert.equal(getMissingRunCount(3), 2);
   assert.equal(getMissingRunCount(5), 0);
   assert.equal(getMissingRunCount(8), 0);
+});
+
+test('triggers a real integration run without the synthetic seed header', async () => {
+  const calls = [];
+  let statusReads = 0;
+  const fetchImpl = async (url, options = {}) => {
+    calls.push({ url, options });
+    if (url.endsWith('/api/v1/jobs/job-real/runs')) {
+      return jsonResponse({ id: 'run-real', status: 'PENDING' }, 202);
+    }
+    if (url.endsWith('/api/v1/runs/run-real')) {
+      statusReads += 1;
+      return jsonResponse({ id: 'run-real', status: statusReads === 1 ? 'RUNNING' : 'SUCCEEDED' });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  };
+
+  const run = await runRealIntegration({
+    fetchImpl,
+    cookieJar: new Map(),
+    apiUrl: 'http://localhost:8080',
+    jobId: 'job-real',
+    csrfToken: 'csrf-token',
+    pollIntervalMs: 0,
+    timeoutSeconds: 1
+  });
+
+  assert.equal(run.status, 'SUCCEEDED');
+  const trigger = calls.find(call => call.options.method === 'POST');
+  assert.equal(trigger.options.headers.get('X-ReplicaDB-Local-Seed'), null);
+  assert.match(trigger.options.headers.get('Idempotency-Key'), /^local-integration-job-real-/);
 });
 
 test('creates only the missing local terminal runs without executing or cancelling a source run', async () => {

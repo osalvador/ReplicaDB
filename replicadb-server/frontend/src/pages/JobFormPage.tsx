@@ -1,9 +1,12 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   Alert,
   Button,
   Checkbox,
+  Collapse,
   FormControlLabel,
+  ListItemText,
   MenuItem,
   Box,
   Stack,
@@ -11,12 +14,12 @@ import {
   Typography
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useId, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import DatasourceSelector from '../components/DatasourceSelector';
 import DataFilteringTabs from '../components/DataFilteringTabs';
-import StagingOptionsTabs from '../components/StagingOptionsTabs';
+import StagingOptionsTabs, { type StagingTarget } from '../components/StagingOptionsTabs';
 import LoadingState from '../components/LoadingState';
 import PageHeader from '../components/PageHeader';
 import SurfaceSection from '../components/SurfaceSection';
@@ -32,6 +35,23 @@ import type { components } from '../api/schema';
 
 type ReplicationMode = JobDefinitionFormInput['mode'];
 type JobDefinitionRequest = components['schemas']['JobDefinitionRequest'];
+
+const replicationModeValues: ReplicationMode[] = ['complete', 'complete-atomic', 'incremental'];
+const replicationModeDetails: Record<ReplicationMode, { label: string; description: string }> = {
+  complete: {
+    label: 'Complete mode',
+    description: 'Replaces the sink before loading.'
+  },
+  'complete-atomic': {
+    label: 'Complete atomic mode',
+    description: 'All-or-nothing load when supported.'
+  },
+  incremental: {
+    label: 'Incremental mode',
+    description: 'Loads changes from a watermark column.'
+  }
+};
+
 type StringField = Exclude<keyof JobDefinitionFormInput,
   | 'sourceDatasourceId'
   | 'sourceDatasourceUseEnabled'
@@ -86,6 +106,24 @@ function isReplicationMode(value: string | undefined): value is ReplicationMode 
 
 function defaultAutomaticRetry(mode: ReplicationMode): boolean {
   return mode !== 'complete';
+}
+
+function advancedOptionsSummary(form: JobDefinitionFormInput): string {
+  const bandwidth = form.bandwidthThrottling > 0
+    ? `${form.bandwidthThrottling} KB/s`
+    : 'Unlimited bandwidth';
+  const retry = form.automaticRetryEnabled ? 'Automatic retry on' : 'Automatic retry off';
+  return `Fetch size ${form.fetchSize} | ${bandwidth} | ${form.maxAttempts} total attempts | ${retry}`;
+}
+
+function requestForStagingTarget(form: JobDefinitionFormInput, target: StagingTarget): JobDefinitionRequest {
+  const request = toJobDefinitionRequest(form);
+  if (target === 'schema') {
+    delete request.sinkStagingTable;
+  } else {
+    delete request.sinkStagingSchema;
+  }
+  return request;
 }
 
 function formFromJob(job: JobDefinitionResponse): JobDefinitionFormInput {
@@ -165,6 +203,9 @@ export default function JobFormPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [errorMessage, setErrorMessage] = useState<string>();
   const [retryPolicyTouched, setRetryPolicyTouched] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [stagingTarget, setStagingTarget] = useState<StagingTarget>('schema');
+  const advancedOptionsId = useId();
 
   const jobQuery = useQuery({
     queryKey: ['jobs', id],
@@ -176,6 +217,7 @@ export default function JobFormPage() {
     if (jobQuery.data) {
       setForm(formFromJob(jobQuery.data));
       setRetryPolicyTouched(false);
+      setStagingTarget(jobQuery.data.sinkStagingTable ? 'table' : 'schema');
     }
   }, [jobQuery.data]);
 
@@ -213,13 +255,17 @@ export default function JobFormPage() {
     const nextErrors = validateForm(form, editMode);
     setErrors(nextErrors);
     setErrorMessage(undefined);
+    if (nextErrors.maxAttempts || nextErrors.retryBackoffSeconds) {
+      setAdvancedOpen(true);
+    }
     if (Object.keys(nextErrors).length > 0) {
       return;
     }
-    mutation.mutate(toJobDefinitionRequest(form));
+    mutation.mutate(requestForStagingTarget(form, stagingTarget));
   };
 
   const modeWarning = editMode && form.mode === 'complete' ? jobQuery.data?.modeWarning : undefined;
+  const selectedMode = replicationModeDetails[form.mode];
 
   return (
     <Stack spacing={3}>
@@ -244,19 +290,23 @@ export default function JobFormPage() {
           <SurfaceSection title="Basics" description="Name the job and choose its replication mode.">
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 2 }}>
                 <TextField
-                  label="Name"
+                  label={editMode ? 'Job name' : 'Name'}
                   value={form.name}
                   onChange={updateStringField('name')}
                   disabled={editMode}
                   required={!editMode}
                   error={Boolean(errors.name)}
-                  helperText={errors.name}
+                  helperText={editMode ? 'Job names cannot be changed after creation.' : errors.name}
                   fullWidth
                 />
                 <TextField
                   select
                   label="Mode"
                   value={form.mode}
+                  helperText={selectedMode.description}
+                  SelectProps={{
+                    renderValue: value => replicationModeDetails[value as ReplicationMode]?.label ?? String(value)
+                  }}
                   onChange={event => setForm(current => {
                     const mode = event.target.value as ReplicationMode;
                     return {
@@ -269,9 +319,16 @@ export default function JobFormPage() {
                   })}
                   fullWidth
                 >
-                  <MenuItem value="complete">complete</MenuItem>
-                  <MenuItem value="complete-atomic">complete-atomic</MenuItem>
-                  <MenuItem value="incremental">incremental</MenuItem>
+                  {replicationModeValues.map(mode => (
+                    <MenuItem key={mode} value={mode}>
+                      <ListItemText
+                        primary={replicationModeDetails[mode].label}
+                        secondary={replicationModeDetails[mode].description}
+                        primaryTypographyProps={{ fontWeight: 500, color: 'text.primary' }}
+                        secondaryTypographyProps={{ color: 'text.secondary' }}
+                      />
+                    </MenuItem>
+                  ))}
                 </TextField>
             </Box>
           </SurfaceSection>
@@ -370,10 +427,12 @@ export default function JobFormPage() {
                 <StagingOptionsTabs
                   schema={form.sinkStagingSchema ?? ''}
                   table={form.sinkStagingTable ?? ''}
+                  target={stagingTarget}
+                  onTargetChange={setStagingTarget}
                   onChange={(field, value) => setForm(current => ({
                     ...current,
-                    sinkStagingSchema: field === 'schema' ? value : '',
-                    sinkStagingTable: field === 'table' ? value : ''
+                    sinkStagingSchema: field === 'schema' ? value : current.sinkStagingSchema,
+                    sinkStagingTable: field === 'table' ? value : current.sinkStagingTable
                   }))}
                 />
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
@@ -401,9 +460,9 @@ export default function JobFormPage() {
             </Stack>
           </SurfaceSection>
 
-          <SurfaceSection title="Watermark and execution" description="Tune parallelism and resume behavior.">
+          <SurfaceSection title="Watermark and execution" description="Set parallelism and resume behavior. Optional tuning is under Advanced options.">
             <Stack spacing={2}>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
+              <Box sx={{ maxWidth: { sm: 320 } }}>
                 <TextField
                   label="Parallel tasks"
                   type="number"
@@ -418,82 +477,7 @@ export default function JobFormPage() {
                   helperText={errors.jobs}
                   fullWidth
                 />
-                <TextField
-                  label="Fetch size"
-                  type="number"
-                  value={form.fetchSize}
-                  onChange={event => setForm(current => ({
-                    ...current,
-                    fetchSize: event.target.value === '' ? 0 : Number(event.target.value)
-                  }))}
-                  inputProps={{ min: 1 }}
-                  fullWidth
-                />
-                <TextField
-                  label="Bandwidth (KB/s)"
-                  type="number"
-                  value={form.bandwidthThrottling}
-                  onChange={event => setForm(current => ({
-                    ...current,
-                    bandwidthThrottling: event.target.value === '' ? 0 : Number(event.target.value)
-                  }))}
-                  inputProps={{ min: 0 }}
-                  fullWidth
-                />
               </Box>
-              <FormControlLabel
-                control={<Checkbox
-                  checked={form.verbose}
-                  onChange={event => setForm(current => ({ ...current, verbose: event.target.checked }))}
-                />}
-                label="Verbose"
-              />
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                <TextField
-                  label="Maximum automatic attempts"
-                  type="number"
-                  value={form.maxAttempts}
-                  onChange={event => {
-                    setRetryPolicyTouched(true);
-                    setForm(current => ({
-                      ...current,
-                      maxAttempts: event.target.value === '' ? 0 : Number(event.target.value)
-                    }));
-                  }}
-                  inputProps={{ min: 1 }}
-                  required
-                  error={Boolean(errors.maxAttempts)}
-                  helperText={errors.maxAttempts ?? 'Includes the initial attempt'}
-                  fullWidth
-                />
-                <TextField
-                  label="Retry backoff (seconds)"
-                  type="number"
-                  value={form.retryBackoffSeconds}
-                  onChange={event => {
-                    setRetryPolicyTouched(true);
-                    setForm(current => ({
-                      ...current,
-                      retryBackoffSeconds: event.target.value === '' ? 0 : Number(event.target.value)
-                    }));
-                  }}
-                  inputProps={{ min: 0 }}
-                  required
-                  error={Boolean(errors.retryBackoffSeconds)}
-                  helperText={errors.retryBackoffSeconds ?? 'Delay before lease recovery retry'}
-                  fullWidth
-                />
-              </Box>
-              <FormControlLabel
-                control={<Checkbox
-                  checked={form.automaticRetryEnabled}
-                  onChange={event => {
-                    setRetryPolicyTouched(true);
-                    setForm(current => ({ ...current, automaticRetryEnabled: event.target.checked }));
-                  }}
-                />}
-                label="Automatic retry after lease expiry"
-              />
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                 <TextField
                   label="Incremental watermark column"
@@ -512,6 +496,130 @@ export default function JobFormPage() {
                   disabled={form.mode !== 'incremental'}
                   fullWidth
                 />
+              </Box>
+              <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 1 }}>
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={{ xs: 0.5, sm: 2 }}
+                  alignItems={{ xs: 'stretch', sm: 'center' }}
+                >
+                  <Button
+                    type="button"
+                    variant="text"
+                    aria-expanded={advancedOpen}
+                    aria-controls={advancedOptionsId}
+                    onClick={() => setAdvancedOpen(current => !current)}
+                    endIcon={(
+                      <ExpandMoreIcon
+                        sx={{
+                          transform: advancedOpen ? 'rotate(180deg)' : 'none',
+                          transition: 'transform 150ms ease'
+                        }}
+                      />
+                    )}
+                    sx={{ alignSelf: { xs: 'flex-start', sm: 'center' }, px: 1 }}
+                  >
+                    Advanced options
+                  </Button>
+                  <Typography color="text.secondary" variant="body2" sx={{ minWidth: 0 }}>
+                    {advancedOptionsSummary(form)}
+                  </Typography>
+                </Stack>
+                <Collapse in={advancedOpen} timeout="auto" unmountOnExit>
+                  <Stack id={advancedOptionsId} spacing={2} sx={{ pt: 2 }}>
+                    <Typography color="text.secondary" variant="body2">
+                      Optional tuning for performance, diagnostics, and lease recovery.
+                    </Typography>
+                    <Box>
+                      <Typography component="h3" variant="subtitle1" fontWeight={700}>
+                        Resilience and retry
+                      </Typography>
+                      <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+                        ReplicaDB creates a new attempt when a worker lease expires. It does not resume interrupted work.
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                      <TextField
+                        label="Fetch size"
+                        type="number"
+                        value={form.fetchSize}
+                        onChange={event => setForm(current => ({
+                          ...current,
+                          fetchSize: event.target.value === '' ? 0 : Number(event.target.value)
+                        }))}
+                        inputProps={{ min: 1 }}
+                        fullWidth
+                      />
+                      <TextField
+                        label="Bandwidth (KB/s)"
+                        type="number"
+                        value={form.bandwidthThrottling}
+                        onChange={event => setForm(current => ({
+                          ...current,
+                          bandwidthThrottling: event.target.value === '' ? 0 : Number(event.target.value)
+                        }))}
+                        inputProps={{ min: 0 }}
+                        fullWidth
+                      />
+                    </Box>
+                    <FormControlLabel
+                      control={<Checkbox
+                        checked={form.verbose}
+                        onChange={event => setForm(current => ({ ...current, verbose: event.target.checked }))}
+                      />}
+                      label="Verbose"
+                    />
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                      <TextField
+                        label="Maximum automatic attempts"
+                        type="number"
+                        value={form.maxAttempts}
+                        onChange={event => {
+                          setRetryPolicyTouched(true);
+                          setForm(current => ({
+                            ...current,
+                            maxAttempts: event.target.value === '' ? 0 : Number(event.target.value)
+                          }));
+                        }}
+                        inputProps={{ min: 1 }}
+                        required
+                        error={Boolean(errors.maxAttempts)}
+                        helperText={errors.maxAttempts ?? 'Total attempts, including the initial attempt.'}
+                        fullWidth
+                      />
+                      <TextField
+                        label="Retry delay after lease expiry (seconds)"
+                        type="number"
+                        value={form.retryBackoffSeconds}
+                        onChange={event => {
+                          setRetryPolicyTouched(true);
+                          setForm(current => ({
+                            ...current,
+                            retryBackoffSeconds: event.target.value === '' ? 0 : Number(event.target.value)
+                          }));
+                        }}
+                        inputProps={{ min: 0 }}
+                        required
+                        error={Boolean(errors.retryBackoffSeconds)}
+                        helperText={errors.retryBackoffSeconds ?? 'Wait before starting a new attempt.'}
+                        fullWidth
+                      />
+                    </Box>
+                    <FormControlLabel
+                      control={<Checkbox
+                        checked={form.automaticRetryEnabled}
+                        onChange={event => {
+                          setRetryPolicyTouched(true);
+                          setForm(current => ({ ...current, automaticRetryEnabled: event.target.checked }));
+                        }}
+                      />}
+                      label="Retry automatically after a worker lease expires"
+                    />
+                    <Typography color="text.secondary" variant="body2">
+                      Automatic retry is on by default for incremental and complete atomic modes, and off for complete mode because complete mode can clear the sink.
+                    </Typography>
+                  </Stack>
+                </Collapse>
               </Box>
             </Stack>
           </SurfaceSection>
