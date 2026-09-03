@@ -44,12 +44,15 @@ require_text replicadb-server/frontend/README.develop.md 'topología Compose loc
 require_text ARCHITECTURE_DECISIONS.md 'Phase 3.3 is complete'
 require_text ARCHITECTURE_DECISIONS.md 'Phase 3.4 is complete'
 require_text ARCHITECTURE_DECISIONS.md 'standalone CLI compatibility validation'
-require_text ARCHITECTURE_DECISIONS.md 'Flyway migrations V1 through V16'
+require_text ARCHITECTURE_DECISIONS.md 'Flyway migrations V1 through V20'
+require_text ARCHITECTURE_DECISIONS.md 'Phase 4 is complete'
 
 forbidden_text README.md 'It is unreleased, unauthenticated, and has no metadata persistence or scheduler yet'
 forbidden_text ARCHITECTURE_DECISIONS.md 'Phase 3.4 is not started'
 forbidden_text ARCHITECTURE_DECISIONS.md 'Phase 3.4 (hybrid worker load distribution) is approved but not started'
 forbidden_text ARCHITECTURE_DECISIONS.md '- [ ] Preserve the CLI artifact'
+forbidden_text ARCHITECTURE_DECISIONS.md 'APPROVED FOR PLANNING; NOT IMPLEMENTED'
+forbidden_text ARCHITECTURE_DECISIONS.md 'Planned Phase 4'
 forbidden_text replicadb-server/frontend/README.develop.md 'Quartz JDBC clustering, throttling de login compartido, métricas y pruebas de carga/caos siguen diferidos a Phase 3.3'
 forbidden_text replicadb-server/frontend/README.develop.md 'mientras Phase 2b y Phase 2c sigan pendientes'
 
