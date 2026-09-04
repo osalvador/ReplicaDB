@@ -1,0 +1,45 @@
+.ai/archive/local-api-startup-guard.plan.md
+  s_445e2dd1454423::t_e014a72ad8495a 1-33
+.ai/archive/physical-job-deletion.plan.md
+  s_214884cc307e1b::t_991c4331eb45c7 1-186
+.ai/archive/local-stack-lifecycle.plan.md
+  s_3f7a4e7207f995::t_f45ae82fa472a3 1-39
+.ai/learnings/job-deletion-concurrency.md
+  s_214884cc307e1b::t_08fd286e38df12 1-11
+.ai/learnings/openapi-empty-response-contract.md
+  s_214884cc307e1b::t_d29cb45bc292e9 1-11
+.ai/learnings/standalone-maven-e2e-route-setup.md
+  s_214884cc307e1b::t_943ebd4494f84e 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "df842ebadfaa19bcf45d249ae863ace4b77fb707",
+  "prompts": {},
+  "sessions": {
+    "s_214884cc307e1b": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "d4d13756-7d04-4cef-a0ed-6ec04099e0cc",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    },
+    "s_3f7a4e7207f995": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "d75410b0-0149-4739-b114-461032905f0d",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    },
+    "s_445e2dd1454423": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "call_ExME1ocukJq489o5mFQ2HClA",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
