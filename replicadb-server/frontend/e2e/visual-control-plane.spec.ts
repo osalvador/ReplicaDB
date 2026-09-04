@@ -105,8 +105,8 @@ for (const viewport of viewports) {
       await page.getByRole('link', { name: 'Back to job' }).click();
       await expect(page).toHaveURL(/\/jobs\/[^/]+$/);
       await page.getByRole('link', { name: 'Back to jobs' }).click();
-      await expect(page).toHaveURL(/\/$/);
-      await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+      await expect(page).toHaveURL(/\/jobs$/);
+      await expect(page.getByRole('heading', { name: 'Jobs' })).toBeVisible();
     });
   });
 }
