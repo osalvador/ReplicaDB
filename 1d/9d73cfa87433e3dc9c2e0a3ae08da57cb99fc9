@@ -1,0 +1,33 @@
+replicadb-server/frontend/src/api/auditApi.test.ts
+  s_8cdfc8b5ffcbc7::t_5ffb1c6a95a90d 1-38
+replicadb-server/frontend/src/api/auditApi.ts
+  s_8cdfc8b5ffcbc7::t_686dfc7074fc43 1-34
+replicadb-server/frontend/src/layout/AppLayout.test.tsx
+  s_8cdfc8b5ffcbc7::t_d1bec1c028a1e8 73
+replicadb-server/frontend/src/layout/AppLayout.tsx
+  s_8cdfc8b5ffcbc7::t_ec6644a2b62a96 2,62
+replicadb-server/frontend/src/pages/AuditPage.test.tsx
+  s_8cdfc8b5ffcbc7::t_4c53841f1bc4ed 1-74
+replicadb-server/frontend/src/pages/AuditPage.tsx
+  s_8cdfc8b5ffcbc7::t_7aa992e7c5116b 1-206
+replicadb-server/frontend/src/router/routes.test.tsx
+  s_8cdfc8b5ffcbc7::t_1ab4d191a4c619 10,48-51,57,132-139,157
+replicadb-server/frontend/src/router/routes.tsx
+  s_8cdfc8b5ffcbc7::t_79471a7fbf4ce7 4,45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "1d9d73cfa87433e3dc9c2e0a3ae08da57cb99fc9",
+  "prompts": {},
+  "sessions": {
+    "s_8cdfc8b5ffcbc7": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "d25b9eba-d40d-4509-8de6-987c98f1a582",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
