@@ -7,6 +7,7 @@ import * as jobsApi from '../api/jobsApi';
 import * as jobPermissionsApi from '../api/jobPermissionsApi';
 import * as datasourcesApi from '../api/datasourcesApi';
 import * as usersApi from '../api/usersApi';
+import * as auditApi from '../api/auditApi';
 import { AuthContext } from '../auth/AuthContext';
 import { theme } from '../theme/theme';
 import { routeObjects } from './routes';
@@ -44,11 +45,16 @@ vi.mock('../api/datasourcesApi', async () => {
 vi.mock('../api/usersApi', () => ({
   listUsers: vi.fn()
 }));
+vi.mock('../api/auditApi', async () => ({
+  ...(await vi.importActual<typeof import('../api/auditApi')>('../api/auditApi')),
+  listAuditEvents: vi.fn()
+}));
 
 const mockedJobsApi = vi.mocked(jobsApi);
 const mockedJobPermissionsApi = vi.mocked(jobPermissionsApi);
 const mockedDatasourcesApi = vi.mocked(datasourcesApi);
 const mockedUsersApi = vi.mocked(usersApi);
+const mockedAuditApi = vi.mocked(auditApi);
 
 function renderAt(path: string, role: 'ADMIN' | 'OPERATOR' | 'VIEWER' = 'OPERATOR') {
   const memoryRouter = createMemoryRouter(routeObjects, {
@@ -123,6 +129,14 @@ describe('route shell', () => {
     expect(await screen.findByRole('heading', { name: 'Users' })).toBeInTheDocument();
   });
 
+  it('renders the audit route for admins', async () => {
+    mockedAuditApi.listAuditEvents.mockResolvedValue({ content: [], page: 0, size: 25, totalElements: 0 });
+    mockedUsersApi.listUsers.mockResolvedValue({ content: [], page: 0, size: 100, totalElements: 0 });
+    renderAt('/audit', 'ADMIN');
+
+    expect(await screen.findByRole('heading', { name: 'Audit' })).toBeInTheDocument();
+  });
+
   it('renders the profile route for every authenticated role', () => {
     renderAt('/profile', 'OPERATOR');
 
@@ -140,7 +154,7 @@ describe('route shell', () => {
     expect(await screen.findByRole('heading', { name: 'Orders replication permissions' })).toBeInTheDocument();
   });
 
-  it.each(['/users', '/jobs/job-1/permissions', '/datasources/new', '/datasources/datasource-1/permissions'])('blocks %s for non-admin users', path => {
+  it.each(['/audit', '/users', '/jobs/job-1/permissions', '/datasources/new', '/datasources/datasource-1/permissions'])('blocks %s for non-admin users', path => {
     renderAt(path, 'OPERATOR');
 
     expect(screen.getByRole('heading', { name: 'Not authorized' })).toBeInTheDocument();

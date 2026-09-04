@@ -1,6 +1,7 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import AppLayout from '../layout/AppLayout';
 import DashboardPage from '../pages/DashboardPage';
+import AuditPage from '../pages/AuditPage';
 import JobsPage from '../pages/JobsPage';
 import DatasourceFormPage from '../pages/DatasourceFormPage';
 import DatasourceDetailPage from '../pages/DatasourceDetailPage';
@@ -41,6 +42,7 @@ export const routeObjects: RouteObject[] = [
           {
             element: <RequireRole role="ADMIN" />,
             children: [
+              { path: 'audit', element: <AuditPage /> },
               { path: 'datasources/new', element: <DatasourceFormPage /> },
               { path: 'datasources/:id/permissions', element: <DatasourcePermissionsPage /> },
               { path: 'users', element: <UsersPage /> },

@@ -70,6 +70,7 @@ describe('AppLayout', () => {
     renderLayout(new QueryClient({ defaultOptions: { queries: { retry: false } } }));
 
     expect(await screen.findByRole('link', { name: 'Users' })).toHaveAttribute('href', '/users');
+    expect(screen.getByRole('link', { name: 'Audit' })).toHaveAttribute('href', '/audit');
   });
 
   it('collapses the desktop navigation to icon-only links', async () => {
