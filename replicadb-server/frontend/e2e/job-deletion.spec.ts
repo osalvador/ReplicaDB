@@ -16,7 +16,8 @@ async function signIn(page: Page) {
 }
 
 async function createTestJob(page: Page, jobName: string) {
-  await page.goto('/jobs');
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Open jobs' }).click();
   await expect(page).toHaveURL(/\/jobs$/);
   await page.getByRole('link', { name: 'New job' }).click();
   await expect(page).toHaveURL(/\/jobs\/new$/);
@@ -38,7 +39,8 @@ test('admin can review and delete a job from the catalog', async ({ page }) => {
   const jobName = `Playwright deletion ${Date.now()}`;
   await createTestJob(page, jobName);
 
-  await page.goto('/jobs');
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Open jobs' }).click();
   const jobRow = page.getByRole('row', { name: new RegExp(jobName) });
   await expect(jobRow).toBeVisible();
   await jobRow.getByText('orders', { exact: true }).click();

@@ -115,7 +115,8 @@ for (const viewport of viewports) {
       await assertInsideViewport(page, page.getByRole('heading', { name: 'New job' }));
       await assertInsideViewport(page, page.getByRole('button', { name: 'Create job' }));
 
-      await page.goto('/jobs');
+      await page.goto('/');
+      await page.getByRole('link', { name: 'Open jobs' }).click();
       const seededJob = page.getByRole('link', { name: seededJobName });
       await expect(seededJob, `the seeded job ${seededJobName} must exist`).toBeVisible();
       await seededJob.click();
@@ -133,7 +134,8 @@ for (const viewport of viewports) {
       await assertInsideViewport(page, page.getByRole('heading', { name: 'Edit job' }));
       await assertInsideViewport(page, page.getByRole('button', { name: 'Save changes' }));
 
-      await page.goto('/jobs');
+      await page.goto('/');
+      await page.getByRole('link', { name: 'Open jobs' }).click();
       await page.getByRole('link', { name: seededJobName }).click();
       await expect(page).toHaveURL(/\/jobs\/[^/]+$/);
       await page.getByRole('button', { name: 'Trigger run' }).click();
