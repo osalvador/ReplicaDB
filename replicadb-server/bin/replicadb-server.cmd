@@ -8,8 +8,11 @@ set "RUN_DIR=%SERVER_HOME%\run"
 set "LOG_DIR=%SERVER_HOME%\logs"
 set "PID_FILE=%RUN_DIR%\server.pid"
 set "MODE_FILE=%RUN_DIR%\server.mode"
-set /p SERVER_VERSION=<"%PACKAGE_ROOT%\VERSION"
+set "SERVER_VERSION="
+if exist "%PACKAGE_ROOT%\VERSION" set /p SERVER_VERSION=<"%PACKAGE_ROOT%\VERSION"
+if not defined SERVER_VERSION set "SERVER_VERSION=%REPLICADB_SERVER_VERSION%"
 set "JAR_FILE=%PACKAGE_ROOT%\lib\replicadb-server-%SERVER_VERSION%.jar"
+if defined REPLICADB_SERVER_JAR set "JAR_FILE=%REPLICADB_SERVER_JAR%"
 
 if /I "%~1"=="help" goto :help
 if /I "%~1"=="" goto :help
