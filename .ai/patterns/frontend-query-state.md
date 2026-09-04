@@ -12,12 +12,12 @@ sources:
     resource: replicadb-server/frontend/src/router/routes.tsx
   - id: tests
     resource: replicadb-server/frontend/src/pages/JobPermissionsPage.test.tsx
-generated: { by: itx-init/2.1, at: "2026-08-20T11:00:36Z" }
+generated: { by: itx-init/2.1, at: "2026-09-04T05:47:18Z" }
 status: stable
 ---
 
-Pages and reusable cards use `useQuery` for server data and `useMutation` for writes. Successful mutations invalidate the owning query; failed mutations keep the relevant form/dialog open and show the API error detail. Pagination is represented in query keys and controls.
+Pages and reusable cards use `useQuery` for server data and `useMutation` for writes. Successful mutations invalidate the owning query; failed mutations keep the relevant form/dialog open and show the API error detail. Pagination and dashboard time windows are represented in query keys and controls.
 
-`ProtectedRoute` resolves authentication before protected content, while `RequireRole` provides the ADMIN UX boundary for users and job permissions. Parameterized page tests mount matching `Routes` so `useParams` receives an ID. Form tabs preserve hidden values and custom blank-field validation is explicit where needed. The job form owns retry-policy defaults and tracks whether a user edited automatic retry before a mode change; run history renders `availableAt` for retry observability. Frontend state never includes the internal lease token.
+`ProtectedRoute` resolves authentication before protected content, while `RequireRole` provides the ADMIN UX boundary for users, datasource creation/permissions, and job permissions. Parameterized page tests mount matching `Routes` so `useParams` receives an ID. Form tabs preserve hidden values and custom blank-field validation is explicit where needed. The job form owns retry-policy defaults and tracks whether a user edited automatic retry before a mode change; run history renders `availableAt` and bounded diagnostics for retry and failure observability. Frontend state never includes the internal lease token. Dashboard actions refetch a selected fixed or custom window and link investigation back to the jobs catalog.
 
 Reference implementations: `DashboardPage.tsx`, `JobScheduleCard.tsx`, `UsersPage.tsx`, and `routes.tsx`.

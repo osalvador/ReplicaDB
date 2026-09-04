@@ -16,7 +16,9 @@ sources:
     resource: replicadb-server/src/main/java/org/replicadb/server/security/persistence/LoginAttemptRepository.java
   - id: cleanup
     resource: replicadb-server/src/main/java/org/replicadb/server/security/execution/LoginAttemptCleanupTask.java
-generated: { by: itx-code, at: "2026-08-25T13:42:47Z" }
+  - id: deletion
+    resource: replicadb-server/src/main/java/org/replicadb/server/job/api/JobDefinitionController.java
+generated: { by: itx-init/2.1, at: "2026-09-04T05:47:18Z" }
 status: stable
 ---
 
@@ -24,6 +26,6 @@ Local users have `ADMIN`, `OPERATOR`, or `VIEWER` roles. Job ACLs grant `VIEW`, 
 
 Spring Security uses session cookies, JDBC-backed Spring Session, Argon2 password hashing, a CSRF cookie/header contract, and PostgreSQL-backed login-attempt throttling. Five failed attempts in a rolling 15-minute window are enforced independently for the username and source address; advisory locks make the reservation decision consistent across API instances, and database failures fail closed. A public CSRF bootstrap endpoint supports browser flows before login. Audit events record actor, resource, action, outcome, and sanitized detail; retention is scheduled and audit persistence failures have an explicit service-level policy.
 
-Credential references are resolved at execution time. Resolved values are redacted before error, log, audit, or telemetry boundaries.
+Credential references are resolved at execution time. Resolved values are redacted before error, log, audit, or telemetry boundaries. Physical job deletion records a `JOB_DELETED` audit event using safe job identity after dependent state is removed; the audit event is intentionally independent of the deleted definition.
 
 Reference implementations: `SecurityConfig.java`, `JobAccessService.java`, `AuthController.java`, and `AuditService.java`.

@@ -1,5 +1,9 @@
 # Directory Update Log
 
+## 2026-09-04
+* **Update**: Refreshed OKF concepts for the control-plane refinement (`8a9f52a`), managed replication diagnostics (`fbdf7df`), nullable committed watermarks (`4d58116`), and the current job deletion/local-startup worktree (frontend, APIs, execution, persistence, deployment, tests).
+* **Update**: Added the dashboard summary interface, current V20/V21 persistence and deletion behavior, local resource lifecycle rules, and four learnings from the archived local PostgreSQL fixture plan.
+
 ## 2026-08-25
 * **Update**: Completed and archived the Phase 3.3 API high-availability and operational-hardening plan (`.ai/archive/phase-3-3-api-high-availability-and-operational-hardening.plan.md`) with its `/itx-code` execution retrospective (commits `b54fa5c`, `19096c3`, `b52e356`, `96e41f4`).
 * **Update**: Added eight Phase 3.3 execution learnings covering framework probes, profile drift, Flyway fixture ordering, artifact readiness, database-observable barriers, CLI architecture limits, CI tool portability, and `pipefail`-safe matching.
