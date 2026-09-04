@@ -1,0 +1,19 @@
+replicadb-server/scripts/server-launcher-windows.test.ps1
+  s_5415709ad7c752::t_9f8485682fc8ec 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "497e5973d627bade24dd2e82528432be6b518a78",
+  "prompts": {},
+  "sessions": {
+    "s_5415709ad7c752": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "f228ec7b-8df6-46c5-8e32-3046c0c823ae",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
