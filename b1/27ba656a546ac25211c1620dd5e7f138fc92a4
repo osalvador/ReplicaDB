@@ -1,0 +1,31 @@
+replicadb-server/frontend/e2e/accessibility.spec.ts
+  s_5415709ad7c752::t_cd6e5da05b91ea 49-50,55,62-68,98
+replicadb-server/frontend/e2e/admin-management.spec.ts
+  s_5415709ad7c752::t_ad7baaf83fb508 11
+replicadb-server/frontend/e2e/datasource-management.spec.ts
+  s_5415709ad7c752::t_ba84b60591611d 39
+replicadb-server/frontend/e2e/job-creation.spec.ts
+  s_5415709ad7c752::t_34eb58be3110c7 18
+replicadb-server/frontend/e2e/responsive-layout.spec.ts
+  s_5415709ad7c752::t_017fb6c7d981d5 95-98,101,118,136
+replicadb-server/frontend/e2e/visual-control-plane.spec.ts
+  s_5415709ad7c752::t_a705b285ec2fa2 55,59-61,71,92
+replicadb-server/scripts/server-launcher-windows.test.ps1
+  s_5415709ad7c752::t_2e8780b2110424 14,16,23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b127ba656a546ac25211c1620dd5e7f138fc92a4",
+  "prompts": {},
+  "sessions": {
+    "s_5415709ad7c752": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "f228ec7b-8df6-46c5-8e32-3046c0c823ae",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
