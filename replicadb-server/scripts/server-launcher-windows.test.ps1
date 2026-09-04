@@ -24,3 +24,4 @@ try {
 }
 
 Write-Output 'Windows server launcher contract checks passed'
+exit 0
