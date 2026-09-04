@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $launcher = Join-Path $PSScriptRoot '..\bin\replicadb-server.cmd'
 
 $help = & $launcher help
-if ($LASTEXITCODE -ne 0 -or ($help -notmatch 'start local\|api\|worker')) {
+if ($LASTEXITCODE -ne 0 -or -not (($help -join "`n") -match 'start local\|api\|worker')) {
     throw 'launcher help contract failed'
 }
 
