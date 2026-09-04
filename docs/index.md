@@ -15,6 +15,11 @@ ReplicaDB supports a wide range of data sources including relational databases (
 
 The tool is **cross-platform** compatible with Windows, Linux, and macOS, and leverages **parallel data transfer** for optimal performance and system utilization during large-scale data migrations and synchronization tasks.
 
+The managed server is a separate `0.19.0` distribution for authenticated jobs,
+schedules, audit, and observability. See the [server installation and
+operations guide](server.html) for local embedded PostgreSQL and external
+`api`/`worker` deployments.
+
 <br>
 
 ![ReplicaDB-Conceptual](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Conceptual.jpg){:class="img-responsive"}
@@ -81,8 +86,8 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Download the latest release from GitHub and extract the archive:
 
 ```bash
-$ curl -o ReplicaDB-0.18.4.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.18.4/ReplicaDB-0.18.4.tar.gz"
-$ tar -xvzf ReplicaDB-0.18.4.tar.gz
+$ curl -o ReplicaDB-0.19.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.19.0/ReplicaDB-0.19.0.tar.gz"
+$ tar -xvzf ReplicaDB-0.19.0.tar.gz
 $ ./bin/replicadb --help
 ```
 

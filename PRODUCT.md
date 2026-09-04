@@ -64,6 +64,9 @@ permissions to control access.
   permissions.
 - The managed control plane is a web product; the standalone CLI is a
   cross-platform companion surface rather than a native mobile product.
+- The managed server is distributed as a Java 17 package with local embedded
+  PostgreSQL or external PostgreSQL `api` and `worker` modes; this does not
+  imply a support SLA or performance benchmark beyond the documented gates.
 
 ## Evidence on Hand
 

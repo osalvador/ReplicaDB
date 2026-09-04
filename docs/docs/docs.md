@@ -4,6 +4,8 @@ layout: page
 
 # Docs
 
+The managed server has a separate [installation and operations guide](../server.html).
+
 - [Docs](#docs)
 - [1. Introduction](#1-introduction)
 - [2. Basic Usage](#2-basic-usage)

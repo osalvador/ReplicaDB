@@ -1,0 +1,288 @@
+#!/usr/bin/env bash
+
+set -u
+
+PACKAGE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SERVER_HOME="${REPLICADB_SERVER_HOME:-${HOME}/.replicadb}"
+RUN_DIR="${SERVER_HOME}/run"
+LOG_DIR="${SERVER_HOME}/logs"
+PID_FILE="${RUN_DIR}/server.pid"
+MODE_FILE="${RUN_DIR}/server.mode"
+LOCK_DIR="${RUN_DIR}/server.lock"
+LOG_FILE="${LOG_DIR}/server.log"
+READINESS_TIMEOUT="${REPLICADB_READINESS_TIMEOUT:-180}"
+STOP_TIMEOUT=30
+MAX_LOG_BYTES=$((10 * 1024 * 1024))
+CURL_BIN=${CURL_BIN:-curl}
+
+usage() {
+    cat <<'EOF'
+Usage: replicadb-server <command> [mode]
+
+Commands:
+  start local|api|worker  Start the server in an explicit mode
+  stop                     Stop the managed server
+  status                   Show managed server state
+  help                     Show this help
+EOF
+}
+
+error() {
+    printf 'Error: %s\n' "$1" >&2
+}
+
+read_version() {
+    if [[ -f "${PACKAGE_ROOT}/VERSION" ]]; then
+        tr -d '[:space:]' < "${PACKAGE_ROOT}/VERSION"
+        return
+    fi
+    if [[ -n "${REPLICADB_SERVER_VERSION:-}" ]]; then
+        printf '%s\n' "$REPLICADB_SERVER_VERSION"
+        return
+    fi
+    error "VERSION is missing from the server package"
+    return 1
+}
+
+resolve_jar() {
+    local version
+    version=$(read_version) || return 1
+    local jar="${PACKAGE_ROOT}/lib/replicadb-server-${version}.jar"
+    if [[ ! -f "$jar" && -n "${REPLICADB_SERVER_JAR:-}" ]]; then
+        jar=$REPLICADB_SERVER_JAR
+    fi
+    if [[ ! -f "$jar" ]]; then
+        error "server JAR is missing from the package"
+        return 1
+    fi
+    printf '%s\n' "$jar"
+}
+
+prepare_directories() {
+    mkdir -p "$RUN_DIR" "$LOG_DIR" || {
+        error "cannot prepare server home"
+        return 1
+    }
+}
+
+write_atomic() {
+    local target=$1
+    local value=$2
+    local temporary="${target}.tmp.$$"
+    printf '%s\n' "$value" > "$temporary" && mv -f "$temporary" "$target"
+}
+
+process_command() {
+    local pid=$1
+    ps -p "$pid" -o command= 2>/dev/null || true
+}
+
+process_matches_server() {
+    local pid=$1
+    local jar=$2
+    local command
+    command=$(process_command "$pid")
+    [[ -n "$command" && "$command" == *"$jar"* ]]
+}
+
+read_pid() {
+    [[ -s "$PID_FILE" ]] || return 1
+    tr -d '[:space:]' < "$PID_FILE"
+}
+
+running_pid() {
+    local pid
+    local jar
+    pid=$(read_pid) || return 1
+    [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+    kill -0 "$pid" 2>/dev/null || return 1
+    jar=$(resolve_jar 2>/dev/null) || return 1
+    process_matches_server "$pid" "$jar" || return 1
+    printf '%s\n' "$pid"
+}
+
+clear_state() {
+    rm -f "$PID_FILE" "$MODE_FILE"
+}
+
+cleanup_stale_state() {
+    if [[ -f "$PID_FILE" ]] && ! running_pid >/dev/null; then
+        clear_state
+    fi
+}
+
+rotate_log() {
+    if [[ -f "$LOG_FILE" && $(wc -c < "$LOG_FILE") -gt $MAX_LOG_BYTES ]]; then
+        mv -f "$LOG_FILE" "${LOG_FILE}.1"
+    fi
+}
+
+require_external_configuration() {
+    local missing=()
+    [[ -n "${DB_URL:-}" ]] || missing+=(DB_URL)
+    [[ -n "${DB_USERNAME:-}" ]] || missing+=(DB_USERNAME)
+    [[ -n "${DB_PASSWORD:-}" ]] || missing+=(DB_PASSWORD)
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        error "${1} requires DB_URL, DB_USERNAME and DB_PASSWORD"
+        return 1
+    fi
+}
+
+require_java17() {
+    local version_output
+    local major_version
+    version_output=$("$1" -version 2>&1) || {
+        error "Java 17 is required"
+        return 1
+    }
+    major_version=$(printf '%s\n' "$version_output" | sed -nE 's/.*version "([0-9]+).*/\1/p' | head -1)
+    if [[ -z "$major_version" || "$major_version" -lt 17 ]]; then
+        error "Java 17 is required"
+        return 1
+    fi
+}
+
+prepare_local_credentials() {
+    if [[ -z "${REPLICADB_BOOTSTRAP_ADMIN_USERNAME:-}" || -z "${REPLICADB_BOOTSTRAP_ADMIN_PASSWORD:-}" ]]; then
+        if [[ ! -t 0 ]]; then
+            error "local mode requires REPLICADB_BOOTSTRAP_ADMIN_USERNAME and REPLICADB_BOOTSTRAP_ADMIN_PASSWORD without a terminal"
+            return 1
+        fi
+        if [[ -z "${REPLICADB_BOOTSTRAP_ADMIN_USERNAME:-}" ]]; then
+            read -r -p "Initial admin username: " REPLICADB_BOOTSTRAP_ADMIN_USERNAME || return 1
+            export REPLICADB_BOOTSTRAP_ADMIN_USERNAME
+        fi
+        if [[ -z "${REPLICADB_BOOTSTRAP_ADMIN_PASSWORD:-}" ]]; then
+            read -r -s -p "Initial admin password: " REPLICADB_BOOTSTRAP_ADMIN_PASSWORD || return 1
+            printf '\n'
+            export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD
+        fi
+    fi
+}
+
+health_url() {
+    if [[ "$1" == worker ]]; then
+        printf 'http://127.0.0.1:%s/actuator/health\n' "${REPLICADB_WORKER_MANAGEMENT_PORT:-9091}"
+    else
+        printf 'http://127.0.0.1:%s/actuator/health\n' "${REPLICADB_SERVER_PORT:-8080}"
+    fi
+}
+
+wait_for_health() {
+    local mode=$1
+    local url
+    local attempt=0
+    url=$(health_url "$mode")
+    while (( attempt < READINESS_TIMEOUT )); do
+        if "$CURL_BIN" --silent --show-error --fail --max-time 1 "$url" >/dev/null 2>&1; then
+            return 0
+        fi
+        if ! kill -0 "$2" 2>/dev/null; then
+            return 1
+        fi
+        attempt=$((attempt + 1))
+        sleep 1
+    done
+    return 1
+}
+
+start_server() {
+    local mode=${1:-}
+    local jar
+    local pid
+    local java_bin=${JAVA_BIN:-java}
+    case "$mode" in
+        local) prepare_local_credentials || return 1 ;;
+        api|worker) require_external_configuration "$mode" || return 1 ;;
+        *) error "start requires one mode: local, api, or worker"; return 2 ;;
+    esac
+    command -v "$java_bin" >/dev/null 2>&1 || { error "Java 17 is required"; return 1; }
+    require_java17 "$java_bin" || return 1
+    prepare_directories || return 1
+    cleanup_stale_state
+    if pid=$(running_pid); then
+        error "server is already running"
+        return 1
+    fi
+    if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+        error "another server startup is in progress"
+        return 1
+    fi
+    trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' RETURN
+    jar=$(resolve_jar) || return 1
+    rotate_log
+    local -a arguments=()
+    if [[ "$mode" == local ]]; then
+        arguments+=("--spring.profiles.active=api" "--replicadb.embedded-postgres.enabled=true")
+    else
+        arguments+=("--spring.profiles.active=$mode")
+    fi
+    nohup "$java_bin" -jar "$jar" "${arguments[@]}" >> "$LOG_FILE" 2>&1 &
+    pid=$!
+    write_atomic "$PID_FILE" "$pid" || { kill "$pid" 2>/dev/null || true; return 1; }
+    write_atomic "$MODE_FILE" "$mode" || { kill "$pid" 2>/dev/null || true; clear_state; return 1; }
+    if ! wait_for_health "$mode" "$pid"; then
+        kill "$pid" 2>/dev/null || true
+        clear_state
+        error "server did not become healthy"
+        return 1
+    fi
+    printf 'server started (mode=%s pid=%s)\n' "$mode" "$pid"
+    return 0
+}
+
+stop_server() {
+    local pid
+    local deadline
+    if ! pid=$(running_pid); then
+        cleanup_stale_state
+        clear_state
+        printf 'server is stopped\n'
+        return 3
+    fi
+    kill -TERM "$pid" 2>/dev/null || true
+    deadline=$((SECONDS + STOP_TIMEOUT))
+    while kill -0 "$pid" 2>/dev/null && (( SECONDS < deadline )); do
+        sleep 1
+    done
+    if kill -0 "$pid" 2>/dev/null; then
+        kill -KILL "$pid" 2>/dev/null || true
+    fi
+    clear_state
+    printf 'server stopped\n'
+}
+
+status_server() {
+    local pid
+    if pid=$(running_pid); then
+        printf 'server is running (mode=%s pid=%s)\n' "$(tr -d '[:space:]' < "$MODE_FILE" 2>/dev/null)" "$pid"
+        return 0
+    fi
+    cleanup_stale_state
+    printf 'server is stopped\n'
+    return 3
+}
+
+command_name=${1:-help}
+case "$command_name" in
+    start)
+        start_server "${2:-}"
+        ;;
+    stop)
+        [[ $# -eq 1 ]] || { error "stop does not accept a mode"; exit 2; }
+        stop_server
+        ;;
+    status)
+        [[ $# -eq 1 ]] || { error "status does not accept a mode"; exit 2; }
+        status_server
+        ;;
+    help|-h|--help)
+        [[ $# -le 1 ]] || { error "help does not accept arguments"; exit 2; }
+        usage
+        ;;
+    *)
+        error "unknown command: $command_name"
+        usage >&2
+        exit 2
+        ;;
+esac

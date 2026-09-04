@@ -19,6 +19,8 @@ services:
     build:
       context: ./replicadb-server
       dockerfile: Dockerfile
+      args:
+        SERVER_VERSION: ${REPLICADB_SERVER_VERSION:-0.19.0}
     environment:
       SPRING_PROFILES_ACTIVE: api
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-replicadb}
@@ -49,6 +51,8 @@ services:
     build:
       context: ./replicadb-server
       dockerfile: Dockerfile
+      args:
+        SERVER_VERSION: ${REPLICADB_SERVER_VERSION:-0.19.0}
     environment:
       SPRING_PROFILES_ACTIVE: api
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-replicadb}
@@ -79,6 +83,8 @@ services:
     build:
       context: ./replicadb-server
       dockerfile: Dockerfile
+      args:
+        SERVER_VERSION: ${REPLICADB_SERVER_VERSION:-0.19.0}
     environment:
       SPRING_PROFILES_ACTIVE: worker
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-replicadb}
@@ -120,6 +126,8 @@ services:
     build:
       context: ./replicadb-server
       dockerfile: Dockerfile
+      args:
+        SERVER_VERSION: ${REPLICADB_SERVER_VERSION:-0.19.0}
     environment:
       SPRING_PROFILES_ACTIVE: worker
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-replicadb}

@@ -662,8 +662,8 @@ Delivered as the standalone `replicadb-server` sibling Maven project:
 
 - The `replicadb` CLI remains the root Maven artifact, with no Spring Boot dependency or application context on its classpath.
 - `replicadb-server` builds against the installed CLI artifact, starts under the `api` profile, and exposes only `/actuator/health` through Actuator.
-- The server skeleton excludes inherited MongoDB auto-configuration until the metadata state layer exists, so startup does not require an external database.
-- CI builds and tests the server module after installing the CLI artifact; the release workflow uploads its unreleased `0.1.0-SNAPSHOT` jar as a separate build artifact rather than publishing it with the CLI release assets.
+- The server excludes inherited MongoDB auto-configuration and uses PostgreSQL as its durable metadata boundary; local mode provisions its verified native PostgreSQL bundle on demand.
+- CI builds and tests the server module after installing the CLI artifact; release `v0.19.0` publishes the independent server archives and direct JAR beside the standalone CLI assets.
 
 The next slice, **Phase 1b: State layer**, is implemented below, followed by **Phase 1c-1: REST API core**, **Phase 1c-2: Quartz scheduler**, and **Phase 1c-3a+b+c: authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings**, also implemented below. The frontend is elevated to its own top-level **Phase 2** (split into Phase 2a/2b/2c); all three frontend slices are implemented. Distributed workers are renumbered to **Phase 3**.
 
