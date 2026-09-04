@@ -16,12 +16,18 @@ sources:
     resource: .ai/archive/phase-2c-frontend-administration.plan.md
   - id: phase33
     resource: .ai/archive/phase-3-3-api-high-availability-and-operational-hardening.plan.md
-generated: { by: itx-code, at: "2026-08-25T13:42:47Z" }
+  - id: physical-delete
+    resource: .ai/archive/physical-job-deletion.plan.md
+  - id: local-fixture
+    resource: .ai/archive/local-pg2pg-integration-fixture.plan.md
+generated: { by: itx-init/2.1, at: "2026-09-04T05:47:18Z" }
 status: draft
 ---
 
 The archive contains repeated gaps in four families: framework/dependency assumptions, database or container readiness, wire-contract/nullability checks, and test-harness/client mismatch. These recurrences span more than three plans. Phase 3.1 added one-off but actionable gaps around resolved Flyway APIs, database-owned time in compatibility paths, staged repository-contract migration, and documentation-path discovery.
 
 ## Gap Recurrence
+
+The newer deletion and local-fixture plans reinforce the recurrence: check Maven module topology, keep E2E actions on their owning page, isolate Flyway fixtures, declare container roles, and separate backend evidence from network-bound frontend installation.
 
 Candidate for promotion to organization-level instructions: require resolved dependency/API inspection, explicit Flyway targets for staged migrations, database-time consistency checks, migration-bridge callers, documentation path searches, exact-assertion impact searches, explicit MockMvc versus real-port classification, clean-runner package configuration, executable focused checks before broad validation, image/package freshness checks, database-observable failure barriers, baseline-tool-only CI scripts, and pipefail-safe output matching. Phase 3.3 confirms that framework probes, test-profile parity, fixture ordering, process readiness, and CI-shell portability should be treated as preflight requirements. This remains a proposal because no organization baseline was available for comparison.
