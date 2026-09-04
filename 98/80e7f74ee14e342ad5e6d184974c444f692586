@@ -1,0 +1,87 @@
+replicadb-server/frontend/src/api/schema.ts
+  s_214884cc307e1b::t_e5d2ac0351f5b2 81,97,327-342,679-725,741,1007-1047,1096,1305-1307,1447-1449,1558-1580
+replicadb-server/frontend/e2e/job-deletion.spec.ts
+  s_214884cc307e1b::t_096a070ccc0d4a 1-73
+replicadb-server/frontend/src/api/dashboardApi.test.ts
+  s_214884cc307e1b::t_b46abf03af88ec 1-24
+replicadb-server/frontend/src/api/dashboardApi.ts
+  s_214884cc307e1b::t_e37ca6ecb552d7 1-12
+replicadb-server/frontend/src/api/jobsApi.test.ts
+  s_214884cc307e1b::t_d671ef868e8ca6 4,115-130
+replicadb-server/frontend/src/api/jobsApi.ts
+  s_214884cc307e1b::t_b66e6e94ae2140 5-6,124-127
+replicadb-server/frontend/src/api/runsApi.test.ts
+  s_214884cc307e1b::t_fae10bf000635f 4,59-88
+replicadb-server/frontend/src/api/runsApi.ts
+  s_214884cc307e1b::t_5d4263aec69a98 22-26,32-37,39-40
+replicadb-server/frontend/src/api/schema.test.ts
+  s_214884cc307e1b::t_25cbb8093f55b1 6,43-50,53,67
+replicadb-server/frontend/src/components/RunHistoryTable.test.tsx
+  s_214884cc307e1b::t_0b18fda4831308 3-4,7,27-50,55,65-68,75-78,96-190
+replicadb-server/frontend/src/components/RunHistoryTable.tsx
+  s_214884cc307e1b::t_9e57dee43440cf 3-4,6,13-16,18-21,23,35-227,229-244,246-254,262,264,274-275,277-282,284-287,290-311,321,324-328,331,333,336-341,346,349
+replicadb-server/frontend/src/pages/DashboardPage.test.tsx
+  s_214884cc307e1b::t_9e4d5840cbf755 6,8,10-13,15-42,46,53,55,58-65,68,71-72,74-75,78-79,81-84,86-89,92-96,98-100,103-104,106-107
+replicadb-server/frontend/src/pages/DashboardPage.tsx
+  s_214884cc307e1b::t_f0b737e52b6188 1-2,5,7-13,15,18,24-32,34-43,45-49,51-121,123-152,154-191,194,197-258,260-287
+replicadb-server/frontend/src/pages/JobDetailPage.test.tsx
+  s_214884cc307e1b::t_30f1a5909616a7 3,16,84,119,142-187
+replicadb-server/frontend/src/pages/JobDetailPage.tsx
+  s_214884cc307e1b::t_396c882a48c06e 2-6,12,16,89-90,120-130,178,183-189,192,201-210,212-233,235,238-271
+replicadb-server/src/main/java/org/replicadb/server/audit/domain/AuditAction.java
+  s_214884cc307e1b::t_f16a3a794e5b09 17
+replicadb-server/src/main/java/org/replicadb/server/job/api/DashboardController.java
+  s_214884cc307e1b::t_2714b7a27f7e5a 1-55
+replicadb-server/src/main/java/org/replicadb/server/job/api/DashboardSummaryResponse.java
+  s_214884cc307e1b::t_ec1d5cb969a3d1 1-45
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobDefinitionController.java
+  s_214884cc307e1b::t_f372a3a4bf4507 5-6,17-18,31,53,62-63,65,72-74,84-85,159-184
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobRunController.java
+  s_b846a6cf92ac79::t_daa18f7ed2cd5f 33,40,42,93-97,103-106,111-115,120,123-125,276-277,280-287,289
+replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobDefinitionRepository.java
+  s_214884cc307e1b::t_69a4b40198eaa5 159-172
+replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobRunRepository.java
+  s_214884cc307e1b::t_6e30d81a9691e3 24,622-623,627,633-634,637,642-733,735-736,742-752
+replicadb-server/src/main/java/org/replicadb/server/job/port/JobDefinitionStore.java
+  s_214884cc307e1b::t_f8b729278e9822 12-19,24-25
+replicadb-server/src/main/java/org/replicadb/server/job/port/JobRunStore.java
+  s_214884cc307e1b::t_409ecdb2ec76ed 65-90
+replicadb-server/src/main/resources/db/migration/V21__cascade_job_dependent_state_on_definition_delete.sql
+  s_214884cc307e1b::t_086a70cde9cf4c 1-22
+replicadb-server/src/test/java/org/replicadb/server/job/api/JobDefinitionControllerTest.java
+  s_214884cc307e1b::t_7514911a694c4b 31,49,51,103-105,148-225
+replicadb-server/src/test/java/org/replicadb/server/job/api/JobRunControllerTest.java
+  s_214884cc307e1b::t_08484d1df5ba0c 127-146,159-163,170-193
+replicadb-server/src/test/java/org/replicadb/server/job/api/RunDispatchApiIT.java
+  s_214884cc307e1b::t_b1f2ebe560f58e 84
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/FlywayMigrationTest.java
+  s_214884cc307e1b::t_7fecf5ed33aa81 149-150,174-176,217-338,421-480
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/JobDefinitionRepositoryIT.java
+  s_214884cc307e1b::t_a02dac77e7e35b 15,20,25-27,32-36,62-64,101-160
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/JobRunRepositoryIT.java
+  s_214884cc307e1b::t_aa948b588d0de4 747-754,761-764
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "9880e7f74ee14e342ad5e6d184974c444f692586",
+  "prompts": {},
+  "sessions": {
+    "s_214884cc307e1b": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "d4d13756-7d04-4cef-a0ed-6ec04099e0cc",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    },
+    "s_b846a6cf92ac79": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "82dd5102-f18c-4ab8-829f-79a6401255a5",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
