@@ -146,8 +146,8 @@ class FlywayMigrationTest {
         createSchema(schema);
         try {
             Flyway flyway = flyway(schema).load();
-            assertEquals(20, flyway.migrate().migrationsExecuted);
-            assertEquals(20, flyway.info().applied().length);
+            assertEquals(21, flyway.migrate().migrationsExecuted);
+            assertEquals(21, flyway.info().applied().length);
             assertEquals(0, flyway.info().pending().length);
             flyway.validate();
 
@@ -171,6 +171,9 @@ class FlywayMigrationTest {
             assertTrue(hasTable(schema, "run_log"));
             assertTrue(hasColumn(schema, "run_log", "captured_size"));
             assertTrue(hasColumn(schema, "run_log", "format_version"));
+                assertForeignKeyDeleteRule(schema, "job_run", "fk_job_run_job_definition", "c");
+                assertForeignKeyDeleteRule(schema, "run_trigger_idempotency",
+                    "fk_run_trigger_idempotency_job_definition", "c");
 
             UUID datasourceId = UUID.randomUUID();
             UUID jobId = UUID.randomUUID();
@@ -206,6 +209,128 @@ class FlywayMigrationTest {
                 delete.setObject(1, datasourceId);
                 assertThrows(java.sql.SQLException.class, delete::executeUpdate);
             }
+        } finally {
+            dropSchema(schema);
+        }
+    }
+
+    @Test
+    void cascadesAllJobOwnedStateButKeepsAuditHistory() throws Exception {
+        String schema = isolatedSchema();
+        createSchema(schema);
+        try {
+            Flyway flyway = flyway(schema).load();
+            flyway.migrate();
+
+            UUID datasourceId = UUID.randomUUID();
+            UUID jobId = UUID.randomUUID();
+            UUID userId = UUID.randomUUID();
+            UUID firstRunId = UUID.randomUUID();
+            UUID secondRunId = UUID.randomUUID();
+            UUID thirdRunId = UUID.randomUUID();
+            try (Connection connection = connection(schema)) {
+                insertDatasource(connection, datasourceId);
+                try (PreparedStatement user = connection.prepareStatement("""
+                        INSERT INTO app_user (id, username, password_hash, role, enabled)
+                        VALUES (?, 'delete-user', 'hash', 'VIEWER', true)
+                        """)) {
+                    user.setObject(1, userId);
+                    user.executeUpdate();
+                }
+                try (PreparedStatement job = connection.prepareStatement("""
+                        INSERT INTO job_definition
+                            (id, name, source_datasource_id, sink_datasource_id,
+                             source_table, sink_table, mode, jobs)
+                        VALUES (?, 'delete-job', ?, ?, 'source_table', 'sink_table', 'complete', 1)
+                        """)) {
+                    job.setObject(1, jobId);
+                    job.setObject(2, datasourceId);
+                    job.setObject(3, datasourceId);
+                    job.executeUpdate();
+                }
+                try (PreparedStatement schedule = connection.prepareStatement("""
+                        INSERT INTO job_schedule (job_definition_id, cron_expression, time_zone)
+                        VALUES (?, '* * * * * ?', 'UTC')
+                        """)) {
+                    schedule.setObject(1, jobId);
+                    schedule.executeUpdate();
+                }
+                try (PreparedStatement permission = connection.prepareStatement("""
+                        INSERT INTO job_permission (job_definition_id, user_id, permission)
+                        VALUES (?, ?, 'VIEW')
+                        """)) {
+                    permission.setObject(1, jobId);
+                    permission.setObject(2, userId);
+                    permission.executeUpdate();
+                }
+                insertRun(connection, firstRunId, jobId, null, "SUCCEEDED");
+                insertRun(connection, secondRunId, jobId, firstRunId, "RETRY_SCHEDULED");
+                insertRun(connection, thirdRunId, jobId, secondRunId, "CANCELLED");
+                try (PreparedStatement log = connection.prepareStatement("""
+                        INSERT INTO run_log
+                            (run_id, content, captured_size, format_version, captured_at, updated_at)
+                        VALUES (?, 'log', 3, 1, now(), now())
+                        """)) {
+                    log.setObject(1, thirdRunId);
+                    log.executeUpdate();
+                }
+                try (PreparedStatement idempotency = connection.prepareStatement("""
+                        INSERT INTO run_trigger_idempotency (idempotency_key, job_definition_id, run_id)
+                        VALUES ('delete-key', ?, ?)
+                        """)) {
+                    idempotency.setObject(1, jobId);
+                    idempotency.setObject(2, thirdRunId);
+                    idempotency.executeUpdate();
+                }
+                try (PreparedStatement audit = connection.prepareStatement("""
+                        INSERT INTO audit_event
+                            (id, actor_username, action, resource_type, resource_id, outcome)
+                        VALUES (?, 'admin', 'JOB_CREATED', 'JOB_DEFINITION', ?, 'SUCCESS')
+                        """)) {
+                    audit.setObject(1, UUID.randomUUID());
+                    audit.setString(2, jobId.toString());
+                    audit.executeUpdate();
+                }
+                try (PreparedStatement delete = connection.prepareStatement(
+                        "DELETE FROM job_definition WHERE id = ?")) {
+                    delete.setObject(1, jobId);
+                    assertEquals(1, delete.executeUpdate());
+                }
+            }
+
+            try (Connection connection = connection(schema)) {
+                assertCount(connection, "job_definition", "id", jobId, 0);
+                assertCount(connection, "job_schedule", "job_definition_id", jobId, 0);
+                assertCount(connection, "job_permission", "job_definition_id", jobId, 0);
+                assertCount(connection, "job_run", "job_definition_id", jobId, 0);
+                assertCount(connection, "run_log", "run_id", thirdRunId, 0);
+                assertCount(connection, "run_trigger_idempotency", "job_definition_id", jobId, 0);
+                assertCount(connection, "audit_event", "resource_id", jobId.toString(), 1);
+            }
+        } finally {
+            dropSchema(schema);
+        }
+    }
+
+    @Test
+    void rejectsV21WhenIdempotencyContainsAnOrphanedJobReference() throws Exception {
+        String schema = isolatedSchema();
+        createSchema(schema);
+        try {
+            Flyway initial = flyway(schema).target("20").load();
+            initial.migrate();
+            try (Connection connection = connection(schema);
+                 PreparedStatement statement = connection.prepareStatement("""
+                         INSERT INTO run_trigger_idempotency (idempotency_key, job_definition_id, run_id)
+                         VALUES ('orphan-key', ?, ?)
+                         """)) {
+                statement.setObject(1, UUID.randomUUID());
+                statement.setObject(2, UUID.randomUUID());
+                statement.executeUpdate();
+            }
+
+            FlywayException exception = assertThrows(FlywayException.class, () -> flyway(schema).load().migrate());
+            assertTrue(exception.getMessage().contains("orphaned job references"));
         } finally {
             dropSchema(schema);
         }
@@ -291,6 +416,66 @@ class FlywayMigrationTest {
         statement.setString(2, name);
         statement.setString(3, mode);
         statement.executeUpdate();
+    }
+
+    private static void insertDatasource(Connection connection, UUID id) throws Exception {
+        try (PreparedStatement datasource = connection.prepareStatement("""
+                INSERT INTO managed_datasource
+                    (id, name, connector_type, safe_connect_display, technical_params,
+                     encrypted_security, security_format_version, encryption_algorithm, key_version)
+                VALUES (?, 'delete-datasource', 'postgres', 'jdbc:postgresql://[REDACTED]', '{}'::jsonb,
+                        ?, 1, 'AES/GCM/NoPadding', 'test')
+                """)) {
+            datasource.setObject(1, id);
+            datasource.setBytes(2, new byte[]{1});
+            datasource.executeUpdate();
+        }
+    }
+
+    private static void insertRun(Connection connection, UUID id, UUID jobId, UUID previousRunId,
+                                  String status) throws Exception {
+        try (PreparedStatement run = connection.prepareStatement("""
+                INSERT INTO job_run (id, job_definition_id, previous_run_id, status, attempt)
+                VALUES (?, ?, ?, ?, 1)
+                """)) {
+            run.setObject(1, id);
+            run.setObject(2, jobId);
+            run.setObject(3, previousRunId);
+            run.setString(4, status);
+            run.executeUpdate();
+        }
+    }
+
+    private static void assertCount(Connection connection, String table, String column,
+                                     Object value, int expected) throws Exception {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT COUNT(*) FROM " + table + " WHERE " + column + " = ?")) {
+            statement.setObject(1, value);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                assertTrue(resultSet.next());
+                assertEquals(expected, resultSet.getInt(1));
+            }
+        }
+    }
+
+    private static void assertForeignKeyDeleteRule(String schema, String table, String constraint,
+                                                    String expectedDeleteRule) throws Exception {
+        try (Connection connection = connection(schema);
+             PreparedStatement statement = connection.prepareStatement("""
+                     SELECT c.confdeltype
+                     FROM pg_constraint c
+                     JOIN pg_class table_ref ON table_ref.oid = c.conrelid
+                     JOIN pg_namespace namespace_ref ON namespace_ref.oid = table_ref.relnamespace
+                     WHERE namespace_ref.nspname = ? AND table_ref.relname = ? AND c.conname = ?
+                     """)) {
+            statement.setString(1, schema);
+            statement.setString(2, table);
+            statement.setString(3, constraint);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                assertTrue(resultSet.next());
+                assertEquals(expectedDeleteRule, resultSet.getString(1));
+            }
+        }
     }
 
     private static void assertPolicy(PreparedStatement statement, UUID id,

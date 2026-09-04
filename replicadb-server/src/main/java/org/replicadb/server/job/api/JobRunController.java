@@ -30,13 +30,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.context.annotation.Profile;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Locale;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -87,27 +90,39 @@ public class JobRunController {
     @GetMapping("/jobs/{jobDefinitionId}/runs")
     public PageResponse<JobRunResponse> listForJob(
             @PathVariable UUID jobDefinitionId,
+            @RequestParam(required = false) List<String> status,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size,
             Authentication authentication) {
         jobAccessService.require(authentication, jobDefinitionId, JobPermissionType.VIEW);
         PageRequestParams params = PageRequestParams.of(page, size);
-        return pageResponse(jobRunStore.findPage(jobDefinitionId, null, params.page(), params.size(), null),
-            params, jobRunStore.count(jobDefinitionId, null, null));
+        Set<JobRunStatus> parsedStatuses = parseStatuses(status);
+        return pageResponse(jobRunStore.findPage(jobDefinitionId, parsedStatuses, from, to,
+                params.page(), params.size(), null),
+            params, jobRunStore.count(jobDefinitionId, parsedStatuses, from, to, null));
     }
 
     @GetMapping("/runs")
     public PageResponse<JobRunResponse> list(
-            @RequestParam(required = false) String status,
+            @RequestParam(required = false) List<String> status,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size,
             Authentication authentication) {
         PageRequestParams params = PageRequestParams.of(page, size);
-        JobRunStatus parsedStatus = parseStatus(status);
+        Set<JobRunStatus> parsedStatuses = parseStatuses(status);
         Optional<Set<UUID>> visibleJobIds = jobAccessService.visibleJobIds(authentication);
         Set<UUID> restriction = visibleJobIds.orElse(null);
-        return pageResponse(jobRunStore.findPage(null, parsedStatus, params.page(), params.size(), restriction),
-            params, jobRunStore.count(null, parsedStatus, restriction));
+        return pageResponse(jobRunStore.findPage(null, parsedStatuses, from, to,
+                params.page(), params.size(), restriction),
+            params, jobRunStore.count(null, parsedStatuses, from, to, restriction));
     }
 
     @GetMapping("/runs/{id}")
@@ -258,15 +273,20 @@ public class JobRunController {
             };
             }
 
-    private static JobRunStatus parseStatus(String status) {
-        if (status == null) {
+    private static Set<JobRunStatus> parseStatuses(List<String> statuses) {
+        if (statuses == null || statuses.isEmpty()) {
             return null;
         }
-        try {
-            return JobRunStatus.valueOf(status.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException("Unknown run status: " + status, exception);
+
+        Set<JobRunStatus> parsed = new java.util.LinkedHashSet<>();
+        for (String status : statuses) {
+            try {
+                parsed.add(JobRunStatus.valueOf(status.toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException exception) {
+                throw new IllegalArgumentException("Unknown run status: " + status, exception);
+            }
         }
+        return parsed;
     }
 
     public record CancellationResponse(UUID runId, JobRunStatus status, String warning) {

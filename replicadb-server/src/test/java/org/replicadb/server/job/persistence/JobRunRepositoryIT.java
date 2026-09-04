@@ -744,24 +744,24 @@ class JobRunRepositoryIT {
             }
         }
 
-        assertEquals(5, jobRunRepository.count(null, null, null));
-        assertEquals(2, jobRunRepository.findPage(null, JobRunStatus.FAILED, 0, 2, null).size());
-        assertEquals(3, jobRunRepository.count(null, JobRunStatus.SUCCEEDED, null));
-        assertEquals(1, jobRunRepository.count(filteredDefinitionId, null, null));
+        assertEquals(5, jobRunRepository.count(null, null, null, null, null));
+        assertEquals(2, jobRunRepository.findPage(null, Set.of(JobRunStatus.FAILED), null, null, 0, 2, null).size());
+        assertEquals(3, jobRunRepository.count(null, Set.of(JobRunStatus.SUCCEEDED), null, null, null));
+        assertEquals(1, jobRunRepository.count(filteredDefinitionId, null, null, null, null));
 
-        java.util.List<JobRun> firstPage = jobRunRepository.findPage(null, null, 0, 2, null);
-        java.util.List<JobRun> secondPage = jobRunRepository.findPage(null, null, 1, 2, null);
-        java.util.List<JobRun> thirdPage = jobRunRepository.findPage(null, null, 2, 2, null);
+        java.util.List<JobRun> firstPage = jobRunRepository.findPage(null, null, null, null, 0, 2, null);
+        java.util.List<JobRun> secondPage = jobRunRepository.findPage(null, null, null, null, 1, 2, null);
+        java.util.List<JobRun> thirdPage = jobRunRepository.findPage(null, null, null, null, 2, 2, null);
         assertEquals(2, firstPage.size());
         assertEquals(2, secondPage.size());
         assertEquals(1, thirdPage.size());
         assertEquals(5, java.util.stream.Stream.of(firstPage, secondPage, thirdPage)
                 .mapToInt(java.util.List::size).sum());
 
-        assertEquals(1, jobRunRepository.count(null, null, Set.of(filteredDefinitionId)));
-        assertEquals(1, jobRunRepository.findPage(null, null, 0, 10, Set.of(filteredDefinitionId)).size());
-        assertEquals(0, jobRunRepository.count(null, null, Set.of()));
-        assertTrue(jobRunRepository.findPage(null, null, 0, 10, Set.of()).isEmpty());
+        assertEquals(1, jobRunRepository.count(null, null, null, null, Set.of(filteredDefinitionId)));
+        assertEquals(1, jobRunRepository.findPage(null, null, null, null, 0, 10, Set.of(filteredDefinitionId)).size());
+        assertEquals(0, jobRunRepository.count(null, null, null, null, Set.of()));
+        assertTrue(jobRunRepository.findPage(null, null, null, null, 0, 10, Set.of()).isEmpty());
     }
 
     @Test

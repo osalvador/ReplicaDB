@@ -81,7 +81,7 @@ class RunDispatchApiIT {
                 .andExpect(jsonPath("$.leaseToken").doesNotExist());
 
         org.junit.jupiter.api.Assertions.assertEquals(JobRunStatus.PENDING,
-                jobRunRepository.findPage(definition.id(), null, 0, 10, null).get(0).status());
+                jobRunRepository.findPage(definition.id(), null, null, null, 0, 10, null).get(0).status());
         verify(executionCoordinator, never()).submit(any(UUID.class), anyString());
     }
 }

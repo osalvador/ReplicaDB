@@ -12,18 +12,28 @@ import org.replicadb.server.job.domain.ManagedDataSource;
 import org.replicadb.server.job.domain.RetryPolicy;
 import org.replicadb.server.job.domain.SinkEndpoint;
 import org.replicadb.server.job.domain.SourceEndpoint;
+import org.replicadb.server.job.port.JobDefinitionStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import javax.sql.DataSource;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.context.annotation.Import;
 
 import java.time.Instant;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -48,6 +58,9 @@ class JobDefinitionRepositoryIT {
 
     @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private DataSource dataSource;
 
     @BeforeEach
     void clearState() {
@@ -83,6 +96,66 @@ class JobDefinitionRepositoryIT {
         repository.insert(definition);
 
         assertThrows(DataIntegrityViolationException.class, () -> repository.insert(definition));
+    }
+
+    @Test
+    void deletesDefinitionAndReturnsSafeIdentity() {
+        JobDefinition inserted = repository.insert(definition("delete-" + UUID.randomUUID()));
+
+        JobDefinitionStore.DeleteResult result = repository.delete(inserted.id());
+
+        assertEquals(JobDefinitionStore.DeleteStatus.DELETED, result.status());
+        assertEquals(inserted.name(), result.jobName());
+        assertTrue(repository.findById(inserted.id()).isEmpty());
+        assertEquals(JobDefinitionStore.DeleteStatus.NOT_FOUND, repository.delete(inserted.id()).status());
+    }
+
+    @Test
+    void rejectsRunInsertionAfterDefinitionDeletionCommits() throws Exception {
+        JobDefinition inserted = repository.insert(definition("delete-race-" + UUID.randomUUID()));
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        CountDownLatch insertAttempted = new CountDownLatch(1);
+
+        try (Connection deletingConnection = dataSource.getConnection()) {
+            deletingConnection.setAutoCommit(false);
+            try (PreparedStatement lock = deletingConnection.prepareStatement(
+                    "SELECT id FROM job_definition WHERE id = ? FOR UPDATE")) {
+                lock.setObject(1, inserted.id());
+                lock.executeQuery().close();
+            }
+
+            Future<SQLException> insertion = executor.submit(() -> {
+                try (Connection insertingConnection = dataSource.getConnection();
+                     PreparedStatement insert = insertingConnection.prepareStatement("""
+                             INSERT INTO job_run (id, job_definition_id, status, attempt)
+                             VALUES (?, ?, 'PENDING', 1)
+                             """)) {
+                    insert.setObject(1, UUID.randomUUID());
+                    insert.setObject(2, inserted.id());
+                    insertAttempted.countDown();
+                    insert.executeUpdate();
+                    return null;
+                } catch (SQLException exception) {
+                    return exception;
+                }
+            });
+
+            assertTrue(insertAttempted.await(5, TimeUnit.SECONDS));
+            try (PreparedStatement delete = deletingConnection.prepareStatement(
+                    "DELETE FROM job_definition WHERE id = ?")) {
+                delete.setObject(1, inserted.id());
+                assertEquals(1, delete.executeUpdate());
+            }
+            deletingConnection.commit();
+
+            SQLException insertionFailure = insertion.get(5, TimeUnit.SECONDS);
+            assertNotNull(insertionFailure);
+            assertEquals("23503", insertionFailure.getSQLState());
+        } finally {
+            executor.shutdownNow();
+        }
+
+        assertTrue(repository.findById(inserted.id()).isEmpty());
     }
 
     @Test

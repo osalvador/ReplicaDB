@@ -1,7 +1,7 @@
 import AxiosMockAdapter from 'axios-mock-adapter';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ApiError, apiClient } from './client';
-import { createJob, toJobDefinitionRequest, updateJob, type JobDefinitionFormInput } from './jobsApi';
+import { createJob, deleteJob, toJobDefinitionRequest, updateJob, type JobDefinitionFormInput } from './jobsApi';
 
 describe('jobsApi mutations', () => {
   let mock: AxiosMockAdapter;
@@ -110,6 +110,22 @@ describe('jobsApi mutations', () => {
     expect(JSON.parse(mock.history.put[0].data)).toEqual(
       JSON.parse(JSON.stringify(toJobDefinitionRequest(input)))
     );
+  });
+
+  it('deletes a job without sending a request body', async () => {
+    mock.onDelete('/jobs/job-1').reply(204);
+
+    await expect(deleteJob('job-1')).resolves.toBeUndefined();
+
+    expect(mock.history.delete[0].url).toBe('/jobs/job-1');
+    expect(mock.history.delete[0].data).toBeUndefined();
+  });
+
+  it.each([403, 404, 409])('surfaces job deletion problem responses with status %s', async status => {
+    const problem = { title: 'Cannot delete job', detail: 'The job has an active run.' };
+    mock.onDelete('/jobs/job-1').reply(status, problem, { 'content-type': 'application/problem+json' });
+
+    await expect(deleteJob('job-1')).rejects.toMatchObject({ status, detail: problem.detail });
   });
 
   it('surfaces RFC 7807 create and update failures as ApiError', async () => {

@@ -28,6 +28,7 @@ import org.replicadb.server.security.secret.SecretProtectionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -45,7 +46,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -97,6 +100,9 @@ class JobDefinitionControllerTest {
         @Autowired
         private AuditEventRepository auditEventRepository;
 
+        @SpyBean
+        private org.replicadb.server.job.execution.QuartzScheduleService quartzScheduleService;
+
     @BeforeEach
     void clearState() {
         jdbcTemplate.update("TRUNCATE TABLE audit_event, datasource_permission, job_permission, "
@@ -137,6 +143,84 @@ class JobDefinitionControllerTest {
         assertNull(persisted.source().connection());
         assertNull(persisted.sink().connection());
         assertFalse(result.getResponse().getContentAsString().contains("encryptedSecurity"));
+    }
+
+    @Test
+    void deletesJobAndAuditsSafeIdentity() throws Exception {
+        ManagedDataSource source = dataSource("delete-source", ConnectorType.POSTGRES,
+                "jdbc:postgresql://host/source");
+        ManagedDataSource sink = dataSource("delete-sink", ConnectorType.POSTGRES,
+                "jdbc:postgresql://host/sink");
+        UUID jobId = createJob("delete-job", source.id(), sink.id(), true, true);
+
+        mockMvc.perform(delete("/api/v1/jobs/" + jobId).with(csrf()))
+                .andExpect(status().isNoContent());
+
+        assertTrue(jobDefinitionRepository.findById(jobId).isEmpty());
+        var events = auditEventRepository.findPage(new AuditEventFilter(null, AuditAction.JOB_DELETED,
+                AuditResourceType.JOB_DEFINITION, jobId.toString(), null, null), 0, 10);
+        assertEquals(1, events.size());
+        assertEquals("delete-job", events.get(0).detail().get("name"));
+        assertTrue(events.get(0).detail().keySet().stream()
+                .noneMatch(key -> key.toLowerCase().contains("password") || key.toLowerCase().contains("connect")));
+    }
+
+    @Test
+    @WithMockUser(roles = "VIEWER")
+    void rejectsJobDeletionForNonAdminUsers() throws Exception {
+        mockMvc.perform(delete("/api/v1/jobs/" + UUID.randomUUID()).with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void returnsNotFoundWhenDeletingAnUnknownJob() throws Exception {
+        UUID jobId = UUID.randomUUID();
+
+        mockMvc.perform(delete("/api/v1/jobs/" + jobId).with(csrf()))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("JobDefinition not found: " + jobId));
+    }
+
+    @Test
+    void keepsJobWhenQuartzUnscheduleFails() throws Exception {
+        ManagedDataSource source = dataSource("quartz-delete-source", ConnectorType.POSTGRES,
+                "jdbc:postgresql://host/source");
+        ManagedDataSource sink = dataSource("quartz-delete-sink", ConnectorType.POSTGRES,
+                "jdbc:postgresql://host/sink");
+        UUID jobId = createJob("quartz-delete-job", source.id(), sink.id(), true, true);
+        doThrow(new IllegalStateException("Could not unschedule schedule for job definition " + jobId))
+                .when(quartzScheduleService).unschedule(jobId);
+
+        mockMvc.perform(delete("/api/v1/jobs/" + jobId).with(csrf()))
+                .andExpect(status().isConflict());
+
+        assertTrue(jobDefinitionRepository.findById(jobId).isPresent());
+        assertTrue(auditEventRepository.findPage(new AuditEventFilter(null, AuditAction.JOB_DELETED,
+                AuditResourceType.JOB_DEFINITION, jobId.toString(), null, null), 0, 10).isEmpty());
+    }
+
+    @Test
+    void rejectsJobDeletionWhileAJobRunIsActive() throws Exception {
+        ManagedDataSource source = dataSource("active-delete-source", ConnectorType.POSTGRES,
+                "jdbc:postgresql://host/source");
+        ManagedDataSource sink = dataSource("active-delete-sink", ConnectorType.POSTGRES,
+                "jdbc:postgresql://host/sink");
+        for (String status : List.of("PENDING", "RUNNING", "CANCEL_REQUESTED")) {
+            UUID jobId = createJob("active-delete-" + status.toLowerCase(), source.id(), sink.id(), true, true);
+            jdbcTemplate.update("""
+                    INSERT INTO job_run (id, job_definition_id, status, attempt)
+                    VALUES (:id, :jobId, :status, 1)
+                    """, Map.of("id", UUID.randomUUID(), "jobId", jobId, "status", status));
+
+            mockMvc.perform(delete("/api/v1/jobs/" + jobId).with(csrf()))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.detail").value(
+                            "Cannot delete JobDefinition with an active run: " + jobId));
+            assertTrue(jobDefinitionRepository.findById(jobId).isPresent());
+            assertTrue(auditEventRepository.findPage(new AuditEventFilter(null, AuditAction.JOB_DELETED,
+                    AuditResourceType.JOB_DEFINITION, jobId.toString(), null, null), 0, 10).isEmpty());
+        }
     }
 
     @Test

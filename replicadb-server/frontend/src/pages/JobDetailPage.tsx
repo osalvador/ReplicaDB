@@ -1,14 +1,19 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { Alert, Button, Stack, Typography } from '@mui/material';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Stack, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { useAuth } from '../auth/useAuth';
-import { getJob, updateJob, type JobDefinitionResponse } from '../api/jobsApi';
+import { deleteJob, getJob, updateJob, type JobDefinitionResponse } from '../api/jobsApi';
 import type { components } from '../api/schema';
 import LoadingState from '../components/LoadingState';
 import JobScheduleCard from '../components/JobScheduleCard';
+import OperationalNotice from '../components/OperationalNotice';
 import PageHeader from '../components/PageHeader';
 import RunHistoryTable from '../components/RunHistoryTable';
 import SurfaceSection from '../components/SurfaceSection';
@@ -81,6 +86,8 @@ export default function JobDetailPage() {
   const queryClient = useQueryClient();
   const [triggerError, setTriggerError] = useState<string>();
   const [bindingError, setBindingError] = useState<string>();
+  const [deleteError, setDeleteError] = useState<string>();
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const jobQuery = useQuery({
     queryKey: ['jobs', id],
     queryFn: () => getJob(id ?? ''),
@@ -108,6 +115,17 @@ export default function JobDetailPage() {
     },
     onError: error => {
       setBindingError(error instanceof ApiError ? error.detail : 'Unable to update datasource binding.');
+    }
+  });
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteJob(id ?? ''),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['jobs', id] });
+      await queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      navigate('/jobs');
+    },
+    onError: error => {
+      setDeleteError(error instanceof ApiError ? error.detail : 'Unable to delete this job.');
     }
   });
 
@@ -157,14 +175,21 @@ export default function JobDetailPage() {
         title={job.name}
         description="Read-only job definition"
         backLink={
-          <Button component={RouterLink} to="/" variant="text" startIcon={<ArrowBackIcon />}>
+          <Button component={RouterLink} to="/jobs" variant="text" startIcon={<ArrowBackIcon />}>
             Back to jobs
           </Button>
         }
         actions={
-          <>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={{ xs: 1.5, sm: 1 }}
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+            role="group"
+            aria-label="Job actions"
+          >
             <Button
               variant="contained"
+              startIcon={<PlayArrowIcon />}
               onClick={() => {
                 setTriggerError(undefined);
                 triggerMutation.mutate();
@@ -173,23 +198,77 @@ export default function JobDetailPage() {
             >
               {triggerMutation.isPending ? 'Triggering...' : 'Trigger run'}
             </Button>
-            <Button component={RouterLink} to={`/jobs/${id}/edit`} variant="outlined">
-              Edit
-            </Button>
-            {user?.role === 'ADMIN' && (
-              <Button component={RouterLink} to={`/jobs/${id}/permissions`} variant="outlined">
-                Manage permissions
+            <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' }, mx: 0.5 }} />
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+              role="group"
+              aria-label="Job management actions"
+            >
+              <Button component={RouterLink} to={`/jobs/${id}/edit`} variant="outlined" startIcon={<EditOutlinedIcon />}>
+                Edit
               </Button>
+              {user?.role === 'ADMIN' && (
+                <Button component={RouterLink} to={`/jobs/${id}/permissions`} variant="outlined" startIcon={<SecurityOutlinedIcon />}>
+                  Manage permissions
+                </Button>
+              )}
+            </Stack>
+            {user?.role === 'ADMIN' && (
+              <>
+                <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', sm: 'block' }, mx: 0.5 }} />
+                <Button
+                  color="error"
+                  variant="outlined"
+                  startIcon={<DeleteOutlineIcon />}
+                  aria-label="Delete job"
+                  onClick={() => {
+                    setDeleteError(undefined);
+                    setDeleteOpen(true);
+                  }}
+                >
+                  Delete
+                </Button>
+              </>
             )}
-          </>
+          </Stack>
         }
       />
-      {job.modeWarning && <Alert severity="warning">{job.modeWarning}</Alert>}
-      {triggerError && <Alert severity="error">{triggerError}</Alert>}
-      <Alert severity="info">
-        Disabling either datasource binding blocks future manual and scheduled runs. It does not cancel active work.
-      </Alert>
-      {bindingError && <Alert severity="error">{bindingError}</Alert>}
+      <Dialog
+        open={deleteOpen}
+        onClose={() => !deleteMutation.isPending && setDeleteOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Delete job</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Delete {job.name}? This permanently removes the job, its run history, schedules, permissions, and logs.
+          </Typography>
+          {deleteError && <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteOpen(false)} disabled={deleteMutation.isPending}>Cancel</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => deleteMutation.mutate()}
+            disabled={deleteMutation.isPending}
+            startIcon={<DeleteOutlineIcon />}
+          >
+            {deleteMutation.isPending ? 'Deleting...' : 'Delete job'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Stack spacing={1}>
+        {job.modeWarning && <OperationalNotice severity="warning">{job.modeWarning}</OperationalNotice>}
+        {triggerError && <OperationalNotice severity="error">{triggerError}</OperationalNotice>}
+        <OperationalNotice severity="info">
+          Disabling either datasource binding blocks future manual and scheduled runs. It does not cancel active work.
+        </OperationalNotice>
+        {bindingError && <OperationalNotice severity="error">{bindingError}</OperationalNotice>}
+      </Stack>
       <Stack spacing={2}>
         <SurfaceSection
           title="Source"

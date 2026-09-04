@@ -3,6 +3,7 @@ import type { components, paths } from './schema';
 
 type RequiredApiPaths = {
   jobs: paths['/api/v1/jobs']['get'];
+  deleteJob: paths['/api/v1/jobs/{id}']['delete'];
   datasources: paths['/api/v1/datasources']['get'];
   datasourcePermissions: paths['/api/v1/datasources/{datasourceId}/permissions']['get'];
   currentUser: paths['/api/v1/auth/me']['get'];
@@ -39,8 +40,17 @@ type RetryPolicyResponseFields = Pick<components['schemas']['JobDefinitionRespon
   'maxAttempts' | 'retryBackoffSeconds' | 'automaticRetryEnabled'>;
 type PublicRunFields = Pick<components['schemas']['JobRunResponse'], 'availableAt'>;
 type LeaseTokenIsNotPublic = 'leaseToken' extends keyof components['schemas']['JobRunResponse'] ? false : true;
+type DeleteJobResponseStatuses = keyof RequiredApiPaths['deleteJob']['responses'];
+type DeleteJobHasExpectedResponses = 204 extends DeleteJobResponseStatuses
+  ? 403 extends DeleteJobResponseStatuses
+    ? 404 extends DeleteJobResponseStatuses
+      ? 409 extends DeleteJobResponseStatuses ? true : false
+      : false
+    : false
+  : false;
 
 const generatedEndpointTypes: RequiredApiPaths | undefined = undefined;
+const deleteJobHasExpectedResponses: DeleteJobHasExpectedResponses = true;
 const generatedDatasourceRequest: DatasourceRequestFields | undefined = undefined;
 const generatedDatasourceResponse: DatasourceResponseFields | undefined = undefined;
 const generatedAdvancedJobFields: AdvancedJobFields | undefined = undefined;
@@ -54,6 +64,7 @@ const jobRequestHasNoInlineCredentials: JobRequestHasNoInlineCredentials = true;
 describe('generated API schema', () => {
   it('contains the job and session endpoints', () => {
     expect(generatedEndpointTypes).toBeUndefined();
+    expect(deleteJobHasExpectedResponses).toBe(true);
   });
 
   it('contains datasource request/response fields without secret response fields', () => {

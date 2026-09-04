@@ -19,14 +19,25 @@ export type JobRunResponse = Omit<GeneratedJobRunResponse,
   cancellationWarning?: string | null;
 };
 export type JobRunStatus = NonNullable<GeneratedJobRunResponse['status']>;
+export interface JobRunFilters {
+  status?: JobRunStatus[];
+  from?: string;
+  to?: string;
+}
 export type JobRunPage = Omit<components['schemas']['PageResponseJobRunResponse'], 'content'> & {
   content?: JobRunResponse[];
 };
 export type RunLogResponse = components['schemas']['RunLogResponse'];
 
-export async function listJobRuns(jobId: string, page = 0, size = 50): Promise<JobRunPage> {
+export async function listJobRuns(
+  jobId: string,
+  page = 0,
+  size = 50,
+  filters: JobRunFilters = {}
+): Promise<JobRunPage> {
   const response = await apiClient.get<JobRunPage>(`/jobs/${jobId}/runs`, {
-    params: { page, size }
+    params: { page, size, ...filters },
+    paramsSerializer: { indexes: null }
   });
   return response.data;
 }
