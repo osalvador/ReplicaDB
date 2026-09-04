@@ -95,7 +95,8 @@ test('authenticated controls expose keyboard and semantic accessibility contract
   await expectContrast(page, 'rgb(11, 110, 105)', 'rgb(255, 255, 255)', 4.5);
   await expectContrast(page, 'rgb(177, 92, 56)', 'rgb(255, 255, 255)', 4.5);
 
-  await page.goto('/jobs');
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Open jobs' }).click();
   const seededJob = page.getByRole('link', { name: seededJobName });
   await expect(seededJob, `the seeded job ${seededJobName} must exist`).toBeVisible();
   await seededJob.click();

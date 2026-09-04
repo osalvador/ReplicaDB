@@ -36,6 +36,8 @@ test('admin can inspect datasource catalog, detail, editor, and ACL screens', as
   await expect(page.getByLabel('Datasource password')).toHaveValue('');
   await page.getByRole('link', { name: 'Back to datasources' }).click();
 
+  await page.getByRole('link', { name: sourceDatasourceName, exact: true }).click();
+  await expect(page).toHaveURL(/\/datasources\/[^/]+$/);
   await page.getByRole('link', { name: 'Manage permissions' }).click();
   await expect(page).toHaveURL(/\/datasources\/[^/]+\/permissions$/);
   await expect(page.getByRole('heading', { name: `${sourceDatasourceName} permissions` })).toBeVisible();

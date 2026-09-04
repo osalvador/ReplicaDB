@@ -68,7 +68,8 @@ for (const viewport of viewports) {
       await expect(page.getByRole('button', { name: 'Create job' })).toBeVisible();
       await expectContained(page);
 
-      await page.goto('/jobs');
+      await page.goto('/');
+      await page.getByRole('link', { name: 'Open jobs' }).click();
       const seededJob = page.getByRole('link', { name: seededJobName });
       await expect(seededJob, `the seeded job ${seededJobName} must exist`).toBeVisible();
       await seededJob.click();
@@ -89,7 +90,8 @@ for (const viewport of viewports) {
       await expect(page.getByRole('button', { name: 'Save changes' })).toBeVisible();
       await expectContained(page);
 
-      await page.goto('/jobs');
+      await page.goto('/');
+      await page.getByRole('link', { name: 'Open jobs' }).click();
       await page.getByRole('link', { name: seededJobName }).click();
       await expect(page).toHaveURL(/\/jobs\/[^/]+$/);
       await page.getByRole('button', { name: 'Trigger run' }).click();
