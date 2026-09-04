@@ -1,0 +1,19 @@
+replicadb-server/frontend/e2e/visual-control-plane.spec.ts
+  s_5415709ad7c752::t_590de3c48d573d 108-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "6df326765e8a78b14c15c1077878cfd08e497214",
+  "prompts": {},
+  "sessions": {
+    "s_5415709ad7c752": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "f228ec7b-8df6-46c5-8e32-3046c0c823ae",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
