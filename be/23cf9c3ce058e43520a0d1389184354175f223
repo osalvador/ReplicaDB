@@ -1,0 +1,21 @@
+.ai/archive/primera-release-de-replicadb-con-servidor.plan.md
+  s_5415709ad7c752::t_c79792efba01e6 1,5-23,27,29,33,36-48,51,54-67,70-73,75,77-82,84-93,97-119,121,123-127,129,131-135,137,139-143,145,147-151,153,155-159,161,163-167,169,171-175,177,179-183,185,187-191,193,195-199,201-207,211,213-218,220-224,226,228-234,236-240,242,244-248,250-260,262-296
+scripts/check-phase3-docs.sh
+  s_5415709ad7c752::t_5924a95568b11d 42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "be23cf9c3ce058e43520a0d1389184354175f223",
+  "prompts": {},
+  "sessions": {
+    "s_5415709ad7c752": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "f228ec7b-8df6-46c5-8e32-3046c0c823ae",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
