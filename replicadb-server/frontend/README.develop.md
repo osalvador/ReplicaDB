@@ -76,10 +76,16 @@ Cuando el script termine de arrancar:
   Los fixtures cubren los modos `complete`, `complete-atomic` e `incremental`; solo el job `pg2pg`
   ejecuta una replicación durante el arranque.
 
-Pulsa `Ctrl+C` para detener API y Vite y eliminar el contenedor PostgreSQL.
-El script requiere libres los puertos `5432`, `8080` y `5173`; no detiene
-procesos ajenos que estén utilizando esos puertos. Para usar Podman en lugar
-de Docker, define `CONTAINER_ENGINE=podman`.
+Pulsa `Ctrl+C` para detener API, Maven, Vite, Node y eliminar el contenedor
+PostgreSQL. El cleanup se aplica también si el script termina por error. Una
+terminación forzada con `SIGKILL` no puede ejecutar este cleanup.
+Antes de arrancar, el script detecta recursos gestionados por este checkout:
+procesos API y Vite, incluidos sus lanzadores, y el contenedor PostgreSQL.
+En una terminal interactiva muestra sus PID, puertos y hora de inicio y
+solicita una única confirmación antes de detenerlos; si se rechaza, deja los
+recursos intactos y cancela el arranque. Sin una terminal interactiva, aborta
+sin detener ningún recurso. Los procesos y contenedores ajenos no se detienen.
+Para usar Podman en lugar de Docker, define `CONTAINER_ENGINE=podman`.
 
 ## Probar PostgreSQL a PostgreSQL en el mismo contenedor
 
