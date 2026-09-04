@@ -78,7 +78,7 @@ export interface paths {
         get: operations["get_3"];
         put: operations["update_1"];
         post?: never;
-        delete?: never;
+        delete: operations["delete_2"];
         options?: never;
         head?: never;
         patch?: never;
@@ -94,7 +94,7 @@ export interface paths {
         get: operations["get_4"];
         put: operations["update_2"];
         post?: never;
-        delete: operations["delete_2"];
+        delete: operations["delete_3"];
         options?: never;
         head?: never;
         patch?: never;
@@ -316,6 +316,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["list_5"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["summary"];
         put?: never;
         post?: never;
         delete?: never;
@@ -660,6 +676,53 @@ export interface components {
             /** Format: int64 */
             totalElements?: number;
         };
+        DashboardJobPerformance: {
+            /** Format: uuid */
+            jobId?: string;
+            jobName?: string;
+            /** Format: int64 */
+            runCount?: number;
+            /** Format: int64 */
+            rowsProcessed?: number;
+            /** Format: int64 */
+            averageDurationMillis?: number;
+            /** Format: int64 */
+            averageLatencyMillis?: number;
+        };
+        DashboardOutcomePoint: {
+            /** Format: date-time */
+            bucket?: string;
+            /** Format: int64 */
+            succeeded?: number;
+            /** Format: int64 */
+            failed?: number;
+            /** Format: int64 */
+            active?: number;
+        };
+        DashboardSummaryResponse: {
+            /** Format: date-time */
+            from?: string;
+            /** Format: date-time */
+            to?: string;
+            /** Format: int64 */
+            totalJobs?: number;
+            /** Format: int64 */
+            activeRuns?: number;
+            /** Format: int64 */
+            totalRuns?: number;
+            /** Format: int64 */
+            succeededRuns?: number;
+            /** Format: int64 */
+            failedRuns?: number;
+            /** Format: int64 */
+            rowsProcessed?: number;
+            /** Format: int64 */
+            averageDurationMillis?: number;
+            /** Format: int64 */
+            averageLatencyMillis?: number;
+            outcomes?: components["schemas"]["DashboardOutcomePoint"][];
+            jobPerformance?: components["schemas"]["DashboardJobPerformance"][];
+        };
         CsrfTokenResponse: {
             headerName?: string;
             parameterName?: string;
@@ -675,7 +738,7 @@ export interface components {
             actorUsername?: string;
             sourceAddress?: string;
             /** @enum {string} */
-            action?: "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "USER_CREATED" | "USER_UPDATED" | "USER_PASSWORD_CHANGED" | "DATASOURCE_CREATED" | "DATASOURCE_UPDATED" | "DATASOURCE_DELETED" | "DATASOURCE_PERMISSION_REPLACED" | "DATASOURCE_PERMISSION_REVOKED" | "JOB_CREATED" | "JOB_UPDATED" | "JOB_DATASOURCE_BINDING_REPLACED" | "JOB_DATASOURCE_BINDING_ENABLED" | "JOB_DATASOURCE_BINDING_DISABLED" | "JOB_PERMISSION_REPLACED" | "JOB_PERMISSION_REVOKED" | "JOB_SCHEDULE_UPSERTED" | "JOB_SCHEDULE_DELETED" | "RUN_TRIGGERED" | "RUN_CANCEL_REQUESTED" | "RUN_RETRIED" | "RUN_SUCCEEDED" | "RUN_FAILED" | "RUN_CANCELLED";
+            action?: "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "USER_CREATED" | "USER_UPDATED" | "USER_PASSWORD_CHANGED" | "DATASOURCE_CREATED" | "DATASOURCE_UPDATED" | "DATASOURCE_DELETED" | "DATASOURCE_PERMISSION_REPLACED" | "DATASOURCE_PERMISSION_REVOKED" | "JOB_CREATED" | "JOB_UPDATED" | "JOB_DELETED" | "JOB_DATASOURCE_BINDING_REPLACED" | "JOB_DATASOURCE_BINDING_ENABLED" | "JOB_DATASOURCE_BINDING_DISABLED" | "JOB_PERMISSION_REPLACED" | "JOB_PERMISSION_REVOKED" | "JOB_SCHEDULE_UPSERTED" | "JOB_SCHEDULE_DELETED" | "RUN_TRIGGERED" | "RUN_CANCEL_REQUESTED" | "RUN_RETRIED" | "RUN_SUCCEEDED" | "RUN_FAILED" | "RUN_CANCELLED";
             /** @enum {string} */
             resourceType?: "USER" | "DATASOURCE" | "JOB_DEFINITION" | "JOB_RUN" | "SESSION";
             resourceId?: string;
@@ -941,6 +1004,47 @@ export interface operations {
             };
         };
     };
+    delete_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Administrator access required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Job definition not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Job has an active run or cannot be unscheduled */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_4: {
         parameters: {
             query?: never;
@@ -989,7 +1093,7 @@ export interface operations {
             };
         };
     };
-    delete_2: {
+    delete_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1198,6 +1302,9 @@ export interface operations {
     listForJob: {
         parameters: {
             query?: {
+                status?: string[];
+                from?: string;
+                to?: string;
                 page?: number;
                 size?: number;
             };
@@ -1337,7 +1444,9 @@ export interface operations {
     list_1: {
         parameters: {
             query?: {
-                status?: string;
+                status?: string[];
+                from?: string;
+                to?: string;
                 page?: number;
                 size?: number;
             };
@@ -1442,6 +1551,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DatasourcePermissionResponse"][];
+                };
+            };
+        };
+    };
+    summary: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DashboardSummaryResponse"];
                 };
             };
         };

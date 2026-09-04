@@ -2,6 +2,8 @@ import type { components } from './schema';
 import { apiClient } from './client';
 
 type GeneratedJobDefinitionResponse = components['schemas']['JobDefinitionResponse'];
+export const COMPLETE_MODE_WARNING =
+  'Complete mode clears the sink before loading. If the run is interrupted or retried, the sink may be empty or partially populated. Use complete-atomic for an all-or-nothing load when supported.';
 export type JobDefinitionResponse = Omit<
   GeneratedJobDefinitionResponse,
   'incrementalWatermarkColumn' | 'initialWatermarkValue' | 'modeWarning'
@@ -118,4 +120,8 @@ export async function createJob(input: JobDefinitionMutationInput): Promise<JobD
 export async function updateJob(id: string, input: JobDefinitionMutationInput): Promise<JobDefinitionResponse> {
   const response = await apiClient.put<JobDefinitionResponse>(`/jobs/${id}`, toJobDefinitionRequest(input));
   return response.data;
+}
+
+export async function deleteJob(id: string): Promise<void> {
+  await apiClient.delete(`/jobs/${id}`);
 }

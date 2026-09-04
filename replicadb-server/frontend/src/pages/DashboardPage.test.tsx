@@ -3,132 +3,107 @@ import { ThemeProvider } from '@mui/material';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as jobsApi from '../api/jobsApi';
-import { theme } from '../theme/theme';
+import * as dashboardApi from '../api/dashboardApi';
 import DashboardPage from './DashboardPage';
+import { theme } from '../theme/theme';
 
-vi.mock('../api/jobsApi', () => ({
-  listJobs: vi.fn()
-}));
+vi.mock('../api/dashboardApi', async () => {
+  const actual = await vi.importActual<typeof import('../api/dashboardApi')>('../api/dashboardApi');
+  return { ...actual, getDashboardSummary: vi.fn() };
+});
 
-const mockedJobsApi = vi.mocked(jobsApi);
+const mockedDashboardApi = vi.mocked(dashboardApi);
+const summary = {
+  from: '2026-09-02T10:00:00Z',
+  to: '2026-09-03T10:00:00Z',
+  totalJobs: 11,
+  activeRuns: 1,
+  totalRuns: 4,
+  succeededRuns: 3,
+  failedRuns: 1,
+  rowsProcessed: 1280,
+  averageDurationMillis: 1500,
+  averageLatencyMillis: 120,
+  outcomes: [
+    { bucket: '2026-09-03T09:00:00Z', succeeded: 3, failed: 1, active: 1 }
+  ],
+  jobPerformance: [{
+    jobId: 'job-1',
+    jobName: 'Orders replication',
+    runCount: 4,
+    rowsProcessed: 1280,
+    averageDurationMillis: 1500,
+    averageLatencyMillis: 120
+  }]
+};
 
-const jobs = [
-  {
-    id: 'job-1',
-    name: 'Orders replication',
-    sourceTable: 'orders',
-    sinkTable: 'warehouse_orders',
-    mode: 'complete',
-    modeWarning: 'Complete mode clears the sink before loading. If the run is interrupted or retried, the sink may be empty or partially populated. Use complete-atomic for an all-or-nothing load when supported.'
-  },
-  {
-    id: 'job-2',
-    name: 'Customers replication',
-    sourceTable: 'customers',
-    sinkTable: 'warehouse_customers',
-    mode: 'complete-atomic',
-    modeWarning: null
-  }
-];
-
-const fullPageJobs = Array.from({ length: 50 }, (_, index) => ({
-  ...jobs[0],
-  id: `job-${index}`,
-  name: `Orders replication ${index}`
-}));
-
-function renderDashboard(response = { content: jobs, page: 0, size: 50, totalElements: 2 }) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } }
-  });
-  mockedJobsApi.listJobs.mockResolvedValue(response);
-
+function renderDashboard(response = summary) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  mockedDashboardApi.getDashboardSummary.mockResolvedValue(response);
   return render(
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter>
-          <DashboardPage />
-        </MemoryRouter>
+        <MemoryRouter><DashboardPage /></MemoryRouter>
       </QueryClientProvider>
     </ThemeProvider>
   );
 }
 
 describe('DashboardPage', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => vi.clearAllMocks());
 
-  it('renders the visible job rows', async () => {
+  it('renders operational metrics and performance bars', async () => {
     renderDashboard();
 
-    expect(await screen.findByText('Orders replication')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: 'Jobs' })).toBeInTheDocument();
-    expect(screen.getByText('orders')).toBeInTheDocument();
-    expect(screen.getByText('warehouse_orders')).toBeInTheDocument();
-    expect(screen.getByText('complete')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'New job' })).toHaveAttribute('href', '/jobs/new');
-    expect(screen.getByRole('link', { name: 'Orders replication' })).toHaveAttribute('href', '/jobs/job-1');
+    expect(await screen.findByRole('heading', { name: 'Replication pulse' })).toBeInTheDocument();
+    expect(screen.getByText('11')).toBeInTheDocument();
+    expect(screen.getByText('75%')).toBeInTheDocument();
+    expect(screen.getByText('1,280')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Run outcomes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Job performance' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Last 24h' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('link', { name: 'Open jobs' })).toHaveAttribute('href', '/jobs');
   });
 
-  it('does not show job warnings in the general list', async () => {
+  it('refetches with a new window when a range preset is selected', async () => {
     renderDashboard();
 
-    await screen.findByText('Orders replication');
+    await screen.findByRole('heading', { name: 'Replication pulse' });
+    fireEvent.click(screen.getByRole('button', { name: 'Last 7d' }));
 
-    expect(screen.queryByRole('button', { name: /Job warning:/ })).not.toBeInTheDocument();
-    expect(screen.queryByText(/Complete mode clears the sink/)).not.toBeInTheDocument();
+    await waitFor(() => expect(mockedDashboardApi.getDashboardSummary).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole('button', { name: 'Last 7d' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('offers a retry when jobs cannot be loaded', async () => {
-    mockedJobsApi.listJobs
+  it('applies a custom two-hour window', async () => {
+    renderDashboard();
+
+    await screen.findByRole('heading', { name: 'Replication pulse' });
+    fireEvent.click(screen.getByRole('button', { name: 'Custom time range' }));
+    fireEvent.change(screen.getByLabelText('Duration'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply range' }));
+
+    await waitFor(() => expect(mockedDashboardApi.getDashboardSummary).toHaveBeenCalledTimes(2));
+    const customWindow = mockedDashboardApi.getDashboardSummary.mock.calls[1][0];
+    expect(new Date(customWindow.to).getTime() - new Date(customWindow.from).getTime()).toBe(2 * 60 * 60 * 1000);
+    expect(screen.getByRole('button', { name: 'Custom time range: Last 2h' })).toHaveTextContent('Last 2h');
+  });
+
+  it('offers retry when dashboard metrics cannot be loaded', async () => {
+    mockedDashboardApi.getDashboardSummary
       .mockRejectedValueOnce(new Error('Network Error'))
-      .mockResolvedValueOnce({ content: jobs, page: 0, size: 50, totalElements: 2 });
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } }
-    });
+      .mockResolvedValueOnce(summary);
+    renderDashboard();
 
-    render(
-      <ThemeProvider theme={theme}>
-        <QueryClientProvider client={queryClient}>
-          <MemoryRouter>
-            <DashboardPage />
-          </MemoryRouter>
-        </QueryClientProvider>
-      </ThemeProvider>
-    );
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Unable to load jobs. Check the server connection and try again.'
-    );
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load dashboard metrics.');
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
-
-    expect(await screen.findByText('Orders replication')).toBeInTheDocument();
-    expect(mockedJobsApi.listJobs).toHaveBeenCalledTimes(2);
+    expect(await screen.findByRole('heading', { name: 'Replication pulse' })).toBeInTheDocument();
   });
 
-  it('requests the next page when pagination advances', async () => {
-    renderDashboard({ content: fullPageJobs, page: 0, size: 50, totalElements: 100 });
+  it('shows a focused empty state when the selected window has no runs', async () => {
+    renderDashboard({ ...summary, totalRuns: 0, succeededRuns: 0, failedRuns: 0, outcomes: [], jobPerformance: [] });
 
-    await screen.findByText('Orders replication 0');
-    fireEvent.click(screen.getByRole('button', { name: 'Go to next page' }));
-
-    await waitFor(() => expect(mockedJobsApi.listJobs).toHaveBeenCalledWith(1, 50));
-  });
-
-  it('disables next page when the response is short', async () => {
-    renderDashboard({ content: jobs.slice(0, 1), page: 0, size: 50, totalElements: 100 });
-
-    await screen.findByText('Orders replication');
-    expect(screen.getByRole('button', { name: 'Go to next page' })).toBeDisabled();
-  });
-
-  it('disables next page for an empty result', async () => {
-    renderDashboard({ content: [], page: 0, size: 50, totalElements: 0 });
-
-    expect(await screen.findByText('No jobs available.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Go to next page' })).toBeDisabled();
+    expect(await screen.findByText('No runs in this window.')).toBeInTheDocument();
+    expect(screen.getByText('No job performance data.')).toBeInTheDocument();
   });
 });

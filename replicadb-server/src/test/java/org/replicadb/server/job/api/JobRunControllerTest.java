@@ -124,6 +124,26 @@ class JobRunControllerTest {
                 .andExpect(jsonPath("$.page").value(1));
     }
 
+            @Test
+            void filtersRunsForAJobByStatusAndCreationDate() throws Exception {
+            JobDefinition definition = jobDefinitionRepository.insert(definition("job-filtered-runs"));
+            JobRun oldFailed = createTerminalRun(definition, JobRunStatus.FAILED);
+            JobRun recentSucceeded = createTerminalRun(definition, JobRunStatus.SUCCEEDED);
+            jdbcTemplate.update("UPDATE job_run SET created_at = :createdAt WHERE id = :id",
+                Map.of("createdAt", Timestamp.from(Instant.parse("2026-08-01T12:00:00Z")), "id", oldFailed.id()));
+            jdbcTemplate.update("UPDATE job_run SET created_at = :createdAt WHERE id = :id",
+                Map.of("createdAt", Timestamp.from(Instant.parse("2026-08-20T12:00:00Z")), "id", recentSucceeded.id()));
+
+            mockMvc.perform(get("/api/v1/jobs/" + definition.id() + "/runs")
+                    .param("status", "succeeded")
+                    .param("from", "2026-08-15T00:00:00Z")
+                    .param("to", "2026-08-21T00:00:00Z"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(recentSucceeded.id().toString()))
+                .andExpect(jsonPath("$.totalElements").value(1));
+            }
+
     @Test
     void filtersRunsByStatusCaseInsensitively() throws Exception {
         JobDefinition definition = jobDefinitionRepository.insert(definition("job-status"));
@@ -136,11 +156,40 @@ class JobRunControllerTest {
                 .andExpect(jsonPath("$.content[0].status").value("FAILED"))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
+            mockMvc.perform(get("/api/v1/runs").param("status", "failed", "succeeded"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.totalElements").value(2));
+
         mockMvc.perform(get("/api/v1/runs").param("status", "not_a_real_status"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.detail").value("Unknown run status: not_a_real_status"));
     }
+
+            @Test
+            void summarizesRunOutcomesAndPerformanceForTheDashboard() throws Exception {
+            JobDefinition definition = jobDefinitionRepository.insert(definition("dashboard-summary"));
+            JobRun succeeded = createTerminalRun(definition, JobRunStatus.SUCCEEDED);
+            JobRun failed = createTerminalRun(definition, JobRunStatus.FAILED);
+            Instant now = Instant.now();
+            jdbcTemplate.update("UPDATE job_run SET created_at = :createdAt WHERE id = :id",
+                Map.of("createdAt", Timestamp.from(now.minusSeconds(60)), "id", succeeded.id()));
+            jdbcTemplate.update("UPDATE job_run SET created_at = :createdAt WHERE id = :id",
+                Map.of("createdAt", Timestamp.from(now.minusSeconds(30)), "id", failed.id()));
+
+            mockMvc.perform(get("/api/v1/dashboard/summary")
+                    .param("from", now.minusSeconds(300).toString())
+                    .param("to", now.plusSeconds(300).toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalJobs").value(1))
+                .andExpect(jsonPath("$.totalRuns").value(2))
+                .andExpect(jsonPath("$.succeededRuns").value(1))
+                .andExpect(jsonPath("$.failedRuns").value(1))
+                .andExpect(jsonPath("$.rowsProcessed").value(2))
+                .andExpect(jsonPath("$.outcomes.length()").value(1))
+                .andExpect(jsonPath("$.jobPerformance[0].jobName").value("dashboard-summary"));
+            }
 
     @Test
     void getsRunAndItsPersistedLog() throws Exception {

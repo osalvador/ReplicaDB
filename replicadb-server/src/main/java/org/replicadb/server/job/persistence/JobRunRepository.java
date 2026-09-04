@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Duration;
 import java.time.Instant;
@@ -618,35 +619,137 @@ public class JobRunRepository implements JobRunStore {
         return jdbcTemplate.query(sql, Map.of("id", id), rowMapper).stream().findFirst();
     }
 
-    public List<JobRun> findPage(UUID jobDefinitionId, JobRunStatus status, int page, int size,
-                                 Set<UUID> restrictToJobIds) {
+    public List<JobRun> findPage(UUID jobDefinitionId, Set<JobRunStatus> statuses, Instant from, Instant to,
+                                 int page, int size, Set<UUID> restrictToJobIds) {
         validatePage(page, size);
         StringBuilder sql = new StringBuilder("SELECT " + SELECT_COLUMNS + " FROM job_run WHERE 1 = 1");
         MapSqlParameterSource parameters = new MapSqlParameterSource();
-        appendFilters(sql, parameters, jobDefinitionId, status, restrictToJobIds);
+        appendFilters(sql, parameters, jobDefinitionId, statuses, from, to, restrictToJobIds);
         sql.append(" ORDER BY created_at DESC, id DESC LIMIT :size OFFSET :offset");
         parameters.addValue("size", size).addValue("offset", (long) page * size);
         return jdbcTemplate.query(sql.toString(), parameters, rowMapper);
     }
 
-    public long count(UUID jobDefinitionId, JobRunStatus status, Set<UUID> restrictToJobIds) {
+    public long count(UUID jobDefinitionId, Set<JobRunStatus> statuses, Instant from, Instant to,
+                      Set<UUID> restrictToJobIds) {
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM job_run WHERE 1 = 1");
         MapSqlParameterSource parameters = new MapSqlParameterSource();
-        appendFilters(sql, parameters, jobDefinitionId, status, restrictToJobIds);
+        appendFilters(sql, parameters, jobDefinitionId, statuses, from, to, restrictToJobIds);
         Long count = jdbcTemplate.queryForObject(sql.toString(), parameters, Long.class);
         return count == null ? 0 : count;
     }
 
+    @Override
+    public JobRunStore.DashboardRunSummary summarizeDashboard(Instant from, Instant to,
+                                                               Set<UUID> restrictToJobIds) {
+        if (from == null || to == null || !from.isBefore(to)) {
+            throw new IllegalArgumentException("Dashboard range must have a start before its end");
+        }
+
+        MapSqlParameterSource parameters = dashboardParameters(from, to, restrictToJobIds);
+        Map<String, Object> aggregate = jdbcTemplate.queryForMap("""
+                SELECT COUNT(*) AS total_runs,
+                       COUNT(*) FILTER (WHERE status IN ('RUNNING', 'CANCEL_REQUESTED')) AS active_runs,
+                       COUNT(*) FILTER (WHERE status = 'SUCCEEDED') AS succeeded_runs,
+                       COUNT(*) FILTER (WHERE status = 'FAILED') AS failed_runs,
+                       COALESCE(SUM(rows_processed), 0) AS rows_processed,
+                       COALESCE(ROUND(AVG(duration_millis) FILTER (WHERE duration_millis IS NOT NULL)), 0)::bigint
+                           AS average_duration_millis,
+                       COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM (started_at - available_at)) * 1000)
+                           FILTER (WHERE started_at IS NOT NULL)), 0)::bigint AS average_latency_millis
+                FROM job_run
+                WHERE created_at >= :from AND created_at < :to
+                """ + dashboardRestriction(restrictToJobIds), parameters);
+
+        String bucket = Duration.between(from, to).compareTo(Duration.ofDays(2)) <= 0 ? "hour" : "day";
+        List<JobRunStore.OutcomeBucket> outcomes = jdbcTemplate.query(("""
+            SELECT date_trunc('%s', created_at) AS bucket,
+                       COUNT(*) FILTER (WHERE status = 'SUCCEEDED') AS succeeded,
+                       COUNT(*) FILTER (WHERE status = 'FAILED') AS failed,
+                       COUNT(*) FILTER (WHERE status IN ('RUNNING', 'CANCEL_REQUESTED')) AS active
+                FROM job_run
+                WHERE created_at >= :from AND created_at < :to
+            """.formatted(bucket) + dashboardRestriction(restrictToJobIds) + " GROUP BY 1 ORDER BY 1"),
+                parameters,
+                (resultSet, rowNum) -> new JobRunStore.OutcomeBucket(
+                        resultSet.getTimestamp("bucket").toInstant(),
+                        resultSet.getLong("succeeded"),
+                        resultSet.getLong("failed"),
+                        resultSet.getLong("active")));
+
+        List<JobRunStore.JobPerformance> performance = jdbcTemplate.query("""
+                SELECT d.id AS job_id, d.name AS job_name, COUNT(r.id) AS run_count,
+                       COALESCE(SUM(r.rows_processed), 0) AS rows_processed,
+                       COALESCE(ROUND(AVG(r.duration_millis) FILTER (WHERE r.duration_millis IS NOT NULL)), 0)::bigint
+                           AS average_duration_millis,
+                       COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM (r.started_at - r.available_at)) * 1000)
+                           FILTER (WHERE r.started_at IS NOT NULL)), 0)::bigint AS average_latency_millis
+                FROM job_run r
+                JOIN job_definition d ON d.id = r.job_definition_id
+                WHERE r.created_at >= :from AND r.created_at < :to
+                """ + dashboardRestriction(restrictToJobIds, "r.job_definition_id") + """
+                GROUP BY d.id, d.name
+                ORDER BY AVG(r.duration_millis) DESC NULLS LAST, d.name
+                LIMIT 8
+                """, parameters,
+                (resultSet, rowNum) -> new JobRunStore.JobPerformance(
+                        resultSet.getObject("job_id", UUID.class),
+                        resultSet.getString("job_name"),
+                        resultSet.getLong("run_count"),
+                        resultSet.getLong("rows_processed"),
+                        resultSet.getLong("average_duration_millis"),
+                        resultSet.getLong("average_latency_millis")));
+
+        return new JobRunStore.DashboardRunSummary(
+                number(aggregate, "active_runs"), number(aggregate, "total_runs"),
+                number(aggregate, "succeeded_runs"), number(aggregate, "failed_runs"),
+                number(aggregate, "rows_processed"), number(aggregate, "average_duration_millis"),
+                number(aggregate, "average_latency_millis"), outcomes, performance);
+    }
+
+    private static MapSqlParameterSource dashboardParameters(Instant from, Instant to,
+                                                              Set<UUID> restrictToJobIds) {
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
+                .addValue("from", Timestamp.from(from))
+                .addValue("to", Timestamp.from(to));
+        if (restrictToJobIds != null) {
+            parameters.addValue("restrictToJobIds", restrictToJobIds.toArray(UUID[]::new), Types.ARRAY);
+        }
+        return parameters;
+    }
+
+    private static String dashboardRestriction(Set<UUID> restrictToJobIds) {
+        return dashboardRestriction(restrictToJobIds, "job_definition_id");
+    }
+
+    private static String dashboardRestriction(Set<UUID> restrictToJobIds, String jobColumn) {
+        return restrictToJobIds == null ? "" : " AND " + jobColumn + " = ANY(:restrictToJobIds)";
+    }
+
+    private static long number(Map<String, Object> values, String key) {
+        Object value = values.get(key);
+        return value instanceof Number number ? number.longValue() : 0;
+    }
+
     private static void appendFilters(StringBuilder sql, MapSqlParameterSource parameters,
-                                      UUID jobDefinitionId, JobRunStatus status,
+                                      UUID jobDefinitionId, Set<JobRunStatus> statuses,
+                                      Instant from, Instant to,
                                       Set<UUID> restrictToJobIds) {
         if (jobDefinitionId != null) {
             sql.append(" AND job_definition_id = :jobDefinitionId");
             parameters.addValue("jobDefinitionId", jobDefinitionId);
         }
-        if (status != null) {
-            sql.append(" AND status = :status");
-            parameters.addValue("status", status.name());
+        if (statuses != null) {
+            sql.append(" AND status = ANY(:statuses)");
+            parameters.addValue("statuses", statuses.stream().map(Enum::name).toArray(String[]::new), Types.ARRAY);
+        }
+        if (from != null) {
+            sql.append(" AND created_at >= :from");
+            parameters.addValue("from", Timestamp.from(from));
+        }
+        if (to != null) {
+            sql.append(" AND created_at < :to");
+            parameters.addValue("to", Timestamp.from(to));
         }
         if (restrictToJobIds != null) {
             sql.append(" AND job_definition_id = ANY(:restrictToJobIds)");

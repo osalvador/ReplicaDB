@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../api/client';
@@ -13,6 +13,7 @@ import { theme } from '../theme/theme';
 import JobDetailPage from './JobDetailPage';
 
 vi.mock('../api/jobsApi', () => ({
+  deleteJob: vi.fn(),
   getJob: vi.fn(),
   listJobs: vi.fn(),
   updateJob: vi.fn()
@@ -80,6 +81,7 @@ function renderDetail(job: JobDefinitionResponse = baseJob, role: 'ADMIN' | 'OPE
           <MemoryRouter initialEntries={['/jobs/job-1']}>
             <Routes>
               <Route path="/jobs/:id" element={<JobDetailPage />} />
+              <Route path="/jobs" element={<div>Jobs destination</div>} />
               <Route path="/runs/:id" element={<div>Run destination</div>} />
             </Routes>
           </MemoryRouter>
@@ -114,7 +116,7 @@ describe('JobDetailPage', () => {
     expect(screen.getAllByText('Not configured').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('2026-08-18T10:00:00Z')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Schedule card' })).toHaveTextContent('Schedule for job-1');
-    expect(screen.getByRole('link', { name: 'Back to jobs' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Back to jobs' })).toHaveAttribute('href', '/jobs');
     expect(screen.getByRole('button', { name: 'Trigger run' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', '/jobs/job-1/edit');
     expect(screen.queryByRole('link', { name: 'Manage permissions' })).not.toBeInTheDocument();
@@ -135,6 +137,52 @@ describe('JobDetailPage', () => {
 
     await screen.findByRole('heading', { name: 'Orders replication' });
     expect(screen.queryByText('Complete mode clears the sink before loading.')).not.toBeInTheDocument();
+  });
+
+  it('allows admins to cancel or confirm job deletion', async () => {
+    mockedJobsApi.deleteJob.mockResolvedValue();
+    const { queryClient } = renderDetail(baseJob, 'ADMIN');
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete job' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Delete job' });
+    expect(dialog).toHaveTextContent('Orders replication');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Delete job' })).not.toBeInTheDocument());
+    expect(mockedJobsApi.deleteJob).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete job' }));
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'Delete job' }))
+      .getByRole('button', { name: 'Delete job' }));
+    expect(await screen.findByText('Jobs destination')).toBeInTheDocument();
+    expect(mockedJobsApi.deleteJob).toHaveBeenCalledWith('job-1');
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['jobs', 'job-1'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['jobs'] });
+  });
+
+  it('hides job deletion from non-admin users', async () => {
+    renderDetail();
+
+    await screen.findByRole('heading', { name: 'Orders replication' });
+    expect(screen.queryByRole('button', { name: 'Delete job' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the deletion dialog open and retryable after an API error', async () => {
+    mockedJobsApi.deleteJob.mockRejectedValueOnce(
+      new ApiError(409, 'Conflict', 'This job has an active run.')
+    ).mockResolvedValueOnce();
+    renderDetail(baseJob, 'ADMIN');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete job' }));
+    let dialog = await screen.findByRole('dialog', { name: 'Delete job' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete job' }));
+
+    expect(await within(await screen.findByRole('dialog', { name: 'Delete job' }))
+      .findByText('This job has an active run.')).toBeInTheDocument();
+    dialog = screen.getByRole('dialog', { name: 'Delete job' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete job' }));
+    expect(await screen.findByText('Jobs destination')).toBeInTheDocument();
+    expect(mockedJobsApi.deleteJob).toHaveBeenCalledTimes(2);
   });
 
   it('renders advanced definition fields without exposing connection parameters', async () => {

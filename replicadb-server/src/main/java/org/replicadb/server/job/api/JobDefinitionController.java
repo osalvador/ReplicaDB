@@ -2,6 +2,8 @@ package org.replicadb.server.job.api;
 
 import jakarta.validation.Valid;
 import jakarta.validation.groups.Default;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.replicadb.server.audit.AuditActorResolver;
 import org.replicadb.server.audit.AuditService;
 import org.replicadb.server.audit.domain.AuditAction;
@@ -12,10 +14,11 @@ import org.replicadb.server.job.domain.DataSourceCapabilityCatalog;
 import org.replicadb.server.job.domain.JobDefinition;
 import org.replicadb.server.job.domain.ManagedDataSourceSummary;
 import org.replicadb.server.job.port.ManagedDataSourceStore;
+import org.replicadb.server.job.port.JobDefinitionStore;
+import org.replicadb.server.job.port.JobRunStore;
 import org.replicadb.server.security.JobAccessService;
 import org.replicadb.server.security.domain.JobPermissionType;
 import org.replicadb.server.security.DataSourceAccessService;
-import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.security.persistence.JobPermissionRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.context.annotation.Profile;
@@ -25,6 +28,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -46,7 +50,7 @@ import org.replicadb.manager.DataSourceType;
 @RequestMapping("/api/v1/jobs")
 public class JobDefinitionController {
 
-    private final JobDefinitionRepository repository;
+    private final JobDefinitionStore repository;
     private final JobDefinitionMapper mapper;
     private final JobAccessService jobAccessService;
     private final JobPermissionRepository jobPermissionRepository;
@@ -55,15 +59,19 @@ public class JobDefinitionController {
     private final DataSourceAccessService dataSourceAccessService;
     private final AuditService auditService;
     private final AuditActorResolver auditActorResolver;
+    private final JobRunStore jobRunStore;
+    private final org.replicadb.server.job.execution.QuartzScheduleService quartzScheduleService;
 
-    public JobDefinitionController(JobDefinitionRepository repository, JobDefinitionMapper mapper,
+    public JobDefinitionController(JobDefinitionStore repository, JobDefinitionMapper mapper,
                                    JobAccessService jobAccessService,
                                    JobPermissionRepository jobPermissionRepository,
                                    ManagedDataSourceStore dataSourceStore,
                                    DataSourceCapabilityCatalog capabilityCatalog,
                                    DataSourceAccessService dataSourceAccessService,
                                    AuditService auditService,
-                                   AuditActorResolver auditActorResolver) {
+                                   AuditActorResolver auditActorResolver,
+                                   JobRunStore jobRunStore,
+                                   org.replicadb.server.job.execution.QuartzScheduleService quartzScheduleService) {
         this.repository = repository;
         this.mapper = mapper;
         this.jobAccessService = jobAccessService;
@@ -73,6 +81,8 @@ public class JobDefinitionController {
         this.dataSourceAccessService = dataSourceAccessService;
         this.auditService = auditService;
         this.auditActorResolver = auditActorResolver;
+        this.jobRunStore = jobRunStore;
+        this.quartzScheduleService = quartzScheduleService;
     }
 
     @PostMapping
@@ -144,6 +154,32 @@ public class JobDefinitionController {
             auditDetail(persisted));
         auditBindingChanges(existing, persisted, sourceDatasource, sinkDatasource, authentication);
         return mapper.toResponse(persisted, sourceDatasource, sinkDatasource);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+        @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Job deleted"),
+            @ApiResponse(responseCode = "403", description = "Administrator access required"),
+            @ApiResponse(responseCode = "404", description = "Job definition not found"),
+            @ApiResponse(responseCode = "409", description = "Job has an active run or cannot be unscheduled")
+        })
+    public ResponseEntity<Void> delete(@PathVariable UUID id, Authentication authentication) {
+        JobDefinition definition = repository.findByIdForUpdate(id)
+                .orElseThrow(() -> new NoSuchElementException("JobDefinition not found: " + id));
+        if (jobRunStore.hasActiveRun(id)) {
+            throw new IllegalStateException("Cannot delete JobDefinition with an active run: " + id);
+        }
+        quartzScheduleService.unschedule(id);
+        JobDefinitionStore.DeleteResult result = repository.delete(definition.id());
+        if (result.status() != JobDefinitionStore.DeleteStatus.DELETED) {
+            throw new NoSuchElementException("JobDefinition not found: " + id);
+        }
+        auditService.record(auditActorResolver.resolve(authentication), AuditAction.JOB_DELETED,
+                AuditResourceType.JOB_DEFINITION, id.toString(), AuditOutcome.SUCCESS,
+                Map.of("name", result.jobName()));
+        return ResponseEntity.noContent().build();
     }
 
     private JobDefinition findDefinition(UUID id) {

@@ -1,7 +1,7 @@
 import AxiosMockAdapter from 'axios-mock-adapter';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { apiClient } from './client';
-import { cancelRun, retryRun, triggerRun } from './runsApi';
+import { cancelRun, listJobRuns, retryRun, triggerRun } from './runsApi';
 
 describe('runsApi mutations', () => {
   let mock: AxiosMockAdapter;
@@ -54,5 +54,35 @@ describe('runsApi mutations', () => {
 
     await expect(retryRun('run-1')).resolves.toEqual(response);
     expect(mock.history.post[0].url).toBe('/runs/run-1/retry');
+  });
+});
+
+describe('runsApi history filters', () => {
+  let mock: AxiosMockAdapter;
+
+  beforeEach(() => {
+    mock = new AxiosMockAdapter(apiClient);
+  });
+
+  afterEach(() => {
+    mock.restore();
+  });
+
+  it('sends status and date filters when listing a job history', async () => {
+    mock.onGet('/jobs/job-1/runs').reply(200, { content: [], page: 0, size: 50, totalElements: 0 });
+
+    await listJobRuns('job-1', 0, 50, {
+      status: ['FAILED', 'RUNNING'],
+      from: '2026-08-01T00:00:00.000Z',
+      to: '2026-09-01T00:00:00.000Z'
+    });
+
+    expect(mock.history.get[0].params).toEqual({
+      page: 0,
+      size: 50,
+      status: ['FAILED', 'RUNNING'],
+      from: '2026-08-01T00:00:00.000Z',
+      to: '2026-09-01T00:00:00.000Z'
+    });
   });
 });

@@ -156,6 +156,20 @@ public class JobDefinitionRepository implements JobDefinitionStore {
         return findById(definition.id()).orElseThrow();
     }
 
+    @Transactional
+    @Override
+    public JobDefinitionStore.DeleteResult delete(UUID id) {
+        Optional<JobDefinition> existing = findByIdForUpdate(id);
+        if (existing.isEmpty()) {
+            return new JobDefinitionStore.DeleteResult(JobDefinitionStore.DeleteStatus.NOT_FOUND, null);
+        }
+        int deleted = jdbcTemplate.update("DELETE FROM job_definition WHERE id = :id", Map.of("id", id));
+        if (deleted != 1) {
+            return new JobDefinitionStore.DeleteResult(JobDefinitionStore.DeleteStatus.NOT_FOUND, null);
+        }
+        return new JobDefinitionStore.DeleteResult(JobDefinitionStore.DeleteStatus.DELETED, existing.get().name());
+    }
+
     private static void validatePage(int page, int size) {
         if (page < 0) {
             throw new IllegalArgumentException("page must not be negative");
