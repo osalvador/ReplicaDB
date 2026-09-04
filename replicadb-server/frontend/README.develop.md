@@ -65,6 +65,13 @@ export REPLICADB_BOOTSTRAP_ADMIN_USERNAME='my-local-admin'
 ./replicadb-server/frontend/scripts/start-local.sh
 ```
 
+Este script es deliberadamente efímero: elimina el contenedor PostgreSQL de
+desarrollo al terminar. Para una instalación local duradera sin Docker, usa el
+paquete server con `./bin/replicadb-server start local`; ese modo gestiona
+PostgreSQL nativo y conserva sus datos y el keyring bajo
+`REPLICADB_SERVER_HOME` (por defecto `~/.replicadb`) y no inicia workers separados. Consulta
+`README.md` y `DEPLOYMENT.md` para el contrato operativo de ese modo.
+
 Cuando el script termine de arrancar:
 
 - Frontend: `http://localhost:5173`
@@ -227,8 +234,10 @@ export DB_URL='<metadata-jdbc-url>'
 export DB_USERNAME='<metadata-user>'
 export DB_PASSWORD='<managed-secret>'
 export REPLICADB_WORKER_IDENTITY='worker-1'
-java -Dspring.profiles.active=worker \
-  -jar replicadb-server/target/replicadb-server-0.1.0-SNAPSHOT.jar
+mvn -f replicadb-server/pom.xml spring-boot:run \
+  -Dspring-boot.run.profiles=worker \
+  -Dskip.installnodenpm=true \
+  -Dskip.npm=true
 ```
 
 Si `REPLICADB_WORKER_IDENTITY` está vacío, el proceso genera una identidad
@@ -357,7 +366,7 @@ Después arranca el jar con el perfil `api` y las variables `DB_URL`, `DB_USERNA
 
 ```bash
 java -Dspring.profiles.active=api \
-  -jar replicadb-server/target/replicadb-server-0.1.0-SNAPSHOT.jar
+  -jar replicadb-server/target/replicadb-server-0.19.0.jar
 ```
 
 En este modo la interfaz se sirve desde el mismo proceso en `http://localhost:8080`.

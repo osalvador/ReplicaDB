@@ -18,6 +18,8 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release_version.outputs.version }}
 
     steps:
     - uses: actions/checkout@v7
@@ -33,88 +35,335 @@ jobs:
       run: scripts/phase3-cli-compatibility.sh
 
     - name: Get version
+      id: release_version
       run: |
         if [ "${{ github.event.inputs.version }}" != "" ]; then
-          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          version="${{ github.event.inputs.version }}"
+        elif [[ "${GITHUB_REF_NAME:-}" == v* ]]; then
+          version="${GITHUB_REF_NAME#v}"
         else
-          echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec) " >> $GITHUB_ENV
+          project_version="\${project.version}"
+          version="$(mvn -q -Dexec.executable=echo -Dexec.args="$project_version" --non-recursive exec:exec)"
         fi
- 
- 
-    - name: Build with Maven
-      run: mvn -DskipTests -B package --file pom.xml
-        
-    - name: Maven Install
+        echo "version=$version" >> "$GITHUB_ENV"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Validate release version
       run: |
-        export REPLICADB_RELEASE_VERSION=${{ env.version }}
-        echo ${REPLICADB_RELEASE_VERSION}  
-        mvn clean install -Dmaven.javadoc.skip=true -DskipTests -B -V -P release 
-        cp ./target/ReplicaDB-*.jar . 
-        mkdir lib
-        echo ${REPLICADB_RELEASE_VERSION} 
-        cp ./target/lib/* ./lib 
-        tar -zcvf ReplicaDB-${REPLICADB_RELEASE_VERSION}.tar.gz ReplicaDB-*.jar README.md lib conf bin LICENSE
-        zip -r -X ReplicaDB-${REPLICADB_RELEASE_VERSION}.zip ReplicaDB-*.jar README.md lib conf bin LICENSE
-        ls -lah        
+        set -euo pipefail
+        python3 - <<'PY'
+        import os
+        import xml.etree.ElementTree as ET
+
+        namespace = {'m': 'http://maven.apache.org/POM/4.0.0'}
+        expected = os.environ['version']
+        root = ET.parse('pom.xml').getroot()
+        server = ET.parse('replicadb-server/pom.xml').getroot()
+        root_version = root.find('m:version', namespace).text
+        server_version = server.find('m:version', namespace).text
+        if expected != root_version or expected != server_version:
+            raise SystemExit(
+                f'version mismatch: release={expected}, root={root_version}, server={server_version}')
+        if not expected.replace('.', '').isdigit() or expected.count('.') != 2:
+            raise SystemExit(f'invalid release version: {expected}')
+        PY
+
+    - name: Build and stage CLI artifact
+      run: |
+        set -euo pipefail
+        mvn -B clean install -Dmaven.javadoc.skip=true -DskipTests -V -P release --file pom.xml
+        rm -rf .release-cli release-staging
+        mkdir -p .release-cli/lib release-staging
+        cp "target/ReplicaDB-${{ env.version }}.jar" ".release-cli/ReplicaDB-${{ env.version }}.jar"
+        cp target/lib/* .release-cli/lib/
+        cp README.md LICENSE .release-cli/
+        cp -R conf bin .release-cli/
+        find .release-cli -exec touch -d '1980-01-01 00:00:00Z' {} +
+        tar --sort=name --mtime='1980-01-01 00:00:00Z' --owner=0 --group=0 --numeric-owner \
+          -C .release-cli -czf "release-staging/ReplicaDB-${{ env.version }}.tar.gz" .
+        (cd .release-cli && find . -type f -print | LC_ALL=C sort \
+          | zip -X -q "../release-staging/ReplicaDB-${{ env.version }}.zip" -@)
 
     - name: Build server artifact
-      run: mvn -B package --file replicadb-server/pom.xml
+      run: |
+        set -euo pipefail
+        mvn -B package -DskipTests --file replicadb-server/pom.xml
+        scripts/package-server-release.sh "${{ env.version }}" \
+          "replicadb-server/target/replicadb-server-${{ env.version }}.jar" release-staging
+        cp "replicadb-server/target/replicadb-server-${{ env.version }}.jar" release-staging/
 
-    - name: Upload server artifact
+    - name: Validate release staging
+      run: |
+        set -euo pipefail
+        cd release-staging
+        expected=(
+          "ReplicaDB-${{ env.version }}.tar.gz"
+          "ReplicaDB-${{ env.version }}.zip"
+          "ReplicaDB-server-${{ env.version }}.tar.gz"
+          "ReplicaDB-server-${{ env.version }}.zip"
+          "replicadb-server-${{ env.version }}.jar"
+        )
+        for asset in "${expected[@]}"; do
+          test -f "$asset"
+        done
+        sha256sum "${expected[@]}" > SHA256SUMS
+        mapfile -t actual < <(find . -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)
+        expected_with_checksums=("${expected[@]}" SHA256SUMS)
+        printf '%s\n' "${expected_with_checksums[@]}" | LC_ALL=C sort > expected.list
+        printf '%s\n' "${actual[@]}" | LC_ALL=C sort > actual.list
+        diff -u expected.list actual.list
+        sha256sum -c SHA256SUMS
+        tar -xOf "ReplicaDB-server-${{ env.version }}.tar.gz" \
+          "ReplicaDB-server-${{ env.version }}/lib/replicadb-server-${{ env.version }}.jar" \
+          | cmp - "replicadb-server-${{ env.version }}.jar"
+        if jar tf "replicadb-server-${{ env.version }}.jar" | grep -Eq '(^|/)postgres-[^/]*\.txz$'; then
+          echo 'server JAR contains a native PostgreSQL bundle' >&2
+          exit 1
+        fi
+
+    - name: Upload release staging
       uses: actions/upload-artifact@v4
       with:
-        name: replicadb-server-jar
-        path: replicadb-server/target/replicadb-server-*.jar
+        name: release-staging
+        path: release-staging
         if-no-files-found: error
 
-    - uses: "marvinpinto/action-automatic-releases@latest"
+  windows_launcher:
+    needs: build
+    runs-on: windows-latest
+    name: Windows launcher contract
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Download release staging
+      uses: actions/download-artifact@v4
       with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: v${{ env.version }}
-        prerelease: false
-        files: |
-          ReplicaDB-*.zip
-          ReplicaDB-*.tar.gz
+        name: release-staging
+        path: release-staging
+    - name: Validate Windows launcher contract
+      shell: pwsh
+      run: ./replicadb-server/scripts/server-launcher-windows.test.ps1
+    - name: Verify release checksums
+      shell: pwsh
+      run: |
+        $expected = @(
+          "ReplicaDB-${{ needs.build.outputs.version }}.tar.gz",
+          "ReplicaDB-${{ needs.build.outputs.version }}.zip",
+          "ReplicaDB-server-${{ needs.build.outputs.version }}.tar.gz",
+          "ReplicaDB-server-${{ needs.build.outputs.version }}.zip",
+          "replicadb-server-${{ needs.build.outputs.version }}.jar"
+        )
+        $manifest = Get-Content release-staging/SHA256SUMS
+        foreach ($asset in $expected) {
+          $line = $manifest | Where-Object { $_ -match "  $([regex]::Escape($asset))$" }
+          if (-not $line) { throw "Missing checksum for $asset" }
+          $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath "release-staging/$asset").Hash.ToLowerInvariant()
+          if (-not $line.StartsWith("$actual  ")) { throw "Checksum mismatch for $asset" }
+        }
 
-    -   name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
-        
-    -   name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-    
-    -   name: Login to DockerHub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v4 
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+  embedded_postgres:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    name: Embedded package smoke (${{ matrix.os }})
 
-    -   name: Build and push managed server image
-        uses: docker/build-push-action@v7
-        with:
-          context: replicadb-server
-          file: replicadb-server/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: osalvador/replicadb-server:${{ env.version }},osalvador/replicadb-server:latest
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up JDK 17
+      uses: actions/setup-java@v6
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+    - name: Download release staging
+      uses: actions/download-artifact@v4
+      with:
+        name: release-staging
+        path: release-staging
+    - name: Check Linux and macOS prerequisites
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        set -euo pipefail
+        java -version
+        command -v bash
+        command -v curl
+        command -v tar
+        if command -v postgres >/dev/null 2>&1; then
+          echo 'system PostgreSQL must not be required by the package smoke' >&2
+          exit 1
+        fi
+    - name: Check Windows prerequisites
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        java -version
+        Get-Command pwsh
+        Get-Command taskkill
+        Get-Command tar
+        if (Get-Command postgres -ErrorAction SilentlyContinue) {
+          throw 'system PostgreSQL must not be required by the package smoke'
+        }
+    - name: Install CLI artifact for embedded Maven profile
+      shell: bash
+      run: mvn -B install -DskipTests --file pom.xml
+    - name: Run embedded PostgreSQL Maven profile
+      shell: bash
+      env:
+        REPLICADB_SERVER_HOME: ${{ runner.temp }}/replicadb-server-home
+      run: mvn -B -Pembedded-postgres -Dskip.installnodenpm=true -Dskip.npm=true test --file replicadb-server/pom.xml
+    - name: Smoke packaged local server on POSIX
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        REPLICADB_SERVER_HOME: ${{ runner.temp }}/replicadb-package-home
+        REPLICADB_BOOTSTRAP_ADMIN_USERNAME: ci-local-admin
+        REPLICADB_BOOTSTRAP_ADMIN_PASSWORD: ci-local-bootstrap-password
+      run: |
+        set -euo pipefail
+        package_dir="$RUNNER_TEMP/replicadb-server-package"
+        mkdir -p "$package_dir"
+        tar -xzf release-staging/ReplicaDB-server-${{ needs.build.outputs.version }}.tar.gz -C "$package_dir"
+        cd "$package_dir/ReplicaDB-server-${{ needs.build.outputs.version }}"
+        trap './bin/replicadb-server stop >/dev/null 2>&1 || true' EXIT
+        ./bin/replicadb-server start local
+        curl --fail --silent http://127.0.0.1:8080/actuator/health >/dev/null
+        ./bin/replicadb-server status
+        ./bin/replicadb-server stop
+        if ./bin/replicadb-server status >/dev/null 2>&1; then
+          echo 'server status remained running after stop' >&2
+          exit 1
+        fi
+        test ! -f "$REPLICADB_SERVER_HOME/run/server.pid"
+        if pgrep -f 'replicadb-server-${{ needs.build.outputs.version }}.jar' >/dev/null 2>&1; then
+          echo 'packaged server process remained after stop' >&2
+          exit 1
+        fi
+    - name: Smoke packaged local server on Windows
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        REPLICADB_SERVER_HOME: ${{ runner.temp }}\replicadb-package-home
+        REPLICADB_BOOTSTRAP_ADMIN_USERNAME: ci-local-admin
+        REPLICADB_BOOTSTRAP_ADMIN_PASSWORD: ci-local-bootstrap-password
+      run: |
+        $packageDir = Join-Path $env:RUNNER_TEMP 'replicadb-server-package'
+        New-Item -ItemType Directory -Force $packageDir | Out-Null
+        tar -xzf "release-staging/ReplicaDB-server-${{ needs.build.outputs.version }}.tar.gz" -C $packageDir
+        Set-Location (Join-Path $packageDir 'ReplicaDB-server-${{ needs.build.outputs.version }}')
+        & '.\bin\replicadb-server.cmd' start local
+        if ($LASTEXITCODE -ne 0) { throw 'packaged local server failed to start' }
+        try {
+          $health = Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:8080/actuator/health'
+          if ($health.StatusCode -ne 200) { throw 'packaged local server health failed' }
+          & '.\bin\replicadb-server.cmd' status
+        } finally {
+          & '.\bin\replicadb-server.cmd' stop
+        }
+        if (Test-Path (Join-Path $env:REPLICADB_SERVER_HOME 'run\server.pid')) {
+          throw 'server PID remained after stop'
+        }
 
-    -   name: Build and push
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: osalvador/replicadb:${{ env.version }}, osalvador/replicadb:latest
-          build-args: REPLICADB_RELEASE_VERSION=${{ env.version }}
+  publish:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [build, windows_launcher, embedded_postgres]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_VERSION: ${{ needs.build.outputs.version }}
+    name: Publish complete release
 
-    -   name: Build and push
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: Containerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: osalvador/replicadb:ubi9-${{ env.version }}, osalvador/replicadb:ubi9-latest
-          build-args: REPLICADB_RELEASE_VERSION=${{ env.version }}
-
-
-
+    steps:
+    - uses: actions/checkout@v7
+    - name: Download release staging
+      uses: actions/download-artifact@v4
+      with:
+        name: release-staging
+        path: release-staging
+    - name: Validate tag and complete release set
+      shell: bash
+      run: |
+        set -euo pipefail
+        test "${GITHUB_REF_NAME#v}" = "$RELEASE_VERSION"
+        cd release-staging
+        assets=(
+          "ReplicaDB-${RELEASE_VERSION}.tar.gz"
+          "ReplicaDB-${RELEASE_VERSION}.zip"
+          "ReplicaDB-server-${RELEASE_VERSION}.tar.gz"
+          "ReplicaDB-server-${RELEASE_VERSION}.zip"
+          "replicadb-server-${RELEASE_VERSION}.jar"
+        )
+        for asset in "${assets[@]}"; do test -f "$asset"; done
+        test -f SHA256SUMS
+        sha256sum -c SHA256SUMS
+        mapfile -t actual < <(find . -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)
+        printf '%s\n' "${assets[@]}" SHA256SUMS | LC_ALL=C sort > expected.list
+        printf '%s\n' "${actual[@]}" | LC_ALL=C sort > actual.list
+        diff -u expected.list actual.list
+        cd ..
+        mkdir -p replicadb-server/target
+        cp "release-staging/replicadb-server-${RELEASE_VERSION}.jar" \
+          "replicadb-server/target/replicadb-server-${RELEASE_VERSION}.jar"
+        cp "release-staging/ReplicaDB-${RELEASE_VERSION}.tar.gz" .
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v4
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v4
+    - name: Login to DockerHub
+      uses: docker/login-action@v4
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Build and push managed server image
+      uses: docker/build-push-action@v7
+      with:
+        context: replicadb-server
+        file: replicadb-server/Dockerfile
+        push: true
+        tags: osalvador/replicadb-server:${{ env.RELEASE_VERSION }},osalvador/replicadb-server:latest
+        build-args: |
+          SERVER_VERSION=${{ env.RELEASE_VERSION }}
+          SERVER_JAR=target/replicadb-server-${{ env.RELEASE_VERSION }}.jar
+    - name: Build and push CLI image
+      uses: docker/build-push-action@v7
+      with:
+        context: .
+        file: Dockerfile
+        push: true
+        tags: osalvador/replicadb:${{ env.RELEASE_VERSION }},osalvador/replicadb:latest
+        build-args: REPLICADB_RELEASE_VERSION=${{ env.RELEASE_VERSION }}
+    - name: Build and push UBI CLI image
+      uses: docker/build-push-action@v7
+      with:
+        context: .
+        file: Containerfile
+        push: true
+        tags: osalvador/replicadb:ubi9-${{ env.RELEASE_VERSION }},osalvador/replicadb:ubi9-latest
+        build-args: REPLICADB_RELEASE_VERSION=${{ env.RELEASE_VERSION }}
+    - name: Publish complete asset set
+      env:
+        GH_TOKEN: ${{ github.token }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        tag="v${RELEASE_VERSION}"
+        assets=(
+          "release-staging/ReplicaDB-${RELEASE_VERSION}.tar.gz"
+          "release-staging/ReplicaDB-${RELEASE_VERSION}.zip"
+          "release-staging/ReplicaDB-server-${RELEASE_VERSION}.tar.gz"
+          "release-staging/ReplicaDB-server-${RELEASE_VERSION}.zip"
+          "release-staging/replicadb-server-${RELEASE_VERSION}.jar"
+          "release-staging/SHA256SUMS"
+        )
+        if gh release view "$tag" >/dev/null 2>&1; then
+          gh release upload "$tag" "${assets[@]}" --clobber
+        else
+          gh release create "$tag" --verify-tag --title "ReplicaDB $RELEASE_VERSION" \
+            --generate-notes "${assets[@]}"
+        fi
     

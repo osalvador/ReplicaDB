@@ -11,7 +11,7 @@
 # 5. Pushes to origin (CI/CD builds release automatically)
 #
 # Usage: ./release.sh <version>
-# Example: ./release.sh 0.18.4
+# Example: ./release.sh 0.19.0
 ################################################################################
 
 set -e
@@ -121,6 +121,16 @@ update_server_pom_dependency_version() {
 
     print_success "replicadb-server dependency updated"
 }
+update_server_pom_version() {
+    local new_version=$1
+
+    print_info "Updating replicadb-server project version to $new_version"
+
+    sed -i.bak "/<artifactId>replicadb-server<\/artifactId>/{n;s/<version>[^<]*<\/version>/<version>${new_version}<\/version>/;}" "$SERVER_POM_FILE"
+    rm -f "${SERVER_POM_FILE}.bak"
+
+    print_success "replicadb-server project version updated"
+}
 update_readme_version() {
     local old_version=$1
     local new_version=$2
@@ -195,6 +205,10 @@ show_release_summary() {
     echo -e "${GREEN}Release Assets:${NC}"
     echo "  - ReplicaDB-${new_version}.tar.gz"
     echo "  - ReplicaDB-${new_version}.zip"
+    echo "  - ReplicaDB-server-${new_version}.tar.gz"
+    echo "  - ReplicaDB-server-${new_version}.zip"
+    echo "  - replicadb-server-${new_version}.jar"
+    echo "  - SHA256SUMS"
     echo
     echo -e "${GREEN}Docker Images:${NC}"
     echo "  - osalvador/replicadb:${new_version}"
@@ -216,7 +230,7 @@ main() {
         print_error "Missing version argument"
         echo
         echo "Usage: ./release.sh <version>"
-        echo "Example: ./release.sh 0.18.4"
+        echo "Example: ./release.sh 0.19.0"
         echo
         echo "Steps performed:"
         echo "  1. Validate version format (semantic versioning)"
@@ -256,6 +270,7 @@ main() {
     print_header "Executing Release Steps"
     
     update_pom_version "$old_version" "$new_version"
+    update_server_pom_version "$new_version"
     update_server_pom_dependency_version "$old_version" "$new_version"
     update_readme_version "$old_version" "$new_version"
     create_release_commit "$new_version"

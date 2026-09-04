@@ -43,6 +43,51 @@ The server image runs as the non-root `replicadb` user. Select the runtime
 with `SPRING_PROFILES_ACTIVE=api` or `SPRING_PROFILES_ACTIVE=worker`; both
 profiles use the same server jar.
 
+## Single-node local mode without Docker
+
+For a local installation that must survive restarts without Docker or a
+system PostgreSQL installation, extract the server package and use its
+launcher:
+
+```bash
+tar -xzf ReplicaDB-server-0.19.0.tar.gz
+cd ReplicaDB-server-0.19.0
+export REPLICADB_SERVER_HOME="${REPLICADB_SERVER_HOME:-$HOME/.replicadb}"
+export REPLICADB_BOOTSTRAP_ADMIN_USERNAME='local-admin'
+export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD='<local-password>'
+./bin/replicadb-server start local
+./bin/replicadb-server status
+```
+
+The launcher starts the `api` profile and enables local execution. It manages
+one PostgreSQL process on loopback, runs Flyway and Quartz against it, and
+serves the API/frontend on the normal server port. Do not combine local mode
+with `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, the `worker` profile, or
+`REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED=false`.
+
+The first start downloads the verified platform bundle from Maven Central and
+requires network access unless the bundle is already cached. The current
+release manifest covers macOS ARM64 and x64, Linux x64, and Windows x64;
+unsupported operating systems or architectures fail before Spring starts. The
+local home contains:
+
+```text
+${REPLICADB_SERVER_HOME}/data/postgresql/       PostgreSQL metadata cluster
+${REPLICADB_SERVER_HOME}/cache/postgresql/      native bundle cache and extraction
+${REPLICADB_SERVER_HOME}/security/master-key.json
+${REPLICADB_SERVER_HOME}/locks/
+${REPLICADB_SERVER_HOME}/run/
+${REPLICADB_SERVER_HOME}/logs/
+```
+
+Stop the server cleanly before copying `data/postgresql` or restoring it. Back
+up the keyring together with the data directory because the API encrypts
+managed datasource credentials with that key. A missing cache can be
+recreated; a missing keyring cannot decrypt an existing datasource catalog.
+The embedded mode keeps PostgreSQL local and uses non-TLS HTTP session cookies,
+so use it only on the local machine unless an authenticated TLS reverse proxy
+is configured. It is not a distributed deployment and does not start workers.
+
 ## Configuration
 
 Provide `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` through the deployment
