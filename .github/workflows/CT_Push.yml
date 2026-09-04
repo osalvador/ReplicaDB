@@ -419,7 +419,9 @@ jobs:
         chmod 600 "$keyring_file"
         export REPLICADB_SECURITY_MASTER_KEY_FILE="$keyring_file"
         echo "REPLICADB_SECURITY_MASTER_KEY_FILE=$keyring_file" >> "$GITHUB_ENV"
-        nohup java -Dspring.profiles.active=api -Dreplicadb.server.local-seeding.enabled=true -jar replicadb-server/target/replicadb-server-0.1.0-SNAPSHOT.jar > /tmp/replicadb-server-e2e.log 2>&1 &
+        server_jar=$(find replicadb-server/target -maxdepth 1 -type f -name 'replicadb-server-*.jar' ! -name '*-original.jar' -print -quit)
+        test -n "$server_jar"
+        nohup java -Dspring.profiles.active=api -Dreplicadb.server.local-seeding.enabled=true -jar "$server_jar" > /tmp/replicadb-server-e2e.log 2>&1 &
         echo $! > /tmp/replicadb-server-e2e.pid
     - name: Wait for API health
       run: |
