@@ -1,4 +1,5 @@
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
+import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -58,6 +59,7 @@ function Navigation({ collapsed = false, onNavigate, onToggleCollapse, onLogout 
     { label: 'Dashboard', to: '/', icon: <DashboardOutlinedIcon /> },
     { label: 'Jobs', to: '/jobs', icon: <WorkOutlineIcon /> },
     { label: 'Datasources', to: '/datasources', icon: <StorageOutlinedIcon /> },
+    ...(user?.role === 'ADMIN' ? [{ label: 'Audit', to: '/audit', icon: <FactCheckOutlinedIcon /> }] : []),
     ...(user?.role === 'ADMIN' ? [{ label: 'Users', to: '/users', icon: <PeopleOutlineIcon /> }] : [])
   ];
 
