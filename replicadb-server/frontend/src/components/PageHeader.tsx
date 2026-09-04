@@ -20,14 +20,14 @@ export default function PageHeader({
 }: PageHeaderProps) {
   return (
     <Box component="header" sx={{ mb: 3 }}>
+      {backLink !== undefined && <Box sx={{ mb: { xs: 1.5, sm: 2 } }}>{backLink}</Box>}
       <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={{ xs: 2, sm: 3 }}
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={{ xs: 2, md: 4 }}
         justifyContent="space-between"
-        alignItems={{ xs: 'stretch', sm: 'flex-start' }}
+        alignItems={{ xs: 'stretch', md: 'center' }}
       >
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          {backLink !== undefined && <Box sx={{ mb: 1 }}>{backLink}</Box>}
           <Typography component={`h${headingLevel}`} variant="h3">
             {title}
           </Typography>
@@ -42,7 +42,7 @@ export default function PageHeader({
             direction={{ xs: 'column', sm: 'row' }}
             spacing={1}
             alignItems={{ xs: 'stretch', sm: 'center' }}
-            sx={{ flexShrink: 0, '& > *': { width: { xs: '100%', sm: 'auto' } } }}
+            sx={{ flexShrink: 0, width: { xs: '100%', md: 'auto' }, '& > *': { width: { xs: '100%', sm: 'auto' } } }}
           >
             {actions}
           </Stack>

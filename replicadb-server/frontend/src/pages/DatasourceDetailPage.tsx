@@ -1,11 +1,13 @@
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
-import { Alert, Button, Chip, Stack, Typography } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
-import { Link as RouterLink, useParams } from 'react-router-dom';
+import { Alert, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
-import { datasourceQueryKeys, getDatasource } from '../api/datasourcesApi';
+import { datasourceQueryKeys, deleteDatasource, getDatasource, invalidateDatasourceQueries } from '../api/datasourcesApi';
 import { useAuth } from '../auth/useAuth';
 import LoadingState from '../components/LoadingState';
 import PageHeader from '../components/PageHeader';
@@ -31,10 +33,21 @@ function DetailRows({ details }: { details: Array<[string, string | number | und
 export default function DatasourceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const datasourceQuery = useQuery({
     queryKey: datasourceQueryKeys.detail(id ?? ''),
     queryFn: () => getDatasource(id ?? ''),
     enabled: Boolean(id)
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (datasourceId: string) => deleteDatasource(datasourceId),
+    onSuccess: () => {
+      void invalidateDatasourceQueries(queryClient);
+      navigate('/datasources');
+    }
   });
 
   if (datasourceQuery.isPending) {
@@ -84,6 +97,16 @@ export default function DatasourceDetailPage() {
                 Manage permissions
               </Button>
             )}
+            {user?.role === 'ADMIN' && datasource.id && (
+              <Button
+                color="error"
+                variant="outlined"
+                startIcon={<DeleteOutlineIcon />}
+                onClick={() => setDeleteOpen(true)}
+              >
+                Delete datasource
+              </Button>
+            )}
           </>
         }
       />
@@ -117,6 +140,32 @@ export default function DatasourceDetailPage() {
           {technicalParams || 'No technical parameters configured.'}
         </Typography>
       </SurfaceSection>
+      <Dialog
+        open={deleteOpen}
+        onClose={() => !deleteMutation.isPending && setDeleteOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Delete datasource</DialogTitle>
+        <DialogContent>
+          {deleteMutation.isError && <Alert severity="error" sx={{ mb: 2 }}>{errorMessage(deleteMutation.error)}</Alert>}
+          <Typography>
+            Delete {datasource.name ?? 'this datasource'}? A profile referenced by a job cannot be deleted.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteOpen(false)} disabled={deleteMutation.isPending}>Cancel</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => datasource.id && deleteMutation.mutate(datasource.id)}
+            disabled={deleteMutation.isPending || !datasource.id}
+            startIcon={<DeleteOutlineIcon />}
+          >
+            {deleteMutation.isPending ? 'Deleting...' : 'Delete datasource'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 }

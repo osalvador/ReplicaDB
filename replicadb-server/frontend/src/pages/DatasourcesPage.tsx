@@ -1,15 +1,8 @@
 import AddIcon from '@mui/icons-material/Add';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import {
   Alert,
   Button,
   Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   MenuItem,
   Stack,
   Table,
@@ -20,17 +13,14 @@ import {
   TablePagination,
   TableRow,
   TextField,
-  Tooltip,
   Typography
 } from '@mui/material';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import {
   datasourceQueryKeys,
-  deleteDatasource,
-  invalidateDatasourceQueries,
   listDatasources,
   type DatasourceResponse,
   type DatasourceRole
@@ -55,23 +45,14 @@ function capabilityLabels(datasource: DatasourceResponse): string[] {
 
 export default function DatasourcesPage() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [page, setPage] = useState(0);
   const [role, setRole] = useState<DatasourceRole | ''>('');
-  const [deleteTarget, setDeleteTarget] = useState<DatasourceResponse | null>(null);
 
   const size = 25;
   const datasourcesQuery = useQuery({
     queryKey: datasourceQueryKeys.list(page, size, role || undefined),
     queryFn: () => listDatasources(page, size, role || undefined)
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteDatasource(id),
-    onSuccess: () => {
-      void invalidateDatasourceQueries(queryClient);
-      setDeleteTarget(null);
-    }
   });
 
   if (datasourcesQuery.isPending) {
@@ -133,14 +114,31 @@ export default function DatasourcesPage() {
                     <TableCell>Safe connection</TableCell>
                     <TableCell>Capabilities</TableCell>
                     <TableCell>Security</TableCell>
-                    <TableCell align="right">Actions</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {datasources.map(datasource => {
                     const capabilities = capabilityLabels(datasource);
+                    const openDatasource = () => {
+                      if (datasource.id) {
+                        navigate(`/datasources/${datasource.id}`);
+                      }
+                    };
                     return (
-                      <TableRow key={datasource.id ?? datasource.name}>
+                      <TableRow
+                        key={datasource.id ?? datasource.name}
+                        hover={Boolean(datasource.id)}
+                        tabIndex={datasource.id ? 0 : undefined}
+                        aria-label={datasource.id ? `Open ${datasource.name ?? 'datasource'}` : undefined}
+                        onClick={openDatasource}
+                        onKeyDown={event => {
+                          if (datasource.id && (event.key === 'Enter' || event.key === ' ')) {
+                            event.preventDefault();
+                            openDatasource();
+                          }
+                        }}
+                        sx={{ cursor: datasource.id ? 'pointer' : 'default' }}
+                      >
                         <TableCell>
                           {datasource.id ? (
                             <Typography
@@ -181,45 +179,6 @@ export default function DatasourcesPage() {
                             variant={datasource.securityConfigured ? 'filled' : 'outlined'}
                           />
                         </TableCell>
-                        <TableCell align="right">
-                          <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                            {datasource.canEdit && datasource.id && (
-                              <Button
-                                component={RouterLink}
-                                to={`/datasources/${datasource.id}/edit`}
-                                size="small"
-                                startIcon={<EditOutlinedIcon />}
-                                aria-label={`Edit ${datasource.name ?? 'datasource'}`}
-                              >
-                                Edit
-                              </Button>
-                            )}
-                            {user?.role === 'ADMIN' && datasource.id && (
-                              <Tooltip title="Manage datasource permissions">
-                                <Button
-                                  component={RouterLink}
-                                  to={`/datasources/${datasource.id}/permissions`}
-                                  size="small"
-                                  startIcon={<SecurityOutlinedIcon />}
-                                  aria-label={`Permissions for ${datasource.name ?? 'datasource'}`}
-                                >
-                                  ACL
-                                </Button>
-                              </Tooltip>
-                            )}
-                            {user?.role === 'ADMIN' && datasource.id && (
-                              <Button
-                                color="error"
-                                size="small"
-                                startIcon={<DeleteOutlineIcon />}
-                                onClick={() => setDeleteTarget(datasource)}
-                                aria-label={`Delete ${datasource.name ?? 'datasource'}`}
-                              >
-                                Delete
-                              </Button>
-                            )}
-                          </Stack>
-                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -236,36 +195,7 @@ export default function DatasourcesPage() {
             />
           </>
         )}
-        {deleteMutation.isError && (
-          <Alert severity="error" sx={{ mt: 2 }}>{errorMessage(deleteMutation.error)}</Alert>
-        )}
       </SurfaceSection>
-
-      <Dialog
-        open={Boolean(deleteTarget)}
-        onClose={() => !deleteMutation.isPending && setDeleteTarget(null)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>Delete datasource</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Delete {deleteTarget?.name ?? 'this datasource'}? A profile referenced by a job cannot be deleted.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteTarget(null)} disabled={deleteMutation.isPending}>Cancel</Button>
-          <Button
-            color="error"
-            variant="contained"
-            onClick={() => deleteTarget?.id && deleteMutation.mutate(deleteTarget.id)}
-            disabled={deleteMutation.isPending || !deleteTarget?.id}
-            startIcon={<DeleteOutlineIcon />}
-          >
-            {deleteMutation.isPending ? 'Deleting...' : 'Delete datasource'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Stack>
   );
 }
