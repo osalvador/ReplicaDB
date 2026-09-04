@@ -21,10 +21,12 @@ import DatasourceSelector from '../components/DatasourceSelector';
 import DataFilteringTabs from '../components/DataFilteringTabs';
 import StagingOptionsTabs, { type StagingTarget } from '../components/StagingOptionsTabs';
 import LoadingState from '../components/LoadingState';
+import OperationalNotice from '../components/OperationalNotice';
 import PageHeader from '../components/PageHeader';
 import SurfaceSection from '../components/SurfaceSection';
 import {
   createJob,
+  COMPLETE_MODE_WARNING,
   getJob,
   toJobDefinitionRequest,
   updateJob,
@@ -264,7 +266,9 @@ export default function JobFormPage() {
     mutation.mutate(requestForStagingTarget(form, stagingTarget));
   };
 
-  const modeWarning = editMode && form.mode === 'complete' ? jobQuery.data?.modeWarning : undefined;
+  const modeWarning = form.mode === 'complete'
+    ? jobQuery.data?.modeWarning ?? COMPLETE_MODE_WARNING
+    : undefined;
   const selectedMode = replicationModeDetails[form.mode];
 
   return (
@@ -283,8 +287,10 @@ export default function JobFormPage() {
           </Button>
         }
       />
-      {modeWarning && <Alert severity="warning">{modeWarning}</Alert>}
-      {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
+      <Stack spacing={1}>
+        {modeWarning && <OperationalNotice severity="warning">{modeWarning}</OperationalNotice>}
+        {errorMessage && <OperationalNotice severity="error">{errorMessage}</OperationalNotice>}
+      </Stack>
       <Box component="form" noValidate onSubmit={submit}>
         <Stack spacing={2.5}>
           <SurfaceSection title="Basics" description="Name the job and choose its replication mode.">
@@ -526,98 +532,116 @@ export default function JobFormPage() {
                   </Typography>
                 </Stack>
                 <Collapse in={advancedOpen} timeout="auto" unmountOnExit>
-                  <Stack id={advancedOptionsId} spacing={2} sx={{ pt: 2 }}>
+                  <Stack id={advancedOptionsId} spacing={2.5} sx={{ pt: 2 }}>
                     <Typography color="text.secondary" variant="body2">
-                      Optional tuning for performance, diagnostics, and lease recovery.
+                      Optional tuning for throughput, diagnostics, and worker lease recovery.
                     </Typography>
                     <Box>
                       <Typography component="h3" variant="subtitle1" fontWeight={700}>
-                        Resilience and retry
+                        Performance
+                      </Typography>
+                      <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5, mb: 1.5 }}>
+                        Control how much data each read fetches and whether transfer speed is capped.
+                      </Typography>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                        <TextField
+                          label="Fetch size"
+                          type="number"
+                          value={form.fetchSize}
+                          onChange={event => setForm(current => ({
+                            ...current,
+                            fetchSize: event.target.value === '' ? 0 : Number(event.target.value)
+                          }))}
+                          inputProps={{ min: 1 }}
+                          fullWidth
+                        />
+                        <TextField
+                          label="Bandwidth (KB/s)"
+                          type="number"
+                          value={form.bandwidthThrottling}
+                          onChange={event => setForm(current => ({
+                            ...current,
+                            bandwidthThrottling: event.target.value === '' ? 0 : Number(event.target.value)
+                          }))}
+                          inputProps={{ min: 0 }}
+                          fullWidth
+                        />
+                      </Box>
+                    </Box>
+                    <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 2 }}>
+                      <Typography component="h3" variant="subtitle1" fontWeight={700}>
+                        Diagnostics
                       </Typography>
                       <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
-                        ReplicaDB creates a new attempt when a worker lease expires. It does not resume interrupted work.
+                        Include detailed replication output when troubleshooting a run.
+                      </Typography>
+                      <FormControlLabel
+                        sx={{ mt: 1 }}
+                        control={<Checkbox
+                          checked={form.verbose}
+                          onChange={event => setForm(current => ({ ...current, verbose: event.target.checked }))}
+                        />}
+                        label="Verbose logging"
+                      />
+                    </Box>
+                    <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 2 }}>
+                      <Typography component="h3" variant="subtitle1" fontWeight={700}>
+                        Retry policy
+                      </Typography>
+                      <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5, mb: 1.5 }}>
+                        A lease expiry creates a new attempt; interrupted work is not resumed.
+                      </Typography>
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+                        <TextField
+                          label="Maximum automatic attempts"
+                          type="number"
+                          value={form.maxAttempts}
+                          onChange={event => {
+                            setRetryPolicyTouched(true);
+                            setForm(current => ({
+                              ...current,
+                              maxAttempts: event.target.value === '' ? 0 : Number(event.target.value)
+                            }));
+                          }}
+                          inputProps={{ min: 1 }}
+                          required
+                          error={Boolean(errors.maxAttempts)}
+                          helperText={errors.maxAttempts ?? 'Includes the initial attempt.'}
+                          fullWidth
+                        />
+                        <TextField
+                          label="Retry delay after lease expiry (seconds)"
+                          type="number"
+                          value={form.retryBackoffSeconds}
+                          onChange={event => {
+                            setRetryPolicyTouched(true);
+                            setForm(current => ({
+                              ...current,
+                              retryBackoffSeconds: event.target.value === '' ? 0 : Number(event.target.value)
+                            }));
+                          }}
+                          inputProps={{ min: 0 }}
+                          required
+                          error={Boolean(errors.retryBackoffSeconds)}
+                          helperText={errors.retryBackoffSeconds ?? 'Wait before starting another attempt.'}
+                          fullWidth
+                        />
+                      </Box>
+                      <FormControlLabel
+                        sx={{ mt: 1 }}
+                        control={<Checkbox
+                          checked={form.automaticRetryEnabled}
+                          onChange={event => {
+                            setRetryPolicyTouched(true);
+                            setForm(current => ({ ...current, automaticRetryEnabled: event.target.checked }));
+                          }}
+                        />}
+                        label="Retry automatically after a worker lease expires"
+                      />
+                      <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+                        Automatic retry defaults on for incremental and complete atomic modes, and off for complete mode because complete mode can clear the sink.
                       </Typography>
                     </Box>
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                      <TextField
-                        label="Fetch size"
-                        type="number"
-                        value={form.fetchSize}
-                        onChange={event => setForm(current => ({
-                          ...current,
-                          fetchSize: event.target.value === '' ? 0 : Number(event.target.value)
-                        }))}
-                        inputProps={{ min: 1 }}
-                        fullWidth
-                      />
-                      <TextField
-                        label="Bandwidth (KB/s)"
-                        type="number"
-                        value={form.bandwidthThrottling}
-                        onChange={event => setForm(current => ({
-                          ...current,
-                          bandwidthThrottling: event.target.value === '' ? 0 : Number(event.target.value)
-                        }))}
-                        inputProps={{ min: 0 }}
-                        fullWidth
-                      />
-                    </Box>
-                    <FormControlLabel
-                      control={<Checkbox
-                        checked={form.verbose}
-                        onChange={event => setForm(current => ({ ...current, verbose: event.target.checked }))}
-                      />}
-                      label="Verbose"
-                    />
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-                      <TextField
-                        label="Maximum automatic attempts"
-                        type="number"
-                        value={form.maxAttempts}
-                        onChange={event => {
-                          setRetryPolicyTouched(true);
-                          setForm(current => ({
-                            ...current,
-                            maxAttempts: event.target.value === '' ? 0 : Number(event.target.value)
-                          }));
-                        }}
-                        inputProps={{ min: 1 }}
-                        required
-                        error={Boolean(errors.maxAttempts)}
-                        helperText={errors.maxAttempts ?? 'Total attempts, including the initial attempt.'}
-                        fullWidth
-                      />
-                      <TextField
-                        label="Retry delay after lease expiry (seconds)"
-                        type="number"
-                        value={form.retryBackoffSeconds}
-                        onChange={event => {
-                          setRetryPolicyTouched(true);
-                          setForm(current => ({
-                            ...current,
-                            retryBackoffSeconds: event.target.value === '' ? 0 : Number(event.target.value)
-                          }));
-                        }}
-                        inputProps={{ min: 0 }}
-                        required
-                        error={Boolean(errors.retryBackoffSeconds)}
-                        helperText={errors.retryBackoffSeconds ?? 'Wait before starting a new attempt.'}
-                        fullWidth
-                      />
-                    </Box>
-                    <FormControlLabel
-                      control={<Checkbox
-                        checked={form.automaticRetryEnabled}
-                        onChange={event => {
-                          setRetryPolicyTouched(true);
-                          setForm(current => ({ ...current, automaticRetryEnabled: event.target.checked }));
-                        }}
-                      />}
-                      label="Retry automatically after a worker lease expires"
-                    />
-                    <Typography color="text.secondary" variant="body2">
-                      Automatic retry is on by default for incremental and complete atomic modes, and off for complete mode because complete mode can clear the sink.
-                    </Typography>
                   </Stack>
                 </Collapse>
               </Box>

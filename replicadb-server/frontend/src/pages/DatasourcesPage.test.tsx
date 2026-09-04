@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as datasourcesApi from '../api/datasourcesApi';
 import type { DatasourceResponse } from '../api/datasourcesApi';
@@ -13,7 +13,6 @@ vi.mock('../api/datasourcesApi', async () => {
   const actual = await vi.importActual<typeof import('../api/datasourcesApi')>('../api/datasourcesApi');
   return {
     ...actual,
-    deleteDatasource: vi.fn(),
     listDatasources: vi.fn()
   };
 });
@@ -72,8 +71,11 @@ function renderPage(role: 'ADMIN' | 'OPERATOR' | 'VIEWER' = 'ADMIN') {
           login: vi.fn().mockResolvedValue(undefined),
           logout: vi.fn().mockResolvedValue(undefined)
         }}>
-          <MemoryRouter>
-            <DatasourcesPage />
+          <MemoryRouter initialEntries={['/datasources']}>
+            <Routes>
+              <Route path="/datasources" element={<DatasourcesPage />} />
+              <Route path="/datasources/:id" element={<div>Datasource detail destination</div>} />
+            </Routes>
           </MemoryRouter>
         </AuthContext.Provider>
       </QueryClientProvider>
@@ -84,7 +86,6 @@ function renderPage(role: 'ADMIN' | 'OPERATOR' | 'VIEWER' = 'ADMIN') {
 describe('DatasourcesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedApi.deleteDatasource.mockResolvedValue(undefined);
   });
 
   it('renders safe metadata, capabilities, and configured state without secrets', async () => {
@@ -97,6 +98,8 @@ describe('DatasourcesPage', () => {
     expect(screen.getAllByText('Source').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Sink').length).toBeGreaterThan(0);
     expect(screen.queryByText('transient-value')).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Actions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete Warehouse' })).not.toBeInTheDocument();
   });
 
   it('passes source and sink role filters to the API', async () => {
@@ -109,16 +112,20 @@ describe('DatasourcesPage', () => {
     await waitFor(() => expect(mockedApi.listDatasources).toHaveBeenLastCalledWith(0, 25, 'source'));
   });
 
-  it('deletes a datasource through the confirmation dialog and invalidates the catalog', async () => {
+  it('opens the datasource detail when a row is clicked', async () => {
     renderPage();
     await screen.findByText('Warehouse');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Delete Warehouse' }));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Delete datasource' }));
+    fireEvent.click(screen.getByRole('row', { name: /Open Warehouse/ }));
+    expect(await screen.findByText('Datasource detail destination')).toBeInTheDocument();
+  });
 
-    await waitFor(() => expect(mockedApi.deleteDatasource).toHaveBeenCalledWith('datasource-1'));
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  it('opens the datasource detail when a row is activated by keyboard', async () => {
+    renderPage();
+    await screen.findByText('Warehouse');
+
+    fireEvent.keyDown(screen.getByRole('row', { name: /Open Warehouse/ }), { key: 'Enter' });
+    expect(await screen.findByText('Datasource detail destination')).toBeInTheDocument();
   });
 
   it('hides admin actions for non-admin users while retaining editable profiles', async () => {
@@ -128,6 +135,6 @@ describe('DatasourcesPage', () => {
     expect(screen.queryByRole('link', { name: 'New datasource' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Permissions for Warehouse' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete Warehouse' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Edit Warehouse' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Edit Warehouse' })).not.toBeInTheDocument();
   });
 });

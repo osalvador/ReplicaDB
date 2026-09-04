@@ -215,6 +215,14 @@ describe('JobFormPage', () => {
     );
   });
 
+  it('shows the complete-mode warning when creating a job', async () => {
+    renderForm('/jobs/new');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Complete mode clears the sink before loading.'
+    );
+  });
+
   it('loads source and sink datasource options from role-filtered USE queries', async () => {
     renderForm('/jobs/new');
 
@@ -328,7 +336,10 @@ describe('JobFormPage', () => {
 
     openAdvancedOptions();
     expect(screen.getByLabelText('Fetch size')).toBeInTheDocument();
-    expect(screen.getByText('Optional tuning for performance, diagnostics, and lease recovery.')).toBeInTheDocument();
+    expect(screen.getByText('Optional tuning for throughput, diagnostics, and worker lease recovery.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Performance' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Diagnostics' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Retry policy' })).toBeInTheDocument();
   });
 
   it('requires a watermark column before submitting incremental mode', async () => {
@@ -366,7 +377,7 @@ describe('JobFormPage', () => {
     await fillRequiredFields();
     fireEvent.click(screen.getByRole('button', { name: 'Create job' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('The source table is required.');
+    expect(await screen.findByText('The source table is required.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'New job' })).toBeInTheDocument();
     expect(screen.queryByText(/Saved /)).not.toBeInTheDocument();
   });
