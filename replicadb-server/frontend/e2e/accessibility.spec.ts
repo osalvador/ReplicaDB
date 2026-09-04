@@ -46,20 +46,26 @@ test('authenticated controls expose keyboard and semantic accessibility contract
 
   await expect(page.getByRole('banner')).toBeVisible();
   await expect(page.getByRole('group', { name: 'Signed-in identity' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'New job' })).toBeVisible();
-  await expect(page.getByRole('table', { name: 'Jobs' })).toBeVisible();
+  const openJobs = page.getByRole('link', { name: 'Open jobs' });
+  await expect(openJobs).toBeVisible();
 
   const focusableControls: Locator[] = [
     page.getByRole('link', { name: 'ReplicaDB' }),
     page.getByRole('button', { name: 'Logout' }),
-    page.getByRole('link', { name: 'New job' })
+    openJobs
   ];
   for (const control of focusableControls) {
     await control.focus();
     await expectFocusedElementVisible(page);
   }
 
-  await page.getByRole('link', { name: 'New job' }).click();
+  await openJobs.click();
+  await expect(page.getByRole('table', { name: 'Jobs' })).toBeVisible();
+  const newJob = page.getByRole('link', { name: 'New job' });
+  await expect(newJob).toBeVisible();
+  await newJob.focus();
+  await expectFocusedElementVisible(page);
+  await newJob.click();
   await expect(page.getByRole('heading', { name: 'New job' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Options' })).toBeVisible();
   await expect(page.getByRole('tab', { name: 'Query' })).toBeVisible();
@@ -89,7 +95,7 @@ test('authenticated controls expose keyboard and semantic accessibility contract
   await expectContrast(page, 'rgb(11, 110, 105)', 'rgb(255, 255, 255)', 4.5);
   await expectContrast(page, 'rgb(177, 92, 56)', 'rgb(255, 255, 255)', 4.5);
 
-  await page.goto('/');
+  await page.goto('/jobs');
   const seededJob = page.getByRole('link', { name: seededJobName });
   await expect(seededJob, `the seeded job ${seededJobName} must exist`).toBeVisible();
   await seededJob.click();
