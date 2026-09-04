@@ -1,0 +1,19 @@
+replicadb-server/frontend/e2e/admin-management.spec.ts
+  s_5415709ad7c752::t_5fc12eb2739644 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ebfb5a408ae23eb85709715f143c6f2ee3d9f4bb",
+  "prompts": {},
+  "sessions": {
+    "s_5415709ad7c752": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "f228ec7b-8df6-46c5-8e32-3046c0c823ae",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
