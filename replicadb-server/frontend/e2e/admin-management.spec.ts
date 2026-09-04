@@ -8,7 +8,7 @@ const seededJobName = 'Develop / PostgreSQL source';
 async function signIn(page: Page) {
   test.skip(!username || !password, 'REPLICADB_BOOTSTRAP_ADMIN_USERNAME and REPLICADB_BOOTSTRAP_ADMIN_PASSWORD must be set');
 
-  await page.goto('/');
+  await page.goto('/jobs');
   await expect(page).toHaveURL(/\/login$/);
   await page.getByLabel('Username').fill(username!);
   await page.getByLabel('Password').fill(password!);

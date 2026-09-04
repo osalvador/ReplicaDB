@@ -15,6 +15,7 @@ test('admin can create a PostgreSQL job from datasource selectors', async ({ pag
   await page.getByRole('button', { name: 'Sign in' }).click();
 
   await expect(page).toHaveURL(/\/$/);
+  await page.goto('/jobs');
   await page.getByRole('link', { name: 'New job' }).click();
   await expect(page).toHaveURL(/\/jobs\/new$/);
 
