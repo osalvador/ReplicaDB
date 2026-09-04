@@ -1,0 +1,21 @@
+.github/workflows/CT_Push.yml
+  s_5415709ad7c752::t_19b0cd0406be07 422-424
+replicadb-server/bin/replicadb-server.cmd
+  s_5415709ad7c752::t_b839d5bce2bb80 11-13,15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "258ed92f619df31c9f656beee275c4b57d8ef1eb",
+  "prompts": {},
+  "sessions": {
+    "s_5415709ad7c752": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "f228ec7b-8df6-46c5-8e32-3046c0c823ae",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
