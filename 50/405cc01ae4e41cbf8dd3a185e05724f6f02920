@@ -1,0 +1,55 @@
+replicadb-server/frontend/src/layout/AppLayout.tsx
+  s_b846a6cf92ac79::t_e4564f7388c214 1-26,29-62,65-73,75-177,180-202,204-211,214-246,248
+replicadb-server/frontend/src/components/OperationalNotice.tsx
+  s_214884cc307e1b::t_84f7cba75cd841 1-35
+replicadb-server/frontend/src/components/PageHeader.tsx
+  s_214884cc307e1b::t_2637158406bd1d 23,25-26,28,45
+replicadb-server/frontend/src/layout/AppLayout.test.tsx
+  s_b846a6cf92ac79::t_f2c35d4ad5724d 3,42,54-58,75-113,118
+replicadb-server/frontend/src/pages/DatasourceDetailPage.test.tsx
+  s_b846a6cf92ac79::t_78ef310929a7e2 3,14,41,58,74-106
+replicadb-server/frontend/src/pages/DatasourceDetailPage.tsx
+  s_b846a6cf92ac79::t_aa39a473aea3e6 2,5-8,10,36-38,45-52,100-109,143-168
+replicadb-server/frontend/src/pages/DatasourcesPage.test.tsx
+  s_b846a6cf92ac79::t_839ee5ecd73ab7 3,74-78,101-102,115,119-125,127-128,138
+replicadb-server/frontend/src/pages/DatasourcesPage.tsx
+  s_b846a6cf92ac79::t_e4429335bf6928 18,20,48,122-126,128-141
+replicadb-server/frontend/src/pages/JobFormPage.test.tsx
+  s_214884cc307e1b::t_baf4d26fae59a9 218-225,339-342,380
+replicadb-server/frontend/src/pages/JobFormPage.tsx
+  s_214884cc307e1b::t_918cdfb780700a 24,29,269-271,290-293,535,537,541,543-544,546-569,571-584,587-639,641-643
+replicadb-server/frontend/src/pages/JobsPage.test.tsx
+  s_214884cc307e1b::t_512bf4c2348f20 1-58
+replicadb-server/frontend/src/pages/JobsPage.tsx
+  s_214884cc307e1b::t_690a8236c155e0 1-106
+replicadb-server/frontend/src/pages/ProfilePage.tsx
+  s_b846a6cf92ac79::t_4f9af07b0ffafd 1-32
+replicadb-server/frontend/src/router/routes.test.tsx
+  s_b846a6cf92ac79::t_0ab4dc8f7004f2 14-23,126-134
+replicadb-server/frontend/src/router/routes.tsx
+  s_b846a6cf92ac79::t_2c46bbc0a9b0be 4,15,32-33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "50405cc01ae4e41cbf8dd3a185e05724f6f02920",
+  "prompts": {},
+  "sessions": {
+    "s_214884cc307e1b": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "d4d13756-7d04-4cef-a0ed-6ec04099e0cc",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    },
+    "s_b846a6cf92ac79": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "82dd5102-f18c-4ab8-829f-79a6401255a5",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
