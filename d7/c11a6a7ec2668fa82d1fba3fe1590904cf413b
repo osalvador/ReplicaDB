@@ -1,0 +1,21 @@
+release.sh
+  s_d1b4b190b0ec2f::t_98b032607038f3 121
+scripts/release-script.test.sh
+  s_d1b4b190b0ec2f::t_6dfc6adf829e68 181-182,208-210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d7c11a6a7ec2668fa82d1fba3fe1590904cf413b",
+  "prompts": {},
+  "sessions": {
+    "s_d1b4b190b0ec2f": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "0091f38c-5d73-430a-bba6-70feebf975dc",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
