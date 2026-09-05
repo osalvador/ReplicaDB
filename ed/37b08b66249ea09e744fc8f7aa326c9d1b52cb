@@ -1,0 +1,21 @@
+release.sh
+  s_0523134ad16641::t_69fa76c8eaaa29 21-22,123
+scripts/release-script.test.sh
+  s_0523134ad16641::t_4ca7ae9c8873c0 58-59,83-84,187-188,217-219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ed37b08b66249ea09e744fc8f7aa326c9d1b52cb",
+  "prompts": {},
+  "sessions": {
+    "s_0523134ad16641": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "8ad52146-66fd-4b20-bdb9-ed02995b1260",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
