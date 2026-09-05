@@ -174,6 +174,10 @@ test_prepare_pushes_without_tag() {
     mkdir -p "$FIXTURE_PATH/.ai"
     printf 'planning note\n' >"$FIXTURE_PATH/.ai/notes.md"
     printf 'separate documentation plan\n' >"$FIXTURE_PATH/implementation_plan_doc.md"
+    mkdir -p "$FIXTURE_PATH/docs/src"
+    printf 'documentation portal source\n' >"$FIXTURE_PATH/docs/src/index.md"
+    mkdir -p "$FIXTURE_PATH/docs/.astro/collections"
+    printf 'generated documentation metadata\n' >"$FIXTURE_PATH/docs/.astro/collections/docs.schema.json"
     : >"$FIXTURE_PATH/shape-datasources.png"
     "$FIXTURE_PATH/release.sh" prepare 1.0.0 >/dev/null
     prepared_head="$(git -C "$FIXTURE_PATH" rev-parse HEAD)"
@@ -192,6 +196,12 @@ test_prepare_pushes_without_tag() {
     fi
     if git -C "$FIXTURE_PATH" ls-files --error-unmatch implementation_plan_doc.md >/dev/null 2>&1; then
         fail "the separate documentation plan must not be staged"
+    fi
+    if git -C "$FIXTURE_PATH" ls-files --error-unmatch docs/src/index.md >/dev/null 2>&1; then
+        fail "untracked documentation portal files must not be staged"
+    fi
+    if git -C "$FIXTURE_PATH" ls-files --error-unmatch docs/.astro/collections/docs.schema.json >/dev/null 2>&1; then
+        fail "generated documentation portal files must not be staged"
     fi
 }
 
