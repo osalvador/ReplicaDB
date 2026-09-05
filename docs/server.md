@@ -4,7 +4,7 @@ title: Server
 permalink: /server.html
 ---
 
-# ReplicaDB Server 0.19.0
+# ReplicaDB Server 1.0.0
 
 The server is the managed ReplicaDB product. The standalone CLI remains a
 separate download and keeps its `REPLICADB_HOME` contract.
@@ -13,9 +13,9 @@ separate download and keeps its `REPLICADB_HOME` contract.
 
 | Use | Artifact | PostgreSQL |
 | --- | --- | --- |
-| Direct transfer | `ReplicaDB-0.19.0.tar.gz` or `.zip` | None required |
-| Durable local server | `ReplicaDB-server-0.19.0.tar.gz` or `.zip` | Downloaded and verified on first local start |
-| Advanced server or Docker | `replicadb-server-0.19.0.jar` | External or embedded according to the launch contract |
+| Direct transfer | `ReplicaDB-1.0.0.tar.gz` or `.zip` | None required |
+| Durable local server | `ReplicaDB-server-1.0.0.tar.gz` or `.zip` | Downloaded and verified on first local start |
+| Advanced server or Docker | `replicadb-server-1.0.0.jar` | External or embedded according to the launch contract |
 
 All server package launchers require Java 17. The package does not require
 Maven, npm, Docker, or a system PostgreSQL installation.
@@ -25,8 +25,8 @@ Maven, npm, Docker, or a system PostgreSQL installation.
 Extract the server package and use the launcher. The mode is always explicit:
 
 ```bash
-tar -xzf ReplicaDB-server-0.19.0.tar.gz
-cd ReplicaDB-server-0.19.0
+tar -xzf ReplicaDB-server-1.0.0.tar.gz
+cd ReplicaDB-server-1.0.0
 export REPLICADB_SERVER_HOME="${REPLICADB_SERVER_HOME:-$HOME/.replicadb}"
 export REPLICADB_BOOTSTRAP_ADMIN_USERNAME='<local-admin>'
 export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD='<managed-bootstrap-password>'
