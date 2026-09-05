@@ -178,6 +178,8 @@ test_prepare_pushes_without_tag() {
     printf 'documentation portal source\n' >"$FIXTURE_PATH/docs/src/index.md"
     mkdir -p "$FIXTURE_PATH/docs/.astro/collections"
     printf 'generated documentation metadata\n' >"$FIXTURE_PATH/docs/.astro/collections/docs.schema.json"
+    mkdir -p "$FIXTURE_PATH/docs/tests"
+    printf 'documentation portal test\n' >"$FIXTURE_PATH/docs/tests/smoke.test.mjs"
     : >"$FIXTURE_PATH/shape-datasources.png"
     "$FIXTURE_PATH/release.sh" prepare 1.0.0 >/dev/null
     prepared_head="$(git -C "$FIXTURE_PATH" rev-parse HEAD)"
@@ -202,6 +204,9 @@ test_prepare_pushes_without_tag() {
     fi
     if git -C "$FIXTURE_PATH" ls-files --error-unmatch docs/.astro/collections/docs.schema.json >/dev/null 2>&1; then
         fail "generated documentation portal files must not be staged"
+    fi
+    if git -C "$FIXTURE_PATH" ls-files --error-unmatch docs/tests/smoke.test.mjs >/dev/null 2>&1; then
+        fail "documentation portal tests must not be staged"
     fi
 }
 
