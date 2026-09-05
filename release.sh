@@ -26,6 +26,7 @@ RELEASE_FILES=(
     "release.sh"
     "scripts/release-script.test.sh"
     "scripts/package-server-release.sh"
+    "scripts/phase3-image-smoke.sh"
     ".github/workflows/CI_Release.yml"
     ".github/workflows/CT_Push.yml"
     ".github/skills/replicadb-release/SKILL.md"
@@ -117,7 +118,7 @@ path_is_release_file() {
 
 path_is_known_untracked() {
     case "$1" in
-        implementation_plan.md|implementation_plan_doc.md|shape-datasources.png|.ai|.ai/*|replicadb-server/frontend/.impeccable|replicadb-server/frontend/.impeccable/*)
+        implementation_plan.md|implementation_plan_doc.md|shape-datasources.png|.ai|.ai/*|docs/astro.config.mjs|docs/package-lock.json|docs/package.json|docs/public|docs/public/*|docs/src|docs/src/*|docs/tsconfig.json|docs/node_modules|docs/node_modules/*|docs/dist|docs/dist/*|docs/.astro|docs/.astro/*|docs/.starlight|docs/.starlight/*|docs/test-results|docs/test-results/*|docs/playwright-report|docs/playwright-report/*|replicadb-server/frontend/.impeccable|replicadb-server/frontend/.impeccable/*)
             return 0
             ;;
         *)

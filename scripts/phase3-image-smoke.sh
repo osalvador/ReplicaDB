@@ -6,7 +6,27 @@ script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repository_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
 server_directory="$repository_root/replicadb-server"
 image_name=${REPLICADB_SERVER_IMAGE:-replicadb-server:phase3-smoke}
-server_version=${REPLICADB_SERVER_VERSION:-0.19.0}
+if [[ -n "${REPLICADB_SERVER_VERSION:-}" ]]; then
+    server_version=$REPLICADB_SERVER_VERSION
+else
+    server_version=$(awk '
+        /<artifactId>replicadb-server<\/artifactId>/ {
+            found = 1
+            next
+        }
+        found && match($0, /<version>[^<]+<\/version>/) {
+            value = substr($0, RSTART, RLENGTH)
+            sub(/^<version>/, "", value)
+            sub(/<\/version>$/, "", value)
+            print value
+            exit
+        }
+    ' "$server_directory/pom.xml")
+fi
+if [[ ! "$server_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    printf 'Error: unable to determine a valid server version: %s\n' "$server_version" >&2
+    exit 1
+fi
 server_jar="target/replicadb-server-${server_version}.jar"
 
 docker build \
