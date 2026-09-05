@@ -1,295 +1,421 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-################################################################################
-# ReplicaDB Release Script
-# 
-# Automates the release process:
-# 1. Validates version format (semantic versioning)
-# 2. Updates pom.xml with new version
-# 3. Commits version bump
-# 4. Creates git tag
-# 5. Pushes to origin (CI/CD builds release automatically)
-#
-# Usage: ./release.sh <version>
-# Example: ./release.sh 0.19.0
-################################################################################
+set -euo pipefail
 
-set -e
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Configuration
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-POM_FILE="${REPO_ROOT}/pom.xml"
-README_FILE="${REPO_ROOT}/README.md"
-SERVER_POM_FILE="${REPO_ROOT}/replicadb-server/pom.xml"
+REMOTE="${RELEASE_REMOTE:-origin}"
+TARGET_BRANCH="master"
+POM_FILE="pom.xml"
+SERVER_POM_FILE="replicadb-server/pom.xml"
 
-################################################################################
-# Functions
-################################################################################
+VERSION_SURFACE_FILES=(
+    "README.md"
+    "DEPLOYMENT.md"
+    "RELEASE_GUIDE.md"
+    "CONTRIBUTING.md"
+    "PRODUCT.md"
+    "docs/index.md"
+    "docs/server.md"
+    "replicadb-server/README.md"
+    "replicadb-server/frontend/README.develop.md"
+)
 
-print_header() {
-    echo -e "${BLUE}╔════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${BLUE}║${NC} $1"
-    echo -e "${BLUE}╚════════════════════════════════════════════════════════╝${NC}"
-}
-
-print_success() {
-    echo -e "${GREEN}✓${NC} $1"
-}
+RELEASE_FILES=(
+    "$POM_FILE"
+    "$SERVER_POM_FILE"
+    "release.sh"
+    "scripts/release-script.test.sh"
+    "scripts/package-server-release.sh"
+    ".github/workflows/CI_Release.yml"
+    ".github/workflows/CT_Push.yml"
+    ".github/skills/replicadb-release/SKILL.md"
+    "${VERSION_SURFACE_FILES[@]}"
+)
 
 print_error() {
-    echo -e "${RED}✗${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}⚠${NC} $1"
+    printf 'error: %s\n' "$*" >&2
 }
 
 print_info() {
-    echo -e "${BLUE}ℹ${NC} $1"
+    printf '%s\n' "$*"
+}
+
+die() {
+    print_error "$*"
+    exit 1
+}
+
+usage() {
+    cat <<'USAGE'
+Usage:
+  ./release.sh validate VERSION
+  ./release.sh prepare VERSION
+  ./release.sh tag VERSION --ci-green
+  ./release.sh push-tag VERSION
+
+Commands:
+  validate   Check version, POMs, release documentation, and artifact names.
+  prepare    Update the release contract, commit it, and push master.
+  tag        Create an annotated local tag after explicit CI confirmation.
+  push-tag   Push an already-created local tag to origin.
+
+The prepare command never creates or pushes a tag. The tag command requires
+the explicit --ci-green confirmation unless RELEASE_CI_GREEN=1 is set.
+USAGE
+}
+
+require_file() {
+    [[ -f "$1" ]] || die "Required file not found: $1"
 }
 
 validate_version() {
     local version=$1
-    # Validate semantic versioning (X.Y.Z)
-    if [[ ! $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        print_error "Invalid version format: $version"
-        print_info "Use semantic versioning format: X.Y.Z"
-        exit 1
-    fi
-    print_success "Version format valid: $version"
+
+    [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || \
+        die "Invalid version '$version'; expected X.Y.Z"
 }
 
-get_current_version() {
-    grep '<version>' "$POM_FILE" | head -1 | sed 's/.*<version>\(.*\)<\/version>.*/\1/'
+get_root_version() {
+    sed -n 's/^[[:space:]]*<version>\([^<]*\)<\/version>[[:space:]]*$/\1/p' \
+        "$POM_FILE" | head -n 1
 }
 
-check_git_clean() {
-    if ! git diff-index --quiet HEAD --; then
-        print_error "Git working directory is not clean"
-        print_info "Commit or stash your changes before releasing"
-        exit 1
-    fi
-    print_success "Git working directory is clean"
+get_version_after_artifact() {
+    local artifact=$1
+    local file=$2
+
+    awk -v artifact="$artifact" '
+        index($0, "<artifactId>" artifact "</artifactId>") {
+            found = 1
+            next
+        }
+        found && match($0, /<version>[^<]+<\/version>/) {
+            value = substr($0, RSTART, RLENGTH)
+            sub(/^<version>/, "", value)
+            sub(/<\/version>$/, "", value)
+            print value
+            exit
+        }
+    ' "$file"
 }
 
-check_git_branch() {
-    local branch=$(git rev-parse --abbrev-ref HEAD)
-    if [[ "$branch" != "master" && "$branch" != "main" ]]; then
-        print_warning "Current branch is '$branch', not master/main"
-        read -p "Continue anyway? (y/n) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            print_info "Release cancelled"
-            exit 1
-        fi
-    fi
-    print_success "On branch: $branch"
+path_is_release_file() {
+    local path=$1
+    local release_file
+
+    case "$path" in
+        .github/skills/replicadb-release/*)
+            return 0
+            ;;
+    esac
+
+    for release_file in "${RELEASE_FILES[@]}"; do
+        [[ "$path" == "$release_file" ]] && return 0
+    done
+    return 1
 }
 
-update_pom_version() {
+path_is_known_untracked() {
+    case "$1" in
+        implementation_plan.md|implementation_plan_doc.md|shape-datasources.png|.ai|.ai/*|replicadb-server/frontend/.impeccable|replicadb-server/frontend/.impeccable/*)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+check_branch() {
+    local branch
+    branch="$(git branch --show-current)"
+    [[ "$branch" == "$TARGET_BRANCH" ]] || \
+        die "Release commands must run on '$TARGET_BRANCH' (current: '${branch:-detached}')"
+}
+
+check_remote() {
+    git remote get-url "$REMOTE" >/dev/null 2>&1 || \
+        die "Git remote '$REMOTE' is not configured"
+}
+
+check_unexpected_untracked() {
+    local path
+
+    while IFS= read -r path; do
+        [[ -z "$path" ]] && continue
+        path_is_release_file "$path" && continue
+        path_is_known_untracked "$path" && continue
+        die "Unexpected untracked file: $path"
+    done < <(git ls-files --others --exclude-standard)
+}
+
+check_release_scope() {
+    local path
+
+    while IFS= read -r path; do
+        [[ -z "$path" ]] && continue
+        path_is_release_file "$path" || \
+            die "Tracked change outside the release scope: $path"
+    done < <({ git diff --name-only; git diff --cached --name-only; } | sort -u)
+}
+
+check_prepare_worktree() {
+    check_branch
+    check_release_scope
+    check_unexpected_untracked
+}
+
+check_release_clean() {
+    check_branch
+    check_unexpected_untracked
+    git diff --quiet || die "Tracked release changes are still present"
+    git diff --cached --quiet || die "Staged changes are still present"
+}
+
+validate_poms() {
+    local version=$1
+    local root_version
+    local server_version
+    local dependency_version
+
+    require_file "$POM_FILE"
+    require_file "$SERVER_POM_FILE"
+
+    root_version="$(get_root_version)"
+    server_version="$(get_version_after_artifact "replicadb-server" "$SERVER_POM_FILE")"
+    dependency_version="$(get_version_after_artifact "ReplicaDB" "$SERVER_POM_FILE")"
+
+    [[ "$root_version" == "$version" ]] || \
+        die "Root POM version is '$root_version', expected '$version'"
+    [[ "$server_version" == "$version" ]] || \
+        die "Server POM version is '$server_version', expected '$version'"
+    [[ "$dependency_version" == "$version" ]] || \
+        die "Server CLI dependency is '$dependency_version', expected '$version'"
+}
+
+validate_version_surface() {
+    local version=$1
+    local file
+    local artifact
+    local jar
+    local url_version
+    local artifacts
+    local jars
+    local url_versions
+
+    for file in "${VERSION_SURFACE_FILES[@]}"; do
+        require_file "$file"
+    done
+
+    grep -F -q -- "ReplicaDB-${version}" "${VERSION_SURFACE_FILES[@]}" || \
+        die "Release documentation does not contain ReplicaDB-${version}"
+    grep -F -q -- "ReplicaDB-server-${version}" "${VERSION_SURFACE_FILES[@]}" || \
+        die "Release documentation does not contain ReplicaDB-server-${version}"
+    grep -F -q -- "replicadb-server-${version}.jar" "${VERSION_SURFACE_FILES[@]}" || \
+        die "Release documentation does not contain replicadb-server-${version}.jar"
+
+    artifacts="$(grep -Eho 'ReplicaDB(-server)?-[0-9]+\.[0-9]+\.[0-9]+' \
+        "${VERSION_SURFACE_FILES[@]}" | sort -u || true)"
+    while IFS= read -r artifact; do
+        [[ -z "$artifact" ]] && continue
+        [[ "$artifact" == "ReplicaDB-${version}" || \
+            "$artifact" == "ReplicaDB-server-${version}" ]] || \
+            die "Stale release artifact name: $artifact"
+    done <<< "$artifacts"
+
+    jars="$(grep -Eho 'replicadb-server-[0-9]+\.[0-9]+\.[0-9]+\.jar' \
+        "${VERSION_SURFACE_FILES[@]}" | sort -u || true)"
+    while IFS= read -r jar; do
+        [[ -z "$jar" ]] && continue
+        [[ "$jar" == "replicadb-server-${version}.jar" ]] || \
+            die "Stale server JAR name: $jar"
+    done <<< "$jars"
+
+    url_versions="$(grep -Eho 'releases/(download|tag)/v[0-9]+\.[0-9]+\.[0-9]+' \
+        "${VERSION_SURFACE_FILES[@]}" | sed 's/.*\/v//' | sort -u || true)"
+    while IFS= read -r url_version; do
+        [[ -z "$url_version" ]] && continue
+        [[ "$url_version" == "$version" ]] || \
+            die "Stale release URL version: $url_version"
+    done <<< "$url_versions"
+}
+
+validate_release_contract() {
+    local version=$1
+
+    validate_version "$version"
+    validate_poms "$version"
+    validate_version_surface "$version"
+}
+
+replace_version_in_file() {
+    local file=$1
+    local old_version=$2
+    local new_version=$3
+
+    perl -0pi -e 's/\Q'"$old_version"'\E/'"$new_version"'/g' "$file"
+}
+
+update_poms() {
     local old_version=$1
     local new_version=$2
-    
-    print_info "Updating pom.xml: $old_version -> $new_version"
-    
-    # Update version in pom.xml
-    sed -i.bak "s/<version>${old_version}<\/version>/<version>${new_version}<\/version>/" "$POM_FILE"
-    rm -f "${POM_FILE}.bak"
-    
-    print_success "pom.xml updated"
+
+    perl -0pi -e 's{(<artifactId>ReplicaDB</artifactId>\s*<version>)\Q'"$old_version"'\E(</version>)}{${1}'"$new_version"'${2}}' "$POM_FILE"
+    perl -0pi -e 's{(<artifactId>replicadb-server</artifactId>\s*<version>)\Q'"$old_version"'\E(</version>)}{${1}'"$new_version"'${2}}' "$SERVER_POM_FILE"
+    perl -0pi -e 's{(<artifactId>ReplicaDB</artifactId>\s*<version>)\Q'"$old_version"'\E(</version>)}{${1}'"$new_version"'${2}}' "$SERVER_POM_FILE"
 }
-update_server_pom_dependency_version() {
-    local old_version=$1
-    local new_version=$2
 
-    if [[ ! -f "$SERVER_POM_FILE" ]]; then
-        print_error "Server pom.xml not found: $SERVER_POM_FILE"
-        exit 1
-    fi
-
-    print_info "Updating replicadb-server dependency: $old_version -> $new_version"
-
-    sed -i.bak "/<artifactId>ReplicaDB<\/artifactId>/,/<\/dependency>/ s/<version>${old_version}<\/version>/<version>${new_version}<\/version>/" "$SERVER_POM_FILE"
-    rm -f "${SERVER_POM_FILE}.bak"
-
-    print_success "replicadb-server dependency updated"
-}
-update_server_pom_version() {
+update_release_contract() {
     local new_version=$1
+    local old_version
+    local file
 
-    print_info "Updating replicadb-server project version to $new_version"
+    old_version="$(get_root_version)"
+    [[ -n "$old_version" ]] || die "Unable to read the current root POM version"
 
-    sed -i.bak "/<artifactId>replicadb-server<\/artifactId>/{n;s/<version>[^<]*<\/version>/<version>${new_version}<\/version>/;}" "$SERVER_POM_FILE"
-    rm -f "${SERVER_POM_FILE}.bak"
-
-    print_success "replicadb-server project version updated"
+    update_poms "$old_version" "$new_version"
+    for file in "${VERSION_SURFACE_FILES[@]}"; do
+        replace_version_in_file "$file" "$old_version" "$new_version"
+    done
 }
-update_readme_version() {
-    local old_version=$1
-    local new_version=$2
-    
-    print_info "Updating README.md installation version: ${old_version} → ${new_version}"
-    
-    if [ ! -f "$README_FILE" ]; then
-        print_warning "README.md not found, skipping README update"
-        return
-    fi
-    
-    # Update version in README.md installation section
-    # Replaces all occurrences of vX.Y.Z with the new version
-    sed -i.bak "s/ReplicaDB-${old_version}/ReplicaDB-${new_version}/g" "$README_FILE"
-    sed -i.bak "s/v${old_version}/v${new_version}/g" "$README_FILE"
-    rm -f "${README_FILE}.bak"
-    
-    print_success "README.md updated"
+
+stage_release_files() {
+    local file
+
+    for file in "${RELEASE_FILES[@]}"; do
+        [[ -e "$file" ]] || continue
+        git add -- "$file"
+    done
 }
-create_release_commit() {
+
+check_staged_scope() {
+    local path
+
+    while IFS= read -r path; do
+        [[ -z "$path" ]] && continue
+        path_is_release_file "$path" || \
+            die "Staged file outside the release scope: $path"
+    done < <(git diff --cached --name-only)
+}
+
+prepare_release() {
     local version=$1
-    
-    print_info "Creating release commit..."
-    git add "$POM_FILE" "$README_FILE" "$SERVER_POM_FILE"
-    git commit -m "Release v${version}" || print_warning "Commit may have failed or nothing to commit"
-    
-    print_success "Release commit created"
+
+    check_prepare_worktree
+    check_remote
+    require_command perl
+    update_release_contract "$version"
+    validate_release_contract "$version"
+    git diff --check
+    stage_release_files
+    check_staged_scope
+    git diff --cached --quiet && die "No release changes are available to commit"
+    git commit -m "feat(release): prepare ${version}"
+    git push "$REMOTE" "HEAD:${TARGET_BRANCH}"
+    print_info "Prepared ${version} and pushed ${TARGET_BRANCH}; no tag was created."
 }
 
-create_git_tag() {
+remote_tag_exists() {
+    local tag=$1
+    git ls-remote --exit-code --refs "$REMOTE" "refs/tags/${tag}" >/dev/null 2>&1
+}
+
+assert_tag_absent() {
+    local tag=$1
+
+    if git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null; then
+        die "Tag ${tag} already exists locally"
+    fi
+    if remote_tag_exists "$tag"; then
+        die "Tag ${tag} already exists on ${REMOTE}"
+    fi
+}
+
+require_ci_confirmation() {
+    local confirmation=${1:-}
+    local configured=${RELEASE_CI_GREEN:-}
+
+    if [[ "$confirmation" == "--ci-green" ]]; then
+        return 0
+    fi
+
+    case "$configured" in
+        1|true|yes)
+            return 0
+            ;;
+        *)
+            die "Tagging requires --ci-green or RELEASE_CI_GREEN=1 after remote gates pass"
+            ;;
+    esac
+}
+
+tag_release() {
+    local version=$1
+    local confirmation=${2:-}
+    local tag="v${version}"
+
+    require_ci_confirmation "$confirmation"
+    validate_release_contract "$version"
+    check_release_clean
+    check_remote
+    assert_tag_absent "$tag"
+    git tag -a "$tag" -m "Release ${tag}"
+    print_info "Created local annotated tag ${tag}; use push-tag to publish it."
+}
+
+push_tag() {
     local version=$1
     local tag="v${version}"
-    
-    print_info "Creating git tag: $tag"
-    
-    if git rev-parse "$tag" >/dev/null 2>&1; then
-        print_error "Tag $tag already exists"
-        exit 1
+    local tag_commit
+
+    validate_release_contract "$version"
+    check_release_clean
+    check_remote
+    git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null || \
+        die "Local tag ${tag} does not exist"
+    tag_commit="$(git rev-list -n 1 "$tag")"
+    [[ "$tag_commit" == "$(git rev-parse HEAD)" ]] || \
+        die "Local tag ${tag} does not point to HEAD"
+    if remote_tag_exists "$tag"; then
+        die "Tag ${tag} already exists on ${REMOTE}"
     fi
-    
-    git tag -a "$tag" -m "Release $tag" || print_warning "Tag creation completed (may already exist)"
-    print_success "Git tag created: $tag"
+    git push "$REMOTE" "$tag"
+    print_info "Pushed ${tag} to ${REMOTE}."
 }
 
-push_to_origin() {
-    local version=$1
-    local tag="v${version}"
-    
-    print_info "Pushing to origin..."
-    print_info "  - Branch: master/main"
-    print_info "  - Tag: $tag"
-    
-    git push origin HEAD:master || git push origin HEAD:main
-    git push origin "$tag"
-    
-    print_success "Pushed to origin"
+require_command() {
+    command -v "$1" >/dev/null 2>&1 || die "Required command not found: $1"
 }
-
-show_release_summary() {
-    local old_version=$1
-    local new_version=$2
-    
-    echo
-    print_header "RELEASE SUMMARY"
-    echo -e "${BLUE}Previous Version:${NC}     ${old_version}"
-    echo -e "${BLUE}Release Version:${NC}      v${new_version}"
-    echo -e "${BLUE}Release Tag:${NC}          v${new_version}"
-    echo -e "${BLUE}Git Branch:${NC}           $(git rev-parse --abbrev-ref HEAD)"
-    echo -e "${BLUE}Commit Hash:${NC}          $(git rev-parse --short HEAD)"
-    echo
-    echo -e "${GREEN}CI/CD Pipeline:${NC}       Automatically triggered on tag push"
-    echo -e "${GREEN}Release Assets:${NC}"
-    echo "  - ReplicaDB-${new_version}.tar.gz"
-    echo "  - ReplicaDB-${new_version}.zip"
-    echo "  - ReplicaDB-server-${new_version}.tar.gz"
-    echo "  - ReplicaDB-server-${new_version}.zip"
-    echo "  - replicadb-server-${new_version}.jar"
-    echo "  - SHA256SUMS"
-    echo
-    echo -e "${GREEN}Docker Images:${NC}"
-    echo "  - osalvador/replicadb:${new_version}"
-    echo "  - osalvador/replicadb:latest"
-    echo "  - osalvador/replicadb:ubi9-${new_version}"
-    echo "  - osalvador/replicadb:ubi9-latest"
-    echo
-    echo -e "${BLUE}Release URL:${NC}          https://github.com/osalvador/ReplicaDB/releases/tag/v${new_version}"
-    echo
-}
-
-################################################################################
-# Main Script
-################################################################################
 
 main() {
-    # Check arguments
-    if [[ $# -ne 1 ]]; then
-        print_error "Missing version argument"
-        echo
-        echo "Usage: ./release.sh <version>"
-        echo "Example: ./release.sh 0.19.0"
-        echo
-        echo "Steps performed:"
-        echo "  1. Validate version format (semantic versioning)"
-        echo "  2. Verify git working directory is clean"
-        echo "  3. Update pom.xml with new version"
-        echo "  4. Create release commit"
-        echo "  5. Create git tag (v\${version})"
-        echo "  6. Push commits and tags to origin"
-        echo "  7. CI/CD builds and publishes release automatically"
-        exit 1
-    fi
-    
-    local new_version=$1
-    local old_version=$(get_current_version)
-    
-    print_header "ReplicaDB Release Process"
-    
-    echo "Current Version:  ${old_version}"
-    echo "Release Version:  ${new_version}"
-    echo
-    
-    # Validations
-    validate_version "$new_version"
-    check_git_clean
-    check_git_branch
-    
-    # Ask for confirmation
-    echo
-    read -p "Ready to release v${new_version}? (y/n) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        print_info "Release cancelled"
-        exit 0
-    fi
-    
-    # Execute release steps
-    print_header "Executing Release Steps"
-    
-    update_pom_version "$old_version" "$new_version"
-    update_server_pom_version "$new_version"
-    update_server_pom_dependency_version "$old_version" "$new_version"
-    update_readme_version "$old_version" "$new_version"
-    create_release_commit "$new_version"
-    create_git_tag "$new_version"
-    push_to_origin "$new_version"
-    
-    # Show summary
-    show_release_summary "$old_version" "$new_version"
-    
-    print_header "RELEASE SUCCESSFUL"
-    echo -e "${GREEN}Release v${new_version} has been created and pushed!${NC}"
-    echo
-    echo "CI/CD Pipeline Status:"
-    echo "  → Visit: https://github.com/osalvador/ReplicaDB/actions"
-    echo
-    echo "To view release progress:"
-    echo "  → Visit: https://github.com/osalvador/ReplicaDB/releases/tag/v${new_version}"
-    echo
+    cd "$REPO_ROOT"
+    git rev-parse --is-inside-work-tree >/dev/null 2>&1 || \
+        die "release.sh must run inside a Git worktree"
+
+    case "${1:-}" in
+        validate)
+            [[ $# -eq 2 ]] || { usage >&2; exit 2; }
+            validate_release_contract "$2"
+            print_info "Release contract ${2} is coherent."
+            ;;
+        prepare)
+            [[ $# -eq 2 ]] || { usage >&2; exit 2; }
+            prepare_release "$2"
+            ;;
+        tag)
+            [[ $# -eq 2 || $# -eq 3 ]] || { usage >&2; exit 2; }
+            [[ $# -eq 2 || "$3" == "--ci-green" ]] || { usage >&2; exit 2; }
+            tag_release "$2" "${3:-}"
+            ;;
+        push-tag)
+            [[ $# -eq 2 ]] || { usage >&2; exit 2; }
+            push_tag "$2"
+            ;;
+        *)
+            usage >&2
+            exit 2
+            ;;
+    esac
 }
 
-# Run main function
 main "$@"

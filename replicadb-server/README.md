@@ -1,11 +1,11 @@
-# ReplicaDB Server 0.19.0
+# ReplicaDB Server 1.0.0
 
 This package runs the managed ReplicaDB server without Maven, npm, Docker, or
 a system PostgreSQL installation. Java 17 is required.
 
 ## Install
 
-Extract `ReplicaDB-server-0.19.0.tar.gz` or the matching ZIP, then run the
+Extract `ReplicaDB-server-1.0.0.tar.gz` or the matching ZIP, then run the
 launcher from the extracted directory:
 
 ```bash
