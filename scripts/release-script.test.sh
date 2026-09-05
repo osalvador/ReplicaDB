@@ -55,6 +55,8 @@ copy_fixture_files() {
         "replicadb-server/pom.xml"
         "replicadb-server/README.md"
         "replicadb-server/frontend/README.develop.md"
+        "replicadb-server/Dockerfile"
+        "docker-compose.server.yml"
     )
 
     for file in "${files[@]}"; do
@@ -78,6 +80,8 @@ set_fixture_version() {
         "replicadb-server/pom.xml"
         "replicadb-server/README.md"
         "replicadb-server/frontend/README.develop.md"
+        "replicadb-server/Dockerfile"
+        "docker-compose.server.yml"
     )
 
     for file in "${files[@]}"; do
@@ -180,6 +184,8 @@ test_prepare_pushes_without_tag() {
     printf 'generated documentation metadata\n' >"$FIXTURE_PATH/docs/.astro/collections/docs.schema.json"
     mkdir -p "$FIXTURE_PATH/docs/tests"
     printf 'documentation portal test\n' >"$FIXTURE_PATH/docs/tests/smoke.test.mjs"
+    mkdir -p "$FIXTURE_PATH/docs/scripts"
+    printf 'documentation portal script\n' >"$FIXTURE_PATH/docs/scripts/build.mjs"
     : >"$FIXTURE_PATH/shape-datasources.png"
     "$FIXTURE_PATH/release.sh" prepare 1.0.0 >/dev/null
     prepared_head="$(git -C "$FIXTURE_PATH" rev-parse HEAD)"
@@ -207,6 +213,9 @@ test_prepare_pushes_without_tag() {
     fi
     if git -C "$FIXTURE_PATH" ls-files --error-unmatch docs/tests/smoke.test.mjs >/dev/null 2>&1; then
         fail "documentation portal tests must not be staged"
+    fi
+    if git -C "$FIXTURE_PATH" ls-files --error-unmatch docs/scripts/build.mjs >/dev/null 2>&1; then
+        fail "documentation portal scripts must not be staged"
     fi
 }
 
