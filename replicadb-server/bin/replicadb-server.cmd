@@ -9,7 +9,7 @@ set "LOG_DIR=%SERVER_HOME%\logs"
 set "PID_FILE=%RUN_DIR%\server.pid"
 set "MODE_FILE=%RUN_DIR%\server.mode"
 set "READINESS_TIMEOUT=%REPLICADB_READINESS_TIMEOUT%"
-if not defined READINESS_TIMEOUT set "READINESS_TIMEOUT=600"
+if not defined READINESS_TIMEOUT set "READINESS_TIMEOUT=180"
 
 if /I "%~1"=="help" goto :help
 if /I "%~1"=="" goto :help
@@ -72,14 +72,25 @@ for /f "delims=" %%P in ('powershell -NoProfile -Command "$p=Start-Process -File
 >"%MODE_FILE%" echo %~2
 set "HEALTH_PORT=8080"
 if /I "%~2"=="worker" set "HEALTH_PORT=%REPLICADB_WORKER_MANAGEMENT_PORT%"
-powershell -NoProfile -Command "$url='http://127.0.0.1:%HEALTH_PORT%/actuator/health'; $pidFile='%PID_FILE%'; $timeout=[int]::Parse('%READINESS_TIMEOUT%'); 1..$timeout | %% { try { if ((Invoke-WebRequest -UseBasicParsing -TimeoutSec 1 $url).StatusCode -eq 200) { exit 0 } } catch {}; if (Test-Path $pidFile) { $managedPid=Get-Content $pidFile; if (-not (Get-Process -Id $managedPid -ErrorAction SilentlyContinue)) { exit 1 } }; Start-Sleep -Seconds 1 }; exit 1"
-if errorlevel 1 (
+where curl.exe >nul 2>&1 || goto :curl_missing
+for /l %%A in (1,1,%READINESS_TIMEOUT%) do (
+    curl.exe --silent --show-error --fail --connect-timeout 1 --max-time 2 "http://127.0.0.1:%HEALTH_PORT%/actuator/health" >nul 2>&1 && goto :health_ready
+)
+goto :health_failed
+
+:health_ready
+echo server started (mode=%~2)
+exit /b 0
+
+:health_failed
     call "%~f0" stop >nul 2>&1
     echo Error: server did not become healthy 1>&2
     exit /b 1
-)
-echo server started (mode=%~2)
-exit /b 0
+
+:curl_missing
+echo Error: curl.exe is required for server readiness checks 1>&2
+call "%~f0" stop >nul 2>&1
+exit /b 1
 
 :status
 if not exist "%PID_FILE%" (

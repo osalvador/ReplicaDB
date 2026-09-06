@@ -205,6 +205,7 @@ jobs:
         Get-Command pwsh
         Get-Command taskkill
         Get-Command tar
+        Get-Command curl
         if (Get-Command postgres -ErrorAction SilentlyContinue) {
           throw 'system PostgreSQL must not be required by the package smoke'
         }
@@ -251,7 +252,7 @@ jobs:
         REPLICADB_BOOTSTRAP_ADMIN_PASSWORD: ci-local-bootstrap-password
         REPLICADB_EMBEDDED_POSTGRES_DOWNLOAD_TIMEOUT: 120s
         REPLICADB_EMBEDDED_POSTGRES_STARTUP_TIMEOUT: 120s
-        REPLICADB_READINESS_TIMEOUT: '600'
+        REPLICADB_READINESS_TIMEOUT: '180'
       run: |
         $packageDir = Join-Path $env:RUNNER_TEMP 'replicadb-server-package'
         $env:REPLICADB_SERVER_HOME = Join-Path $env:USERPROFILE 'replicadb-package-home'
