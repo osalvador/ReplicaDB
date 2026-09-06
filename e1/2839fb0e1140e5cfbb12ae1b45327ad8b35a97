@@ -1,0 +1,31 @@
+.github/workflows/CI_Release.yml
+  s_d1b4b190b0ec2f::t_a4af930d3f0fa1 253-255,262-263,267-280
+replicadb-server/bin/replicadb-server.cmd
+  s_d1b4b190b0ec2f::t_74431f858012b2 11-12,75
+scripts/release-script.test.sh
+  s_0523134ad16641::t_cddeaa337d4e62 60-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "e12839fb0e1140e5cfbb12ae1b45327ad8b35a97",
+  "prompts": {},
+  "sessions": {
+    "s_0523134ad16641": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "8ad52146-66fd-4b20-bdb9-ed02995b1260",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    },
+    "s_d1b4b190b0ec2f": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "0091f38c-5d73-430a-bba6-70feebf975dc",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
