@@ -247,7 +247,6 @@ jobs:
       if: runner.os == 'Windows'
       shell: pwsh
       env:
-        REPLICADB_SERVER_HOME: ${{ runner.temp }}\replicadb-package-home
         REPLICADB_BOOTSTRAP_ADMIN_USERNAME: ci-local-admin
         REPLICADB_BOOTSTRAP_ADMIN_PASSWORD: ci-local-bootstrap-password
         REPLICADB_EMBEDDED_POSTGRES_DOWNLOAD_TIMEOUT: 120s
@@ -255,7 +254,9 @@ jobs:
         REPLICADB_READINESS_TIMEOUT: '600'
       run: |
         $packageDir = Join-Path $env:RUNNER_TEMP 'replicadb-server-package'
+        $env:REPLICADB_SERVER_HOME = Join-Path $env:USERPROFILE 'replicadb-package-home'
         New-Item -ItemType Directory -Force $packageDir | Out-Null
+        New-Item -ItemType Directory -Force $env:REPLICADB_SERVER_HOME | Out-Null
         tar -xzf "release-staging/ReplicaDB-server-${{ needs.build.outputs.version }}.tar.gz" -C $packageDir
         Set-Location (Join-Path $packageDir 'ReplicaDB-server-${{ needs.build.outputs.version }}')
         try {
