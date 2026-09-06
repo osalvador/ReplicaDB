@@ -260,11 +260,15 @@ jobs:
         tar -xzf "release-staging/ReplicaDB-server-${{ needs.build.outputs.version }}.tar.gz" -C $packageDir
         Set-Location (Join-Path $packageDir 'ReplicaDB-server-${{ needs.build.outputs.version }}')
         try {
+          Write-Host 'Starting packaged local server'
           & '.\bin\replicadb-server.cmd' start local
           if ($LASTEXITCODE -ne 0) { throw 'packaged local server failed to start' }
+          Write-Host 'Packaged local server start returned successfully'
           $health = Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:8080/actuator/health'
           if ($health.StatusCode -ne 200) { throw 'packaged local server health failed' }
+          Write-Host 'Packaged local server health passed'
           & '.\bin\replicadb-server.cmd' status
+          Write-Host 'Packaged local server status returned successfully'
         } catch {
           $logDir = Join-Path $env:REPLICADB_SERVER_HOME 'logs'
           Write-Host "Packaged server diagnostics from $logDir"
@@ -280,7 +284,9 @@ jobs:
           }
           throw
         } finally {
+          Write-Host 'Stopping packaged local server'
           & '.\bin\replicadb-server.cmd' stop
+          Write-Host 'Packaged local server stop returned'
         }
         if (Test-Path (Join-Path $env:REPLICADB_SERVER_HOME 'run\server.pid')) {
           throw 'server PID remained after stop'
