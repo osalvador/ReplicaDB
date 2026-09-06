@@ -1,0 +1,19 @@
+replicadb-server/bin/replicadb-server.cmd
+  s_0523134ad16641::t_5c88693c36f31c 71-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ea5cf27491a26de7724cf2dde38cca5503baeebf",
+  "prompts": {},
+  "sessions": {
+    "s_0523134ad16641": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "8ad52146-66fd-4b20-bdb9-ed02995b1260",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
