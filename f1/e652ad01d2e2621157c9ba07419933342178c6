@@ -1,0 +1,19 @@
+.github/workflows/CI_Release.yml
+  s_0523134ad16641::t_ddb7304170fdd7 111-113,328-330
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "f1e652ad01d2e2621157c9ba07419933342178c6",
+  "prompts": {},
+  "sessions": {
+    "s_0523134ad16641": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "8ad52146-66fd-4b20-bdb9-ed02995b1260",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
