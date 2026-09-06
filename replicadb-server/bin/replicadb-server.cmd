@@ -68,7 +68,11 @@ set "PROFILE=%~2"
 if /I "%~2"=="local" set "PROFILE=api"
 set "JAVA_ARGS=--spring.profiles.active=%PROFILE%"
 if /I "%~2"=="local" set "JAVA_ARGS=%JAVA_ARGS% --replicadb.embedded-postgres.enabled=true"
-for /f "delims=" %%P in ('powershell -NoProfile -Command "$p=Start-Process -FilePath java.exe -ArgumentList '-jar "%JAR_FILE%" %JAVA_ARGS%' -RedirectStandardOutput '%LOG_DIR%\server.log' -RedirectStandardError '%LOG_DIR%\server-error.log' -PassThru; $p.Id"') do echo %%P>"%PID_FILE%"
+powershell -NoProfile -Command "$p=Start-Process -FilePath java.exe -ArgumentList '-jar "%JAR_FILE%" %JAVA_ARGS%' -RedirectStandardOutput '%LOG_DIR%\server.log' -RedirectStandardError '%LOG_DIR%\server-error.log' -PassThru; Set-Content -Encoding ascii -Path '%PID_FILE%' -Value $p.Id"
+if errorlevel 1 (
+    echo Error: could not start the server process 1>&2
+    exit /b 1
+)
 >"%MODE_FILE%" echo %~2
 set "HEALTH_PORT=8080"
 if /I "%~2"=="worker" set "HEALTH_PORT=%REPLICADB_WORKER_MANAGEMENT_PORT%"
