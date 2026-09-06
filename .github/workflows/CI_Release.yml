@@ -107,11 +107,10 @@ jobs:
           test -f "$asset"
         done
         sha256sum "${expected[@]}" > SHA256SUMS
-        mapfile -t actual < <(find . -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)
         expected_with_checksums=("${expected[@]}" SHA256SUMS)
-        printf '%s\n' "${expected_with_checksums[@]}" | LC_ALL=C sort > expected.list
-        printf '%s\n' "${actual[@]}" | LC_ALL=C sort > actual.list
-        diff -u expected.list actual.list
+        diff -u \
+          <(printf '%s\n' "${expected_with_checksums[@]}" | LC_ALL=C sort) \
+          <(find . -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)
         sha256sum -c SHA256SUMS
         tar -xOf "ReplicaDB-server-${{ env.version }}.tar.gz" \
           "ReplicaDB-server-${{ env.version }}/lib/replicadb-server-${{ env.version }}.jar" \
@@ -326,10 +325,9 @@ jobs:
         for asset in "${assets[@]}"; do test -f "$asset"; done
         test -f SHA256SUMS
         sha256sum -c SHA256SUMS
-        mapfile -t actual < <(find . -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)
-        printf '%s\n' "${assets[@]}" SHA256SUMS | LC_ALL=C sort > expected.list
-        printf '%s\n' "${actual[@]}" | LC_ALL=C sort > actual.list
-        diff -u expected.list actual.list
+        diff -u \
+          <(printf '%s\n' "${assets[@]}" SHA256SUMS | LC_ALL=C sort) \
+          <(find . -maxdepth 1 -type f -printf '%f\n' | LC_ALL=C sort)
         cd ..
         mkdir -p replicadb-server/target
         cp "release-staging/replicadb-server-${RELEASE_VERSION}.jar" \
