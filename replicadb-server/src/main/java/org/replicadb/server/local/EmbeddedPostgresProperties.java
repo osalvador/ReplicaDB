@@ -29,8 +29,8 @@ public final class EmbeddedPostgresProperties {
 
     private static final String DEFAULT_VERSION = "14.22.0";
     private static final int DEFAULT_PORT = 0;
-    private static final Duration DEFAULT_STARTUP_TIMEOUT = Duration.ofSeconds(30);
-    private static final Duration DEFAULT_DOWNLOAD_TIMEOUT = Duration.ofSeconds(30);
+    private static final Duration DEFAULT_STARTUP_TIMEOUT = Duration.ofMinutes(2);
+    private static final Duration DEFAULT_DOWNLOAD_TIMEOUT = Duration.ofMinutes(2);
     private static final int DEFAULT_DOWNLOAD_RETRIES = 3;
 
     private final boolean enabled;

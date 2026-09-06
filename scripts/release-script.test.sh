@@ -57,6 +57,8 @@ copy_fixture_files() {
         "replicadb-server/frontend/README.develop.md"
         "replicadb-server/Dockerfile"
         "docker-compose.server.yml"
+        "replicadb-server/src/main/java/org/replicadb/server/local/EmbeddedPostgresProperties.java"
+        "replicadb-server/src/test/java/org/replicadb/server/local/EmbeddedPostgresPropertiesTest.java"
     )
 
     for file in "${files[@]}"; do

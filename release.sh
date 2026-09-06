@@ -20,6 +20,8 @@ VERSION_SURFACE_FILES=(
     "replicadb-server/frontend/README.develop.md"
     "replicadb-server/Dockerfile"
     "docker-compose.server.yml"
+    "replicadb-server/src/main/java/org/replicadb/server/local/EmbeddedPostgresProperties.java"
+    "replicadb-server/src/test/java/org/replicadb/server/local/EmbeddedPostgresPropertiesTest.java"
 )
 
 RELEASE_FILES=(
@@ -29,6 +31,8 @@ RELEASE_FILES=(
     "scripts/release-script.test.sh"
     "scripts/package-server-release.sh"
     "scripts/phase3-image-smoke.sh"
+    "replicadb-server/bin/replicadb-server"
+    "replicadb-server/bin/replicadb-server.cmd"
     ".github/workflows/CI_Release.yml"
     ".github/workflows/CT_Push.yml"
     ".github/skills/replicadb-release/SKILL.md"

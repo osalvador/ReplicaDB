@@ -250,17 +250,34 @@ jobs:
         REPLICADB_SERVER_HOME: ${{ runner.temp }}\replicadb-package-home
         REPLICADB_BOOTSTRAP_ADMIN_USERNAME: ci-local-admin
         REPLICADB_BOOTSTRAP_ADMIN_PASSWORD: ci-local-bootstrap-password
+        REPLICADB_EMBEDDED_POSTGRES_DOWNLOAD_TIMEOUT: 120s
+        REPLICADB_EMBEDDED_POSTGRES_STARTUP_TIMEOUT: 120s
+        REPLICADB_READINESS_TIMEOUT: '600'
       run: |
         $packageDir = Join-Path $env:RUNNER_TEMP 'replicadb-server-package'
         New-Item -ItemType Directory -Force $packageDir | Out-Null
         tar -xzf "release-staging/ReplicaDB-server-${{ needs.build.outputs.version }}.tar.gz" -C $packageDir
         Set-Location (Join-Path $packageDir 'ReplicaDB-server-${{ needs.build.outputs.version }}')
-        & '.\bin\replicadb-server.cmd' start local
-        if ($LASTEXITCODE -ne 0) { throw 'packaged local server failed to start' }
         try {
+          & '.\bin\replicadb-server.cmd' start local
+          if ($LASTEXITCODE -ne 0) { throw 'packaged local server failed to start' }
           $health = Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:8080/actuator/health'
           if ($health.StatusCode -ne 200) { throw 'packaged local server health failed' }
           & '.\bin\replicadb-server.cmd' status
+        } catch {
+          $logDir = Join-Path $env:REPLICADB_SERVER_HOME 'logs'
+          Write-Host "Packaged server diagnostics from $logDir"
+          foreach ($logName in @('server.log', 'server-error.log')) {
+            $logPath = Join-Path $logDir $logName
+            if (Test-Path $logPath) {
+              Write-Host "--- $logName ---"
+              Get-Content $logPath -Tail 200 | ForEach-Object {
+                $_ -replace '(?i)(password|token)=\S+', '$1=[redacted]' `
+                   -replace '(?i)jdbc:[^\s]+', 'jdbc:[redacted]'
+              }
+            }
+          }
+          throw
         } finally {
           & '.\bin\replicadb-server.cmd' stop
         }
