@@ -58,7 +58,7 @@ if not exist "%RUN_DIR%" mkdir "%RUN_DIR%"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
 if exist "%PID_FILE%" (
     set /p EXISTING_PID=<"%PID_FILE%"
-    powershell -NoProfile -Command "$p=Get-CimInstance Win32_Process -Filter 'ProcessId=%EXISTING_PID%' -ErrorAction SilentlyContinue; if ($p -and $p.CommandLine -like '*%JAR_FILE%*') { exit 0 } else { exit 1 }"
+    powershell -NoProfile -Command "$p=Get-CimInstance Win32_Process -Filter 'ProcessId=%EXISTING_PID%' -OperationTimeoutSec 10 -ErrorAction SilentlyContinue; if ($p -and $p.CommandLine -like '*%JAR_FILE%*') { exit 0 } else { exit 1 }"
     if not errorlevel 1 goto :already_started
     del /q "%PID_FILE%" "%MODE_FILE%" 2>nul
 )
@@ -87,7 +87,7 @@ if not exist "%PID_FILE%" (
     exit /b 3
 )
 set /p PID=<"%PID_FILE%"
-powershell -NoProfile -Command "$p=Get-CimInstance Win32_Process -Filter 'ProcessId=%PID%' -ErrorAction SilentlyContinue; if ($p -and $p.CommandLine -like '*replicadb-server*.jar*') { exit 0 } else { exit 1 }"
+powershell -NoProfile -Command "$p=Get-CimInstance Win32_Process -Filter 'ProcessId=%PID%' -OperationTimeoutSec 10 -ErrorAction SilentlyContinue; if ($p -and $p.CommandLine -like '*replicadb-server*.jar*') { exit 0 } else { exit 1 }"
 if errorlevel 1 (
     del /q "%PID_FILE%" "%MODE_FILE%" 2>nul
     echo server is stopped
@@ -105,7 +105,7 @@ if errorlevel 1 (
     exit /b 3
 )
 set /p PID=<"%PID_FILE%"
-powershell -NoProfile -Command "$p=Get-CimInstance Win32_Process -Filter 'ProcessId=%PID%' -ErrorAction SilentlyContinue; if ($p -and $p.CommandLine -like '*replicadb-server*.jar*') { Stop-Process -Id %PID% -ErrorAction SilentlyContinue }"
+powershell -NoProfile -Command "$p=Get-CimInstance Win32_Process -Filter 'ProcessId=%PID%' -OperationTimeoutSec 10 -ErrorAction SilentlyContinue; if ($p -and $p.CommandLine -like '*replicadb-server*.jar*') { Stop-Process -Id %PID% -ErrorAction SilentlyContinue }"
 del /q "%PID_FILE%" "%MODE_FILE%" 2>nul
 echo server stopped
 exit /b 0
