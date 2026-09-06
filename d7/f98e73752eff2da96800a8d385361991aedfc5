@@ -1,0 +1,21 @@
+.github/workflows/CI_Release.yml
+  s_0523134ad16641::t_7d8d390a9174f6 263,266,269,271,287,289
+replicadb-server/bin/replicadb-server.cmd
+  s_0523134ad16641::t_6fa2855b99b89a 61,90,108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d7f98e73752eff2da96800a8d385361991aedfc5",
+  "prompts": {},
+  "sessions": {
+    "s_0523134ad16641": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "8ad52146-66fd-4b20-bdb9-ed02995b1260",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
