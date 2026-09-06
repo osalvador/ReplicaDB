@@ -32,8 +32,8 @@ class EmbeddedPostgresPropertiesTest {
         assertEquals(temporaryDirectory.resolve(".replicadb"), properties.getHome().getRoot());
         assertEquals("14.22.0", properties.getPostgresVersion());
         assertEquals(0, properties.getPort());
-        assertEquals(java.time.Duration.ofSeconds(30), properties.getStartupTimeout());
-        assertEquals(java.time.Duration.ofSeconds(30), properties.getDownloadTimeout());
+        assertEquals(java.time.Duration.ofMinutes(2), properties.getStartupTimeout());
+        assertEquals(java.time.Duration.ofMinutes(2), properties.getDownloadTimeout());
         assertEquals(3, properties.getDownloadRetries());
     }
 

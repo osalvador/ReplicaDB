@@ -8,6 +8,8 @@ set "RUN_DIR=%SERVER_HOME%\run"
 set "LOG_DIR=%SERVER_HOME%\logs"
 set "PID_FILE=%RUN_DIR%\server.pid"
 set "MODE_FILE=%RUN_DIR%\server.mode"
+set "READINESS_TIMEOUT=%REPLICADB_READINESS_TIMEOUT%"
+if not defined READINESS_TIMEOUT set "READINESS_TIMEOUT=600"
 
 if /I "%~1"=="help" goto :help
 if /I "%~1"=="" goto :help
@@ -70,7 +72,7 @@ for /f "delims=" %%P in ('powershell -NoProfile -Command "$p=Start-Process -File
 >"%MODE_FILE%" echo %~2
 set "HEALTH_PORT=8080"
 if /I "%~2"=="worker" set "HEALTH_PORT=%REPLICADB_WORKER_MANAGEMENT_PORT%"
-powershell -NoProfile -Command "$url='http://127.0.0.1:%HEALTH_PORT%/actuator/health'; 1..180 | %% { try { if ((Invoke-WebRequest -UseBasicParsing -TimeoutSec 1 $url).StatusCode -eq 200) { exit 0 } } catch {}; Start-Sleep -Seconds 1 }; exit 1"
+powershell -NoProfile -Command "$url='http://127.0.0.1:%HEALTH_PORT%/actuator/health'; $pidFile='%PID_FILE%'; $timeout=[int]::Parse('%READINESS_TIMEOUT%'); 1..$timeout | %% { try { if ((Invoke-WebRequest -UseBasicParsing -TimeoutSec 1 $url).StatusCode -eq 200) { exit 0 } } catch {}; if (Test-Path $pidFile) { $managedPid=Get-Content $pidFile; if (-not (Get-Process -Id $managedPid -ErrorAction SilentlyContinue)) { exit 1 } }; Start-Sleep -Seconds 1 }; exit 1"
 if errorlevel 1 (
     call "%~f0" stop >nul 2>&1
     echo Error: server did not become healthy 1>&2
