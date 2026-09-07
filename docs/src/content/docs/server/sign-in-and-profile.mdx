@@ -1,0 +1,30 @@
+---
+title: Sign in and profile
+description: Use the authenticated session and understand profile boundaries.
+---
+
+import ScreenshotFrame from '../../../components/ScreenshotFrame.astro';
+import login from '../../../assets/screenshots/server/login.png';
+import profile from '../../../assets/screenshots/server/profile.png';
+import loginMobile from '../../../assets/screenshots/server/login-mobile.png';
+
+# Sign in and profile
+
+`/login` is the only public frontend route. The sign-in flow obtains CSRF
+protection, submits the credentials to the session API, and redirects an
+authenticated user to the control plane. Anonymous users who visit a protected
+route are redirected back to sign in.
+
+<ScreenshotFrame src={login} alt="ReplicaDB sign-in form" caption="The authenticated entry point for the managed control plane." width={1440} height={900} loading="eager" />
+
+The navigation exposes `My profile` and `Logout`. Profile displays the current
+username and role. Password self-service is intentionally unavailable: the
+disabled fields explain that account self-management is not enabled. An ADMIN
+can reset another user's password from [Users](/ReplicaDB/server/users/).
+
+<ScreenshotFrame src={profile} alt="ReplicaDB profile page" caption="Profile shows identity and role without offering secret self-service." width={1440} height={900} />
+<ScreenshotFrame src={loginMobile} alt="ReplicaDB mobile sign-in form" caption="The sign-in flow remains readable on a narrow viewport." width={390} height={844} />
+
+The frontend must never receive resolved datasource security values. Session
+cookies and CSRF handling belong to the same origin as the API; do not copy
+them into documentation examples or third-party request tools.

@@ -1,0 +1,49 @@
+---
+title: Replication modes
+description: Understand complete, complete-atomic, and incremental CLI behavior.
+---
+
+import ScreenshotFrame from '../../../components/ScreenshotFrame.astro';
+import complete from '../../../assets/media/replication-modes/complete.png';
+import completeAtomic from '../../../assets/media/replication-modes/complete-atomic.png';
+import incremental from '../../../assets/media/replication-modes/incremental.png';
+
+# Replication modes
+
+Set `mode` in an options file or use `--mode`. The supported values are
+`complete`, `complete-atomic`, and `incremental`.
+
+## Complete
+
+`complete` prepares the sink and inserts all rows read from the source. The
+sink can be empty while the transfer is running. This is the default mode.
+Use it for a disposable or replaceable sink where the straightforward bulk
+path is the right tradeoff.
+
+<ScreenshotFrame src={complete} alt="Complete replication mode flow from source to sink" caption="Complete mode prepares the sink before inserting the full source selection." width={800} height={600} loading="eager" />
+
+## Complete-atomic
+
+`complete-atomic` stages the new data and replaces the sink contents within a
+transactional flow so readers do not observe the ordinary complete-mode
+truncation window. It requires staging support and enough sink capacity for
+the staging table. With a fixed staging table, the sink must provide the
+required permissions; a staging schema can be used for generated tables.
+
+<ScreenshotFrame src={completeAtomic} alt="Complete atomic replication mode using a staging table" caption="Complete-atomic mode stages rows before the sink replacement step." width={800} height={600} />
+
+## Incremental
+
+`incremental` reads a bounded source selection and merges rows into the sink.
+Use a source filter or the explicit watermark options described in the
+[watermark guide](/ReplicaDB/cli/incremental-watermarks/). Incremental mode
+does not propagate deletes and requires a sink primary key for merge behavior.
+
+<ScreenshotFrame src={incremental} alt="Incremental replication mode flow using a source watermark" caption="Incremental mode transfers a bounded selection and merges it into the sink." width={800} height={600} />
+
+## Cancellation and recovery
+
+The CLI does not resume a partially completed process. A cancellation exits
+with code 2; a validation or replication error exits with code 1. Inspect the
+sink after interruption and choose a new complete or incremental run based on
+the connector's transaction and staging behavior.
