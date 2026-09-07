@@ -1,5 +1,8 @@
 # ReplicaDB Server 1.0.0
 
+For user-facing installation, workflow, operations, and API guidance, use the
+[ReplicaDB documentation portal](https://osalvador.github.io/ReplicaDB/).
+
 This package runs the managed ReplicaDB server without Maven, npm, Docker, or
 a system PostgreSQL installation. Java 17 is required.
 

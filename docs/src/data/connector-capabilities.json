@@ -1,0 +1,200 @@
+[
+  {
+    "id": "mysql",
+    "displayName": "MySQL",
+    "schemes": ["jdbc:mysql:"],
+    "roles": ["source", "sink"],
+    "modes": ["complete", "complete-atomic", "incremental"],
+    "bandwidthThrottling": true,
+    "staging": true,
+    "page": "/connectors/mysql-mariadb/",
+    "caveats": ["Uses the MariaDB JDBC driver and supports LOAD DATA style optimizations where available."]
+  },
+  {
+    "id": "mariadb",
+    "displayName": "MariaDB",
+    "schemes": ["jdbc:mariadb:"],
+    "roles": ["source", "sink"],
+    "modes": ["complete", "complete-atomic", "incremental"],
+    "bandwidthThrottling": true,
+    "staging": true,
+    "page": "/connectors/mysql-mariadb/",
+    "caveats": ["Use MariaDB-compatible connection properties and validate server-specific SQL behavior before production runs."]
+  },
+  {
+    "id": "postgresql",
+    "displayName": "PostgreSQL",
+    "schemes": ["jdbc:postgresql:"],
+    "roles": ["source", "sink"],
+    "modes": ["complete", "complete-atomic", "incremental"],
+    "bandwidthThrottling": true,
+    "staging": true,
+    "page": "/connectors/postgresql/",
+    "caveats": ["Binary COPY is optimized for compatible shapes; complex values may use the text path."]
+  },
+  {
+    "id": "hsqldb",
+    "displayName": "HSQLDB",
+    "schemes": ["jdbc:hsqldb:"],
+    "roles": ["source", "sink"],
+    "modes": ["complete"],
+    "bandwidthThrottling": false,
+    "staging": false,
+    "page": "/connectors/generic-jdbc/",
+    "caveats": ["The maintained generic path is complete-mode and single-job only."]
+  },
+  {
+    "id": "oracle",
+    "displayName": "Oracle",
+    "schemes": ["jdbc:oracle:"],
+    "roles": ["source", "sink"],
+    "modes": ["complete", "complete-atomic", "incremental"],
+    "bandwidthThrottling": true,
+    "staging": true,
+    "page": "/connectors/oracle/",
+    "caveats": ["Flashback and partition behavior depend on Oracle permissions and the selected query shape."]
+  },
+  {
+    "id": "sql-server",
+    "displayName": "SQL Server and Azure SQL",
+    "schemes": ["jdbc:sqlserver:"],
+    "roles": ["source", "sink"],
+    "modes": ["complete", "complete-atomic", "incremental"],
+    "bandwidthThrottling": false,
+    "staging": true,
+    "page": "/connectors/sql-server/",
+    "caveats": ["Microsoft Entra interactive authentication requires jobs=1 and is not a headless container flow.", "Bulk copy does not expose the generic bandwidth throttle."]
+  },
+  {
+    "id": "cubrid",
+    "displayName": "CUBRID",
+    "schemes": ["jdbc:cubrid:"],
+    "roles": ["source", "sink"],
+    "modes": ["complete"],
+    "bandwidthThrottling": false,
+    "staging": false,
+    "page": "/connectors/generic-jdbc/",
+    "caveats": ["The maintained generic path is complete-mode and single-job only."]
+  },
+  {
+    "id": "jtds-sql-server",
+    "displayName": "jTDS SQL Server",
+    "schemes": ["jdbc:jtds:sqlserver:"],
+    "roles": ["source", "sink"],
+    "modes": ["complete"],
+    "bandwidthThrottling": false,
+    "staging": false,
+    "page": "/connectors/generic-jdbc/",
+    "caveats": ["This legacy driver path is complete-mode and single-job only; prefer the Microsoft driver for new SQL Server work."]
+  },
+  {
+    "id": "db2",
+    "displayName": "IBM Db2",
+    "schemes": ["jdbc:db2:"],
+    "roles": ["source", "sink"],
+    "modes": ["complete", "complete-atomic", "incremental"],
+    "bandwidthThrottling": true,
+    "staging": true,
+    "page": "/connectors/db2/",
+    "caveats": ["Partitioning and type behavior differ between Db2 LUW and other Db2 environments."]
+  },
+  {
+    "id": "db2-as400",
+    "displayName": "IBM i Db2",
+    "schemes": ["jdbc:as400:"],
+    "roles": ["source", "sink"],
+    "modes": ["complete", "complete-atomic", "incremental"],
+    "bandwidthThrottling": true,
+    "staging": true,
+    "page": "/connectors/db2/",
+    "caveats": ["Use IBM i naming and permissions appropriate to the AS/400 JDBC driver."]
+  },
+  {
+    "id": "netezza",
+    "displayName": "Netezza",
+    "schemes": ["jdbc:netezza:"],
+    "roles": ["source", "sink"],
+    "modes": ["complete"],
+    "bandwidthThrottling": false,
+    "staging": false,
+    "page": "/connectors/generic-jdbc/",
+    "caveats": ["The maintained generic path is complete-mode and single-job only."]
+  },
+  {
+    "id": "denodo",
+    "displayName": "Denodo",
+    "schemes": ["jdbc:vdb:"],
+    "roles": ["source"],
+    "modes": ["complete", "complete-atomic", "incremental"],
+    "bandwidthThrottling": false,
+    "staging": false,
+    "page": "/connectors/denodo/",
+    "caveats": ["Denodo is source-only; it does not implement sink writes or staging."]
+  },
+  {
+    "id": "kafka",
+    "displayName": "Kafka",
+    "schemes": ["kafka:"],
+    "roles": ["sink"],
+    "modes": ["complete"],
+    "bandwidthThrottling": true,
+    "staging": false,
+    "page": "/connectors/kafka/",
+    "caveats": ["Kafka is sink-only and the maintained capability is complete-mode row publishing."]
+  },
+  {
+    "id": "amazon-s3",
+    "displayName": "Amazon S3",
+    "schemes": ["s3:"],
+    "roles": ["sink"],
+    "modes": ["complete"],
+    "bandwidthThrottling": true,
+    "staging": false,
+    "page": "/connectors/amazon-s3/",
+    "caveats": ["S3 is sink-only and uses the runtime credential chain; it does not provide table merge semantics."]
+  },
+  {
+    "id": "file",
+    "displayName": "CSV and local files",
+    "schemes": ["file:"],
+    "roles": ["source", "sink"],
+    "modes": ["complete", "complete-atomic", "incremental"],
+    "bandwidthThrottling": true,
+    "staging": true,
+    "page": "/connectors/csv/",
+    "caveats": ["File replication is single-job only and has no complete-atomic sink mode."]
+  },
+  {
+    "id": "sqlite",
+    "displayName": "SQLite",
+    "schemes": ["jdbc:sqlite"],
+    "roles": ["source", "sink"],
+    "modes": ["complete", "complete-atomic", "incremental"],
+    "bandwidthThrottling": true,
+    "staging": true,
+    "page": "/connectors/sqlite/",
+    "caveats": ["SQLite does not support the complete-atomic sink capability and is constrained by file locking."]
+  },
+  {
+    "id": "mongodb",
+    "displayName": "MongoDB",
+    "schemes": ["mongodb:"],
+    "roles": ["source", "sink"],
+    "modes": ["complete", "complete-atomic", "incremental"],
+    "bandwidthThrottling": true,
+    "staging": true,
+    "page": "/connectors/mongodb/",
+    "caveats": ["MongoDB sink mode has no complete-atomic capability; document-to-row mapping is connector-specific."]
+  },
+  {
+    "id": "mongodb-srv",
+    "displayName": "MongoDB SRV",
+    "schemes": ["mongodb+srv:"],
+    "roles": ["source", "sink"],
+    "modes": ["complete", "complete-atomic", "incremental"],
+    "bandwidthThrottling": true,
+    "staging": true,
+    "page": "/connectors/mongodb/",
+    "caveats": ["SRV discovery and TLS settings are supplied by the MongoDB connection string and deployment environment."]
+  }
+]

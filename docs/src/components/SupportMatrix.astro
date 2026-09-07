@@ -1,0 +1,47 @@
+---
+interface SupportRow {
+  name: string;
+  roles: string;
+  modes: string[];
+  staging: string;
+  caveat: string;
+}
+
+interface Props {
+  caption?: string;
+  rows: SupportRow[];
+}
+
+const {
+  caption = 'Connector support summary',
+  rows
+} = Astro.props;
+---
+
+<div class="support-matrix" tabindex="0" role="region" aria-label={caption}>
+  <table>
+    <caption class="sr-only">{caption}</caption>
+    <thead>
+      <tr>
+        <th scope="col">Connector</th>
+        <th scope="col">Roles</th>
+        <th scope="col">Modes</th>
+        <th scope="col">Staging</th>
+        <th scope="col">Caveat</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((row) => (
+        <tr>
+          <th scope="row">{row.name}</th>
+          <td>{row.roles}</td>
+          <td>
+            {row.modes.map((mode) => <span class="support-matrix__mode">{mode}</span>)}
+          </td>
+          <td>{row.staging}</td>
+          <td>{row.caveat}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>

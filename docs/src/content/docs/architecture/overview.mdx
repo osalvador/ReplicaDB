@@ -1,0 +1,28 @@
+---
+title: Architecture overview
+description: Understand the CLI, API, worker, and durable-state boundaries.
+---
+
+import ArchitectureDiagram from '../../../components/ArchitectureDiagram.astro';
+
+# Architecture overview
+
+ReplicaDB has a dependency direction, not a single runtime shape. The
+standalone CLI owns one invocation. The managed server adds an authenticated
+API, durable PostgreSQL state, Quartz scheduling, and optional workers.
+
+<ArchitectureDiagram
+  id="replicadb-boundaries"
+  title="ReplicaDB separates the replication core from managed control and execution state."
+  source={'flowchart LR\n  CLI[Standalone CLI] --> Core[Replication core]\n  API[API profile] --> Core\n  Worker[Worker profile] --> Core\n  API --> DB[(PostgreSQL durable state)]\n  Worker --> DB'}
+  fallback={'Standalone CLI -> replication core\nAPI profile -> replication core and PostgreSQL durable state\nWorker profile -> replication core and PostgreSQL durable state'}
+/>
+
+The API and worker profiles translate managed job definitions into the same
+replication options contract. They do not create a second connector engine.
+The database is the ownership boundary for run state, leases, cancellation,
+attempt lineage, schedules, permissions, and audit records.
+
+Continue with [topology](/ReplicaDB/architecture/distributed-topology/),
+[run lifecycle](/ReplicaDB/architecture/run-lifecycle/), and
+[concurrency and fencing](/ReplicaDB/architecture/concurrency-and-fencing/).

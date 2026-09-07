@@ -1,0 +1,27 @@
+---
+interface Props {
+  id: string;
+  title?: string;
+  source: string;
+  fallback: string;
+}
+
+const {
+  id,
+  title = 'Architecture diagram',
+  source,
+  fallback
+} = Astro.props;
+---
+
+<figure class="architecture-diagram" id={id} aria-labelledby={`${id}-caption`}>
+  <div
+    class="architecture-diagram__canvas"
+    data-mermaid
+    data-diagram-id={id}
+    aria-hidden="true"
+  ></div>
+  <pre class="architecture-diagram__source" data-mermaid-source hidden>{source}</pre>
+  <p class="architecture-diagram__fallback" data-diagram-fallback>{fallback}</p>
+  <figcaption id={`${id}-caption`}>{title}</figcaption>
+</figure>

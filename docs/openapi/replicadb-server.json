@@ -1,0 +1,2421 @@
+{
+  "components": {
+    "schemas": {
+      "AuditEventResponse": {
+        "properties": {
+          "action": {
+            "enum": [
+              "LOGIN_SUCCEEDED",
+              "LOGIN_FAILED",
+              "LOGOUT",
+              "USER_CREATED",
+              "USER_UPDATED",
+              "USER_PASSWORD_CHANGED",
+              "DATASOURCE_CREATED",
+              "DATASOURCE_UPDATED",
+              "DATASOURCE_DELETED",
+              "DATASOURCE_PERMISSION_REPLACED",
+              "DATASOURCE_PERMISSION_REVOKED",
+              "JOB_CREATED",
+              "JOB_UPDATED",
+              "JOB_DELETED",
+              "JOB_DATASOURCE_BINDING_REPLACED",
+              "JOB_DATASOURCE_BINDING_ENABLED",
+              "JOB_DATASOURCE_BINDING_DISABLED",
+              "JOB_PERMISSION_REPLACED",
+              "JOB_PERMISSION_REVOKED",
+              "JOB_SCHEDULE_UPSERTED",
+              "JOB_SCHEDULE_DELETED",
+              "RUN_TRIGGERED",
+              "RUN_CANCEL_REQUESTED",
+              "RUN_RETRIED",
+              "RUN_SUCCEEDED",
+              "RUN_FAILED",
+              "RUN_CANCELLED"
+            ],
+            "type": "string"
+          },
+          "actorUserId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "actorUsername": {
+            "type": "string"
+          },
+          "detail": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "occurredAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "SUCCESS",
+              "FAILURE"
+            ],
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string"
+          },
+          "resourceType": {
+            "enum": [
+              "USER",
+              "DATASOURCE",
+              "JOB_DEFINITION",
+              "JOB_RUN",
+              "SESSION"
+            ],
+            "type": "string"
+          },
+          "sourceAddress": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "CancellationResponse": {
+        "properties": {
+          "runId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCEL_REQUESTED",
+              "CANCELLED",
+              "RETRY_SCHEDULED"
+            ],
+            "type": "string"
+          },
+          "warning": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "CsrfTokenResponse": {
+        "properties": {
+          "headerName": {
+            "type": "string"
+          },
+          "parameterName": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "DashboardJobPerformance": {
+        "properties": {
+          "averageDurationMillis": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "averageLatencyMillis": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "jobId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "jobName": {
+            "type": "string"
+          },
+          "rowsProcessed": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "runCount": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "DashboardOutcomePoint": {
+        "properties": {
+          "active": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "bucket": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "failed": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "succeeded": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "DashboardSummaryResponse": {
+        "properties": {
+          "activeRuns": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "averageDurationMillis": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "averageLatencyMillis": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "failedRuns": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "from": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "jobPerformance": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardJobPerformance"
+            },
+            "type": "array"
+          },
+          "outcomes": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardOutcomePoint"
+            },
+            "type": "array"
+          },
+          "rowsProcessed": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "succeededRuns": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "to": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "totalJobs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "totalRuns": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "DatasourceCapabilitiesResponse": {
+        "properties": {
+          "singleJobOnly": {
+            "type": "boolean"
+          },
+          "sinkCapable": {
+            "type": "boolean"
+          },
+          "sinkModes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "sourceCapable": {
+            "type": "boolean"
+          },
+          "sourceModes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "sourceQuery": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "DatasourcePermissionRequest": {
+        "properties": {
+          "permissions": {
+            "items": {
+              "enum": [
+                "VIEW",
+                "USE",
+                "EDIT"
+              ],
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "permissions"
+        ],
+        "type": "object"
+      },
+      "DatasourcePermissionResponse": {
+        "properties": {
+          "permissions": {
+            "items": {
+              "enum": [
+                "VIEW",
+                "USE",
+                "EDIT"
+              ],
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "userId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "DatasourceRequest": {
+        "properties": {
+          "clearSecurityKeys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "connectorType": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "security": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "technicalParams": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "connectorType",
+          "name"
+        ],
+        "type": "object"
+      },
+      "DatasourceResponse": {
+        "properties": {
+          "canEdit": {
+            "type": "boolean"
+          },
+          "canUse": {
+            "type": "boolean"
+          },
+          "canView": {
+            "type": "boolean"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/DatasourceCapabilitiesResponse"
+          },
+          "connectorType": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "safeConnectDisplay": {
+            "type": "string"
+          },
+          "securityConfigured": {
+            "type": "boolean"
+          },
+          "technicalParams": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "DatasourceSummaryResponse": {
+        "properties": {
+          "connectorType": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "safeConnectDisplay": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "JobDefinitionRequest": {
+        "properties": {
+          "automaticRetryEnabled": {
+            "type": "boolean"
+          },
+          "bandwidthThrottling": {
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "fetchSize": {
+            "format": "int32",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "incrementalWatermarkColumn": {
+            "type": "string"
+          },
+          "initialWatermarkValue": {
+            "type": "string"
+          },
+          "jobs": {
+            "format": "int32",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "maxAttempts": {
+            "format": "int32",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "retryBackoffSeconds": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "sinkColumns": {
+            "type": "string"
+          },
+          "sinkDatasourceId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "sinkDatasourceUseEnabled": {
+            "type": "boolean"
+          },
+          "sinkDisableEscape": {
+            "type": "boolean"
+          },
+          "sinkDisableTruncate": {
+            "type": "boolean"
+          },
+          "sinkStagingSchema": {
+            "type": "string"
+          },
+          "sinkStagingTable": {
+            "type": "string"
+          },
+          "sinkTable": {
+            "type": "string"
+          },
+          "sourceColumns": {
+            "type": "string"
+          },
+          "sourceDatasourceId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "sourceDatasourceUseEnabled": {
+            "type": "boolean"
+          },
+          "sourceQuery": {
+            "type": "string"
+          },
+          "sourceTable": {
+            "type": "string"
+          },
+          "sourceWhere": {
+            "type": "string"
+          },
+          "verbose": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "mode",
+          "name",
+          "sinkDatasourceId",
+          "sinkTable",
+          "sourceDatasourceId"
+        ],
+        "type": "object"
+      },
+      "JobDefinitionResponse": {
+        "properties": {
+          "automaticRetryEnabled": {
+            "type": "boolean"
+          },
+          "bandwidthThrottling": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "fetchSize": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "incrementalWatermarkColumn": {
+            "type": "string"
+          },
+          "initialWatermarkValue": {
+            "type": "string"
+          },
+          "jobs": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "maxAttempts": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "modeWarning": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "retryBackoffSeconds": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "sinkColumns": {
+            "type": "string"
+          },
+          "sinkDatasource": {
+            "$ref": "#/components/schemas/DatasourceSummaryResponse"
+          },
+          "sinkDatasourceId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "sinkDatasourceUseEnabled": {
+            "type": "boolean"
+          },
+          "sinkDisableEscape": {
+            "type": "boolean"
+          },
+          "sinkDisableTruncate": {
+            "type": "boolean"
+          },
+          "sinkStagingSchema": {
+            "type": "string"
+          },
+          "sinkStagingTable": {
+            "type": "string"
+          },
+          "sinkTable": {
+            "type": "string"
+          },
+          "sourceColumns": {
+            "type": "string"
+          },
+          "sourceDatasource": {
+            "$ref": "#/components/schemas/DatasourceSummaryResponse"
+          },
+          "sourceDatasourceId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "sourceDatasourceUseEnabled": {
+            "type": "boolean"
+          },
+          "sourceQuery": {
+            "type": "string"
+          },
+          "sourceTable": {
+            "type": "string"
+          },
+          "sourceWhere": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "verbose": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "JobPermissionRequest": {
+        "properties": {
+          "permissions": {
+            "items": {
+              "enum": [
+                "VIEW",
+                "EDIT",
+                "EXECUTE",
+                "CANCEL"
+              ],
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "permissions"
+        ],
+        "type": "object"
+      },
+      "JobPermissionResponse": {
+        "properties": {
+          "permissions": {
+            "items": {
+              "enum": [
+                "VIEW",
+                "EDIT",
+                "EXECUTE",
+                "CANCEL"
+              ],
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "userId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "JobRunResponse": {
+        "properties": {
+          "attempt": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "availableAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "cancellationWarning": {
+            "type": "string"
+          },
+          "committedWatermark": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "durationMillis": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "errorMessage": {
+            "type": "string"
+          },
+          "executorIdentity": {
+            "type": "string"
+          },
+          "finishedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "heartbeatAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "jobDefinitionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "leaseUntil": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "previousRunId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "rowsProcessed": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "startedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCEL_REQUESTED",
+              "CANCELLED",
+              "RETRY_SCHEDULED"
+            ],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "JobScheduleRequest": {
+        "properties": {
+          "cronExpression": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "timeZone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cronExpression"
+        ],
+        "type": "object"
+      },
+      "JobScheduleResponse": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "cronExpression": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "jobDefinitionId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "nextFireTime": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "timeZone": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "LoginRequest": {
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "username"
+        ],
+        "type": "object"
+      },
+      "PageResponseAuditEventResponse": {
+        "properties": {
+          "content": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEventResponse"
+            },
+            "type": "array"
+          },
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "totalElements": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PageResponseDatasourceResponse": {
+        "properties": {
+          "content": {
+            "items": {
+              "$ref": "#/components/schemas/DatasourceResponse"
+            },
+            "type": "array"
+          },
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "totalElements": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PageResponseJobDefinitionResponse": {
+        "properties": {
+          "content": {
+            "items": {
+              "$ref": "#/components/schemas/JobDefinitionResponse"
+            },
+            "type": "array"
+          },
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "totalElements": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PageResponseJobRunResponse": {
+        "properties": {
+          "content": {
+            "items": {
+              "$ref": "#/components/schemas/JobRunResponse"
+            },
+            "type": "array"
+          },
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "totalElements": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PageResponseUserResponse": {
+        "properties": {
+          "content": {
+            "items": {
+              "$ref": "#/components/schemas/UserResponse"
+            },
+            "type": "array"
+          },
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "size": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "totalElements": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PasswordUpdate": {
+        "properties": {
+          "newPassword": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "newPassword"
+        ],
+        "type": "object"
+      },
+      "RoleUpdate": {
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "role": {
+            "enum": [
+              "ADMIN",
+              "OPERATOR",
+              "VIEWER"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "type": "object"
+      },
+      "RunLogResponse": {
+        "properties": {
+          "capturedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "capturedSize": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "content": {
+            "type": "string"
+          },
+          "formatVersion": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "runId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "UserIdentityResponse": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "ADMIN",
+              "OPERATOR",
+              "VIEWER"
+            ],
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "UserRequest": {
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "ADMIN",
+              "OPERATOR",
+              "VIEWER"
+            ],
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "role",
+          "username"
+        ],
+        "type": "object"
+      },
+      "UserResponse": {
+        "properties": {
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "ADMIN",
+              "OPERATOR",
+              "VIEWER"
+            ],
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "OpenAPI definition",
+    "version": "v0"
+  },
+  "openapi": "3.0.1",
+  "paths": {
+    "/api/v1/audit": {
+      "get": {
+        "operationId": "list_6",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "actorUserId",
+            "required": false,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resourceType",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resourceId",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseAuditEventResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "audit-event-controller"
+        ]
+      }
+    },
+    "/api/v1/auth/csrf": {
+      "get": {
+        "operationId": "csrf",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CsrfTokenResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "auth-controller"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserIdentityResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "auth-controller"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "auth-controller"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserIdentityResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "auth-controller"
+        ]
+      }
+    },
+    "/api/v1/dashboard/summary": {
+      "get": {
+        "operationId": "summary",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardSummaryResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "dashboard-controller"
+        ]
+      }
+    },
+    "/api/v1/datasources": {
+      "get": {
+        "operationId": "list_4",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "role",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseDatasourceResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "datasource-controller"
+        ]
+      },
+      "post": {
+        "operationId": "create_2",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasourceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasourceResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "datasource-controller"
+        ]
+      }
+    },
+    "/api/v1/datasources/{datasourceId}/permissions": {
+      "get": {
+        "operationId": "list_5",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "datasourceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DatasourcePermissionResponse"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "datasource-permission-controller"
+        ]
+      }
+    },
+    "/api/v1/datasources/{datasourceId}/permissions/{userId}": {
+      "delete": {
+        "operationId": "revoke",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "datasourceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "datasource-permission-controller"
+        ]
+      },
+      "put": {
+        "operationId": "replace_1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "datasourceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasourcePermissionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasourcePermissionResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "datasource-permission-controller"
+        ]
+      }
+    },
+    "/api/v1/datasources/{id}": {
+      "delete": {
+        "operationId": "delete_3",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "datasource-controller"
+        ]
+      },
+      "get": {
+        "operationId": "get_4",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasourceResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "datasource-controller"
+        ]
+      },
+      "put": {
+        "operationId": "update_2",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasourceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasourceResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "datasource-controller"
+        ]
+      }
+    },
+    "/api/v1/jobs": {
+      "get": {
+        "operationId": "list_2",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseJobDefinitionResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-definition-controller"
+        ]
+      },
+      "post": {
+        "operationId": "create_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobDefinitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDefinitionResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-definition-controller"
+        ]
+      }
+    },
+    "/api/v1/jobs/{id}": {
+      "delete": {
+        "operationId": "delete_2",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Job deleted"
+          },
+          "403": {
+            "description": "Administrator access required"
+          },
+          "404": {
+            "description": "Job definition not found"
+          },
+          "409": {
+            "description": "Job has an active run or cannot be unscheduled"
+          }
+        },
+        "tags": [
+          "job-definition-controller"
+        ]
+      },
+      "get": {
+        "operationId": "get_3",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDefinitionResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-definition-controller"
+        ]
+      },
+      "put": {
+        "operationId": "update_1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobDefinitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDefinitionResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-definition-controller"
+        ]
+      }
+    },
+    "/api/v1/jobs/{jobDefinitionId}/permissions": {
+      "get": {
+        "operationId": "list_3",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "jobDefinitionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JobPermissionResponse"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-permission-controller"
+        ]
+      }
+    },
+    "/api/v1/jobs/{jobDefinitionId}/permissions/{userId}": {
+      "delete": {
+        "operationId": "delete_1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "jobDefinitionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-permission-controller"
+        ]
+      },
+      "put": {
+        "operationId": "replace",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "jobDefinitionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobPermissionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobPermissionResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-permission-controller"
+        ]
+      }
+    },
+    "/api/v1/jobs/{jobDefinitionId}/runs": {
+      "get": {
+        "operationId": "listForJob",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "jobDefinitionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseJobRunResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-run-controller"
+        ]
+      },
+      "post": {
+        "operationId": "trigger",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "jobDefinitionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobRunResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-run-controller"
+        ]
+      }
+    },
+    "/api/v1/jobs/{jobDefinitionId}/schedule": {
+      "delete": {
+        "operationId": "delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "jobDefinitionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-schedule-controller"
+        ]
+      },
+      "get": {
+        "operationId": "get_2",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "jobDefinitionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobScheduleResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-schedule-controller"
+        ]
+      },
+      "put": {
+        "operationId": "upsert",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "jobDefinitionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobScheduleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobScheduleResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-schedule-controller"
+        ]
+      }
+    },
+    "/api/v1/runs": {
+      "get": {
+        "operationId": "list_1",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseJobRunResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-run-controller"
+        ]
+      }
+    },
+    "/api/v1/runs/{id}": {
+      "get": {
+        "operationId": "get_1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobRunResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-run-controller"
+        ]
+      }
+    },
+    "/api/v1/runs/{id}/cancel": {
+      "post": {
+        "operationId": "cancel",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancellationResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-run-controller"
+        ]
+      }
+    },
+    "/api/v1/runs/{id}/log": {
+      "get": {
+        "operationId": "log",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunLogResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-run-controller"
+        ]
+      }
+    },
+    "/api/v1/runs/{id}/retry": {
+      "post": {
+        "operationId": "retry",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobRunResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "job-run-controller"
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "operationId": "list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageResponseUserResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "user-controller"
+        ]
+      },
+      "post": {
+        "operationId": "create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "user-controller"
+        ]
+      }
+    },
+    "/api/v1/users/{id}": {
+      "get": {
+        "operationId": "get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "user-controller"
+        ]
+      },
+      "put": {
+        "operationId": "update",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "user-controller"
+        ]
+      }
+    },
+    "/api/v1/users/{id}/password": {
+      "put": {
+        "operationId": "updatePassword",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "tags": [
+          "user-controller"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Generated server url",
+      "url": "http://localhost"
+    }
+  ]
+}
