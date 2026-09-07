@@ -3,7 +3,6 @@ title: Generic JDBC and legacy managers
 description: Fallback JDBC schemes and their intentionally narrow capability contract.
 ---
 
-# Generic JDBC and legacy managers
 
 ReplicaDB includes explicit legacy manager schemes for HSQLDB, CUBRID, jTDS SQL
 Server, and Netezza, plus a Standard JDBC fallback for other JDBC-compatible

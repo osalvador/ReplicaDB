@@ -3,7 +3,6 @@ title: CLI troubleshooting
 description: Diagnose malformed options, connection failures, resource pressure, and interrupted runs.
 ---
 
-# CLI troubleshooting
 
 Start with `./bin/replicadb --help`, the resolved options file, and the process
 exit code. Never paste resolved connection values into a shared issue or log.

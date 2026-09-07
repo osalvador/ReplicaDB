@@ -260,6 +260,25 @@ nav[aria-labelledby='starlight__on-this-page'] a {
   white-space: pre-wrap;
 }
 
+.architecture-diagram[data-rendered='true'] .architecture-diagram__fallback {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.architecture-diagram__canvas svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 34rem;
+}
+
 .architecture-diagram figcaption,
 .screenshot-frame figcaption {
   margin-top: 0.75rem;

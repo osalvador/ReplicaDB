@@ -3,7 +3,6 @@ title: CLI quickstart
 description: Install ReplicaDB and run a first standalone replication workflow.
 ---
 
-# CLI quickstart
 
 This path runs one direct transfer from a release archive. It leaves metadata
 ownership, scheduling, and process supervision to your existing automation.

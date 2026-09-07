@@ -3,7 +3,6 @@ title: CLI performance
 description: Diagnose and tune throughput without changing the CLI contract.
 ---
 
-# CLI performance
 
 Throughput is bounded by the slowest source read, sink write, network path,
 connector staging path, and host resources. Start with a representative table

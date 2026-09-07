@@ -3,7 +3,6 @@ title: CLI parallelism
 description: Tune jobs, fetch size, and bandwidth for standalone transfers.
 ---
 
-# CLI parallelism
 
 Use `--jobs` or the `jobs` property to control the number of source-to-sink
 workers. The command-line help reports the default as 4; set a value that the

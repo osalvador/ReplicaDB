@@ -3,7 +3,6 @@ title: MongoDB connector
 description: MongoDB and MongoDB SRV source/sink capabilities and caveats.
 ---
 
-# MongoDB
 
 Use `mongodb:` or `mongodb+srv:`. MongoDB supports source and sink roles for
 all three source modes and complete or incremental sink modes. The sink does

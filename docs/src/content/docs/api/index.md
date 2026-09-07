@@ -4,7 +4,6 @@ description: Read-only reference for the authenticated ReplicaDB server API.
 slug: api-introduction
 ---
 
-# API reference
 
 ReplicaDB Server exposes its control plane below the `/api/v1` base path. The
 endpoint pages are generated from the tested Springdoc contract and grouped by

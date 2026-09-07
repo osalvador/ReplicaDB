@@ -3,7 +3,6 @@ title: Concurrency and fencing
 description: Understand atomic claims, leases, token fencing, and overlap prevention.
 ---
 
-# Concurrency and fencing
 
 Claims use an atomic database update with `FOR UPDATE SKIP LOCKED` so workers
 do not wait behind one another while selecting eligible `PENDING` runs. The

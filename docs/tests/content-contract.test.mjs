@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
 
@@ -16,6 +16,23 @@ function readGuide(name) {
 function shellBlocks(text) {
   return [...text.matchAll(/```(?:bash|sh)\n([\s\S]*?)```/g)].map((match) => match[1]);
 }
+
+/** @param {string} root @returns {string[]} */
+function contentFiles(root) {
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) return contentFiles(path);
+    return /\.mdx?$/.test(entry.name) ? [path] : [];
+  });
+}
+
+test('uses Starlight frontmatter titles without duplicate manual H1 headings', () => {
+  const duplicateTitles = contentFiles(join(docsRoot, 'src/content/docs'))
+    .filter((/** @type {string} */ path) => /^---[\s\S]*?^title:.+?[\s\S]*?^---/m.test(readFileSync(path, 'utf8')))
+    .filter((/** @type {string} */ path) => /^# /m.test(readFileSync(path, 'utf8')));
+
+  assert.deepEqual(duplicateTitles, []);
+});
 
 test('contains the product decision path, quickstarts, and glossary terms', () => {
   const homepage = readFileSync(join(docsRoot, 'src/content/docs/index.mdx'), 'utf8');

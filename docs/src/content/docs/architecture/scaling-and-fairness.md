@@ -3,7 +3,6 @@ title: Scaling and fairness
 description: Calculate capacity and understand the worker admission lanes.
 ---
 
-# Scaling and fairness
 
 The arithmetic capacity ceiling is:
 

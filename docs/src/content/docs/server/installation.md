@@ -3,7 +3,6 @@ title: Server installation
 description: Install local, API, and worker server profiles with durable state.
 ---
 
-# Server installation
 
 The managed server uses Java 17 or newer. Its distribution is separate from
 the CLI and uses `REPLICADB_SERVER_HOME`; it does not migrate or read

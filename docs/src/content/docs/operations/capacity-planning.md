@@ -3,7 +3,6 @@ title: Capacity planning
 description: Plan worker concurrency, database pools, and effective throughput.
 ---
 
-# Capacity planning
 
 The arithmetic ceiling is `worker instances * concurrent runs per worker * jobs
 per run`. Bind it to `replicadb.worker.max-concurrent-runs`, the count of

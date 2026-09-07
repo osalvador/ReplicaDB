@@ -3,7 +3,6 @@ title: CLI installation
 description: Install and verify the standalone ReplicaDB archive.
 ---
 
-# CLI installation
 
 The CLI archive contains its launcher, runtime libraries, and connector
 drivers. It requires Java 17 or newer and does not require Maven, npm, Docker,

@@ -3,7 +3,6 @@ title: Core concepts
 description: A concise glossary for ReplicaDB CLI and managed-server guides.
 ---
 
-# Core concepts
 
 These terms keep the standalone and managed documentation precise.
 

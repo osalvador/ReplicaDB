@@ -25,3 +25,38 @@ const {
   <p class="architecture-diagram__fallback" data-diagram-fallback>{fallback}</p>
   <figcaption id={`${id}-caption`}>{title}</figcaption>
 </figure>
+
+<script>
+  import mermaid from 'mermaid';
+
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'strict',
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#E8F0ED',
+      primaryTextColor: '#1B2926',
+      primaryBorderColor: '#0B6E69',
+      lineColor: '#50625D',
+      secondaryColor: '#FFFFFF',
+      tertiaryColor: '#F3F6F4'
+    }
+  });
+
+  const diagrams = document.querySelectorAll('[data-mermaid]');
+
+  for (const diagram of diagrams) {
+    const source = diagram.parentElement?.querySelector('[data-mermaid-source]')?.textContent?.trim();
+    const id = diagram.getAttribute('data-diagram-id');
+
+    if (!source || !id) continue;
+
+    try {
+      const { svg } = await mermaid.render(`${id}-svg`, source);
+      diagram.innerHTML = svg;
+      diagram.parentElement?.setAttribute('data-rendered', 'true');
+    } catch {
+      diagram.parentElement?.setAttribute('data-render-failed', 'true');
+    }
+  }
+</script>

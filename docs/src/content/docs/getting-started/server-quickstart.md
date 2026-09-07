@@ -3,7 +3,6 @@ title: Server quickstart
 description: Start a durable local ReplicaDB server with embedded PostgreSQL.
 ---
 
-# Server quickstart
 
 The local server is the smallest managed deployment. It provides an
 authenticated web control plane, durable metadata, jobs, schedules, and run

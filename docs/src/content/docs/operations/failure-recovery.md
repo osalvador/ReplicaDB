@@ -3,7 +3,6 @@ title: Failure recovery
 description: Recover worker loss, cancellation, retries, and indeterminate sinks.
 ---
 
-# Failure recovery
 
 Worker loss never resumes an abandoned run. Wait for PostgreSQL lease expiry;
 recovery preserves the abandoned attempt and creates a new attempt when the

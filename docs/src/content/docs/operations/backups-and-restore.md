@@ -3,7 +3,6 @@ title: Backups and restore
 description: Back up PostgreSQL state and the encryption keyring together.
 ---
 
-# Backups and restore
 
 PostgreSQL is the source of truth for jobs, schedules, permissions, sessions,
 audit, leases, retry chains, watermarks, and run logs. Back up the database
