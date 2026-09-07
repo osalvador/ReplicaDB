@@ -4,7 +4,7 @@ description: Choose the right ReplicaDB product and get started.
 template: splash
 hero:
   title: ReplicaDB
-  tagline: High-performance, non-intrusive bulk replication.
+  tagline: Move data between supported systems with a workflow that fits the way you operate.
   actions:
     - text: Choose CLI or Server
       link: /ReplicaDB/getting-started/choose-cli-or-server/
@@ -17,25 +17,32 @@ import ScreenshotFrame from '../../components/ScreenshotFrame.astro';
 import SupportMatrix from '../../components/SupportMatrix.astro';
 import logo from '../../assets/brand/replicadb-logo.png';
 
-ReplicaDB provides two related products for moving data between supported
-systems: a standalone CLI and a managed server. Start with the
-[product comparison](/ReplicaDB/getting-started/choose-cli-or-server/) and
-choose the operating model that matches your workflow.
+ReplicaDB provides two operating paths over the same replication core. Run a
+direct transfer from a terminal, or operate durable authenticated jobs from a
+shared control plane. The choice is about ownership, state, and repeatability,
+not a different data-movement engine. Read the
+[product comparison](/ReplicaDB/getting-started/choose-cli-or-server/) if you
+need to compare the two operating models first.
 
 <ProductChoice
-  title="Choose your working mode"
+  title="Choose the operating path"
+  description="Use the CLI for direct execution. Use the server when runs need durable state, scheduling, and shared control."
   options={[
     {
       title: 'Standalone CLI',
-      summary: 'Run direct, non-intrusive bulk replication without a managed metadata database.',
+      fit: 'Direct execution',
+      summary: 'Run a transfer from a release archive and keep control in the terminal or your automation. No managed metadata database is required.',
+      detail: 'Best for one-off migrations, scripts, and operator-owned runs.',
       href: '/ReplicaDB/getting-started/cli-quickstart/',
-      action: 'Start with the CLI'
+      action: 'Open CLI quickstart'
     },
     {
       title: 'Managed Server',
-      summary: 'Operate durable, authenticated jobs from a shared control plane.',
+      fit: 'Durable operations',
+      summary: 'Define authenticated jobs with durable state, scheduling, permissions, and observable runs from a shared control plane.',
+      detail: 'Best for repeatable workflows and teams sharing operational ownership.',
       href: '/ReplicaDB/getting-started/server-quickstart/',
-      action: 'Start with the server'
+      action: 'Open server quickstart'
     }
   ]}
 />
@@ -47,7 +54,20 @@ choose the operating model that matches your workflow.
   fallback={'Standalone CLI -> replication core\nManaged server -> replication core\nManaged server -> durable state'}
 />
 
+<div class="home-operator-path">
+  <div>
+    <h2>Already know the path?</h2>
+    <p>Jump straight to installation, configuration, or the managed API reference.</p>
+  </div>
+  <nav aria-label="Operator entry points">
+    <a href="/ReplicaDB/cli/installation/">Install the CLI</a>
+    <a href="/ReplicaDB/operations/configuration/">Configure the server</a>
+    <a href="/ReplicaDB/api/">Read the API reference</a>
+  </nav>
+</div>
+
 <SupportMatrix
+  caption="Featured connector support summary"
   rows={[
     {
       name: 'PostgreSQL',
