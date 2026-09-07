@@ -2,8 +2,13 @@ package org.replicadb.server.job.api;
 
 import jakarta.validation.Valid;
 import jakarta.validation.groups.Default;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.replicadb.server.audit.AuditActorResolver;
 import org.replicadb.server.audit.AuditService;
 import org.replicadb.server.audit.domain.AuditAction;
@@ -48,6 +53,8 @@ import org.replicadb.manager.DataSourceType;
 @RestController
 @Profile("api")
 @RequestMapping("/api/v1/jobs")
+@Tag(name = "Jobs", description = "Create and manage durable replication job definitions.")
+@SecurityRequirement(name = "sessionCookie")
 public class JobDefinitionController {
 
     private final JobDefinitionStore repository;
@@ -88,6 +95,15 @@ public class JobDefinitionController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','OPERATOR')")
     @Transactional
+        @Operation(operationId = "createJobDefinition", summary = "Create a job definition",
+            description = "Creates a job after validating datasource USE access, connector roles, mode support, and single-job limits. Protected mutations require the session cookie and CSRF header.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Job definition created"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
     public ResponseEntity<JobDefinitionResponse> create(
             @Validated({Default.class, JobDefinitionRequest.Create.class})
             @RequestBody JobDefinitionRequest request,
@@ -110,8 +126,17 @@ public class JobDefinitionController {
     }
 
     @GetMapping
+        @Operation(operationId = "listJobDefinitions", summary = "List visible job definitions",
+            description = "Returns only jobs visible to the authenticated identity. Pagination defaults to page 0 and size 50; size is clamped to 1 through 200.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Visible job definitions returned"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem")
+        })
     public PageResponse<JobDefinitionResponse> list(
+            @Parameter(description = "Zero-based page number.", schema = @Schema(defaultValue = "0", minimum = "0"))
             @RequestParam(required = false) Integer page,
+            @Parameter(description = "Requested page size, clamped to the range 1 through 200.", schema = @Schema(defaultValue = "50", minimum = "1", maximum = "200"))
             @RequestParam(required = false) Integer size,
             Authentication authentication) {
         PageRequestParams params = PageRequestParams.of(page, size);
@@ -123,14 +148,35 @@ public class JobDefinitionController {
     }
 
     @GetMapping("/{id}")
-    public JobDefinitionResponse get(@PathVariable UUID id, Authentication authentication) {
+        @Operation(operationId = "getJobDefinition", summary = "Get a job definition",
+            description = "Returns one job definition when the authenticated identity has VIEW permission. Datasource summaries are omitted when their metadata is not visible.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Job definition returned"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
+        public JobDefinitionResponse get(
+            @Parameter(description = "Job definition identifier.", required = true) @PathVariable UUID id,
+            Authentication authentication) {
         jobAccessService.require(authentication, id, JobPermissionType.VIEW);
         return response(findDefinition(id), authentication);
     }
 
     @PutMapping("/{id}")
     @Transactional
-    public JobDefinitionResponse update(@PathVariable UUID id, @Valid @RequestBody JobDefinitionRequest request,
+        @Operation(operationId = "updateJobDefinition", summary = "Update a job definition",
+            description = "Replaces editable job settings after EDIT permission and datasource capability checks. The job name is immutable. Protected mutations require the session cookie and CSRF header.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Job definition updated"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
+        public JobDefinitionResponse update(
+                         @Parameter(description = "Job definition identifier.", required = true) @PathVariable UUID id,
+                         @Valid @RequestBody JobDefinitionRequest request,
                                          Authentication authentication) {
         jobAccessService.require(authentication, id, JobPermissionType.EDIT);
         JobDefinition existing = repository.findByIdForUpdate(id)
@@ -159,13 +205,18 @@ public class JobDefinitionController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+        @Operation(operationId = "deleteJobDefinition", summary = "Delete a job definition",
+            description = "Deletes an inactive job and its dependent history after unscheduling it. ADMIN is required; active runs cause a conflict. Protected mutations require the session cookie and CSRF header.")
         @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Job deleted"),
-            @ApiResponse(responseCode = "403", description = "Administrator access required"),
-            @ApiResponse(responseCode = "404", description = "Job definition not found"),
-            @ApiResponse(responseCode = "409", description = "Job has an active run or cannot be unscheduled")
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem"),
+            @ApiResponse(responseCode = "409", ref = "#/components/responses/ConflictProblem")
         })
-    public ResponseEntity<Void> delete(@PathVariable UUID id, Authentication authentication) {
+        public ResponseEntity<Void> delete(
+            @Parameter(description = "Job definition identifier.", required = true) @PathVariable UUID id,
+            Authentication authentication) {
         JobDefinition definition = repository.findByIdForUpdate(id)
                 .orElseThrow(() -> new NoSuchElementException("JobDefinition not found: " + id));
         if (jobRunStore.hasActiveRun(id)) {

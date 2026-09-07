@@ -29,6 +29,7 @@
   --sl-color-gray-5: #3D4C48;
   --sl-color-gray-6: #26332F;
   --sl-color-black: #17211F;
+  --sl-color-red: var(--replicadb-error);
   --sl-font: "Avenir Next", "Helvetica Neue", sans-serif;
   --sl-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }

@@ -18,6 +18,12 @@ The default options file uses 100 as a starting point.
 KB/s. It is useful when replication shares a constrained network, but it does
 not change database lock, query, or sink commit behavior.
 
+The limit is applied per worker. For example, four workers each capped at
+10,240 KB/s can collectively approach 40,960 KB/s when the source, sink, and
+network can sustain it. Use a per-worker value derived from the total budget,
+and remember that connectors without throttling support ignore this tuning
+path as documented on their connector page.
+
 ## A tuning sequence
 
 1. Start with one job and a representative table.
@@ -29,3 +35,8 @@ not change database lock, query, or sink commit behavior.
 The standalone CLI runs all entries in a multi-table catalog sequentially;
 `jobs` controls work within the current table rather than table-level
 parallelism.
+
+Parallel reads also increase active source and sink connections. Stop raising
+`jobs` when throughput flattens, database waits rise, or the host approaches
+its memory or file-descriptor limits. A larger worker count is not a substitute
+for a selective source predicate or a suitable sink key/index strategy.

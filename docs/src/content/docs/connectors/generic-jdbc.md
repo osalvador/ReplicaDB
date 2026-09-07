@@ -16,3 +16,9 @@ Use the connector's driver class through the relevant
 compatibility does not imply vendor-specific bulk loading, partitioning,
 staging, type conversion, or security support. Validate the full table shape
 and permissions with a disposable sink before production use.
+
+The fallback uses ordinary JDBC result-set reads and prepared-statement writes.
+It can execute a source query, but the maintained legacy capability remains
+complete mode with one job. Supply the driver JAR in the CLI `lib` directory,
+confirm that the driver class is loadable, and verify BLOB, CLOB, SQLXML,
+temporal, and binary mappings for the exact driver version.

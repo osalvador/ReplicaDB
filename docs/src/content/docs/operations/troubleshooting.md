@@ -13,7 +13,9 @@ database work.
   admission state before restarting.
 - **Listener disconnected, polling healthy:** notification latency may rise;
   polling preserves correctness. Check reconnect backoff and
-  `replicadb.worker.listener.connected`.
+  `replicadb.worker.listener.connected`. The listener retries from 1 second up
+  to 30 seconds; inspect PostgreSQL `LISTEN/NOTIFY`, network, and firewall
+  reachability while `replicadb.managed.polling.lag` shows fallback latency.
 - **No claims:** inspect queue age, `replicadb.managed.claims`, worker identity,
   permissions, available time, and lease expiry.
 - **Repeated recovery:** inspect lease renewal outcomes, database time, pool

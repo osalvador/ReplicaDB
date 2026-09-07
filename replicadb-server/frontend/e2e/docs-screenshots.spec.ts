@@ -38,11 +38,14 @@ test.describe('curated documentation screenshots', () => {
         } else if (definition.key === 'job-new') {
           await page.goto('/jobs/new');
           await waitForHeading(page, 'New job');
-        } else if (definition.key === 'job-detail' || definition.key === 'job-edit') {
+        } else if (definition.key === 'job-detail' || definition.key === 'job-edit' || definition.key === 'schedule') {
           await clickSeededJob(page);
           if (definition.key === 'job-edit') {
             await page.getByRole('link', { name: 'Edit' }).click();
             await waitForHeading(page, 'Edit job');
+          } else if (definition.key === 'schedule') {
+            await page.getByRole('button', { name: /Create schedule|Edit/ }).first().click();
+            await waitForHeading(page, /Create schedule|Edit schedule/);
           } else {
             await waitForHeading(page, /Develop \/ PostgreSQL source/);
           }

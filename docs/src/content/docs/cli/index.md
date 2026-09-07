@@ -25,6 +25,30 @@ from the maintained option evidence and preserves exact flag names. The
 [options-file examples](/ReplicaDB/reference/example-options-files/) show
 safe environment substitution without resolving secrets into source control.
 
+## What one invocation does
+
+1. Parse the options file, then apply command-line overrides.
+2. Validate the source, sink, mode, table selection, and staging constraints.
+3. Open connector managers and run their pre-transfer preparation.
+4. Partition the current source table across `jobs` workers and write rows to
+	 the sink or its staging area.
+5. Run the mode-specific sink operation, cleanup, and connector shutdown.
+
+A multi-table catalog repeats that complete lifecycle for each table pair in
+numeric order. It does not turn one invocation into a durable workflow: keep
+the options, exit code, logs, destination checks, and last committed watermark
+with the external scheduler or run record that launched it.
+
+## Choose the next guide
+
+- Start with `complete` when replacing the destination is acceptable.
+- Choose `complete-atomic` when readers must not see the ordinary replacement
+	window and the sink supports transactional staging.
+- Choose `incremental` when a source predicate or committed watermark can
+	identify changed rows and the sink has the keys required to merge them.
+- Use `source.query` for a result set that cannot be expressed as one table,
+	but accept that automatic watermark and multi-table features are unavailable.
+
 ## Scope and limits
 
 The CLI is a batch replication tool. It does not provide change-data-capture,

@@ -13,7 +13,9 @@
     "test:e2e": "playwright test",
     "test:e2e:docs": "playwright test --config=playwright.docs.config.ts",
     "test:e2e:admin:local": "bash scripts/test-admin-e2e-local.sh",
-    "generate:api-types": "node scripts/generate-api-types.mjs"
+    "generate:api-types": "node scripts/generate-api-types.mjs",
+    "test:api-types": "node --test scripts/generate-api-types.test.mjs",
+    "test:playwright-config": "node --experimental-strip-types --test scripts/playwright-docs-config.test.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

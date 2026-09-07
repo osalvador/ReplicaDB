@@ -13,7 +13,8 @@ on:
       - 'replicadb-server/frontend/src/**'
       - 'replicadb-server/frontend/e2e/**'
       - 'replicadb-server/frontend/package*.json'
-      - 'replicadb-server/frontend/playwright.docs.config.ts'
+      - 'replicadb-server/frontend/playwright*.config.ts'
+      - 'replicadb-server/frontend/scripts/**/*.mjs'
       - 'replicadb-server/src/main/java/**'
       - 'replicadb-server/src/test/java/org/replicadb/server/OpenApiSpecificationIT.java'
       - 'replicadb-server/pom.xml'
@@ -30,7 +31,8 @@ on:
       - 'replicadb-server/frontend/src/**'
       - 'replicadb-server/frontend/e2e/**'
       - 'replicadb-server/frontend/package*.json'
-      - 'replicadb-server/frontend/playwright.docs.config.ts'
+      - 'replicadb-server/frontend/playwright*.config.ts'
+      - 'replicadb-server/frontend/scripts/**/*.mjs'
       - 'replicadb-server/src/main/java/**'
       - 'replicadb-server/src/test/java/org/replicadb/server/OpenApiSpecificationIT.java'
       - 'replicadb-server/pom.xml'
@@ -92,10 +94,25 @@ jobs:
           java-version: '17'
           distribution: temurin
           cache: maven
-      - name: Regenerate and compare OpenAPI
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: replicadb-server/frontend/package-lock.json
+      - name: Install frontend schema tooling
+        working-directory: replicadb-server/frontend
+        run: npm ci
+      - name: Regenerate and compare API contracts
         run: |
           bash docs/scripts/update-openapi.sh
-          git diff --exit-code -- docs/openapi/replicadb-server.json
+          OPENAPI_SCHEMA_FILE="$PWD/docs/openapi/replicadb-server.json" \
+            OPENAPI_SCHEMA_OUTPUT="$PWD/replicadb-server/frontend/src/api/schema.ts" \
+            npm --prefix replicadb-server/frontend run generate:api-types
+          npm --prefix replicadb-server/frontend run test:api-types
+          npm --prefix replicadb-server/frontend run typecheck
+          npm --prefix replicadb-server/frontend test -- src/api/schema.test.ts
+          git diff --exit-code -- docs/openapi/replicadb-server.json \
+            replicadb-server/frontend/src/api/schema.ts
 
   frontend_drift:
     if: ${{ github.event_name == 'workflow_dispatch' || needs.classify.outputs.frontend == 'true' }}
@@ -114,4 +131,4 @@ jobs:
         run: npm ci
       - name: Typecheck and fixture contracts
         working-directory: replicadb-server/frontend
-        run: npm run typecheck && npm run test:seed && node --test scripts/seed-docs-screenshots.test.mjs
+        run: npm run typecheck && npm run test:api-types && npm run test:playwright-config && npm run test:seed && node --test scripts/seed-docs-screenshots.test.mjs

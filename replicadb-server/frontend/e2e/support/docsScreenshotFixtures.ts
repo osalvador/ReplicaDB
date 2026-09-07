@@ -29,6 +29,7 @@ export const CURATED_SCREENSHOTS: DocsScreenshotDefinition[] = [
   ['jobs', 'jobs.png', 'desktop', 'seeded job catalog', 'ReplicaDB jobs catalog', 'The jobs catalog lists definitions available to the signed-in operator.', 'server/jobs'],
   ['job-new', 'job-new.png', 'desktop', 'new job form', 'ReplicaDB new job form', 'A new job binds datasources and defines the replication contract.', 'server/jobs'],
   ['job-detail', 'job-detail.png', 'desktop', 'complete-mode warning and run history', 'ReplicaDB job detail with complete-mode warning', 'Job detail keeps the destructive complete-mode warning beside the actions it affects.', 'server/jobs'],
+  ['schedule', 'schedule.png', 'desktop', 'schedule configuration dialog', 'ReplicaDB schedule configuration dialog', 'The schedule editor builds a Quartz CRON expression with an explicit time zone and enabled state.', 'server/schedules'],
   ['job-edit', 'job-edit.png', 'desktop', 'edit job form', 'ReplicaDB edit job form', 'The edit form preserves datasource references and retry policy controls.', 'server/jobs'],
   ['run-detail', 'run-detail.png', 'desktop', 'terminal run diagnostics', 'ReplicaDB run detail and bounded diagnostics', 'Run detail shows status, metrics, and bounded operational logs.', 'server/runs-and-diagnostics'],
   ['datasources', 'datasources.png', 'desktop', 'datasource catalog', 'ReplicaDB datasource catalog', 'Datasource profiles expose safe metadata and permission flags.', 'server/datasources'],

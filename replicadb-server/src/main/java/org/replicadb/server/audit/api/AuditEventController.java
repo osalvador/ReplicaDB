@@ -1,5 +1,12 @@
 package org.replicadb.server.audit.api;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.replicadb.server.audit.domain.AuditAction;
 import org.replicadb.server.audit.domain.AuditResourceType;
 import org.replicadb.server.audit.persistence.AuditEventFilter;
@@ -23,6 +30,8 @@ import java.util.UUID;
 @Profile("api")
 @RequestMapping("/api/v1/audit")
 @PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "Audit", description = "ADMIN-filtered, paginated durable audit history.")
+@SecurityRequirement(name = "sessionCookie")
 public class AuditEventController {
 
     private final AuditEventRepository repository;
@@ -32,16 +41,32 @@ public class AuditEventController {
     }
 
     @GetMapping
+        @Operation(operationId = "listAuditEvents", summary = "List audit events",
+            description = "Returns durable audit events matching optional actor, action, resource, and UTC time filters. ADMIN is required.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Audit events returned"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem")
+        })
     public PageResponse<AuditEventResponse> list(
+            @Parameter(description = "Actor user identifier. System actors do not have a user identifier.")
             @RequestParam(required = false) UUID actorUserId,
+            @Parameter(description = "Case-insensitive AuditAction enum name.")
             @RequestParam(required = false) String action,
+            @Parameter(description = "Case-insensitive resource category.", schema = @Schema(allowableValues = {"USER", "DATASOURCE", "JOB_DEFINITION", "JOB_RUN", "SESSION"}))
             @RequestParam(required = false) String resourceType,
+            @Parameter(description = "Exact audited resource identifier.")
             @RequestParam(required = false) String resourceId,
+            @Parameter(description = "Inclusive lower event timestamp bound in UTC ISO-8601 date-time format.", schema = @Schema(format = "date-time"))
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @Parameter(description = "Exclusive upper event timestamp bound in UTC ISO-8601 date-time format.", schema = @Schema(format = "date-time"))
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @Parameter(description = "Zero-based page number.", schema = @Schema(defaultValue = "0", minimum = "0"))
             @RequestParam(required = false) Integer page,
+            @Parameter(description = "Requested page size, clamped to the range 1 through 200.", schema = @Schema(defaultValue = "50", minimum = "1", maximum = "200"))
             @RequestParam(required = false) Integer size) {
         AuditEventFilter filter = new AuditEventFilter(actorUserId, parseAction(action),
                 parseResourceType(resourceType), resourceId, from, to);

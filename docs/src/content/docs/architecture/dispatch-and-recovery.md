@@ -14,6 +14,14 @@ generic path when notifications are absent.
 creates durable pending work and a wake-up; it does not bypass the same claim,
 permission, or lease path used by manual execution.
 
+Claiming a run and preparing its inputs is one database operation. The worker
+locks the run, job binding, and both datasource rows in stable UUID order,
+checks that the bindings are still enabled, and stores encrypted source and
+sink snapshots plus `datasourcesResolvedAt`. That claim-time snapshot is
+immutable for the active attempt. Editing a datasource affects the next claim;
+disabling a binding blocks a future claim but does not rewrite an attempt that
+is already running.
+
 When `lease_until <= now()`, recovery does one of three things:
 
 - a cancellation-requested run becomes `CANCELLED`;

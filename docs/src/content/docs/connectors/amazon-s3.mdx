@@ -13,10 +13,33 @@ Use the `s3:` scheme. S3 is sink-only and supports complete replication. It
 does not provide table merge or complete-atomic behavior; choose the object
 layout and replacement convention in the job that consumes the output.
 
-<ScreenshotFrame src={s3} alt="Amazon S3 connector object output configuration" caption="S3 output can be organized as object-per-row or a file for the replication." width={1024} height={768} loading="eager" />
-<ScreenshotFrame src={s3Csv} alt="Amazon S3 connector CSV output example" caption="CSV output is useful when downstream consumers expect one structured object." width={1024} height={768} />
+<ScreenshotFrame src={s3} alt="Amazon S3 connector object output configuration" caption="S3 output can be organized as object-per-row or a file for the replication." width={1070} height={420} loading="eager" />
+<ScreenshotFrame src={s3Csv} alt="Amazon S3 connector CSV output example" caption="CSV output is useful when downstream consumers expect one structured object." width={1128} height={436} />
 
-Use the AWS runtime credential chain, workload identity, or an environment
-managed profile. Do not place access keys in a connection string, options file,
-JSON example, or documentation screenshot. Confirm bucket, prefix, region,
-encryption, and object-write permissions before a large transfer.
+## Object layout
+
+In object-per-row mode, `row.keyColumn` supplies each object key and
+`row.contentColumn` supplies its content. In file mode, the selected file
+manager streams all rows to one key identified by `keyFileName`; choose CSV or
+ORC according to the [local file constraints](/ReplicaDB/connectors/csv/).
+Existing objects at the selected keys can be replaced. There is no transaction
+covering a group of objects, no incremental table merge, and no rollback of
+objects already uploaded when a later write fails.
+
+The `s3:` connection identifies the service endpoint and bucket path. Keep
+layout-only settings under `sink.connect.parameter.*`:
+
+```properties
+mode=complete
+sink.connect=${S3_ENDPOINT_AND_BUCKET}
+sink.file.format=csv
+sink.connect.parameter.row.isObject=false
+sink.connect.parameter.keyFileName=${S3_OBJECT_KEY}
+```
+
+The current manager requires explicit S3 credentials. Supply them through the
+deployment's environment-managed secret injection and never place resolved
+keys in a connection string, committed options file, command history, image
+caption, or support log. Confirm endpoint, bucket, prefix, encryption policy,
+and object-write permissions with the same runtime identity before a large
+transfer.

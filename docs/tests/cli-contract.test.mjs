@@ -29,6 +29,12 @@ const compatibilityGate = readFileSync(join(repoRoot, 'scripts/phase3-cli-compat
 
 const documentedDeprecationAllowlist = new Set();
 
+/** @param {string} phrase */
+function phrasePattern(phrase) {
+  const escapedWords = phrase.split(/\s+/).map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(escapedWords.join('\\s+'), 'i');
+}
+
 test('documents only long options present in the CLI evidence set', () => {
   const evidenceOptions = new Set([
     ...toolOptions.matchAll(/\.longOpt\("([a-z0-9-]+)"\)/g)
@@ -48,7 +54,8 @@ test('documents properties present in the maintained options-file evidence', () 
     ...sampleConfig.matchAll(/^\s*#?\s*([a-z][a-z0-9]*(?:\.[a-z0-9{}_-]+)*)\s*=/gim),
     ...toolOptions.matchAll(/getProperty\("([a-z][a-z0-9]*(?:\.[a-z0-9{}_-]+)*)"\)/g)
   ].map((match) => match[1]));
-  const documentedProperties = new Set((docs.match(/\b(?:mode|jobs|verbose|fetch\.size|bandwidth\.throttling|quoted\.identifiers|source|sink|incremental|replication|sentry)(?:\.[a-z0-9{}_-]+)+\b/g) || []));
+  const propertyDocs = docs.replace(/^import .* from .*;$/gm, '');
+  const documentedProperties = new Set((propertyDocs.match(/\b(?:mode|jobs|verbose|fetch\.size|bandwidth\.throttling|quoted\.identifiers|source|sink|incremental|replication|sentry)(?:\.[a-z0-9{}_-]+)+\b/g) || []));
   const unsupported = [...documentedProperties].filter((property) => {
     if (property.startsWith('source.connect.parameter') || property.startsWith('sink.connect.parameter')) return false;
     if (property === 'source.auth' || property === 'sink.auth' || property === 'replication.table') return false;
@@ -72,6 +79,54 @@ test('preserves the CLI behavior sections and contract limits', () => {
     assert.match(docs, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), required);
   }
   assert.match(docs, /Command-line\s+arguments override/i);
+});
+
+test('covers the complete CLI workflow in its owning guides', () => {
+  const requiredTopics = {
+    'index.md': ['one invocation', 'external scheduler', 'change-data-capture'],
+    'installation.md': ['Java 17', 'replicadb.cmd', 'external JDBC driver'],
+    'configuration.md': ['applying explicit flags', 'defaults to 4', 'sentry.dsn'],
+    'parallelism.md': ['per worker', '40,960 KB/s', 'connections'],
+    'filtering-and-queries.md': ['source.where', 'source.query', 'sink.columns'],
+    'multi-table.md': ['sequentially', 'first failure', 'not rolled back'],
+    'incremental-watermarks.md': ['strict greater-than', 'monotonically increasing', 'code 2'],
+    'performance.md': ['source plan', 'sink write strategy', 'lock waits'],
+    'troubleshooting.md': ['verbose=DEBUG', 'conversion failure', 'staging failure']
+  };
+
+  for (const [file, topics] of Object.entries(requiredTopics)) {
+    const guide = readFileSync(join(cliRoot, file), 'utf8');
+    for (const topic of topics) {
+      assert.match(guide, phrasePattern(topic), `${file}: ${topic}`);
+    }
+  }
+});
+
+test('documents mode-specific flow and interruption consequences', () => {
+  const modes = readFileSync(join(cliRoot, 'replication-modes.mdx'), 'utf8');
+  for (const behavior of [
+    'clearing the sink',
+    'empty or partially repopulated',
+    'staging table',
+    'atomic replacement transaction',
+    'merge matched keys',
+    'does not infer deleted source rows',
+    'retry starts the complete flow again'
+  ]) {
+    assert.match(modes, phrasePattern(behavior), behavior);
+  }
+});
+
+test('documents file formats, defaults, precedence, and safe optional telemetry', () => {
+  const options = readFileSync(join(referenceRoot, 'cli-options.md'), 'utf8');
+  const examples = readFileSync(join(referenceRoot, 'example-options-files.md'), 'utf8');
+  for (const format of ['csv', 'json', 'avro', 'parquet', 'orc']) {
+    assert.match(options, new RegExp(`source file format:[^\\n]*${format}`, 'i'));
+    assert.match(options, new RegExp(`sink file format:[^\\n]*${format}`, 'i'));
+  }
+  assert.match(options, /mode=complete[\s\S]*jobs=4[\s\S]*fetch\.size=100/i);
+  assert.match(examples, /--jobs 2[\s\S]*wins over `jobs=1`/i);
+  assert.match(examples, /sentry\.dsn=\$\{SENTRY_DSN\}/);
 });
 
 test('keeps CLI guide examples free of resolved credentials', () => {

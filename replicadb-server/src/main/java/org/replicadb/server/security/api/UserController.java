@@ -1,5 +1,12 @@
 package org.replicadb.server.security.api;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.replicadb.server.audit.AuditActorResolver;
 import org.replicadb.server.audit.AuditService;
@@ -34,6 +41,8 @@ import java.util.UUID;
 @Profile("api")
 @RequestMapping("/api/v1/users")
 @PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "Users", description = "ADMIN-managed users, global roles, account state, and password resets.")
+@SecurityRequirement(name = "sessionCookie")
 public class UserController {
 
     private final AppUserRepository repository;
@@ -50,6 +59,15 @@ public class UserController {
     }
 
     @PostMapping
+        @Operation(operationId = "createUser", summary = "Create a user",
+            description = "Creates an enabled user with an ADMIN, OPERATOR, or VIEWER role. The password is accepted only for hashing and is never returned. ADMIN and CSRF are required.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "User created"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "409", ref = "#/components/responses/ConflictProblem")
+        })
     public ResponseEntity<UserResponse> create(@Valid @RequestBody UserRequest request,
                                                Authentication authentication) {
         if (repository.findByUsername(request.username()).isPresent()) {
@@ -70,8 +88,19 @@ public class UserController {
     }
 
     @GetMapping
-    public PageResponse<UserResponse> list(@RequestParam(required = false) Integer page,
-                                           @RequestParam(required = false) Integer size) {
+        @Operation(operationId = "listUsers", summary = "List users",
+            description = "Returns the ADMIN-visible user catalog with zero-based pagination.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Users returned"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem")
+        })
+        public PageResponse<UserResponse> list(
+                           @Parameter(description = "Zero-based page number.", schema = @Schema(defaultValue = "0", minimum = "0"))
+                           @RequestParam(required = false) Integer page,
+                           @Parameter(description = "Requested page size, clamped to the range 1 through 200.", schema = @Schema(defaultValue = "50", minimum = "1", maximum = "200"))
+                           @RequestParam(required = false) Integer size) {
         PageRequestParams params = PageRequestParams.of(page, size);
         return new PageResponse<>(repository.findPage(params.page(), params.size()).stream()
                 .map(UserResponse::from)
@@ -79,12 +108,32 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public UserResponse get(@PathVariable UUID id) {
+        @Operation(operationId = "getUser", summary = "Get a user",
+            description = "Returns one user's public identity, global role, and enabled state. ADMIN is required.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "User returned"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
+        public UserResponse get(
+            @Parameter(description = "User identifier.", required = true) @PathVariable UUID id) {
         return UserResponse.from(findUser(id));
     }
 
     @PutMapping("/{id}")
-    public UserResponse update(@PathVariable UUID id, @Valid @RequestBody UserRequest.RoleUpdate request,
+        @Operation(operationId = "updateUser", summary = "Update a user's role and state",
+            description = "Replaces the global role and enabled state without changing username or password. ADMIN and CSRF are required.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "User updated"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
+        public UserResponse update(
+                       @Parameter(description = "User identifier.", required = true) @PathVariable UUID id,
+                       @Valid @RequestBody UserRequest.RoleUpdate request,
                                Authentication authentication) {
         AppUser existing = findUser(id);
         AppUser replacement = new AppUser(existing.id(), existing.username(), existing.passwordHash(),
@@ -97,7 +146,17 @@ public class UserController {
     }
 
     @PutMapping("/{id}/password")
-    public UserResponse updatePassword(@PathVariable UUID id,
+        @Operation(operationId = "updateUserPassword", summary = "Reset a user's password",
+            description = "Hashes and replaces the target user's password without returning it or requiring the old value. ADMIN and CSRF are required.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Password reset completed"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
+        public UserResponse updatePassword(
+                           @Parameter(description = "User identifier.", required = true) @PathVariable UUID id,
                                        @Valid @RequestBody UserRequest.PasswordUpdate request,
                                        Authentication authentication) {
         AppUser existing = findUser(id);

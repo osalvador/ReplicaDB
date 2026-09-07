@@ -14,7 +14,9 @@ test('covers the durable execution invariants and limitations', () => {
     'PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCEL_REQUESTED', 'CANCELLED', 'RETRY_SCHEDULED',
     'FOR UPDATE SKIP LOCKED', 'lease token', 'token matches', 'watermark', 'notification', 'polling',
     'Quartz', 'approximate fairness', 'not round-robin', 'worker instances * concurrent runs per worker * jobs per run',
-    'replicadb.worker.max-concurrent-runs', 'jobs per run', 'datasource', 'fencing'
+    'replicadb.worker.max-concurrent-runs', 'jobs per run', 'datasource', 'fencing',
+    'claim time', 'UUID order', 'immutable for the active attempt', 're-resolves the current datasource',
+    'DIRECTED', 'FALLBACK', 'GENERIC', '100 ms', '250 ms', '25 ms', '2 s', '30 s decay half-life'
   ]) {
     assert.match(docs, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), required);
   }

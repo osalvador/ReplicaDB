@@ -20,6 +20,7 @@ function trackedFiles() {
     .trim()
     .split('\n')
     .filter(Boolean)
+    .filter((path) => !path.startsWith('.ai/'))
     .filter((path) => trackedExtensions.has(path.slice(path.lastIndexOf('.'))));
 }
 

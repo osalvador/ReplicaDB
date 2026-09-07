@@ -8,6 +8,10 @@ description: Exact long options supported by the standalone ReplicaDB CLI.
 These names are the maintained long-option contract. Run `./bin/replicadb
 --help` for the generated descriptions and argument names.
 
+Unless overridden, the CLI uses `mode=complete`, `jobs=4`, `fetch.size=100`,
+unlimited bandwidth (`0`), INFO logging, and unquoted identifiers. An options
+file may deliberately choose more conservative values.
+
 | Option | Purpose |
 | --- | --- |
 | `--source-connect` | Source connection string. |
@@ -24,7 +28,7 @@ These names are the maintained long-option contract. Run `./bin/replicadb
 | `--incremental-watermark-column` | Incremental source watermark column. |
 | `--incremental-watermark-value` | Previously successful watermark value. |
 | `--source-query` | Free-form source query. |
-| `--source-file-format` | Source file format. |
+| `--source-file-format` | Source file format: `csv`, `json`, `avro`, `parquet`, or `orc`. |
 | `--sink-connect` | Sink connection string. |
 | `--sink-user` | Sink user. |
 | `--sink-password` | Sink password supplied through a protected options file. |
@@ -43,7 +47,7 @@ These names are the maintained long-option contract. Run `./bin/replicadb
 | `--sink-staging-table` | Existing sink staging table. |
 | `--sink-staging-table-alias` | Alias for the sink staging table. |
 | `--sink-staging-schema` | Schema for generated sink staging tables. |
-| `--sink-file-format` | Sink file format. |
+| `--sink-file-format` | Sink file format: `csv`, `json`, `avro`, `parquet`, or `orc`. |
 | `--options-file` | Java-properties options file path. |
 | `--mode` | `complete`, `complete-atomic`, or `incremental`. |
 | `--fetch-size` | Rows requested by a source read. |
@@ -53,3 +57,8 @@ These names are the maintained long-option contract. Run `./bin/replicadb
 | `--jobs` | Number of parallel jobs. |
 | `--verbose` | Print more information while working. |
 | `--quoted-identifiers` | Quote database identifiers. |
+
+Boolean flags are enabled by their presence on the command line. In an options
+file, use the corresponding dotted property and an explicit `true` or `false`
+where the maintained sample exposes one. Connector pages remain authoritative
+for whether an otherwise valid option is meaningful for that source or sink.

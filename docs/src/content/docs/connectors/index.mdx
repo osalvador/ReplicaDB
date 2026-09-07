@@ -10,15 +10,16 @@ import capabilities from '../../../data/connector-capabilities.json';
 
 This matrix is generated from the maintained capability source and checked
 against the Java manager registry. Roles describe whether a manager can be a
-source or sink; modes describe the supported user-visible replication modes.
-Connector pages add connection, driver, type, staging, and security details.
+source or sink; source and sink modes are listed separately so a readable
+source mode is never presented as a sink guarantee. Connector pages add
+connection, driver, query, job-count, type, staging, and security details.
 
 <SupportMatrix
   caption="ReplicaDB connector capability matrix"
   rows={capabilities.map((connector) => ({
     name: connector.displayName,
-    roles: connector.roles.join(', '),
-    modes: connector.modes,
+    sourceModes: connector.sourceModes,
+    sinkModes: connector.sinkModes,
     staging: connector.staging ? 'Supported where the mode requires it' : 'Not provided',
     caveat: connector.caveats[0]
   }))}

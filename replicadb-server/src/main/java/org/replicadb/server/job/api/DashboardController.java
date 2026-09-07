@@ -1,5 +1,12 @@
 package org.replicadb.server.job.api;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.replicadb.server.job.port.JobDefinitionStore;
 import org.replicadb.server.job.port.JobRunStore;
 import org.replicadb.server.security.JobAccessService;
@@ -20,6 +27,8 @@ import java.util.UUID;
 @RestController
 @Profile("api")
 @RequestMapping("/api/v1/dashboard")
+@Tag(name = "Dashboard", description = "Permission-aware run and throughput summaries.")
+@SecurityRequirement(name = "sessionCookie")
 public class DashboardController {
 
     private final JobRunStore jobRunStore;
@@ -34,9 +43,18 @@ public class DashboardController {
     }
 
     @GetMapping("/summary")
+        @Operation(operationId = "getDashboardSummary", summary = "Get the dashboard summary",
+            description = "Aggregates only jobs visible to the authenticated identity. Omitted bounds produce an effective 24-hour window ending at the current server time; from must be before to.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Permission-aware dashboard summary returned"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem")
+        })
     public DashboardSummaryResponse summary(
+            @Parameter(description = "Optional inclusive window start in UTC ISO-8601 date-time format. Defaults to 24 hours before the effective end.", schema = @Schema(format = "date-time"))
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @Parameter(description = "Optional exclusive window end in UTC ISO-8601 date-time format. Defaults to current server time.", schema = @Schema(format = "date-time"))
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             Authentication authentication) {

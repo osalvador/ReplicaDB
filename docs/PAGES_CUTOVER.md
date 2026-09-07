@@ -12,8 +12,8 @@ Java, PostgreSQL, credentials, or a running ReplicaDB server.
 - [x] Repository variable `DOCS_PAGES_SOURCE` is `actions`.
 - [x] The expected URL is `https://osalvador.github.io/ReplicaDB/`.
 - [x] The first manual workflow run completed and its Pages URL was checked.
-- [x] `/server.html`, `/docs/docs.html`, `/wizard/`, and `/markdown/` work from
-      the production-shaped artifact.
+- [x] `/server.html`, `/docs/docs.html`, `/docs/user-guide.html`, `/wizard/`,
+      and `/markdown/` work from the production-shaped artifact.
 - [x] A last-known-good artifact name and workflow run ID are recorded below.
 
 ## Rollback

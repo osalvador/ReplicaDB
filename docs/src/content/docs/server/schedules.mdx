@@ -3,12 +3,17 @@ title: Schedules
 description: Configure and remove recurring job schedules.
 ---
 
+import ScreenshotFrame from '../../../components/ScreenshotFrame.astro';
+import schedule from '../../../assets/screenshots/server/schedule.png';
+
 # Schedules
 
 The job detail page owns the schedule card. A job without a schedule shows
 `No recurring schedule configured` and the `Create schedule` action. An
 existing schedule shows its CRON expression, time zone, enabled state, and
 next fire time, with `Edit` and a destructive delete action.
+
+<ScreenshotFrame src={schedule} alt="ReplicaDB schedule configuration dialog" caption="The schedule editor builds a Quartz CRON expression with an explicit time zone and enabled state." width={1440} height={900} loading="eager" />
 
 The editor accepts a frequency builder or a `CRON expression`, a `Time zone`,
 and `Enabled`. Save with `Save` or leave with `Cancel`. Schedule validation

@@ -20,3 +20,10 @@ the runtime environment.
 Complete-atomic and incremental sinks require staging and the permissions for
 the generated or configured staging table. Test Azure firewall, TLS, and
 identity access with the same host identity that will run ReplicaDB.
+
+The sink uses the Microsoft JDBC bulk-copy API with table locking and the
+configured fetch size as its batch size. SQL Server reports XML with a
+vendor-specific JDBC type, which ReplicaDB maps to `SQLXML`; test XML and other
+vendor types across the exact source/sink pair. Bulk copy has no mid-transfer
+cancellation hook, so an interrupted run can retain the mode-specific sink
+warning even after cancellation is requested.
