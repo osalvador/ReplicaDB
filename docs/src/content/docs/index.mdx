@@ -9,6 +9,9 @@ hero:
     - text: Choose CLI or Server
       link: /ReplicaDB/getting-started/choose-cli-or-server/
       icon: right-arrow
+    - text: Start a quickstart
+      link: /ReplicaDB/getting-started/cli-quickstart/
+      icon: external
 ---
 
 import ArchitectureDiagram from '../../components/ArchitectureDiagram.astro';
@@ -23,6 +26,27 @@ shared control plane. The choice is about ownership, state, and repeatability,
 not a different data-movement engine. Read the
 [product comparison](/ReplicaDB/getting-started/choose-cli-or-server/) if you
 need to compare the two operating models first.
+
+<section class="home-capabilities" aria-labelledby="capabilities-heading">
+  <h2 id="capabilities-heading">A practical path for moving data</h2>
+  <div class="home-capabilities__grid">
+    <article>
+      <span class="home-capabilities__marker" aria-hidden="true">01</span>
+      <h3>Heterogeneous systems</h3>
+      <p>Connect supported relational, file, object-storage, document, and stream systems through one replication core.</p>
+    </article>
+    <article>
+      <span class="home-capabilities__marker" aria-hidden="true">02</span>
+      <h3>Three replication modes</h3>
+      <p>Choose complete, complete-atomic, or incremental flows based on the data movement and visibility you need.</p>
+    </article>
+    <article>
+      <span class="home-capabilities__marker" aria-hidden="true">03</span>
+      <h3>Direct or durable</h3>
+      <p>Run from a terminal, or operate authenticated jobs with scheduling, permissions, and observable state.</p>
+    </article>
+  </div>
+</section>
 
 <ProductChoice
   title="Choose the operating path"

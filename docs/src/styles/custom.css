@@ -140,6 +140,48 @@ nav[aria-labelledby='starlight__on-this-page'] a {
   margin: 2.75rem 0 2rem;
 }
 
+.home-capabilities {
+  margin: 2.5rem 0 2rem;
+  padding: 1.5rem 0;
+  border-top: 1px solid color-mix(in srgb, var(--replicadb-muted-ink) 36%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--replicadb-muted-ink) 36%, transparent);
+}
+
+.home-capabilities h2 {
+  margin: 0 0 1.25rem;
+}
+
+.home-capabilities__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.home-capabilities article {
+  min-width: 0;
+}
+
+.home-capabilities__marker {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: var(--replicadb-brand-teal);
+  font-family: var(--sl-font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.home-capabilities h3 {
+  margin: 0;
+  color: var(--replicadb-ink);
+  font-size: 1.125rem;
+}
+
+.home-capabilities p {
+  margin: 0.5rem 0 0;
+  color: var(--replicadb-muted-ink);
+}
+
 .product-choice__heading {
   margin-bottom: 0.5rem;
 }
@@ -379,6 +421,11 @@ nav[aria-labelledby='starlight__on-this-page'] a {
 }
 
 @media (max-width: 40rem) {
+  .home-capabilities__grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
   .product-choice__grid {
     grid-template-columns: 1fr;
   }
