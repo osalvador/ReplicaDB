@@ -3,6 +3,9 @@ title: Errors and empty states
 description: Interpret loading, empty, validation, conflict, and unauthorized states.
 ---
 
+import ScreenshotFrame from '../../../components/ScreenshotFrame.astro';
+import unauthorized from '../../../assets/screenshots/server/unauthorized.png';
+
 # Errors and empty states
 
 The frontend names recovery paths instead of hiding operational states.
@@ -21,6 +24,8 @@ The frontend names recovery paths instead of hiding operational states.
   to view this page.` through the unauthorized route guard.
 - A 409 conflict is recoverable: preserve the user's context, refresh the
   resource, and resolve the changed binding or definition before retrying.
+
+<ScreenshotFrame src={unauthorized} alt="ReplicaDB unauthorized access state" caption="A forbidden route names the access problem without exposing protected content." width={1440} height={900} loading="eager" />
 
 ## Binding and secret edge cases
 

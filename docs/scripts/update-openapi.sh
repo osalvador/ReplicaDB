@@ -13,6 +13,8 @@ second="$temporary_root/second.json"
 
 (cd "$repository_root" && mvn -B -f replicadb-server/pom.xml \
   -Dtest=OpenApiSpecificationIT \
+  -Dskip.installnodenpm=true \
+  -Dskip.npm=true \
   -Dreplicadb.openapi.output="$raw" test)
 
 canonicalize() {

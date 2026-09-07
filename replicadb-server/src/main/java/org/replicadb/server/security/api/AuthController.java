@@ -1,6 +1,13 @@
 package org.replicadb.server.security.api;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -35,6 +42,7 @@ import java.util.Map;
 @RestController
 @Profile("api")
 @RequestMapping("/api/v1/auth")
+@Tag(name = "Authentication", description = "CSRF bootstrap, login, logout, and current session identity.")
 public class AuthController {
 
     private final AuthenticationManager authenticationManager;
@@ -56,9 +64,18 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+        @Operation(operationId = "login", summary = "Create an authenticated session",
+            description = "Authenticates a user and establishes the server-owned session. Login is public and exempt from CSRF, but database-backed throttling limits repeated failures by account and source address.",
+            security = {})
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Authenticated identity returned and session established"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "429", ref = "#/components/responses/TooManyRequestsProblem")
+        })
     public UserIdentityResponse login(@Valid @RequestBody LoginRequest request,
-                                      HttpServletRequest httpRequest,
-                                      HttpServletResponse httpResponse) {
+                          @Parameter(hidden = true) HttpServletRequest httpRequest,
+                          @Parameter(hidden = true) HttpServletResponse httpResponse) {
         String remoteAddress = httpRequest.getRemoteAddr();
         LoginAttemptReservation reservation;
         try {
@@ -94,7 +111,14 @@ public class AuthController {
     }
 
     @GetMapping("/csrf")
-    public CsrfTokenResponse csrf(HttpServletRequest request) {
+        @Operation(operationId = "getCsrfToken", summary = "Initialize CSRF protection",
+            description = "Initializes the XSRF-TOKEN cookie and returns the framework header and parameter names. Call this public endpoint before protected state-changing requests.",
+            security = {})
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "CSRF contract initialized"),
+            @ApiResponse(responseCode = "500", ref = "#/components/responses/InternalServerErrorProblem")
+        })
+        public CsrfTokenResponse csrf(@Parameter(hidden = true) HttpServletRequest request) {
         CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
         if (csrfToken == null) {
             throw new IllegalStateException("CSRF token was not initialized");
@@ -103,7 +127,16 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletRequest request, Authentication authentication) {
+        @Operation(operationId = "logout", summary = "End the authenticated session",
+            description = "Invalidates the current server session and clears its security context. The session cookie and CSRF header are required.",
+            security = @SecurityRequirement(name = "sessionCookie"))
+        @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Session ended"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem")
+        })
+        public ResponseEntity<Void> logout(@Parameter(hidden = true) HttpServletRequest request,
+                           Authentication authentication) {
         AuditActor actor = auditActorResolver.resolve(authentication);
         HttpSession session = request.getSession(false);
         if (session != null) {
@@ -116,11 +149,22 @@ public class AuthController {
     }
 
     @GetMapping("/me")
+        @Operation(operationId = "getCurrentIdentity", summary = "Get the current identity",
+            description = "Returns the user identifier, username, and global role associated with the current session.",
+            security = @SecurityRequirement(name = "sessionCookie"))
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Current identity returned"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem")
+        })
     public UserIdentityResponse me(Authentication authentication) {
         return UserIdentityResponse.from(authentication);
     }
 
     @JsonPropertyOrder({"headerName", "parameterName", "token"})
-    public record CsrfTokenResponse(String headerName, String parameterName, String token) {
+    @Schema(description = "CSRF bootstrap values issued by Spring Security.")
+    public record CsrfTokenResponse(
+            @Schema(description = "HTTP header name expected on protected mutations.", example = "X-XSRF-TOKEN") String headerName,
+            @Schema(description = "Framework request parameter name.") String parameterName,
+            @Schema(description = "Opaque CSRF value that must match the XSRF-TOKEN cookie.", accessMode = Schema.AccessMode.READ_ONLY) String token) {
     }
 }

@@ -24,6 +24,12 @@ selection and reports the highest observed value. Store that value in your
 orchestration system and pass it to the next invocation only after a
 successful run.
 
+For subsequent runs, ReplicaDB adds a strict greater-than condition for the
+committed value. Choose a stable, monotonically increasing column exposed by
+the source table. Capture the reported value together with the run's exit code
+and destination verification; never advance the external checkpoint after
+code 1 or code 2.
+
 ## Limits
 
 - Watermarks apply only to `incremental` mode and a concrete `source.table`.
@@ -32,3 +38,6 @@ successful run.
 - A failed or cancelled run does not advance the value.
 - A transaction that commits after the read with an older value can be missed;
   there is no read-lag setting yet.
+- Rows sharing the maximum value are safe only when the source's ordering and
+  commit model ensure no later row can appear with that same committed value;
+  otherwise use a source predicate managed by your orchestration strategy.

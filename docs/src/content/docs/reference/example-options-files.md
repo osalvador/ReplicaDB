@@ -33,6 +33,25 @@ Invoke it with:
 
 The explicit `--jobs 2` wins over `jobs=1` in the file.
 
+## File endpoints and diagnostic level
+
+File connectors use an explicit format from `csv`, `json`, `avro`, `parquet`,
+or `orc` where that connector supports the requested role:
+
+```properties
+mode=complete
+jobs=1
+verbose=INFO
+source.connect=${SOURCE_FILE_PATH}
+source.file.format=csv
+sink.connect=${SINK_FILE_PATH}
+sink.file.format=parquet
+```
+
+Use `verbose=DEBUG` temporarily for diagnosis. The command-line `--verbose`
+flag also selects diagnostic output, but an explicit command-line value is not
+accepted because it is a boolean flag.
+
 ## Multi-table catalog
 
 ```properties
@@ -57,8 +76,19 @@ allowed values belong to the connector guide:
 source.connect.parameter.driver=${SOURCE_DRIVER}
 sink.connect.parameter.driver=${SINK_DRIVER}
 source.auth.mode=${SOURCE_AUTH_MODE}
+source.auth.client.certificate=${SOURCE_CLIENT_CERTIFICATE}
+source.auth.client.key=${SOURCE_CLIENT_KEY}
 sink.auth.mode=${SINK_AUTH_MODE}
 ```
+
+Optional telemetry is configured only in the options file:
+
+```properties
+sentry.dsn=${SENTRY_DSN}
+```
+
+Leave the variable unset to keep telemetry disabled. Do not commit a resolved
+DSN, certificate, private key, password, token, or connection value.
 
 Keep the resolved file in an owner-controlled location and remove it according
 to the retention policy for the host running the CLI.

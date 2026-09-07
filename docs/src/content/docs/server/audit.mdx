@@ -3,11 +3,16 @@ title: Audit
 description: Review authenticated actions and resource history as an admin.
 ---
 
+import ScreenshotFrame from '../../../components/ScreenshotFrame.astro';
+import audit from '../../../assets/screenshots/server/audit.png';
+
 # Audit
 
 `/audit` is ADMIN-only. The page loads audit events and supports filters for
 `From`, `To`, `Action`, `Resource type`, `Resource ID`, and `Actor`. Use `Apply
 filters` and `Clear filters` to control the query window.
+
+<ScreenshotFrame src={audit} alt="ReplicaDB audit event catalog and filters" caption="Administrators filter durable audit events and open individual event details." width={1440} height={900} loading="eager" />
 
 Selecting an event opens `Event detail` with its context. Audit data is a
 diagnostic record, not a source of raw credentials or internal lease identity.

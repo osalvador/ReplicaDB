@@ -1,0 +1,46 @@
+---
+title: Jobs
+description: Define, edit, run, bind, and remove managed replication jobs.
+---
+
+import ScreenshotFrame from '../../../components/ScreenshotFrame.astro';
+import jobDetail from '../../../assets/screenshots/server/job-detail.png';
+import jobEdit from '../../../assets/screenshots/server/job-edit.png';
+import jobNew from '../../../assets/screenshots/server/job-new.png';
+import jobs from '../../../assets/screenshots/server/jobs.png';
+import jobsMobile from '../../../assets/screenshots/server/jobs-mobile.png';
+
+# Jobs
+
+The protected `/jobs` route lists jobs visible to the current user. `New job`
+opens a definition with source and sink datasource bindings, table/query
+selection, mode, parallel tasks, fetch size, bandwidth, logging, staging, and
+retry settings.
+
+<ScreenshotFrame src={jobs} alt="ReplicaDB job catalog" caption="The job catalog lists definitions and their latest operational state." width={1440} height={900} loading="eager" />
+<ScreenshotFrame src={jobsMobile} alt="ReplicaDB job catalog on a mobile viewport" caption="Job status and primary actions remain available on narrow screens." width={390} height={844} />
+
+## Definition and actions
+
+The job detail route is `/jobs/:id` and is read-only for the definition. It
+offers `Trigger run`, `Edit`, and, for ADMIN users, `Manage permissions` and
+`Delete`. Deleting a job also removes its run history, schedules, permissions,
+and logs after confirmation.
+
+<ScreenshotFrame src={jobNew} alt="ReplicaDB new job form" caption="A job binds source and sink datasources to a validated replication definition." width={1440} height={900} />
+<ScreenshotFrame src={jobDetail} alt="ReplicaDB job detail page" caption="Job detail combines the immutable definition view with run and schedule actions." width={1440} height={900} />
+<ScreenshotFrame src={jobEdit} alt="ReplicaDB job edit form" caption="The edit workflow validates mode, binding, parallelism, watermark, and retry settings." width={1440} height={900} />
+
+The edit route is `/jobs/:id/edit`. Validation includes `Name is required`,
+`Source datasource is required`, `Source table or query is required`,
+`Sink datasource is required`, `Sink table is required`, `Parallelism must be
+at least 1`, watermark requirements for incremental mode, and retry bounds.
+
+Complete mode shows a warning that it clears the sink before loading; an
+interrupted or retried run may leave it empty, truncated, or partially
+populated. Use complete-atomic when the connector supports an all-or-nothing
+load. Binding a source or sink can be disabled; disabling either blocks future
+manual and scheduled runs but does not cancel active work.
+
+Jobs refer to datasource IDs only. Connection security is managed by the
+datasource catalog and is never copied into a job response.

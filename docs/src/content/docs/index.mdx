@@ -51,17 +51,17 @@ choose the operating model that matches your workflow.
   rows={[
     {
       name: 'PostgreSQL',
-      roles: 'Source and sink',
-      modes: ['complete', 'incremental'],
+      sourceModes: ['complete', 'complete-atomic', 'incremental'],
+      sinkModes: ['complete', 'complete-atomic', 'incremental'],
       staging: 'JDBC or bulk path',
       caveat: 'Match the server and driver versions used by your deployment.'
     },
     {
       name: 'Amazon S3',
-      roles: 'Sink',
-      modes: ['complete'],
+      sourceModes: [],
+      sinkModes: ['complete'],
       staging: 'Object storage',
-      caveat: 'Use an environment-managed credential chain.'
+      caveat: 'Inject credentials through deployment secret management.'
     }
   ]}
 />

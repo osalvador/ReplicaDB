@@ -1,8 +1,8 @@
 ---
 interface SupportRow {
   name: string;
-  roles: string;
-  modes: string[];
+  sourceModes: string[];
+  sinkModes: string[];
   staging: string;
   caveat: string;
 }
@@ -24,8 +24,8 @@ const {
     <thead>
       <tr>
         <th scope="col">Connector</th>
-        <th scope="col">Roles</th>
-        <th scope="col">Modes</th>
+        <th scope="col">Source modes</th>
+        <th scope="col">Sink modes</th>
         <th scope="col">Staging</th>
         <th scope="col">Caveat</th>
       </tr>
@@ -34,9 +34,15 @@ const {
       {rows.map((row) => (
         <tr>
           <th scope="row">{row.name}</th>
-          <td>{row.roles}</td>
           <td>
-            {row.modes.map((mode) => <span class="support-matrix__mode">{mode}</span>)}
+            {row.sourceModes.length > 0
+              ? row.sourceModes.map((mode) => <span class="support-matrix__mode">{mode}</span>)
+              : 'Not supported'}
+          </td>
+          <td>
+            {row.sinkModes.length > 0
+              ? row.sinkModes.map((mode) => <span class="support-matrix__mode">{mode}</span>)
+              : 'Not supported'}
           </td>
           <td>{row.staging}</td>
           <td>{row.caveat}</td>

@@ -4,350 +4,18 @@
  */
 
 export interface paths {
-    "/api/v1/users/{id}": {
+    "/api/v1/audit": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["get"];
-        put: operations["update"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users/{id}/password": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["updatePassword"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/jobs/{jobDefinitionId}/schedule": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_2"];
-        put: operations["upsert"];
-        post?: never;
-        delete: operations["delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/jobs/{jobDefinitionId}/permissions/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["replace"];
-        post?: never;
-        delete: operations["delete_1"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/jobs/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_3"];
-        put: operations["update_1"];
-        post?: never;
-        delete: operations["delete_2"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/datasources/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_4"];
-        put: operations["update_2"];
-        post?: never;
-        delete: operations["delete_3"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/datasources/{datasourceId}/permissions/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["replace_1"];
-        post?: never;
-        delete: operations["revoke"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["list"];
-        put?: never;
-        post: operations["create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/runs/{id}/retry": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["retry"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/runs/{id}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["cancel"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/jobs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["list_2"];
-        put?: never;
-        post: operations["create_1"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/jobs/{jobDefinitionId}/runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["listForJob"];
-        put?: never;
-        post: operations["trigger"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/datasources": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["list_4"];
-        put?: never;
-        post: operations["create_2"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["logout"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["login"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["list_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/runs/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["get_1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/runs/{id}/log": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["log"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/jobs/{jobDefinitionId}/permissions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["list_3"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/datasources/{datasourceId}/permissions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["list_5"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/dashboard/summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["summary"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/auth/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["me"];
+        /**
+         * List audit events
+         * @description Returns durable audit events matching optional actor, action, resource, and UTC time filters. ADMIN is required.
+         */
+        get: operations["listAuditEvents"];
         put?: never;
         post?: never;
         delete?: never;
@@ -363,7 +31,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["csrf"];
+        /**
+         * Initialize CSRF protection
+         * @description Initializes the XSRF-TOKEN cookie and returns the framework header and parameter names. Call this public endpoint before protected state-changing requests.
+         */
+        get: operations["getCsrfToken"];
         put?: never;
         post?: never;
         delete?: never;
@@ -372,15 +44,491 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/audit": {
+    "/api/v1/auth/login": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["list_6"];
+        get?: never;
         put?: never;
+        /**
+         * Create an authenticated session
+         * @description Authenticates a user and establishes the server-owned session. Login is public and exempt from CSRF, but database-backed throttling limits repeated failures by account and source address.
+         */
+        post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * End the authenticated session
+         * @description Invalidates the current server session and clears its security context. The session cookie and CSRF header are required.
+         */
+        post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the current identity
+         * @description Returns the user identifier, username, and global role associated with the current session.
+         */
+        get: operations["getCurrentIdentity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the dashboard summary
+         * @description Aggregates only jobs visible to the authenticated identity. Omitted bounds produce an effective 24-hour window ending at the current server time; from must be before to.
+         */
+        get: operations["getDashboardSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List visible datasources
+         * @description Returns only visible profiles. The optional role filter selects connector source or sink capability; it is not a user-role filter.
+         */
+        get: operations["listDatasources"];
+        put?: never;
+        /**
+         * Create a datasource
+         * @description Creates an encrypted datasource profile after validating its connector scheme. Responses expose only redacted connection metadata. ADMIN and CSRF are required.
+         */
+        post: operations["createDatasource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasources/{datasourceId}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List datasource permissions
+         * @description Returns grants grouped by user. ADMIN is required.
+         */
+        get: operations["listDatasourcePermissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasources/{datasourceId}/permissions/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace datasource permissions
+         * @description Atomically replaces one user's VIEW, USE, and EDIT grant set. ADMIN and CSRF are required.
+         */
+        put: operations["replaceDatasourcePermissions"];
+        post?: never;
+        /**
+         * Revoke datasource permissions
+         * @description Removes all datasource grants for one user. ADMIN and CSRF are required.
+         */
+        delete: operations["revokeDatasourcePermissions"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasources/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a datasource
+         * @description Returns redacted profile metadata and capability flags after VIEW permission. Stored security values are never rehydrated in the response.
+         */
+        get: operations["getDatasource"];
+        /**
+         * Update a datasource
+         * @description Updates a profile after EDIT permission. Omitted or blank security inputs preserve stored encrypted values; clearSecurityKeys explicitly removes named values. CSRF is required.
+         */
+        put: operations["updateDatasource"];
+        post?: never;
+        /**
+         * Delete a datasource
+         * @description Deletes an unreferenced datasource. ADMIN and CSRF are required; profiles bound to jobs return a conflict.
+         */
+        delete: operations["deleteDatasource"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List visible job definitions
+         * @description Returns only jobs visible to the authenticated identity. Pagination defaults to page 0 and size 50; size is clamped to 1 through 200.
+         */
+        get: operations["listJobDefinitions"];
+        put?: never;
+        /**
+         * Create a job definition
+         * @description Creates a job after validating datasource USE access, connector roles, mode support, and single-job limits. Protected mutations require the session cookie and CSRF header.
+         */
+        post: operations["createJobDefinition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a job definition
+         * @description Returns one job definition when the authenticated identity has VIEW permission. Datasource summaries are omitted when their metadata is not visible.
+         */
+        get: operations["getJobDefinition"];
+        /**
+         * Update a job definition
+         * @description Replaces editable job settings after EDIT permission and datasource capability checks. The job name is immutable. Protected mutations require the session cookie and CSRF header.
+         */
+        put: operations["updateJobDefinition"];
+        post?: never;
+        /**
+         * Delete a job definition
+         * @description Deletes an inactive job and its dependent history after unscheduling it. ADMIN is required; active runs cause a conflict. Protected mutations require the session cookie and CSRF header.
+         */
+        delete: operations["deleteJobDefinition"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{jobDefinitionId}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List job permissions
+         * @description Returns grants grouped by user after EDIT permission on the job.
+         */
+        get: operations["listJobPermissions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{jobDefinitionId}/permissions/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace job permissions
+         * @description Atomically replaces one user's VIEW, EDIT, EXECUTE, and CANCEL grants after EDIT permission. CSRF is required.
+         */
+        put: operations["replaceJobPermissions"];
+        post?: never;
+        /**
+         * Revoke job permissions
+         * @description Removes all job grants for one user after EDIT permission. CSRF is required.
+         */
+        delete: operations["revokeJobPermissions"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{jobDefinitionId}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List runs for a job
+         * @description Returns run history for one job after VIEW permission. Status values are case-insensitive; paging defaults to page 0 and size 50 with a size cap of 200.
+         */
+        get: operations["listJobRunsForJob"];
+        put?: never;
+        /**
+         * Trigger a manual run
+         * @description Creates or replays one pending manual run after EXECUTE permission. The idempotency key is scoped to manual trigger requests and remains replay-safe within the server retention window. Protected mutations require the session cookie and CSRF header.
+         */
+        post: operations["triggerJobRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/jobs/{jobDefinitionId}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a job schedule
+         * @description Returns the recurring schedule and next fire time after VIEW permission. A job without a schedule returns not found.
+         */
+        get: operations["getJobSchedule"];
+        /**
+         * Create or replace a job schedule
+         * @description Validates and stores the Quartz CRON schedule after EDIT permission, then reconciles the durable scheduler trigger. Blank time zones default to UTC. Protected mutations require the session cookie and CSRF header.
+         */
+        put: operations["upsertJobSchedule"];
+        post?: never;
+        /**
+         * Delete a job schedule
+         * @description Removes the persisted schedule and Quartz trigger after EDIT permission. Repeated deletion is idempotent. Protected mutations require the session cookie and CSRF header.
+         */
+        delete: operations["deleteJobSchedule"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List visible runs
+         * @description Returns runs only for jobs visible to the authenticated identity, with optional status and UTC time bounds.
+         */
+        get: operations["listJobRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a run
+         * @description Returns durable state and attempt information after VIEW permission on the owning job.
+         */
+        get: operations["getJobRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request run cancellation
+         * @description Cancels pending work or persists cancellation intent for a running attempt after CANCEL permission. The response includes a mode-specific sink warning. Protected mutations require the session cookie and CSRF header.
+         */
+        post: operations["cancelJobRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{id}/log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get bounded run diagnostics
+         * @description Returns the credential-redacted, size-bounded log after VIEW permission. A run without captured output returns an empty log response.
+         */
+        get: operations["getJobRunLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry a failed run
+         * @description Creates a new pending attempt linked to the failed run after EXECUTE permission. Retry restarts from the beginning and is not resume behavior. Protected mutations require the session cookie and CSRF header.
+         */
+        post: operations["retryJobRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List users
+         * @description Returns the ADMIN-visible user catalog with zero-based pagination.
+         */
+        get: operations["listUsers"];
+        put?: never;
+        /**
+         * Create a user
+         * @description Creates an enabled user with an ADMIN, OPERATOR, or VIEWER role. The password is accepted only for hashing and is never returned. ADMIN and CSRF are required.
+         */
+        post: operations["createUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a user
+         * @description Returns one user's public identity, global role, and enabled state. ADMIN is required.
+         */
+        get: operations["getUser"];
+        /**
+         * Update a user's role and state
+         * @description Replaces the global role and enabled state without changing username or password. ADMIN and CSRF are required.
+         */
+        put: operations["updateUser"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/{id}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Reset a user's password
+         * @description Hashes and replaces the target user's password without returning it or requiring the old value. ADMIN and CSRF are required.
+         */
+        put: operations["updateUserPassword"];
         post?: never;
         delete?: never;
         options?: never;
@@ -392,373 +540,900 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        RoleUpdate: {
-            /** @enum {string} */
-            role: "ADMIN" | "OPERATOR" | "VIEWER";
-            enabled?: boolean;
-        };
-        UserResponse: {
-            /** Format: uuid */
-            id?: string;
-            username?: string;
-            /** @enum {string} */
-            role?: "ADMIN" | "OPERATOR" | "VIEWER";
-            enabled?: boolean;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-        };
-        PasswordUpdate: {
-            newPassword: string;
-        };
-        JobScheduleRequest: {
-            cronExpression: string;
-            timeZone?: string;
-            enabled?: boolean;
-        };
-        JobScheduleResponse: {
-            /** Format: uuid */
-            jobDefinitionId?: string;
-            cronExpression?: string;
-            timeZone?: string;
-            enabled?: boolean;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-            /** Format: date-time */
-            nextFireTime?: string;
-        };
-        JobPermissionRequest: {
-            permissions: ("VIEW" | "EDIT" | "EXECUTE" | "CANCEL")[];
-        };
-        JobPermissionResponse: {
-            /** Format: uuid */
-            userId?: string;
-            username?: string;
-            permissions?: ("VIEW" | "EDIT" | "EXECUTE" | "CANCEL")[];
-        };
-        JobDefinitionRequest: {
-            name: string;
-            /** Format: uuid */
-            sourceDatasourceId: string;
-            sourceDatasourceUseEnabled?: boolean;
-            sourceTable?: string;
-            sourceWhere?: string;
-            sourceColumns?: string;
-            sourceQuery?: string;
-            /** Format: uuid */
-            sinkDatasourceId: string;
-            sinkDatasourceUseEnabled?: boolean;
-            sinkTable: string;
-            sinkColumns?: string;
-            sinkStagingSchema?: string;
-            sinkStagingTable?: string;
-            sinkDisableEscape?: boolean;
-            sinkDisableTruncate?: boolean;
-            mode: string;
-            /** Format: int32 */
-            jobs?: number;
-            incrementalWatermarkColumn?: string;
-            initialWatermarkValue?: string;
-            /** Format: int32 */
-            fetchSize?: number;
-            /** Format: int32 */
-            bandwidthThrottling?: number;
-            verbose?: boolean;
-            /** Format: int32 */
-            maxAttempts?: number;
-            /** Format: int64 */
-            retryBackoffSeconds?: number;
-            automaticRetryEnabled?: boolean;
-        };
-        DatasourceSummaryResponse: {
-            /** Format: uuid */
-            id?: string;
-            name?: string;
-            connectorType?: string;
-            safeConnectDisplay?: string;
-        };
-        JobDefinitionResponse: {
-            /** Format: uuid */
-            id?: string;
-            name?: string;
-            /** Format: uuid */
-            sourceDatasourceId?: string;
-            sourceDatasource?: components["schemas"]["DatasourceSummaryResponse"];
-            sourceDatasourceUseEnabled?: boolean;
-            sourceTable?: string;
-            sourceWhere?: string;
-            sourceColumns?: string;
-            sourceQuery?: string;
-            /** Format: uuid */
-            sinkDatasourceId?: string;
-            sinkDatasource?: components["schemas"]["DatasourceSummaryResponse"];
-            sinkDatasourceUseEnabled?: boolean;
-            sinkTable?: string;
-            sinkColumns?: string;
-            sinkStagingSchema?: string;
-            sinkStagingTable?: string;
-            sinkDisableEscape?: boolean;
-            sinkDisableTruncate?: boolean;
-            mode?: string;
-            /** Format: int32 */
-            jobs?: number;
-            incrementalWatermarkColumn?: string;
-            initialWatermarkValue?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-            /** Format: int32 */
-            fetchSize?: number;
-            /** Format: int32 */
-            bandwidthThrottling?: number;
-            verbose?: boolean;
-            /** Format: int32 */
-            maxAttempts?: number;
-            /** Format: int64 */
-            retryBackoffSeconds?: number;
-            automaticRetryEnabled?: boolean;
-            modeWarning?: string;
-        };
-        DatasourceRequest: {
-            name: string;
-            connectorType: string;
-            technicalParams?: {
-                [key: string]: string;
-            };
-            security?: {
-                [key: string]: string;
-            };
-            clearSecurityKeys?: string[];
-        };
-        DatasourceCapabilitiesResponse: {
-            sourceCapable?: boolean;
-            sinkCapable?: boolean;
-            sourceModes?: string[];
-            sinkModes?: string[];
-            sourceQuery?: boolean;
-            singleJobOnly?: boolean;
-        };
-        DatasourceResponse: {
-            /** Format: uuid */
-            id?: string;
-            name?: string;
-            connectorType?: string;
-            safeConnectDisplay?: string;
-            technicalParams?: {
-                [key: string]: string;
-            };
-            securityConfigured?: boolean;
-            capabilities?: components["schemas"]["DatasourceCapabilitiesResponse"];
-            canView?: boolean;
-            canUse?: boolean;
-            canEdit?: boolean;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-        };
-        DatasourcePermissionRequest: {
-            permissions: ("VIEW" | "USE" | "EDIT")[];
-        };
-        DatasourcePermissionResponse: {
-            /** Format: uuid */
-            userId?: string;
-            username?: string;
-            permissions?: ("VIEW" | "USE" | "EDIT")[];
-        };
-        UserRequest: {
-            username: string;
-            password: string;
-            /** @enum {string} */
-            role: "ADMIN" | "OPERATOR" | "VIEWER";
-        };
-        JobRunResponse: {
-            /** Format: uuid */
-            id?: string;
-            /** Format: uuid */
-            jobDefinitionId?: string;
-            /** Format: uuid */
-            previousRunId?: string;
-            /** @enum {string} */
-            status?: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCEL_REQUESTED" | "CANCELLED" | "RETRY_SCHEDULED";
-            /** Format: int32 */
-            attempt?: number;
-            executorIdentity?: string;
-            /** Format: date-time */
-            leaseUntil?: string;
-            /** Format: date-time */
-            heartbeatAt?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            availableAt?: string;
-            /** Format: date-time */
-            startedAt?: string;
-            /** Format: date-time */
-            finishedAt?: string;
-            /** Format: int64 */
-            rowsProcessed?: number;
-            /** Format: int64 */
-            durationMillis?: number;
-            committedWatermark?: string;
-            errorMessage?: string;
-            cancellationWarning?: string;
-        };
-        CancellationResponse: {
-            /** Format: uuid */
-            runId?: string;
-            /** @enum {string} */
-            status?: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCEL_REQUESTED" | "CANCELLED" | "RETRY_SCHEDULED";
-            warning?: string;
-        };
-        LoginRequest: {
-            username: string;
-            password: string;
-        };
-        UserIdentityResponse: {
-            /** Format: uuid */
-            id?: string;
-            username?: string;
-            /** @enum {string} */
-            role?: "ADMIN" | "OPERATOR" | "VIEWER";
-        };
-        PageResponseUserResponse: {
-            content?: components["schemas"]["UserResponse"][];
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-            /** Format: int64 */
-            totalElements?: number;
-        };
-        PageResponseJobRunResponse: {
-            content?: components["schemas"]["JobRunResponse"][];
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-            /** Format: int64 */
-            totalElements?: number;
-        };
-        RunLogResponse: {
-            /** Format: uuid */
-            runId?: string;
-            content?: string;
-            truncated?: boolean;
-            /** Format: int32 */
-            capturedSize?: number;
-            /** Format: int32 */
-            formatVersion?: number;
-            /** Format: date-time */
-            capturedAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-        };
-        PageResponseJobDefinitionResponse: {
-            content?: components["schemas"]["JobDefinitionResponse"][];
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-            /** Format: int64 */
-            totalElements?: number;
-        };
-        PageResponseDatasourceResponse: {
-            content?: components["schemas"]["DatasourceResponse"][];
-            /** Format: int32 */
-            page?: number;
-            /** Format: int32 */
-            size?: number;
-            /** Format: int64 */
-            totalElements?: number;
-        };
-        DashboardJobPerformance: {
-            /** Format: uuid */
-            jobId?: string;
-            jobName?: string;
-            /** Format: int64 */
-            runCount?: number;
-            /** Format: int64 */
-            rowsProcessed?: number;
-            /** Format: int64 */
-            averageDurationMillis?: number;
-            /** Format: int64 */
-            averageLatencyMillis?: number;
-        };
-        DashboardOutcomePoint: {
-            /** Format: date-time */
-            bucket?: string;
-            /** Format: int64 */
-            succeeded?: number;
-            /** Format: int64 */
-            failed?: number;
-            /** Format: int64 */
-            active?: number;
-        };
-        DashboardSummaryResponse: {
-            /** Format: date-time */
-            from?: string;
-            /** Format: date-time */
-            to?: string;
-            /** Format: int64 */
-            totalJobs?: number;
-            /** Format: int64 */
-            activeRuns?: number;
-            /** Format: int64 */
-            totalRuns?: number;
-            /** Format: int64 */
-            succeededRuns?: number;
-            /** Format: int64 */
-            failedRuns?: number;
-            /** Format: int64 */
-            rowsProcessed?: number;
-            /** Format: int64 */
-            averageDurationMillis?: number;
-            /** Format: int64 */
-            averageLatencyMillis?: number;
-            outcomes?: components["schemas"]["DashboardOutcomePoint"][];
-            jobPerformance?: components["schemas"]["DashboardJobPerformance"][];
-        };
-        CsrfTokenResponse: {
-            headerName?: string;
-            parameterName?: string;
-            token?: string;
-        };
+        /** @description Durable audit record for an authenticated or system action. */
         AuditEventResponse: {
-            /** Format: uuid */
-            id?: string;
-            /** Format: date-time */
-            occurredAt?: string;
-            /** Format: uuid */
-            actorUserId?: string;
-            actorUsername?: string;
-            sourceAddress?: string;
-            /** @enum {string} */
+            /**
+             * @description Audited action category.
+             * @enum {string}
+             */
             action?: "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "USER_CREATED" | "USER_UPDATED" | "USER_PASSWORD_CHANGED" | "DATASOURCE_CREATED" | "DATASOURCE_UPDATED" | "DATASOURCE_DELETED" | "DATASOURCE_PERMISSION_REPLACED" | "DATASOURCE_PERMISSION_REVOKED" | "JOB_CREATED" | "JOB_UPDATED" | "JOB_DELETED" | "JOB_DATASOURCE_BINDING_REPLACED" | "JOB_DATASOURCE_BINDING_ENABLED" | "JOB_DATASOURCE_BINDING_DISABLED" | "JOB_PERMISSION_REPLACED" | "JOB_PERMISSION_REVOKED" | "JOB_SCHEDULE_UPSERTED" | "JOB_SCHEDULE_DELETED" | "RUN_TRIGGERED" | "RUN_CANCEL_REQUESTED" | "RUN_RETRIED" | "RUN_SUCCEEDED" | "RUN_FAILED" | "RUN_CANCELLED";
-            /** @enum {string} */
-            resourceType?: "USER" | "DATASOURCE" | "JOB_DEFINITION" | "JOB_RUN" | "SESSION";
-            resourceId?: string;
-            /** @enum {string} */
-            outcome?: "SUCCESS" | "FAILURE";
+            /**
+             * Format: uuid
+             * @description Actor user identifier, or null for a system actor.
+             */
+            actorUserId?: string | null;
+            /** @description Username snapshot or stable system actor name. */
+            actorUsername?: string;
+            /** @description Bounded, non-secret action context. Keys vary by action. */
             detail?: {
                 [key: string]: string;
             };
+            /**
+             * Format: uuid
+             * @description Audit event identifier.
+             */
+            id?: string;
+            /**
+             * Format: date-time
+             * @description Event timestamp in UTC.
+             */
+            occurredAt?: string;
+            /**
+             * @description Recorded action outcome.
+             * @enum {string}
+             */
+            outcome?: "SUCCESS" | "FAILURE";
+            /** @description Resource identifier as recorded by the owning operation. */
+            resourceId?: string;
+            /**
+             * @description Type of resource affected by the action.
+             * @enum {string}
+             */
+            resourceType?: "USER" | "DATASOURCE" | "JOB_DEFINITION" | "JOB_RUN" | "SESSION";
+            /** @description Recorded source address when available. */
+            sourceAddress?: string | null;
         };
+        /** @description Durable result of a run cancellation request. */
+        CancellationResponse: {
+            /**
+             * Format: uuid
+             * @description Run identifier.
+             */
+            runId?: string;
+            /**
+             * @description Resulting durable cancellation state.
+             * @enum {string}
+             */
+            status?: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCEL_REQUESTED" | "CANCELLED" | "RETRY_SCHEDULED" | "CANCEL_REQUESTED" | "CANCELLED";
+            /** @description Mode-specific warning about the possible sink state. */
+            warning?: string;
+        };
+        /** @description CSRF bootstrap values issued by Spring Security. */
+        CsrfTokenResponse: {
+            /**
+             * @description HTTP header name expected on protected mutations.
+             * @example X-XSRF-TOKEN
+             */
+            headerName?: string;
+            /** @description Framework request parameter name. */
+            parameterName?: string;
+            /** @description Opaque CSRF value that must match the XSRF-TOKEN cookie. */
+            readonly token?: string;
+        };
+        /** @description Dashboard aggregate for one visible job. */
+        DashboardJobPerformance: {
+            /**
+             * Format: int64
+             * @description Mean execution duration in milliseconds.
+             */
+            averageDurationMillis?: number;
+            /**
+             * Format: int64
+             * @description Mean queue-to-start latency in milliseconds.
+             */
+            averageLatencyMillis?: number;
+            /**
+             * Format: uuid
+             * @description Job identifier.
+             */
+            jobId?: string;
+            /** @description Job display name. */
+            jobName?: string;
+            /**
+             * Format: int64
+             * @description Rows reported by counted runs.
+             */
+            rowsProcessed?: number;
+            /**
+             * Format: int64
+             * @description Counted runs.
+             */
+            runCount?: number;
+        };
+        /** @description Run outcome counts for one dashboard time bucket. */
+        DashboardOutcomePoint: {
+            /**
+             * Format: int64
+             * @description Active runs in this bucket.
+             */
+            active?: number;
+            /**
+             * Format: date-time
+             * @description Bucket start timestamp in UTC.
+             */
+            bucket?: string;
+            /**
+             * Format: int64
+             * @description Failed runs in this bucket.
+             */
+            failed?: number;
+            /**
+             * Format: int64
+             * @description Successful runs in this bucket.
+             */
+            succeeded?: number;
+        };
+        /** @description Permission-aware dashboard aggregates for one explicit effective time window. */
+        DashboardSummaryResponse: {
+            /**
+             * Format: int64
+             * @description Runs currently active, distinct from terminal outcomes.
+             */
+            activeRuns?: number;
+            /**
+             * Format: int64
+             * @description Mean execution duration in milliseconds; zero when no completed duration exists.
+             */
+            averageDurationMillis?: number;
+            /**
+             * Format: int64
+             * @description Mean queue-to-start latency in milliseconds; zero when no started run exists.
+             */
+            averageLatencyMillis?: number;
+            /**
+             * Format: int64
+             * @description Failed runs in the window.
+             */
+            failedRuns?: number;
+            /**
+             * Format: date-time
+             * @description Inclusive effective window start in UTC.
+             */
+            from?: string;
+            /** @description Per-job throughput and timing summaries. */
+            jobPerformance?: components["schemas"]["DashboardJobPerformance"][];
+            /** @description Time-bucketed run outcomes. */
+            outcomes?: components["schemas"]["DashboardOutcomePoint"][];
+            /**
+             * Format: int64
+             * @description Rows reported by counted runs; not a correctness guarantee.
+             */
+            rowsProcessed?: number;
+            /**
+             * Format: int64
+             * @description Successfully completed runs in the window.
+             */
+            succeededRuns?: number;
+            /**
+             * Format: date-time
+             * @description Exclusive effective window end in UTC.
+             */
+            to?: string;
+            /**
+             * Format: int64
+             * @description Jobs visible to the current identity.
+             */
+            totalJobs?: number;
+            /**
+             * Format: int64
+             * @description Runs counted in the effective window.
+             */
+            totalRuns?: number;
+        };
+        /** @description Role-specific connector capabilities used to validate job bindings. */
+        DatasourceCapabilitiesResponse: {
+            /** @description Whether the connector requires jobs=1. */
+            singleJobOnly?: boolean;
+            /** @description Whether the connector can receive sink rows. */
+            sinkCapable?: boolean;
+            sinkModes?: ("complete" | "complete-atomic" | "incremental")[];
+            /** @description Whether the connector can provide source rows. */
+            sourceCapable?: boolean;
+            sourceModes?: ("complete" | "complete-atomic" | "incremental")[];
+            /** @description Whether source.query is supported. */
+            sourceQuery?: boolean;
+        };
+        /** @description Complete replacement set of grants for one user and datasource. */
+        DatasourcePermissionRequest: {
+            permissions: ("VIEW" | "USE" | "EDIT" | "VIEW" | "USE" | "EDIT")[];
+        };
+        /** @description Datasource grants grouped for one user. */
+        DatasourcePermissionResponse: {
+            permissions?: ("VIEW" | "USE" | "EDIT" | "VIEW" | "USE" | "EDIT")[];
+            /**
+             * Format: uuid
+             * @description Granted user identifier.
+             */
+            userId?: string;
+            /** @description Granted user's current username. */
+            username?: string;
+        };
+        /** @description Request for a managed datasource profile. Unknown fields are rejected. */
+        DatasourceRequest: {
+            /**
+             * @description Security keys to remove explicitly during an update.
+             * @example [
+             *       "password"
+             *     ]
+             */
+            clearSecurityKeys?: string[];
+            /**
+             * @description Registered connector wire name.
+             * @example postgres
+             */
+            connectorType: string;
+            /**
+             * @description Unique display name.
+             * @example Warehouse source
+             */
+            name: string;
+            /** @description Security values to encrypt. On update, omitted or blank entries preserve stored values. */
+            security?: {
+                [key: string]: string;
+            };
+            /** @description Non-secret connector settings. Omitted values default to an empty map. */
+            technicalParams?: {
+                [key: string]: string;
+            };
+        };
+        /** @description Redacted managed datasource profile and permission-aware capabilities. */
+        DatasourceResponse: {
+            /** @description Whether the current identity may edit this profile. */
+            canEdit?: boolean;
+            /** @description Whether the current identity may bind this profile to a job. */
+            canUse?: boolean;
+            /** @description Whether the current identity may view this profile. */
+            canView?: boolean;
+            capabilities?: components["schemas"]["DatasourceCapabilitiesResponse"];
+            /** @description Registered connector wire name. */
+            connectorType?: string;
+            /**
+             * Format: date-time
+             * @description Creation timestamp in UTC.
+             */
+            createdAt?: string;
+            /**
+             * Format: uuid
+             * @description Datasource identifier.
+             */
+            id?: string;
+            /** @description Datasource display name. */
+            name?: string;
+            /** @description Credential-redacted connection display suitable for the UI. */
+            safeConnectDisplay?: string;
+            /** @description Whether encrypted security material is configured, without exposing it. */
+            securityConfigured?: boolean;
+            /** @description Non-secret connector settings. */
+            technicalParams?: {
+                [key: string]: string;
+            };
+            /**
+             * Format: date-time
+             * @description Last update timestamp in UTC.
+             */
+            updatedAt?: string;
+        };
+        /** @description Redacted datasource identity embedded in a job response. */
+        DatasourceSummaryResponse: {
+            /** @description Registered connector wire name. */
+            connectorType?: string;
+            /**
+             * Format: uuid
+             * @description Datasource identifier.
+             */
+            id?: string;
+            /** @description Datasource display name. */
+            name?: string;
+            /** @description Credential-redacted connection display. */
+            safeConnectDisplay?: string;
+        } | null;
+        /** @description Create or update contract for one managed, single-table replication job. */
+        JobDefinitionRequest: {
+            /** @description Whether lease-expiry recovery may create another attempt. */
+            automaticRetryEnabled?: boolean | null;
+            /**
+             * Format: int32
+             * @description Per-task bandwidth cap in KB/s; zero means unlimited.
+             */
+            bandwidthThrottling?: number | null;
+            /**
+             * Format: int32
+             * @description Rows requested per source fetch.
+             */
+            fetchSize?: number | null;
+            /** @description Source column used to compute the next incremental watermark. */
+            incrementalWatermarkColumn?: string | null;
+            /** @description Initial committed watermark for the first managed run. */
+            initialWatermarkValue?: string | null;
+            /**
+             * Format: int32
+             * @description Parallel tasks inside this run.
+             * @example 1
+             */
+            jobs?: number;
+            /**
+             * Format: int32
+             * @description Maximum attempts including the initial attempt.
+             */
+            maxAttempts?: number | null;
+            /**
+             * @description Replication mode.
+             * @example complete
+             * @enum {string}
+             */
+            mode: "complete" | "complete-atomic" | "incremental";
+            /**
+             * @description Immutable display name. Required on create and omitted or unchanged on update.
+             * @example Nightly orders
+             */
+            name: string | null;
+            /**
+             * Format: int64
+             * @description Delay before an automatic retry becomes eligible, in seconds.
+             */
+            retryBackoffSeconds?: number | null;
+            /** @description Ordered sink column mapping. */
+            sinkColumns?: string | null;
+            /**
+             * Format: uuid
+             * @description Sink datasource identifier.
+             */
+            sinkDatasourceId: string;
+            /** @description Whether future attempts may resolve and use the sink binding. */
+            sinkDatasourceUseEnabled?: boolean | null;
+            /** @description Connector-specific escaping override. */
+            sinkDisableEscape?: boolean | null;
+            /** @description Skip complete-mode sink truncation when supported. */
+            sinkDisableTruncate?: boolean | null;
+            /** @description Schema in which ReplicaDB may create a staging table. */
+            sinkStagingSchema?: string | null;
+            /** @description Existing staging table managed by the operator. */
+            sinkStagingTable?: string | null;
+            /** @description Sink table, collection, topic, or object target. */
+            sinkTable: string;
+            /** @description Ordered source column selection or connector projection. */
+            sourceColumns?: string | null;
+            /**
+             * Format: uuid
+             * @description Source datasource identifier.
+             */
+            sourceDatasourceId: string;
+            /** @description Whether future attempts may resolve and use the source binding. */
+            sourceDatasourceUseEnabled?: boolean | null;
+            /** @description Connector-specific free-form source query. Mutually exclusive with sourceTable. */
+            sourceQuery?: string | null;
+            /** @description Source table or collection. Mutually exclusive with sourceQuery. */
+            sourceTable?: string | null;
+            /** @description Connector-specific source predicate without a WHERE keyword. */
+            sourceWhere?: string | null;
+            /** @description Enable verbose replication diagnostics. */
+            verbose?: boolean | null;
+        };
+        /** @description Persisted managed job definition with resolved policy values and redacted datasource summaries. */
+        JobDefinitionResponse: {
+            /** @description Whether lease-expiry recovery may create another attempt. */
+            automaticRetryEnabled?: boolean;
+            /**
+             * Format: int32
+             * @description Per-task bandwidth cap in KB/s; zero means unlimited.
+             */
+            bandwidthThrottling?: number;
+            /**
+             * Format: date-time
+             * @description Creation timestamp in UTC.
+             */
+            createdAt?: string;
+            /**
+             * Format: int32
+             * @description Rows requested per source fetch.
+             */
+            fetchSize?: number;
+            /**
+             * Format: uuid
+             * @description Job definition identifier.
+             */
+            id?: string;
+            /** @description Incremental watermark source column. */
+            incrementalWatermarkColumn?: string | null;
+            /** @description Initial committed watermark. */
+            initialWatermarkValue?: string | null;
+            /**
+             * Format: int32
+             * @description Parallel tasks inside each run.
+             */
+            jobs?: number;
+            /**
+             * Format: int32
+             * @description Maximum attempts including the initial attempt.
+             */
+            maxAttempts?: number;
+            /**
+             * @description Replication mode.
+             * @enum {string}
+             */
+            mode?: "complete" | "complete-atomic" | "incremental";
+            /** @description Mode-specific warning for destructive or indeterminate outcomes. */
+            modeWarning?: string | null;
+            /** @description Immutable job display name. */
+            name?: string;
+            /**
+             * Format: int64
+             * @description Retry eligibility delay in seconds.
+             */
+            retryBackoffSeconds?: number;
+            /** @description Ordered sink column mapping. */
+            sinkColumns?: string | null;
+            sinkDatasource?: components["schemas"]["DatasourceSummaryResponse"];
+            /**
+             * Format: uuid
+             * @description Sink datasource identifier.
+             */
+            sinkDatasourceId?: string;
+            /** @description Whether future attempts may use the sink binding. */
+            sinkDatasourceUseEnabled?: boolean;
+            /** @description Whether connector escaping is disabled. */
+            sinkDisableEscape?: boolean;
+            /** @description Whether complete-mode truncation is disabled. */
+            sinkDisableTruncate?: boolean;
+            /** @description Schema for generated staging tables. */
+            sinkStagingSchema?: string | null;
+            /** @description Operator-managed staging table. */
+            sinkStagingTable?: string | null;
+            /** @description Sink target name. */
+            sinkTable?: string;
+            /** @description Ordered source column selection. */
+            sourceColumns?: string | null;
+            sourceDatasource?: components["schemas"]["DatasourceSummaryResponse"];
+            /**
+             * Format: uuid
+             * @description Source datasource identifier.
+             */
+            sourceDatasourceId?: string;
+            /** @description Whether future attempts may use the source binding. */
+            sourceDatasourceUseEnabled?: boolean;
+            /** @description Connector-specific free-form source query. */
+            sourceQuery?: string | null;
+            /** @description Source table or collection. */
+            sourceTable?: string | null;
+            /** @description Connector-specific source predicate. */
+            sourceWhere?: string | null;
+            /**
+             * Format: date-time
+             * @description Last update timestamp in UTC.
+             */
+            updatedAt?: string;
+            /** @description Whether verbose replication diagnostics are enabled. */
+            verbose?: boolean;
+        };
+        /** @description Complete replacement set of grants for one user and job. */
+        JobPermissionRequest: {
+            permissions: ("VIEW" | "EDIT" | "EXECUTE" | "CANCEL" | "VIEW" | "EDIT" | "EXECUTE" | "CANCEL")[];
+        };
+        /** @description Job grants grouped for one user. */
+        JobPermissionResponse: {
+            permissions?: ("VIEW" | "EDIT" | "EXECUTE" | "CANCEL" | "VIEW" | "EDIT" | "EXECUTE" | "CANCEL")[];
+            /**
+             * Format: uuid
+             * @description Granted user identifier.
+             */
+            userId?: string;
+            /** @description Granted user's current username. */
+            username?: string;
+        };
+        /** @description Public durable run state and attempt lineage. Lease tokens and resolved datasource security are never exposed. */
+        JobRunResponse: {
+            /**
+             * Format: int32
+             * @description One-based attempt number.
+             */
+            attempt?: number;
+            /**
+             * Format: date-time
+             * @description Earliest database time at which this attempt is eligible for claim.
+             */
+            availableAt?: string;
+            /** @description Mode-specific warning about sink state after cancellation. */
+            cancellationWarning?: string | null;
+            /** @description Incremental watermark committed only by successful finalization. */
+            committedWatermark?: string | null;
+            /**
+             * Format: date-time
+             * @description Run creation timestamp in UTC.
+             */
+            createdAt?: string;
+            /**
+             * Format: int64
+             * @description Elapsed execution time in milliseconds when reported.
+             */
+            durationMillis?: number | null;
+            /** @description Credential-redacted failure detail. */
+            errorMessage?: string | null;
+            /** @description Worker identity assigned after claim. */
+            executorIdentity?: string | null;
+            /**
+             * Format: date-time
+             * @description Terminal completion timestamp in UTC.
+             */
+            finishedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description Most recent successful worker heartbeat in UTC.
+             */
+            heartbeatAt?: string | null;
+            /**
+             * Format: uuid
+             * @description Run attempt identifier.
+             */
+            id?: string;
+            /**
+             * Format: uuid
+             * @description Owning job definition identifier.
+             */
+            jobDefinitionId?: string;
+            /**
+             * Format: date-time
+             * @description Current claim expiry timestamp in UTC.
+             */
+            leaseUntil?: string | null;
+            /**
+             * Format: uuid
+             * @description Previous attempt in the retry chain.
+             */
+            previousRunId?: string | null;
+            /**
+             * Format: int64
+             * @description Rows processed by this attempt when reported.
+             */
+            rowsProcessed?: number | null;
+            /**
+             * Format: date-time
+             * @description Execution start timestamp in UTC.
+             */
+            startedAt?: string | null;
+            /**
+             * @description Durable lifecycle state.
+             * @enum {string}
+             */
+            status?: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCEL_REQUESTED" | "CANCELLED" | "RETRY_SCHEDULED";
+        };
+        /** @description Recurring Quartz schedule for one job. */
+        JobScheduleRequest: {
+            /**
+             * @description Quartz CRON expression with seconds, minutes, hours, day, month, and weekday fields.
+             * @example 0 0 2 * * ?
+             */
+            cronExpression: string;
+            /**
+             * @description Whether the scheduler may create runs from this schedule.
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * @description IANA time-zone identifier. Null or blank defaults to UTC.
+             * @example UTC
+             */
+            timeZone?: string | null;
+        };
+        /** @description Persisted job schedule and its currently computed next fire time. */
+        JobScheduleResponse: {
+            /**
+             * Format: date-time
+             * @description Creation timestamp in UTC.
+             */
+            createdAt?: string;
+            /** @description Validated Quartz CRON expression. */
+            cronExpression?: string;
+            /** @description Whether the schedule is enabled. */
+            enabled?: boolean;
+            /**
+             * Format: uuid
+             * @description Scheduled job definition identifier.
+             */
+            jobDefinitionId?: string;
+            /**
+             * Format: date-time
+             * @description Next fire time computed by the current scheduler, or null when disabled or unscheduled.
+             */
+            nextFireTime?: string | null;
+            /** @description IANA time-zone identifier used by Quartz. */
+            timeZone?: string;
+            /**
+             * Format: date-time
+             * @description Last update timestamp in UTC.
+             */
+            updatedAt?: string;
+        };
+        /** @description Credentials used only to create a server-owned session. */
+        LoginRequest: {
+            /** @description Password accepted only for authentication and never returned. */
+            password: string;
+            /**
+             * @description ReplicaDB username.
+             * @example api-operator
+             */
+            username: string;
+        };
+        /** @description Zero-based page of resource results. */
         PageResponseAuditEventResponse: {
+            /** @description Results in this page. */
             content?: components["schemas"]["AuditEventResponse"][];
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Zero-based page number.
+             */
             page?: number;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Effective page size, from 1 through 200.
+             */
             size?: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Total matching resources across all pages.
+             */
             totalElements?: number;
         };
+        /** @description Zero-based page of resource results. */
+        PageResponseDatasourceResponse: {
+            /** @description Results in this page. */
+            content?: components["schemas"]["DatasourceResponse"][];
+            /**
+             * Format: int32
+             * @description Zero-based page number.
+             */
+            page?: number;
+            /**
+             * Format: int32
+             * @description Effective page size, from 1 through 200.
+             */
+            size?: number;
+            /**
+             * Format: int64
+             * @description Total matching resources across all pages.
+             */
+            totalElements?: number;
+        };
+        /** @description Zero-based page of resource results. */
+        PageResponseJobDefinitionResponse: {
+            /** @description Results in this page. */
+            content?: components["schemas"]["JobDefinitionResponse"][];
+            /**
+             * Format: int32
+             * @description Zero-based page number.
+             */
+            page?: number;
+            /**
+             * Format: int32
+             * @description Effective page size, from 1 through 200.
+             */
+            size?: number;
+            /**
+             * Format: int64
+             * @description Total matching resources across all pages.
+             */
+            totalElements?: number;
+        };
+        /** @description Zero-based page of resource results. */
+        PageResponseJobRunResponse: {
+            /** @description Results in this page. */
+            content?: components["schemas"]["JobRunResponse"][];
+            /**
+             * Format: int32
+             * @description Zero-based page number.
+             */
+            page?: number;
+            /**
+             * Format: int32
+             * @description Effective page size, from 1 through 200.
+             */
+            size?: number;
+            /**
+             * Format: int64
+             * @description Total matching resources across all pages.
+             */
+            totalElements?: number;
+        };
+        /** @description Zero-based page of resource results. */
+        PageResponseUserResponse: {
+            /** @description Results in this page. */
+            content?: components["schemas"]["UserResponse"][];
+            /**
+             * Format: int32
+             * @description Zero-based page number.
+             */
+            page?: number;
+            /**
+             * Format: int32
+             * @description Effective page size, from 1 through 200.
+             */
+            size?: number;
+            /**
+             * Format: int64
+             * @description Total matching resources across all pages.
+             */
+            totalElements?: number;
+        };
+        /** @description ADMIN password reset request. */
+        PasswordUpdate: {
+            /** @description Replacement password accepted only for hashing and never returned. */
+            newPassword: string;
+        };
+        /** @description RFC 7807 problem response. Dynamic detail text is credential-redacted. */
+        ProblemDetail: {
+            detail?: string;
+            /** Format: uri-reference */
+            instance?: string;
+            /** Format: int32 */
+            status?: number;
+            title?: string;
+            /** Format: uri-reference */
+            type?: string;
+        };
+        /** @description ADMIN update for a user's global role and enabled state. */
+        RoleUpdate: {
+            /** @description Whether the account may authenticate. */
+            enabled?: boolean;
+            /**
+             * @description Replacement global role.
+             * @enum {string}
+             */
+            role: "ADMIN" | "OPERATOR" | "VIEWER";
+        };
+        /** @description Credential-redacted run diagnostics bounded to 256 KiB of persisted content. */
+        RunLogResponse: {
+            /**
+             * Format: date-time
+             * @description Initial capture timestamp in UTC.
+             */
+            capturedAt?: string | null;
+            /**
+             * Format: int32
+             * @description Total captured byte count before bounded retention.
+             */
+            capturedSize?: number;
+            /** @description Redacted diagnostic text. Truncated content contains [TRUNCATED: middle omitted]. */
+            content?: string;
+            /**
+             * Format: int32
+             * @description Persisted diagnostic format version.
+             */
+            formatVersion?: number;
+            /**
+             * Format: uuid
+             * @description Run identifier.
+             */
+            runId?: string;
+            /** @description Whether captured output exceeded the persisted content bound. */
+            truncated?: boolean;
+            /**
+             * Format: date-time
+             * @description Last capture update timestamp in UTC.
+             */
+            updatedAt?: string | null;
+        };
+        /** @description Identity associated with the current authenticated session. */
+        UserIdentityResponse: {
+            /**
+             * Format: uuid
+             * @description User identifier.
+             */
+            id?: string;
+            /**
+             * @description Global authorization role.
+             * @enum {string}
+             */
+            role?: "ADMIN" | "OPERATOR" | "VIEWER";
+            /** @description Current username. */
+            username?: string;
+        };
+        /** @description ADMIN request for creating a user. */
+        UserRequest: {
+            /** @description Initial password accepted only for hashing and never returned. */
+            password: string;
+            /**
+             * @description Initial global role.
+             * @enum {string}
+             */
+            role: "ADMIN" | "OPERATOR" | "VIEWER";
+            /**
+             * @description Unique username.
+             * @example replication-operator
+             */
+            username: string;
+        };
+        /** @description Public user administration record. Password hashes and credentials are never exposed. */
+        UserResponse: {
+            /**
+             * Format: date-time
+             * @description Creation timestamp in UTC.
+             */
+            createdAt?: string;
+            /** @description Whether the account may authenticate. */
+            enabled?: boolean;
+            /**
+             * Format: uuid
+             * @description User identifier.
+             */
+            id?: string;
+            /**
+             * @description Global authorization role.
+             * @enum {string}
+             */
+            role?: "ADMIN" | "OPERATOR" | "VIEWER";
+            /**
+             * Format: date-time
+             * @description Last update timestamp in UTC.
+             */
+            updatedAt?: string;
+            /** @description Current username. */
+            username?: string;
+        };
     };
-    responses: never;
+    responses: {
+        /** @description The request is malformed or fails validation. */
+        BadRequestProblem: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["ProblemDetail"];
+            };
+        };
+        /** @description The request conflicts with the current resource or run state. */
+        ConflictProblem: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["ProblemDetail"];
+            };
+        };
+        /** @description The authenticated identity lacks the required permission. */
+        ForbiddenProblem: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["ProblemDetail"];
+            };
+        };
+        /** @description The server could not complete the request. */
+        InternalServerErrorProblem: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["ProblemDetail"];
+            };
+        };
+        /** @description The requested resource does not exist or is not visible. */
+        NotFoundProblem: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["ProblemDetail"];
+            };
+        };
+        /** @description The request is throttled after repeated authentication failures. */
+        TooManyRequestsProblem: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["ProblemDetail"];
+            };
+        };
+        /** @description Authentication is required or credentials are invalid. */
+        UnauthorizedProblem: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["ProblemDetail"];
+            };
+        };
+    };
     parameters: never;
     requestBodies: never;
     headers: never;
@@ -766,597 +1441,25 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["UserResponse"];
-                };
-            };
-        };
-    };
-    update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RoleUpdate"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["UserResponse"];
-                };
-            };
-        };
-    };
-    updatePassword: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PasswordUpdate"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["UserResponse"];
-                };
-            };
-        };
-    };
-    get_2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobDefinitionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["JobScheduleResponse"];
-                };
-            };
-        };
-    };
-    upsert: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobDefinitionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["JobScheduleRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["JobScheduleResponse"];
-                };
-            };
-        };
-    };
-    delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobDefinitionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    replace: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobDefinitionId: string;
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["JobPermissionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["JobPermissionResponse"];
-                };
-            };
-        };
-    };
-    delete_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobDefinitionId: string;
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    get_3: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["JobDefinitionResponse"];
-                };
-            };
-        };
-    };
-    update_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["JobDefinitionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["JobDefinitionResponse"];
-                };
-            };
-        };
-    };
-    delete_2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Job deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Administrator access required */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Job definition not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Job has an active run or cannot be unscheduled */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    get_4: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["DatasourceResponse"];
-                };
-            };
-        };
-    };
-    update_2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DatasourceRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["DatasourceResponse"];
-                };
-            };
-        };
-    };
-    delete_3: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    replace_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                datasourceId: string;
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DatasourcePermissionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["DatasourcePermissionResponse"];
-                };
-            };
-        };
-    };
-    revoke: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                datasourceId: string;
-                userId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    list: {
+    listAuditEvents: {
         parameters: {
             query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["PageResponseUserResponse"];
-                };
-            };
-        };
-    };
-    create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UserRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["UserResponse"];
-                };
-            };
-        };
-    };
-    retry: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["JobRunResponse"];
-                };
-            };
-        };
-    };
-    cancel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["CancellationResponse"];
-                };
-            };
-        };
-    };
-    list_2: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["PageResponseJobDefinitionResponse"];
-                };
-            };
-        };
-    };
-    create_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["JobDefinitionRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["JobDefinitionResponse"];
-                };
-            };
-        };
-    };
-    listForJob: {
-        parameters: {
-            query?: {
-                status?: string[];
+                /** @description Actor user identifier. System actors do not have a user identifier. */
+                actorUserId?: string;
+                /** @description Case-insensitive AuditAction enum name. */
+                action?: string;
+                /** @description Case-insensitive resource category. */
+                resourceType?: "USER" | "DATASOURCE" | "JOB_DEFINITION" | "JOB_RUN" | "SESSION";
+                /** @description Exact audited resource identifier. */
+                resourceId?: string;
+                /** @description Inclusive lower event timestamp bound in UTC ISO-8601 date-time format. */
                 from?: string;
+                /** @description Exclusive upper event timestamp bound in UTC ISO-8601 date-time format. */
                 to?: string;
-                page?: number;
-                size?: number;
-            };
-            header?: never;
-            path: {
-                jobDefinitionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["PageResponseJobRunResponse"];
-                };
-            };
-        };
-    };
-    trigger: {
-        parameters: {
-            query?: never;
-            header?: {
-                "Idempotency-Key"?: string;
-            };
-            path: {
-                jobDefinitionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["JobRunResponse"];
-                };
-            };
-        };
-    };
-    list_4: {
-        parameters: {
-            query?: {
-                page?: number;
-                size?: number;
-                role?: string;
+                /** @description Zero-based page number. */
+                page?: string;
+                /** @description Requested page size, clamped to the range 1 through 200. */
+                size?: string;
             };
             header?: never;
             path?: never;
@@ -1364,42 +1467,21 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Audit events returned */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["PageResponseDatasourceResponse"];
+                    "*/*": components["schemas"]["PageResponseAuditEventResponse"];
                 };
             };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
         };
     };
-    create_2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DatasourceRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["DatasourceResponse"];
-                };
-            };
-        };
-    };
-    logout: {
+    getCsrfToken: {
         parameters: {
             query?: never;
             header?: never;
@@ -1408,13 +1490,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description CSRF contract initialized */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "*/*": components["schemas"]["CsrfTokenResponse"];
+                };
             };
+            500: components["responses"]["InternalServerErrorProblem"];
         };
     };
     login: {
@@ -1430,7 +1515,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description Authenticated identity returned and session established */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1439,126 +1524,58 @@ export interface operations {
                     "*/*": components["schemas"]["UserIdentityResponse"];
                 };
             };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            429: components["responses"]["TooManyRequestsProblem"];
         };
     };
-    list_1: {
+    logout: {
         parameters: {
-            query?: {
-                status?: string[];
-                from?: string;
-                to?: string;
-                page?: number;
-                size?: number;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
-            200: {
+            /** @description Session ended */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "*/*": components["schemas"]["PageResponseJobRunResponse"];
-                };
+                content?: never;
             };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
         };
     };
-    get_1: {
+    getCurrentIdentity: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                id: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Current identity returned */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["JobRunResponse"];
+                    "*/*": components["schemas"]["UserIdentityResponse"];
                 };
             };
+            401: components["responses"]["UnauthorizedProblem"];
         };
     };
-    log: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["RunLogResponse"];
-                };
-            };
-        };
-    };
-    list_3: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                jobDefinitionId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["JobPermissionResponse"][];
-                };
-            };
-        };
-    };
-    list_5: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                datasourceId: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["DatasourcePermissionResponse"][];
-                };
-            };
-        };
-    };
-    summary: {
+    getDashboardSummary: {
         parameters: {
             query?: {
+                /** @description Optional inclusive window start in UTC ISO-8601 date-time format. Defaults to 24 hours before the effective end. */
                 from?: string;
+                /** @description Optional exclusive window end in UTC ISO-8601 date-time format. Defaults to current server time. */
                 to?: string;
             };
             header?: never;
@@ -1567,7 +1584,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Permission-aware dashboard summary returned */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1576,59 +1593,19 @@ export interface operations {
                     "*/*": components["schemas"]["DashboardSummaryResponse"];
                 };
             };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
         };
     };
-    me: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["UserIdentityResponse"];
-                };
-            };
-        };
-    };
-    csrf: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["CsrfTokenResponse"];
-                };
-            };
-        };
-    };
-    list_6: {
+    listDatasources: {
         parameters: {
             query?: {
-                actorUserId?: string;
-                action?: string;
-                resourceType?: string;
-                resourceId?: string;
-                from?: string;
-                to?: string;
-                page?: number;
-                size?: number;
+                /** @description Zero-based page number. */
+                page?: string;
+                /** @description Requested page size, clamped to the range 1 through 200. */
+                size?: string;
+                /** @description Connector capability filter. */
+                role?: "source" | "sink";
             };
             header?: never;
             path?: never;
@@ -1636,15 +1613,868 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Visible datasources returned */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["PageResponseAuditEventResponse"];
+                    "*/*": components["schemas"]["PageResponseDatasourceResponse"];
                 };
             };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+        };
+    };
+    createDatasource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Datasource created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DatasourceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            409: components["responses"]["ConflictProblem"];
+        };
+    };
+    listDatasourcePermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Datasource identifier. */
+                datasourceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Datasource grants returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DatasourcePermissionResponse"][];
+                };
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    replaceDatasourcePermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Datasource identifier. */
+                datasourceId: string;
+                /** @description Target user identifier. */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasourcePermissionRequest"];
+            };
+        };
+        responses: {
+            /** @description Datasource grants replaced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DatasourcePermissionResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    revokeDatasourcePermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Datasource identifier. */
+                datasourceId: string;
+                /** @description Target user identifier. */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Datasource grants revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    getDatasource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Datasource identifier. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Datasource returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DatasourceResponse"];
+                };
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    updateDatasource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Datasource identifier. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Datasource updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DatasourceResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+            409: components["responses"]["ConflictProblem"];
+        };
+    };
+    deleteDatasource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Datasource identifier. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Datasource deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+            409: components["responses"]["ConflictProblem"];
+        };
+    };
+    listJobDefinitions: {
+        parameters: {
+            query?: {
+                /** @description Zero-based page number. */
+                page?: string;
+                /** @description Requested page size, clamped to the range 1 through 200. */
+                size?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Visible job definitions returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseJobDefinitionResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+        };
+    };
+    createJobDefinition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobDefinitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Job definition created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["JobDefinitionResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    getJobDefinition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Job definition identifier. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job definition returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["JobDefinitionResponse"];
+                };
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    updateJobDefinition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Job definition identifier. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobDefinitionRequest"];
+            };
+        };
+        responses: {
+            /** @description Job definition updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["JobDefinitionResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    deleteJobDefinition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Job definition identifier. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+            409: components["responses"]["ConflictProblem"];
+        };
+    };
+    listJobPermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Job definition identifier. */
+                jobDefinitionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job grants returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["JobPermissionResponse"][];
+                };
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    replaceJobPermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Job definition identifier. */
+                jobDefinitionId: string;
+                /** @description Target user identifier. */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobPermissionRequest"];
+            };
+        };
+        responses: {
+            /** @description Job grants replaced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["JobPermissionResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    revokeJobPermissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Job definition identifier. */
+                jobDefinitionId: string;
+                /** @description Target user identifier. */
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job grants revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    listJobRunsForJob: {
+        parameters: {
+            query?: {
+                /** @description Optional repeated run statuses: PENDING, RUNNING, SUCCEEDED, FAILED, CANCEL_REQUESTED, CANCELLED, or RETRY_SCHEDULED. */
+                status?: string[];
+                /** @description Inclusive lower timestamp bound in UTC ISO-8601 date-time format. */
+                from?: string;
+                /** @description Exclusive upper timestamp bound in UTC ISO-8601 date-time format. */
+                to?: string;
+                /** @description Zero-based page number. */
+                page?: string;
+                /** @description Requested page size, clamped to the range 1 through 200. */
+                size?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Job definition identifier. */
+                jobDefinitionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Job run history returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseJobRunResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    triggerJobRun: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Required non-blank key for replay-safe manual triggering; maximum 255 characters. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                /** @description Job definition identifier. */
+                jobDefinitionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Run accepted or an existing idempotent result replayed */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["JobRunResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+            409: components["responses"]["ConflictProblem"];
+        };
+    };
+    getJobSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Job definition identifier. */
+                jobDefinitionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Schedule returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["JobScheduleResponse"];
+                };
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    upsertJobSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Job definition identifier. */
+                jobDefinitionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobScheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Schedule created or replaced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["JobScheduleResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    deleteJobSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Job definition identifier. */
+                jobDefinitionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Schedule removed or already absent */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    listJobRuns: {
+        parameters: {
+            query?: {
+                /** @description Optional repeated run statuses: PENDING, RUNNING, SUCCEEDED, FAILED, CANCEL_REQUESTED, CANCELLED, or RETRY_SCHEDULED. */
+                status?: string[];
+                /** @description Inclusive lower timestamp bound in UTC ISO-8601 date-time format. */
+                from?: string;
+                /** @description Exclusive upper timestamp bound in UTC ISO-8601 date-time format. */
+                to?: string;
+                /** @description Zero-based page number. */
+                page?: string;
+                /** @description Requested page size, clamped to the range 1 through 200. */
+                size?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Visible runs returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseJobRunResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+        };
+    };
+    getJobRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Run identifier. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Run returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["JobRunResponse"];
+                };
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    cancelJobRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Run identifier. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Run cancelled or cancellation requested */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CancellationResponse"];
+                };
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+            409: components["responses"]["ConflictProblem"];
+        };
+    };
+    getJobRunLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Run identifier. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Run diagnostics returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RunLogResponse"];
+                };
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    retryJobRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Failed run identifier. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Retry attempt accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["JobRunResponse"];
+                };
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+            409: components["responses"]["ConflictProblem"];
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: {
+                /** @description Zero-based page number. */
+                page?: string;
+                /** @description Requested page size, clamped to the range 1 through 200. */
+                size?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Users returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PageResponseUserResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+        };
+    };
+    createUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserRequest"];
+            };
+        };
+        responses: {
+            /** @description User created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            409: components["responses"]["ConflictProblem"];
+        };
+    };
+    getUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description User identifier. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description User returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    updateUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description User identifier. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleUpdate"];
+            };
+        };
+        responses: {
+            /** @description User updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    updateUserPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description User identifier. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordUpdate"];
+            };
+        };
+        responses: {
+            /** @description Password reset completed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+            400: components["responses"]["BadRequestProblem"];
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+            404: components["responses"]["NotFoundProblem"];
         };
     };
 }

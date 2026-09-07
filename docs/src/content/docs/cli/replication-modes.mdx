@@ -20,7 +20,18 @@ sink can be empty while the transfer is running. This is the default mode.
 Use it for a disposable or replaceable sink where the straightforward bulk
 path is the right tradeoff.
 
-<ScreenshotFrame src={complete} alt="Complete replication mode flow from source to sink" caption="Complete mode prepares the sink before inserting the full source selection." width={800} height={600} loading="eager" />
+The observable flow is:
+
+1. Validate the source selection and sink target.
+2. Run connector preparation, including clearing the sink unless truncation is
+	explicitly disabled.
+3. Partition and read the selected source rows across the configured workers.
+4. Insert those rows into the sink and run connector post-processing.
+
+If the process stops after sink preparation, readers can observe an empty or
+partially repopulated target. A retry starts the complete flow again.
+
+<ScreenshotFrame src={complete} alt="Complete replication mode flow from source to sink" caption="Complete mode prepares the sink before inserting the full source selection." width={1023} height={680} loading="eager" />
 
 ## Complete-atomic
 
@@ -30,7 +41,14 @@ truncation window. It requires staging support and enough sink capacity for
 the staging table. With a fixed staging table, the sink must provide the
 required permissions; a staging schema can be used for generated tables.
 
-<ScreenshotFrame src={completeAtomic} alt="Complete atomic replication mode using a staging table" caption="Complete-atomic mode stages rows before the sink replacement step." width={800} height={600} />
+The connector creates or selects a staging table, loads the complete source
+selection into it, validates the staged operation, then clears and repopulates
+the final sink within its atomic replacement transaction. Automatically
+created staging state is cleaned up afterward; a user-provided staging table
+is retained. Connector support and transactional guarantees remain
+sink-specific.
+
+<ScreenshotFrame src={completeAtomic} alt="Complete atomic replication mode using a staging table" caption="Complete-atomic mode stages rows before the sink replacement step." width={1023} height={830} />
 
 ## Incremental
 
@@ -39,7 +57,14 @@ Use a source filter or the explicit watermark options described in the
 [watermark guide](/ReplicaDB/cli/incremental-watermarks/). Incremental mode
 does not propagate deletes and requires a sink primary key for merge behavior.
 
-<ScreenshotFrame src={incremental} alt="Incremental replication mode flow using a source watermark" caption="Incremental mode transfers a bounded selection and merges it into the sink." width={800} height={600} />
+The source filter or watermark selects candidate rows. Connectors that require
+staging load those rows into a staging table, then merge matched keys and
+insert new keys into the final sink. A successful process reports the highest
+observed watermark; the caller persists it only after the whole run succeeds.
+ReplicaDB does not infer deleted source rows or provide change ordering beyond
+the selected watermark value.
+
+<ScreenshotFrame src={incremental} alt="Incremental replication mode flow using a source watermark" caption="Incremental mode transfers a bounded selection and merges it into the sink." width={1023} height={718} />
 
 ## Cancellation and recovery
 

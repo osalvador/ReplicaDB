@@ -44,7 +44,8 @@ and protects sensitive security values before persistence.
 
 A source value used by incremental replication to bound the next read. The CLI
 reports a successful watermark for external orchestration; a failed or
-cancelled run does not advance it.
+cancelled run does not advance it. In the managed server, only successful run
+finalization commits the next watermark for a later attempt.
 
 ## API
 

@@ -1,9 +1,83 @@
 {
   "components": {
+    "responses": {
+      "BadRequestProblem": {
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetail"
+            }
+          }
+        },
+        "description": "The request is malformed or fails validation."
+      },
+      "ConflictProblem": {
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetail"
+            }
+          }
+        },
+        "description": "The request conflicts with the current resource or run state."
+      },
+      "ForbiddenProblem": {
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetail"
+            }
+          }
+        },
+        "description": "The authenticated identity lacks the required permission."
+      },
+      "InternalServerErrorProblem": {
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetail"
+            }
+          }
+        },
+        "description": "The server could not complete the request."
+      },
+      "NotFoundProblem": {
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetail"
+            }
+          }
+        },
+        "description": "The requested resource does not exist or is not visible."
+      },
+      "TooManyRequestsProblem": {
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetail"
+            }
+          }
+        },
+        "description": "The request is throttled after repeated authentication failures."
+      },
+      "UnauthorizedProblem": {
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ProblemDetail"
+            }
+          }
+        },
+        "description": "Authentication is required or credentials are invalid."
+      }
+    },
     "schemas": {
       "AuditEventResponse": {
+        "description": "Durable audit record for an authenticated or system action.",
         "properties": {
           "action": {
+            "description": "Audited action category.",
             "enum": [
               "LOGIN_SUCCEEDED",
               "LOGIN_FAILED",
@@ -36,27 +110,35 @@
             "type": "string"
           },
           "actorUserId": {
+            "description": "Actor user identifier, or null for a system actor.",
             "format": "uuid",
+            "nullable": true,
             "type": "string"
           },
           "actorUsername": {
+            "description": "Username snapshot or stable system actor name.",
             "type": "string"
           },
           "detail": {
             "additionalProperties": {
+              "description": "Bounded, non-secret action context. Keys vary by action.",
               "type": "string"
             },
+            "description": "Bounded, non-secret action context. Keys vary by action.",
             "type": "object"
           },
           "id": {
+            "description": "Audit event identifier.",
             "format": "uuid",
             "type": "string"
           },
           "occurredAt": {
+            "description": "Event timestamp in UTC.",
             "format": "date-time",
             "type": "string"
           },
           "outcome": {
+            "description": "Recorded action outcome.",
             "enum": [
               "SUCCESS",
               "FAILURE"
@@ -64,9 +146,11 @@
             "type": "string"
           },
           "resourceId": {
+            "description": "Resource identifier as recorded by the owning operation.",
             "type": "string"
           },
           "resourceType": {
+            "description": "Type of resource affected by the action.",
             "enum": [
               "USER",
               "DATASOURCE",
@@ -77,18 +161,23 @@
             "type": "string"
           },
           "sourceAddress": {
+            "description": "Recorded source address when available.",
+            "nullable": true,
             "type": "string"
           }
         },
         "type": "object"
       },
       "CancellationResponse": {
+        "description": "Durable result of a run cancellation request.",
         "properties": {
           "runId": {
+            "description": "Run identifier.",
             "format": "uuid",
             "type": "string"
           },
           "status": {
+            "description": "Resulting durable cancellation state.",
             "enum": [
               "PENDING",
               "RUNNING",
@@ -96,172 +185,243 @@
               "FAILED",
               "CANCEL_REQUESTED",
               "CANCELLED",
-              "RETRY_SCHEDULED"
+              "RETRY_SCHEDULED",
+              "CANCEL_REQUESTED",
+              "CANCELLED"
             ],
             "type": "string"
           },
           "warning": {
+            "description": "Mode-specific warning about the possible sink state.",
             "type": "string"
           }
         },
         "type": "object"
       },
       "CsrfTokenResponse": {
+        "description": "CSRF bootstrap values issued by Spring Security.",
         "properties": {
           "headerName": {
+            "description": "HTTP header name expected on protected mutations.",
+            "example": "X-XSRF-TOKEN",
             "type": "string"
           },
           "parameterName": {
+            "description": "Framework request parameter name.",
             "type": "string"
           },
           "token": {
+            "description": "Opaque CSRF value that must match the XSRF-TOKEN cookie.",
+            "readOnly": true,
             "type": "string"
           }
         },
         "type": "object"
       },
       "DashboardJobPerformance": {
+        "description": "Dashboard aggregate for one visible job.",
         "properties": {
           "averageDurationMillis": {
+            "description": "Mean execution duration in milliseconds.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           },
           "averageLatencyMillis": {
+            "description": "Mean queue-to-start latency in milliseconds.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           },
           "jobId": {
+            "description": "Job identifier.",
             "format": "uuid",
             "type": "string"
           },
           "jobName": {
+            "description": "Job display name.",
             "type": "string"
           },
           "rowsProcessed": {
+            "description": "Rows reported by counted runs.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           },
           "runCount": {
+            "description": "Counted runs.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           }
         },
         "type": "object"
       },
       "DashboardOutcomePoint": {
+        "description": "Run outcome counts for one dashboard time bucket.",
         "properties": {
           "active": {
+            "description": "Active runs in this bucket.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           },
           "bucket": {
+            "description": "Bucket start timestamp in UTC.",
             "format": "date-time",
             "type": "string"
           },
           "failed": {
+            "description": "Failed runs in this bucket.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           },
           "succeeded": {
+            "description": "Successful runs in this bucket.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           }
         },
         "type": "object"
       },
       "DashboardSummaryResponse": {
+        "description": "Permission-aware dashboard aggregates for one explicit effective time window.",
         "properties": {
           "activeRuns": {
+            "description": "Runs currently active, distinct from terminal outcomes.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           },
           "averageDurationMillis": {
+            "description": "Mean execution duration in milliseconds; zero when no completed duration exists.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           },
           "averageLatencyMillis": {
+            "description": "Mean queue-to-start latency in milliseconds; zero when no started run exists.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           },
           "failedRuns": {
+            "description": "Failed runs in the window.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           },
           "from": {
+            "description": "Inclusive effective window start in UTC.",
             "format": "date-time",
             "type": "string"
           },
           "jobPerformance": {
+            "description": "Per-job throughput and timing summaries.",
             "items": {
               "$ref": "#/components/schemas/DashboardJobPerformance"
             },
             "type": "array"
           },
           "outcomes": {
+            "description": "Time-bucketed run outcomes.",
             "items": {
               "$ref": "#/components/schemas/DashboardOutcomePoint"
             },
             "type": "array"
           },
           "rowsProcessed": {
+            "description": "Rows reported by counted runs; not a correctness guarantee.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           },
           "succeededRuns": {
+            "description": "Successfully completed runs in the window.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           },
           "to": {
+            "description": "Exclusive effective window end in UTC.",
             "format": "date-time",
             "type": "string"
           },
           "totalJobs": {
+            "description": "Jobs visible to the current identity.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           },
           "totalRuns": {
+            "description": "Runs counted in the effective window.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           }
         },
         "type": "object"
       },
       "DatasourceCapabilitiesResponse": {
+        "description": "Role-specific connector capabilities used to validate job bindings.",
         "properties": {
           "singleJobOnly": {
+            "description": "Whether the connector requires jobs=1.",
             "type": "boolean"
           },
           "sinkCapable": {
+            "description": "Whether the connector can receive sink rows.",
             "type": "boolean"
           },
           "sinkModes": {
             "items": {
+              "description": "Supported sink mode.",
+              "enum": [
+                "complete",
+                "complete-atomic",
+                "incremental"
+              ],
               "type": "string"
             },
             "type": "array",
             "uniqueItems": true
           },
           "sourceCapable": {
+            "description": "Whether the connector can provide source rows.",
             "type": "boolean"
           },
           "sourceModes": {
             "items": {
+              "description": "Supported source mode.",
+              "enum": [
+                "complete",
+                "complete-atomic",
+                "incremental"
+              ],
               "type": "string"
             },
             "type": "array",
             "uniqueItems": true
           },
           "sourceQuery": {
+            "description": "Whether source.query is supported.",
             "type": "boolean"
           }
         },
         "type": "object"
       },
       "DatasourcePermissionRequest": {
+        "description": "Complete replacement set of grants for one user and datasource.",
         "properties": {
           "permissions": {
             "items": {
+              "description": "Datasource permission.",
               "enum": [
+                "VIEW",
+                "USE",
+                "EDIT",
                 "VIEW",
                 "USE",
                 "EDIT"
@@ -278,10 +438,15 @@
         "type": "object"
       },
       "DatasourcePermissionResponse": {
+        "description": "Datasource grants grouped for one user.",
         "properties": {
           "permissions": {
             "items": {
+              "description": "Granted datasource permission.",
               "enum": [
+                "VIEW",
+                "USE",
+                "EDIT",
                 "VIEW",
                 "USE",
                 "EDIT"
@@ -292,40 +457,59 @@
             "uniqueItems": true
           },
           "userId": {
+            "description": "Granted user identifier.",
             "format": "uuid",
             "type": "string"
           },
           "username": {
+            "description": "Granted user's current username.",
             "type": "string"
           }
         },
         "type": "object"
       },
       "DatasourceRequest": {
+        "description": "Request for a managed datasource profile. Unknown fields are rejected.",
         "properties": {
           "clearSecurityKeys": {
+            "description": "Security keys to remove explicitly during an update.",
+            "example": [
+              "password"
+            ],
             "items": {
+              "description": "Security keys to remove explicitly during an update.",
+              "example": "[\"password\"]",
               "type": "string"
             },
             "type": "array",
             "uniqueItems": true
           },
           "connectorType": {
+            "description": "Registered connector wire name.",
+            "example": "postgres",
             "type": "string"
           },
           "name": {
+            "description": "Unique display name.",
+            "example": "Warehouse source",
             "type": "string"
           },
           "security": {
             "additionalProperties": {
-              "type": "string"
+              "description": "Security values to encrypt. On update, omitted or blank entries preserve stored values.",
+              "type": "string",
+              "writeOnly": true
             },
-            "type": "object"
+            "description": "Security values to encrypt. On update, omitted or blank entries preserve stored values.",
+            "type": "object",
+            "writeOnly": true
           },
           "technicalParams": {
             "additionalProperties": {
+              "description": "Non-secret connector settings. Omitted values default to an empty map.",
               "type": "string"
             },
+            "description": "Non-secret connector settings. Omitted values default to an empty map.",
             "type": "object"
           }
         },
@@ -336,46 +520,59 @@
         "type": "object"
       },
       "DatasourceResponse": {
+        "description": "Redacted managed datasource profile and permission-aware capabilities.",
         "properties": {
           "canEdit": {
+            "description": "Whether the current identity may edit this profile.",
             "type": "boolean"
           },
           "canUse": {
+            "description": "Whether the current identity may bind this profile to a job.",
             "type": "boolean"
           },
           "canView": {
+            "description": "Whether the current identity may view this profile.",
             "type": "boolean"
           },
           "capabilities": {
             "$ref": "#/components/schemas/DatasourceCapabilitiesResponse"
           },
           "connectorType": {
+            "description": "Registered connector wire name.",
             "type": "string"
           },
           "createdAt": {
+            "description": "Creation timestamp in UTC.",
             "format": "date-time",
             "type": "string"
           },
           "id": {
+            "description": "Datasource identifier.",
             "format": "uuid",
             "type": "string"
           },
           "name": {
+            "description": "Datasource display name.",
             "type": "string"
           },
           "safeConnectDisplay": {
+            "description": "Credential-redacted connection display suitable for the UI.",
             "type": "string"
           },
           "securityConfigured": {
+            "description": "Whether encrypted security material is configured, without exposing it.",
             "type": "boolean"
           },
           "technicalParams": {
             "additionalProperties": {
+              "description": "Non-secret connector settings.",
               "type": "string"
             },
+            "description": "Non-secret connector settings.",
             "type": "object"
           },
           "updatedAt": {
+            "description": "Last update timestamp in UTC.",
             "format": "date-time",
             "type": "string"
           }
@@ -383,110 +580,170 @@
         "type": "object"
       },
       "DatasourceSummaryResponse": {
+        "description": "Redacted datasource identity embedded in a job response.",
+        "nullable": true,
         "properties": {
           "connectorType": {
+            "description": "Registered connector wire name.",
             "type": "string"
           },
           "id": {
+            "description": "Datasource identifier.",
             "format": "uuid",
             "type": "string"
           },
           "name": {
+            "description": "Datasource display name.",
             "type": "string"
           },
           "safeConnectDisplay": {
+            "description": "Credential-redacted connection display.",
             "type": "string"
           }
         },
         "type": "object"
       },
       "JobDefinitionRequest": {
+        "description": "Create or update contract for one managed, single-table replication job.",
         "properties": {
           "automaticRetryEnabled": {
+            "description": "Whether lease-expiry recovery may create another attempt.",
+            "nullable": true,
             "type": "boolean"
           },
           "bandwidthThrottling": {
+            "description": "Per-task bandwidth cap in KB/s; zero means unlimited.",
             "format": "int32",
             "minimum": 0,
+            "nullable": true,
             "type": "integer"
           },
           "fetchSize": {
+            "description": "Rows requested per source fetch.",
             "format": "int32",
             "minimum": 1,
+            "nullable": true,
             "type": "integer"
           },
           "incrementalWatermarkColumn": {
+            "description": "Source column used to compute the next incremental watermark.",
+            "nullable": true,
             "type": "string"
           },
           "initialWatermarkValue": {
+            "description": "Initial committed watermark for the first managed run.",
+            "nullable": true,
             "type": "string"
           },
           "jobs": {
+            "description": "Parallel tasks inside this run.",
+            "example": 1,
             "format": "int32",
             "minimum": 1,
             "type": "integer"
           },
           "maxAttempts": {
+            "description": "Maximum attempts including the initial attempt.",
             "format": "int32",
             "minimum": 1,
+            "nullable": true,
             "type": "integer"
           },
           "mode": {
+            "description": "Replication mode.",
+            "enum": [
+              "complete",
+              "complete-atomic",
+              "incremental"
+            ],
+            "example": "complete",
             "type": "string"
           },
           "name": {
+            "description": "Immutable display name. Required on create and omitted or unchanged on update.",
+            "example": "Nightly orders",
+            "nullable": true,
             "type": "string"
           },
           "retryBackoffSeconds": {
+            "description": "Delay before an automatic retry becomes eligible, in seconds.",
             "format": "int64",
             "minimum": 0,
+            "nullable": true,
             "type": "integer"
           },
           "sinkColumns": {
+            "description": "Ordered sink column mapping.",
+            "nullable": true,
             "type": "string"
           },
           "sinkDatasourceId": {
+            "description": "Sink datasource identifier.",
             "format": "uuid",
             "type": "string"
           },
           "sinkDatasourceUseEnabled": {
+            "description": "Whether future attempts may resolve and use the sink binding.",
+            "nullable": true,
             "type": "boolean"
           },
           "sinkDisableEscape": {
+            "description": "Connector-specific escaping override.",
+            "nullable": true,
             "type": "boolean"
           },
           "sinkDisableTruncate": {
+            "description": "Skip complete-mode sink truncation when supported.",
+            "nullable": true,
             "type": "boolean"
           },
           "sinkStagingSchema": {
+            "description": "Schema in which ReplicaDB may create a staging table.",
+            "nullable": true,
             "type": "string"
           },
           "sinkStagingTable": {
+            "description": "Existing staging table managed by the operator.",
+            "nullable": true,
             "type": "string"
           },
           "sinkTable": {
+            "description": "Sink table, collection, topic, or object target.",
             "type": "string"
           },
           "sourceColumns": {
+            "description": "Ordered source column selection or connector projection.",
+            "nullable": true,
             "type": "string"
           },
           "sourceDatasourceId": {
+            "description": "Source datasource identifier.",
             "format": "uuid",
             "type": "string"
           },
           "sourceDatasourceUseEnabled": {
+            "description": "Whether future attempts may resolve and use the source binding.",
+            "nullable": true,
             "type": "boolean"
           },
           "sourceQuery": {
+            "description": "Connector-specific free-form source query. Mutually exclusive with sourceTable.",
+            "nullable": true,
             "type": "string"
           },
           "sourceTable": {
+            "description": "Source table or collection. Mutually exclusive with sourceQuery.",
+            "nullable": true,
             "type": "string"
           },
           "sourceWhere": {
+            "description": "Connector-specific source predicate without a WHERE keyword.",
+            "nullable": true,
             "type": "string"
           },
           "verbose": {
+            "description": "Enable verbose replication diagnostics.",
+            "nullable": true,
             "type": "boolean"
           }
         },
@@ -500,118 +757,174 @@
         "type": "object"
       },
       "JobDefinitionResponse": {
+        "description": "Persisted managed job definition with resolved policy values and redacted datasource summaries.",
         "properties": {
           "automaticRetryEnabled": {
+            "description": "Whether lease-expiry recovery may create another attempt.",
             "type": "boolean"
           },
           "bandwidthThrottling": {
+            "description": "Per-task bandwidth cap in KB/s; zero means unlimited.",
             "format": "int32",
+            "minimum": 0,
             "type": "integer"
           },
           "createdAt": {
+            "description": "Creation timestamp in UTC.",
             "format": "date-time",
             "type": "string"
           },
           "fetchSize": {
+            "description": "Rows requested per source fetch.",
             "format": "int32",
+            "minimum": 1,
             "type": "integer"
           },
           "id": {
+            "description": "Job definition identifier.",
             "format": "uuid",
             "type": "string"
           },
           "incrementalWatermarkColumn": {
+            "description": "Incremental watermark source column.",
+            "nullable": true,
             "type": "string"
           },
           "initialWatermarkValue": {
+            "description": "Initial committed watermark.",
+            "nullable": true,
             "type": "string"
           },
           "jobs": {
+            "description": "Parallel tasks inside each run.",
             "format": "int32",
+            "minimum": 1,
             "type": "integer"
           },
           "maxAttempts": {
+            "description": "Maximum attempts including the initial attempt.",
             "format": "int32",
+            "minimum": 1,
             "type": "integer"
           },
           "mode": {
+            "description": "Replication mode.",
+            "enum": [
+              "complete",
+              "complete-atomic",
+              "incremental"
+            ],
             "type": "string"
           },
           "modeWarning": {
+            "description": "Mode-specific warning for destructive or indeterminate outcomes.",
+            "nullable": true,
             "type": "string"
           },
           "name": {
+            "description": "Immutable job display name.",
             "type": "string"
           },
           "retryBackoffSeconds": {
+            "description": "Retry eligibility delay in seconds.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           },
           "sinkColumns": {
+            "description": "Ordered sink column mapping.",
+            "nullable": true,
             "type": "string"
           },
           "sinkDatasource": {
             "$ref": "#/components/schemas/DatasourceSummaryResponse"
           },
           "sinkDatasourceId": {
+            "description": "Sink datasource identifier.",
             "format": "uuid",
             "type": "string"
           },
           "sinkDatasourceUseEnabled": {
+            "description": "Whether future attempts may use the sink binding.",
             "type": "boolean"
           },
           "sinkDisableEscape": {
+            "description": "Whether connector escaping is disabled.",
             "type": "boolean"
           },
           "sinkDisableTruncate": {
+            "description": "Whether complete-mode truncation is disabled.",
             "type": "boolean"
           },
           "sinkStagingSchema": {
+            "description": "Schema for generated staging tables.",
+            "nullable": true,
             "type": "string"
           },
           "sinkStagingTable": {
+            "description": "Operator-managed staging table.",
+            "nullable": true,
             "type": "string"
           },
           "sinkTable": {
+            "description": "Sink target name.",
             "type": "string"
           },
           "sourceColumns": {
+            "description": "Ordered source column selection.",
+            "nullable": true,
             "type": "string"
           },
           "sourceDatasource": {
             "$ref": "#/components/schemas/DatasourceSummaryResponse"
           },
           "sourceDatasourceId": {
+            "description": "Source datasource identifier.",
             "format": "uuid",
             "type": "string"
           },
           "sourceDatasourceUseEnabled": {
+            "description": "Whether future attempts may use the source binding.",
             "type": "boolean"
           },
           "sourceQuery": {
+            "description": "Connector-specific free-form source query.",
+            "nullable": true,
             "type": "string"
           },
           "sourceTable": {
+            "description": "Source table or collection.",
+            "nullable": true,
             "type": "string"
           },
           "sourceWhere": {
+            "description": "Connector-specific source predicate.",
+            "nullable": true,
             "type": "string"
           },
           "updatedAt": {
+            "description": "Last update timestamp in UTC.",
             "format": "date-time",
             "type": "string"
           },
           "verbose": {
+            "description": "Whether verbose replication diagnostics are enabled.",
             "type": "boolean"
           }
         },
         "type": "object"
       },
       "JobPermissionRequest": {
+        "description": "Complete replacement set of grants for one user and job.",
         "properties": {
           "permissions": {
             "items": {
+              "description": "Job permission.",
               "enum": [
+                "VIEW",
+                "EDIT",
+                "EXECUTE",
+                "CANCEL",
                 "VIEW",
                 "EDIT",
                 "EXECUTE",
@@ -629,10 +942,16 @@
         "type": "object"
       },
       "JobPermissionResponse": {
+        "description": "Job grants grouped for one user.",
         "properties": {
           "permissions": {
             "items": {
+              "description": "Granted job permission.",
               "enum": [
+                "VIEW",
+                "EDIT",
+                "EXECUTE",
+                "CANCEL",
                 "VIEW",
                 "EDIT",
                 "EXECUTE",
@@ -644,78 +963,112 @@
             "uniqueItems": true
           },
           "userId": {
+            "description": "Granted user identifier.",
             "format": "uuid",
             "type": "string"
           },
           "username": {
+            "description": "Granted user's current username.",
             "type": "string"
           }
         },
         "type": "object"
       },
       "JobRunResponse": {
+        "description": "Public durable run state and attempt lineage. Lease tokens and resolved datasource security are never exposed.",
         "properties": {
           "attempt": {
+            "description": "One-based attempt number.",
             "format": "int32",
+            "minimum": 1,
             "type": "integer"
           },
           "availableAt": {
+            "description": "Earliest database time at which this attempt is eligible for claim.",
             "format": "date-time",
             "type": "string"
           },
           "cancellationWarning": {
+            "description": "Mode-specific warning about sink state after cancellation.",
+            "nullable": true,
             "type": "string"
           },
           "committedWatermark": {
+            "description": "Incremental watermark committed only by successful finalization.",
+            "nullable": true,
             "type": "string"
           },
           "createdAt": {
+            "description": "Run creation timestamp in UTC.",
             "format": "date-time",
             "type": "string"
           },
           "durationMillis": {
+            "description": "Elapsed execution time in milliseconds when reported.",
             "format": "int64",
+            "minimum": 0,
+            "nullable": true,
             "type": "integer"
           },
           "errorMessage": {
+            "description": "Credential-redacted failure detail.",
+            "nullable": true,
             "type": "string"
           },
           "executorIdentity": {
+            "description": "Worker identity assigned after claim.",
+            "nullable": true,
             "type": "string"
           },
           "finishedAt": {
+            "description": "Terminal completion timestamp in UTC.",
             "format": "date-time",
+            "nullable": true,
             "type": "string"
           },
           "heartbeatAt": {
+            "description": "Most recent successful worker heartbeat in UTC.",
             "format": "date-time",
+            "nullable": true,
             "type": "string"
           },
           "id": {
+            "description": "Run attempt identifier.",
             "format": "uuid",
             "type": "string"
           },
           "jobDefinitionId": {
+            "description": "Owning job definition identifier.",
             "format": "uuid",
             "type": "string"
           },
           "leaseUntil": {
+            "description": "Current claim expiry timestamp in UTC.",
             "format": "date-time",
+            "nullable": true,
             "type": "string"
           },
           "previousRunId": {
+            "description": "Previous attempt in the retry chain.",
             "format": "uuid",
+            "nullable": true,
             "type": "string"
           },
           "rowsProcessed": {
+            "description": "Rows processed by this attempt when reported.",
             "format": "int64",
+            "minimum": 0,
+            "nullable": true,
             "type": "integer"
           },
           "startedAt": {
+            "description": "Execution start timestamp in UTC.",
             "format": "date-time",
+            "nullable": true,
             "type": "string"
           },
           "status": {
+            "description": "Durable lifecycle state.",
             "enum": [
               "PENDING",
               "RUNNING",
@@ -731,14 +1084,22 @@
         "type": "object"
       },
       "JobScheduleRequest": {
+        "description": "Recurring Quartz schedule for one job.",
         "properties": {
           "cronExpression": {
+            "description": "Quartz CRON expression with seconds, minutes, hours, day, month, and weekday fields.",
+            "example": "0 0 2 * * ?",
             "type": "string"
           },
           "enabled": {
+            "default": true,
+            "description": "Whether the scheduler may create runs from this schedule.",
             "type": "boolean"
           },
           "timeZone": {
+            "description": "IANA time-zone identifier. Null or blank defaults to UTC.",
+            "example": "UTC",
+            "nullable": true,
             "type": "string"
           }
         },
@@ -748,29 +1109,38 @@
         "type": "object"
       },
       "JobScheduleResponse": {
+        "description": "Persisted job schedule and its currently computed next fire time.",
         "properties": {
           "createdAt": {
+            "description": "Creation timestamp in UTC.",
             "format": "date-time",
             "type": "string"
           },
           "cronExpression": {
+            "description": "Validated Quartz CRON expression.",
             "type": "string"
           },
           "enabled": {
+            "description": "Whether the schedule is enabled.",
             "type": "boolean"
           },
           "jobDefinitionId": {
+            "description": "Scheduled job definition identifier.",
             "format": "uuid",
             "type": "string"
           },
           "nextFireTime": {
+            "description": "Next fire time computed by the current scheduler, or null when disabled or unscheduled.",
             "format": "date-time",
+            "nullable": true,
             "type": "string"
           },
           "timeZone": {
+            "description": "IANA time-zone identifier used by Quartz.",
             "type": "string"
           },
           "updatedAt": {
+            "description": "Last update timestamp in UTC.",
             "format": "date-time",
             "type": "string"
           }
@@ -778,11 +1148,16 @@
         "type": "object"
       },
       "LoginRequest": {
+        "description": "Credentials used only to create a server-owned session.",
         "properties": {
           "password": {
-            "type": "string"
+            "description": "Password accepted only for authentication and never returned.",
+            "type": "string",
+            "writeOnly": true
           },
           "username": {
+            "description": "ReplicaDB username.",
+            "example": "api-operator",
             "type": "string"
           }
         },
@@ -793,124 +1168,172 @@
         "type": "object"
       },
       "PageResponseAuditEventResponse": {
+        "description": "Zero-based page of resource results.",
         "properties": {
           "content": {
+            "description": "Results in this page.",
             "items": {
               "$ref": "#/components/schemas/AuditEventResponse"
             },
             "type": "array"
           },
           "page": {
+            "description": "Zero-based page number.",
             "format": "int32",
+            "minimum": 0,
             "type": "integer"
           },
           "size": {
+            "description": "Effective page size, from 1 through 200.",
             "format": "int32",
+            "maximum": 200,
+            "minimum": 1,
             "type": "integer"
           },
           "totalElements": {
+            "description": "Total matching resources across all pages.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           }
         },
         "type": "object"
       },
       "PageResponseDatasourceResponse": {
+        "description": "Zero-based page of resource results.",
         "properties": {
           "content": {
+            "description": "Results in this page.",
             "items": {
               "$ref": "#/components/schemas/DatasourceResponse"
             },
             "type": "array"
           },
           "page": {
+            "description": "Zero-based page number.",
             "format": "int32",
+            "minimum": 0,
             "type": "integer"
           },
           "size": {
+            "description": "Effective page size, from 1 through 200.",
             "format": "int32",
+            "maximum": 200,
+            "minimum": 1,
             "type": "integer"
           },
           "totalElements": {
+            "description": "Total matching resources across all pages.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           }
         },
         "type": "object"
       },
       "PageResponseJobDefinitionResponse": {
+        "description": "Zero-based page of resource results.",
         "properties": {
           "content": {
+            "description": "Results in this page.",
             "items": {
               "$ref": "#/components/schemas/JobDefinitionResponse"
             },
             "type": "array"
           },
           "page": {
+            "description": "Zero-based page number.",
             "format": "int32",
+            "minimum": 0,
             "type": "integer"
           },
           "size": {
+            "description": "Effective page size, from 1 through 200.",
             "format": "int32",
+            "maximum": 200,
+            "minimum": 1,
             "type": "integer"
           },
           "totalElements": {
+            "description": "Total matching resources across all pages.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           }
         },
         "type": "object"
       },
       "PageResponseJobRunResponse": {
+        "description": "Zero-based page of resource results.",
         "properties": {
           "content": {
+            "description": "Results in this page.",
             "items": {
               "$ref": "#/components/schemas/JobRunResponse"
             },
             "type": "array"
           },
           "page": {
+            "description": "Zero-based page number.",
             "format": "int32",
+            "minimum": 0,
             "type": "integer"
           },
           "size": {
+            "description": "Effective page size, from 1 through 200.",
             "format": "int32",
+            "maximum": 200,
+            "minimum": 1,
             "type": "integer"
           },
           "totalElements": {
+            "description": "Total matching resources across all pages.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           }
         },
         "type": "object"
       },
       "PageResponseUserResponse": {
+        "description": "Zero-based page of resource results.",
         "properties": {
           "content": {
+            "description": "Results in this page.",
             "items": {
               "$ref": "#/components/schemas/UserResponse"
             },
             "type": "array"
           },
           "page": {
+            "description": "Zero-based page number.",
             "format": "int32",
+            "minimum": 0,
             "type": "integer"
           },
           "size": {
+            "description": "Effective page size, from 1 through 200.",
             "format": "int32",
+            "maximum": 200,
+            "minimum": 1,
             "type": "integer"
           },
           "totalElements": {
+            "description": "Total matching resources across all pages.",
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           }
         },
         "type": "object"
       },
       "PasswordUpdate": {
+        "description": "ADMIN password reset request.",
         "properties": {
           "newPassword": {
-            "type": "string"
+            "description": "Replacement password accepted only for hashing and never returned.",
+            "type": "string",
+            "writeOnly": true
           }
         },
         "required": [
@@ -918,12 +1341,39 @@
         ],
         "type": "object"
       },
+      "ProblemDetail": {
+        "description": "RFC 7807 problem response. Dynamic detail text is credential-redacted.",
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "format": "uri-reference",
+            "type": "string"
+          },
+          "status": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "format": "uri-reference",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "RoleUpdate": {
+        "description": "ADMIN update for a user's global role and enabled state.",
         "properties": {
           "enabled": {
+            "description": "Whether the account may authenticate.",
             "type": "boolean"
           },
           "role": {
+            "description": "Replacement global role.",
             "enum": [
               "ADMIN",
               "OPERATOR",
@@ -938,43 +1388,59 @@
         "type": "object"
       },
       "RunLogResponse": {
+        "description": "Credential-redacted run diagnostics bounded to 256 KiB of persisted content.",
         "properties": {
           "capturedAt": {
+            "description": "Initial capture timestamp in UTC.",
             "format": "date-time",
+            "nullable": true,
             "type": "string"
           },
           "capturedSize": {
+            "description": "Total captured byte count before bounded retention.",
             "format": "int32",
+            "minimum": 0,
             "type": "integer"
           },
           "content": {
+            "description": "Redacted diagnostic text. Truncated content contains [TRUNCATED: middle omitted].",
+            "maxLength": 262144,
             "type": "string"
           },
           "formatVersion": {
+            "description": "Persisted diagnostic format version.",
             "format": "int32",
+            "minimum": 1,
             "type": "integer"
           },
           "runId": {
+            "description": "Run identifier.",
             "format": "uuid",
             "type": "string"
           },
           "truncated": {
+            "description": "Whether captured output exceeded the persisted content bound.",
             "type": "boolean"
           },
           "updatedAt": {
+            "description": "Last capture update timestamp in UTC.",
             "format": "date-time",
+            "nullable": true,
             "type": "string"
           }
         },
         "type": "object"
       },
       "UserIdentityResponse": {
+        "description": "Identity associated with the current authenticated session.",
         "properties": {
           "id": {
+            "description": "User identifier.",
             "format": "uuid",
             "type": "string"
           },
           "role": {
+            "description": "Global authorization role.",
             "enum": [
               "ADMIN",
               "OPERATOR",
@@ -983,17 +1449,22 @@
             "type": "string"
           },
           "username": {
+            "description": "Current username.",
             "type": "string"
           }
         },
         "type": "object"
       },
       "UserRequest": {
+        "description": "ADMIN request for creating a user.",
         "properties": {
           "password": {
-            "type": "string"
+            "description": "Initial password accepted only for hashing and never returned.",
+            "type": "string",
+            "writeOnly": true
           },
           "role": {
+            "description": "Initial global role.",
             "enum": [
               "ADMIN",
               "OPERATOR",
@@ -1002,6 +1473,8 @@
             "type": "string"
           },
           "username": {
+            "description": "Unique username.",
+            "example": "replication-operator",
             "type": "string"
           }
         },
@@ -1013,19 +1486,24 @@
         "type": "object"
       },
       "UserResponse": {
+        "description": "Public user administration record. Password hashes and credentials are never exposed.",
         "properties": {
           "createdAt": {
+            "description": "Creation timestamp in UTC.",
             "format": "date-time",
             "type": "string"
           },
           "enabled": {
+            "description": "Whether the account may authenticate.",
             "type": "boolean"
           },
           "id": {
+            "description": "User identifier.",
             "format": "uuid",
             "type": "string"
           },
           "role": {
+            "description": "Global authorization role.",
             "enum": [
               "ADMIN",
               "OPERATOR",
@@ -1034,28 +1512,47 @@
             "type": "string"
           },
           "updatedAt": {
+            "description": "Last update timestamp in UTC.",
             "format": "date-time",
             "type": "string"
           },
           "username": {
+            "description": "Current username.",
             "type": "string"
           }
         },
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "csrfHeader": {
+        "description": "CSRF header for protected state-changing requests. Its value matches the XSRF-TOKEN cookie.",
+        "in": "header",
+        "name": "X-XSRF-TOKEN",
+        "type": "apiKey"
+      },
+      "sessionCookie": {
+        "description": "Session cookie issued by an authenticated, same-origin ReplicaDB Server deployment.",
+        "in": "cookie",
+        "name": "JSESSIONID",
+        "type": "apiKey"
+      }
     }
   },
   "info": {
-    "title": "OpenAPI definition",
-    "version": "v0"
+    "description": "Static contract for the authenticated ReplicaDB Server control plane. Use it against a same-origin deployment that owns the session and CSRF cookies.",
+    "title": "ReplicaDB Server API",
+    "version": "v1"
   },
   "openapi": "3.0.1",
   "paths": {
     "/api/v1/audit": {
       "get": {
-        "operationId": "list_6",
+        "description": "Returns durable audit events matching optional actor, action, resource, and UTC time filters. ADMIN is required.",
+        "operationId": "listAuditEvents",
         "parameters": [
           {
+            "description": "Actor user identifier. System actors do not have a user identifier.",
             "in": "query",
             "name": "actorUserId",
             "required": false,
@@ -1065,6 +1562,7 @@
             }
           },
           {
+            "description": "Case-insensitive AuditAction enum name.",
             "in": "query",
             "name": "action",
             "required": false,
@@ -1073,14 +1571,23 @@
             }
           },
           {
+            "description": "Case-insensitive resource category.",
             "in": "query",
             "name": "resourceType",
             "required": false,
             "schema": {
+              "enum": [
+                "USER",
+                "DATASOURCE",
+                "JOB_DEFINITION",
+                "JOB_RUN",
+                "SESSION"
+              ],
               "type": "string"
             }
           },
           {
+            "description": "Exact audited resource identifier.",
             "in": "query",
             "name": "resourceId",
             "required": false,
@@ -1089,6 +1596,7 @@
             }
           },
           {
+            "description": "Inclusive lower event timestamp bound in UTC ISO-8601 date-time format.",
             "in": "query",
             "name": "from",
             "required": false,
@@ -1098,6 +1606,7 @@
             }
           },
           {
+            "description": "Exclusive upper event timestamp bound in UTC ISO-8601 date-time format.",
             "in": "query",
             "name": "to",
             "required": false,
@@ -1107,21 +1616,26 @@
             }
           },
           {
+            "description": "Zero-based page number.",
             "in": "query",
             "name": "page",
             "required": false,
             "schema": {
-              "format": "int32",
-              "type": "integer"
+              "default": "0",
+              "minimum": 0,
+              "type": "string"
             }
           },
           {
+            "description": "Requested page size, clamped to the range 1 through 200.",
             "in": "query",
             "name": "size",
             "required": false,
             "schema": {
-              "format": "int32",
-              "type": "integer"
+              "default": "50",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "string"
             }
           }
         ],
@@ -1134,17 +1648,33 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Audit events returned"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List audit events",
         "tags": [
-          "audit-event-controller"
+          "Audit"
         ]
       }
     },
     "/api/v1/auth/csrf": {
       "get": {
-        "operationId": "csrf",
+        "description": "Initializes the XSRF-TOKEN cookie and returns the framework header and parameter names. Call this public endpoint before protected state-changing requests.",
+        "operationId": "getCsrfToken",
         "responses": {
           "200": {
             "content": {
@@ -1154,16 +1684,21 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "CSRF contract initialized"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerErrorProblem"
           }
         },
+        "summary": "Initialize CSRF protection",
         "tags": [
-          "auth-controller"
+          "Authentication"
         ]
       }
     },
     "/api/v1/auth/login": {
       "post": {
+        "description": "Authenticates a user and establishes the server-owned session. Login is public and exempt from CSRF, but database-backed throttling limits repeated failures by account and source address.",
         "operationId": "login",
         "requestBody": {
           "content": {
@@ -1184,30 +1719,55 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Authenticated identity returned and session established"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequestsProblem"
           }
         },
+        "summary": "Create an authenticated session",
         "tags": [
-          "auth-controller"
+          "Authentication"
         ]
       }
     },
     "/api/v1/auth/logout": {
       "post": {
+        "description": "Invalidates the current server session and clears its security context. The session cookie and CSRF header are required.",
         "operationId": "logout",
         "responses": {
-          "200": {
-            "description": "OK"
+          "204": {
+            "description": "Session ended"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "End the authenticated session",
         "tags": [
-          "auth-controller"
+          "Authentication"
         ]
       }
     },
     "/api/v1/auth/me": {
       "get": {
-        "operationId": "me",
+        "description": "Returns the user identifier, username, and global role associated with the current session.",
+        "operationId": "getCurrentIdentity",
         "responses": {
           "200": {
             "content": {
@@ -1217,19 +1777,30 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Current identity returned"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Get the current identity",
         "tags": [
-          "auth-controller"
+          "Authentication"
         ]
       }
     },
     "/api/v1/dashboard/summary": {
       "get": {
-        "operationId": "summary",
+        "description": "Aggregates only jobs visible to the authenticated identity. Omitted bounds produce an effective 24-hour window ending at the current server time; from must be before to.",
+        "operationId": "getDashboardSummary",
         "parameters": [
           {
+            "description": "Optional inclusive window start in UTC ISO-8601 date-time format. Defaults to 24 hours before the effective end.",
             "in": "query",
             "name": "from",
             "required": false,
@@ -1239,6 +1810,7 @@
             }
           },
           {
+            "description": "Optional exclusive window end in UTC ISO-8601 date-time format. Defaults to current server time.",
             "in": "query",
             "name": "to",
             "required": false,
@@ -1257,41 +1829,64 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Permission-aware dashboard summary returned"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Get the dashboard summary",
         "tags": [
-          "dashboard-controller"
+          "Dashboard"
         ]
       }
     },
     "/api/v1/datasources": {
       "get": {
-        "operationId": "list_4",
+        "description": "Returns only visible profiles. The optional role filter selects connector source or sink capability; it is not a user-role filter.",
+        "operationId": "listDatasources",
         "parameters": [
           {
+            "description": "Zero-based page number.",
             "in": "query",
             "name": "page",
             "required": false,
             "schema": {
-              "format": "int32",
-              "type": "integer"
+              "default": "0",
+              "minimum": 0,
+              "type": "string"
             }
           },
           {
+            "description": "Requested page size, clamped to the range 1 through 200.",
             "in": "query",
             "name": "size",
             "required": false,
             "schema": {
-              "format": "int32",
-              "type": "integer"
+              "default": "50",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "string"
             }
           },
           {
+            "description": "Connector capability filter.",
             "in": "query",
             "name": "role",
             "required": false,
             "schema": {
+              "enum": [
+                "source",
+                "sink"
+              ],
               "type": "string"
             }
           }
@@ -1305,15 +1900,28 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Visible datasources returned"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List visible datasources",
         "tags": [
-          "datasource-controller"
+          "Datasources"
         ]
       },
       "post": {
-        "operationId": "create_2",
+        "description": "Creates an encrypted datasource profile after validating its connector scheme. Responses expose only redacted connection metadata. ADMIN and CSRF are required.",
+        "operationId": "createDatasource",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1325,7 +1933,7 @@
           "required": true
         },
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "*/*": {
                 "schema": {
@@ -1333,19 +1941,40 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Datasource created"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Create a datasource",
         "tags": [
-          "datasource-controller"
+          "Datasources"
         ]
       }
     },
     "/api/v1/datasources/{datasourceId}/permissions": {
       "get": {
-        "operationId": "list_5",
+        "description": "Returns grants grouped by user. ADMIN is required.",
+        "operationId": "listDatasourcePermissions",
         "parameters": [
           {
+            "description": "Datasource identifier.",
             "in": "path",
             "name": "datasourceId",
             "required": true,
@@ -1367,19 +1996,36 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Datasource grants returned"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List datasource permissions",
         "tags": [
-          "datasource-permission-controller"
+          "Datasource permissions"
         ]
       }
     },
     "/api/v1/datasources/{datasourceId}/permissions/{userId}": {
       "delete": {
-        "operationId": "revoke",
+        "description": "Removes all datasource grants for one user. ADMIN and CSRF are required.",
+        "operationId": "revokeDatasourcePermissions",
         "parameters": [
           {
+            "description": "Datasource identifier.",
             "in": "path",
             "name": "datasourceId",
             "required": true,
@@ -1389,6 +2035,7 @@
             }
           },
           {
+            "description": "Target user identifier.",
             "in": "path",
             "name": "userId",
             "required": true,
@@ -1399,18 +2046,36 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
+          "204": {
+            "description": "Datasource grants revoked"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Revoke datasource permissions",
         "tags": [
-          "datasource-permission-controller"
+          "Datasource permissions"
         ]
       },
       "put": {
-        "operationId": "replace_1",
+        "description": "Atomically replaces one user's VIEW, USE, and EDIT grant set. ADMIN and CSRF are required.",
+        "operationId": "replaceDatasourcePermissions",
         "parameters": [
           {
+            "description": "Datasource identifier.",
             "in": "path",
             "name": "datasourceId",
             "required": true,
@@ -1420,6 +2085,7 @@
             }
           },
           {
+            "description": "Target user identifier.",
             "in": "path",
             "name": "userId",
             "required": true,
@@ -1448,19 +2114,40 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Datasource grants replaced"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Replace datasource permissions",
         "tags": [
-          "datasource-permission-controller"
+          "Datasource permissions"
         ]
       }
     },
     "/api/v1/datasources/{id}": {
       "delete": {
-        "operationId": "delete_3",
+        "description": "Deletes an unreferenced datasource. ADMIN and CSRF are required; profiles bound to jobs return a conflict.",
+        "operationId": "deleteDatasource",
         "parameters": [
           {
+            "description": "Datasource identifier.",
             "in": "path",
             "name": "id",
             "required": true,
@@ -1471,18 +2158,39 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
+          "204": {
+            "description": "Datasource deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Delete a datasource",
         "tags": [
-          "datasource-controller"
+          "Datasources"
         ]
       },
       "get": {
-        "operationId": "get_4",
+        "description": "Returns redacted profile metadata and capability flags after VIEW permission. Stored security values are never rehydrated in the response.",
+        "operationId": "getDatasource",
         "parameters": [
           {
+            "description": "Datasource identifier.",
             "in": "path",
             "name": "id",
             "required": true,
@@ -1501,17 +2209,34 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Datasource returned"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Get a datasource",
         "tags": [
-          "datasource-controller"
+          "Datasources"
         ]
       },
       "put": {
-        "operationId": "update_2",
+        "description": "Updates a profile after EDIT permission. Omitted or blank security inputs preserve stored encrypted values; clearSecurityKeys explicitly removes named values. CSRF is required.",
+        "operationId": "updateDatasource",
         "parameters": [
           {
+            "description": "Datasource identifier.",
             "in": "path",
             "name": "id",
             "required": true,
@@ -1540,34 +2265,62 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Datasource updated"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Update a datasource",
         "tags": [
-          "datasource-controller"
+          "Datasources"
         ]
       }
     },
     "/api/v1/jobs": {
       "get": {
-        "operationId": "list_2",
+        "description": "Returns only jobs visible to the authenticated identity. Pagination defaults to page 0 and size 50; size is clamped to 1 through 200.",
+        "operationId": "listJobDefinitions",
         "parameters": [
           {
+            "description": "Zero-based page number.",
             "in": "query",
             "name": "page",
             "required": false,
             "schema": {
-              "format": "int32",
-              "type": "integer"
+              "default": "0",
+              "minimum": 0,
+              "type": "string"
             }
           },
           {
+            "description": "Requested page size, clamped to the range 1 through 200.",
             "in": "query",
             "name": "size",
             "required": false,
             "schema": {
-              "format": "int32",
-              "type": "integer"
+              "default": "50",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "string"
             }
           }
         ],
@@ -1580,15 +2333,28 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Visible job definitions returned"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List visible job definitions",
         "tags": [
-          "job-definition-controller"
+          "Jobs"
         ]
       },
       "post": {
-        "operationId": "create_1",
+        "description": "Creates a job after validating datasource USE access, connector roles, mode support, and single-job limits. Protected mutations require the session cookie and CSRF header.",
+        "operationId": "createJobDefinition",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1600,7 +2366,7 @@
           "required": true
         },
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "*/*": {
                 "schema": {
@@ -1608,19 +2374,40 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Job definition created"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Create a job definition",
         "tags": [
-          "job-definition-controller"
+          "Jobs"
         ]
       }
     },
     "/api/v1/jobs/{id}": {
       "delete": {
-        "operationId": "delete_2",
+        "description": "Deletes an inactive job and its dependent history after unscheduling it. ADMIN is required; active runs cause a conflict. Protected mutations require the session cookie and CSRF header.",
+        "operationId": "deleteJobDefinition",
         "parameters": [
           {
+            "description": "Job definition identifier.",
             "in": "path",
             "name": "id",
             "required": true,
@@ -1634,24 +2421,36 @@
           "204": {
             "description": "Job deleted"
           },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
           "403": {
-            "description": "Administrator access required"
+            "$ref": "#/components/responses/ForbiddenProblem"
           },
           "404": {
-            "description": "Job definition not found"
+            "$ref": "#/components/responses/NotFoundProblem"
           },
           "409": {
-            "description": "Job has an active run or cannot be unscheduled"
+            "$ref": "#/components/responses/ConflictProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Delete a job definition",
         "tags": [
-          "job-definition-controller"
+          "Jobs"
         ]
       },
       "get": {
-        "operationId": "get_3",
+        "description": "Returns one job definition when the authenticated identity has VIEW permission. Datasource summaries are omitted when their metadata is not visible.",
+        "operationId": "getJobDefinition",
         "parameters": [
           {
+            "description": "Job definition identifier.",
             "in": "path",
             "name": "id",
             "required": true,
@@ -1670,17 +2469,34 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Job definition returned"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Get a job definition",
         "tags": [
-          "job-definition-controller"
+          "Jobs"
         ]
       },
       "put": {
-        "operationId": "update_1",
+        "description": "Replaces editable job settings after EDIT permission and datasource capability checks. The job name is immutable. Protected mutations require the session cookie and CSRF header.",
+        "operationId": "updateJobDefinition",
         "parameters": [
           {
+            "description": "Job definition identifier.",
             "in": "path",
             "name": "id",
             "required": true,
@@ -1709,19 +2525,40 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Job definition updated"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Update a job definition",
         "tags": [
-          "job-definition-controller"
+          "Jobs"
         ]
       }
     },
     "/api/v1/jobs/{jobDefinitionId}/permissions": {
       "get": {
-        "operationId": "list_3",
+        "description": "Returns grants grouped by user after EDIT permission on the job.",
+        "operationId": "listJobPermissions",
         "parameters": [
           {
+            "description": "Job definition identifier.",
             "in": "path",
             "name": "jobDefinitionId",
             "required": true,
@@ -1743,19 +2580,36 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Job grants returned"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List job permissions",
         "tags": [
-          "job-permission-controller"
+          "Job permissions"
         ]
       }
     },
     "/api/v1/jobs/{jobDefinitionId}/permissions/{userId}": {
       "delete": {
-        "operationId": "delete_1",
+        "description": "Removes all job grants for one user after EDIT permission. CSRF is required.",
+        "operationId": "revokeJobPermissions",
         "parameters": [
           {
+            "description": "Job definition identifier.",
             "in": "path",
             "name": "jobDefinitionId",
             "required": true,
@@ -1765,6 +2619,7 @@
             }
           },
           {
+            "description": "Target user identifier.",
             "in": "path",
             "name": "userId",
             "required": true,
@@ -1775,18 +2630,36 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
+          "204": {
+            "description": "Job grants revoked"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Revoke job permissions",
         "tags": [
-          "job-permission-controller"
+          "Job permissions"
         ]
       },
       "put": {
-        "operationId": "replace",
+        "description": "Atomically replaces one user's VIEW, EDIT, EXECUTE, and CANCEL grants after EDIT permission. CSRF is required.",
+        "operationId": "replaceJobPermissions",
         "parameters": [
           {
+            "description": "Job definition identifier.",
             "in": "path",
             "name": "jobDefinitionId",
             "required": true,
@@ -1796,6 +2669,7 @@
             }
           },
           {
+            "description": "Target user identifier.",
             "in": "path",
             "name": "userId",
             "required": true,
@@ -1824,19 +2698,40 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Job grants replaced"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Replace job permissions",
         "tags": [
-          "job-permission-controller"
+          "Job permissions"
         ]
       }
     },
     "/api/v1/jobs/{jobDefinitionId}/runs": {
       "get": {
-        "operationId": "listForJob",
+        "description": "Returns run history for one job after VIEW permission. Status values are case-insensitive; paging defaults to page 0 and size 50 with a size cap of 200.",
+        "operationId": "listJobRunsForJob",
         "parameters": [
           {
+            "description": "Job definition identifier.",
             "in": "path",
             "name": "jobDefinitionId",
             "required": true,
@@ -1846,6 +2741,7 @@
             }
           },
           {
+            "description": "Optional repeated run statuses: PENDING, RUNNING, SUCCEEDED, FAILED, CANCEL_REQUESTED, CANCELLED, or RETRY_SCHEDULED.",
             "in": "query",
             "name": "status",
             "required": false,
@@ -1857,6 +2753,7 @@
             }
           },
           {
+            "description": "Inclusive lower timestamp bound in UTC ISO-8601 date-time format.",
             "in": "query",
             "name": "from",
             "required": false,
@@ -1866,6 +2763,7 @@
             }
           },
           {
+            "description": "Exclusive upper timestamp bound in UTC ISO-8601 date-time format.",
             "in": "query",
             "name": "to",
             "required": false,
@@ -1875,21 +2773,26 @@
             }
           },
           {
+            "description": "Zero-based page number.",
             "in": "query",
             "name": "page",
             "required": false,
             "schema": {
-              "format": "int32",
-              "type": "integer"
+              "default": "0",
+              "minimum": 0,
+              "type": "string"
             }
           },
           {
+            "description": "Requested page size, clamped to the range 1 through 200.",
             "in": "query",
             "name": "size",
             "required": false,
             "schema": {
-              "format": "int32",
-              "type": "integer"
+              "default": "50",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "string"
             }
           }
         ],
@@ -1902,17 +2805,37 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Job run history returned"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List runs for a job",
         "tags": [
-          "job-run-controller"
+          "Runs"
         ]
       },
       "post": {
-        "operationId": "trigger",
+        "description": "Creates or replays one pending manual run after EXECUTE permission. The idempotency key is scoped to manual trigger requests and remains replay-safe within the server retention window. Protected mutations require the session cookie and CSRF header.",
+        "operationId": "triggerJobRun",
         "parameters": [
           {
+            "description": "Job definition identifier.",
             "in": "path",
             "name": "jobDefinitionId",
             "required": true,
@@ -1922,16 +2845,19 @@
             }
           },
           {
+            "description": "Required non-blank key for replay-safe manual triggering; maximum 255 characters.",
             "in": "header",
             "name": "Idempotency-Key",
-            "required": false,
+            "required": true,
             "schema": {
+              "example": "orders-sync-20260907-001",
+              "maxLength": 255,
               "type": "string"
             }
           }
         ],
         "responses": {
-          "200": {
+          "202": {
             "content": {
               "*/*": {
                 "schema": {
@@ -1939,19 +2865,43 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Run accepted or an existing idempotent result replayed"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Trigger a manual run",
         "tags": [
-          "job-run-controller"
+          "Runs"
         ]
       }
     },
     "/api/v1/jobs/{jobDefinitionId}/schedule": {
       "delete": {
-        "operationId": "delete",
+        "description": "Removes the persisted schedule and Quartz trigger after EDIT permission. Repeated deletion is idempotent. Protected mutations require the session cookie and CSRF header.",
+        "operationId": "deleteJobSchedule",
         "parameters": [
           {
+            "description": "Job definition identifier.",
             "in": "path",
             "name": "jobDefinitionId",
             "required": true,
@@ -1962,18 +2912,36 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "OK"
+          "204": {
+            "description": "Schedule removed or already absent"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Delete a job schedule",
         "tags": [
-          "job-schedule-controller"
+          "Schedules"
         ]
       },
       "get": {
-        "operationId": "get_2",
+        "description": "Returns the recurring schedule and next fire time after VIEW permission. A job without a schedule returns not found.",
+        "operationId": "getJobSchedule",
         "parameters": [
           {
+            "description": "Job definition identifier.",
             "in": "path",
             "name": "jobDefinitionId",
             "required": true,
@@ -1992,17 +2960,34 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Schedule returned"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Get a job schedule",
         "tags": [
-          "job-schedule-controller"
+          "Schedules"
         ]
       },
       "put": {
-        "operationId": "upsert",
+        "description": "Validates and stores the Quartz CRON schedule after EDIT permission, then reconciles the durable scheduler trigger. Blank time zones default to UTC. Protected mutations require the session cookie and CSRF header.",
+        "operationId": "upsertJobSchedule",
         "parameters": [
           {
+            "description": "Job definition identifier.",
             "in": "path",
             "name": "jobDefinitionId",
             "required": true,
@@ -2031,19 +3016,40 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Schedule created or replaced"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Create or replace a job schedule",
         "tags": [
-          "job-schedule-controller"
+          "Schedules"
         ]
       }
     },
     "/api/v1/runs": {
       "get": {
-        "operationId": "list_1",
+        "description": "Returns runs only for jobs visible to the authenticated identity, with optional status and UTC time bounds.",
+        "operationId": "listJobRuns",
         "parameters": [
           {
+            "description": "Optional repeated run statuses: PENDING, RUNNING, SUCCEEDED, FAILED, CANCEL_REQUESTED, CANCELLED, or RETRY_SCHEDULED.",
             "in": "query",
             "name": "status",
             "required": false,
@@ -2055,6 +3061,7 @@
             }
           },
           {
+            "description": "Inclusive lower timestamp bound in UTC ISO-8601 date-time format.",
             "in": "query",
             "name": "from",
             "required": false,
@@ -2064,6 +3071,7 @@
             }
           },
           {
+            "description": "Exclusive upper timestamp bound in UTC ISO-8601 date-time format.",
             "in": "query",
             "name": "to",
             "required": false,
@@ -2073,21 +3081,26 @@
             }
           },
           {
+            "description": "Zero-based page number.",
             "in": "query",
             "name": "page",
             "required": false,
             "schema": {
-              "format": "int32",
-              "type": "integer"
+              "default": "0",
+              "minimum": 0,
+              "type": "string"
             }
           },
           {
+            "description": "Requested page size, clamped to the range 1 through 200.",
             "in": "query",
             "name": "size",
             "required": false,
             "schema": {
-              "format": "int32",
-              "type": "integer"
+              "default": "50",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "string"
             }
           }
         ],
@@ -2100,19 +3113,33 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Visible runs returned"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List visible runs",
         "tags": [
-          "job-run-controller"
+          "Runs"
         ]
       }
     },
     "/api/v1/runs/{id}": {
       "get": {
-        "operationId": "get_1",
+        "description": "Returns durable state and attempt information after VIEW permission on the owning job.",
+        "operationId": "getJobRun",
         "parameters": [
           {
+            "description": "Run identifier.",
             "in": "path",
             "name": "id",
             "required": true,
@@ -2131,19 +3158,36 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Run returned"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Get a run",
         "tags": [
-          "job-run-controller"
+          "Runs"
         ]
       }
     },
     "/api/v1/runs/{id}/cancel": {
       "post": {
-        "operationId": "cancel",
+        "description": "Cancels pending work or persists cancellation intent for a running attempt after CANCEL permission. The response includes a mode-specific sink warning. Protected mutations require the session cookie and CSRF header.",
+        "operationId": "cancelJobRun",
         "parameters": [
           {
+            "description": "Run identifier.",
             "in": "path",
             "name": "id",
             "required": true,
@@ -2162,19 +3206,40 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Run cancelled or cancellation requested"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Request run cancellation",
         "tags": [
-          "job-run-controller"
+          "Runs"
         ]
       }
     },
     "/api/v1/runs/{id}/log": {
       "get": {
-        "operationId": "log",
+        "description": "Returns the credential-redacted, size-bounded log after VIEW permission. A run without captured output returns an empty log response.",
+        "operationId": "getJobRunLog",
         "parameters": [
           {
+            "description": "Run identifier.",
             "in": "path",
             "name": "id",
             "required": true,
@@ -2193,19 +3258,36 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Run diagnostics returned"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Get bounded run diagnostics",
         "tags": [
-          "job-run-controller"
+          "Runs"
         ]
       }
     },
     "/api/v1/runs/{id}/retry": {
       "post": {
-        "operationId": "retry",
+        "description": "Creates a new pending attempt linked to the failed run after EXECUTE permission. Retry restarts from the beginning and is not resume behavior. Protected mutations require the session cookie and CSRF header.",
+        "operationId": "retryJobRun",
         "parameters": [
           {
+            "description": "Failed run identifier.",
             "in": "path",
             "name": "id",
             "required": true,
@@ -2216,7 +3298,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "202": {
             "content": {
               "*/*": {
                 "schema": {
@@ -2224,34 +3306,59 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Retry attempt accepted"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Retry a failed run",
         "tags": [
-          "job-run-controller"
+          "Runs"
         ]
       }
     },
     "/api/v1/users": {
       "get": {
-        "operationId": "list",
+        "description": "Returns the ADMIN-visible user catalog with zero-based pagination.",
+        "operationId": "listUsers",
         "parameters": [
           {
+            "description": "Zero-based page number.",
             "in": "query",
             "name": "page",
             "required": false,
             "schema": {
-              "format": "int32",
-              "type": "integer"
+              "default": "0",
+              "minimum": 0,
+              "type": "string"
             }
           },
           {
+            "description": "Requested page size, clamped to the range 1 through 200.",
             "in": "query",
             "name": "size",
             "required": false,
             "schema": {
-              "format": "int32",
-              "type": "integer"
+              "default": "50",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "string"
             }
           }
         ],
@@ -2264,15 +3371,31 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Users returned"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List users",
         "tags": [
-          "user-controller"
+          "Users"
         ]
       },
       "post": {
-        "operationId": "create",
+        "description": "Creates an enabled user with an ADMIN, OPERATOR, or VIEWER role. The password is accepted only for hashing and is never returned. ADMIN and CSRF are required.",
+        "operationId": "createUser",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2284,7 +3407,7 @@
           "required": true
         },
         "responses": {
-          "200": {
+          "201": {
             "content": {
               "*/*": {
                 "schema": {
@@ -2292,19 +3415,40 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "User created"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Create a user",
         "tags": [
-          "user-controller"
+          "Users"
         ]
       }
     },
     "/api/v1/users/{id}": {
       "get": {
-        "operationId": "get",
+        "description": "Returns one user's public identity, global role, and enabled state. ADMIN is required.",
+        "operationId": "getUser",
         "parameters": [
           {
+            "description": "User identifier.",
             "in": "path",
             "name": "id",
             "required": true,
@@ -2323,17 +3467,34 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "User returned"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Get a user",
         "tags": [
-          "user-controller"
+          "Users"
         ]
       },
       "put": {
-        "operationId": "update",
+        "description": "Replaces the global role and enabled state without changing username or password. ADMIN and CSRF are required.",
+        "operationId": "updateUser",
         "parameters": [
           {
+            "description": "User identifier.",
             "in": "path",
             "name": "id",
             "required": true,
@@ -2362,19 +3523,40 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "User updated"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Update a user's role and state",
         "tags": [
-          "user-controller"
+          "Users"
         ]
       }
     },
     "/api/v1/users/{id}/password": {
       "put": {
-        "operationId": "updatePassword",
+        "description": "Hashes and replaces the target user's password without returning it or requiring the old value. ADMIN and CSRF are required.",
+        "operationId": "updateUserPassword",
         "parameters": [
           {
+            "description": "User identifier.",
             "in": "path",
             "name": "id",
             "required": true,
@@ -2403,11 +3585,30 @@
                 }
               }
             },
-            "description": "OK"
+            "description": "Password reset completed"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestProblem"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundProblem"
           }
         },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Reset a user's password",
         "tags": [
-          "user-controller"
+          "Users"
         ]
       }
     }
@@ -2416,6 +3617,88 @@
     {
       "description": "Generated server url",
       "url": "http://localhost"
+    }
+  ],
+  "tags": [
+    {
+      "description": "Managed, encrypted source and sink connection profiles.",
+      "name": "Datasources"
+    },
+    {
+      "description": "ADMIN-managed users, global roles, account state, and password resets.",
+      "name": "Users"
+    },
+    {
+      "description": "Session, CSRF, and current identity operations.",
+      "name": "Authentication"
+    },
+    {
+      "description": "ADMIN-managed VIEW, USE, and EDIT grants for datasources.",
+      "name": "Datasource permissions"
+    },
+    {
+      "description": "Run dispatch, state, diagnostics, cancellation, and retry.",
+      "name": "Runs"
+    },
+    {
+      "description": "Permission-aware operational summaries.",
+      "name": "Dashboard"
+    },
+    {
+      "description": "Job resource grants.",
+      "name": "Job permissions"
+    },
+    {
+      "description": "VIEW, EDIT, EXECUTE, and CANCEL grants for jobs.",
+      "name": "Job permissions"
+    },
+    {
+      "description": "CSRF bootstrap, login, logout, and current session identity.",
+      "name": "Authentication"
+    },
+    {
+      "description": "Administrator-managed users and roles.",
+      "name": "Users"
+    },
+    {
+      "description": "Managed source and sink connection profiles.",
+      "name": "Datasources"
+    },
+    {
+      "description": "ADMIN-filtered, paginated durable audit history.",
+      "name": "Audit"
+    },
+    {
+      "description": "Datasource resource grants.",
+      "name": "Datasource permissions"
+    },
+    {
+      "description": "Managed replication definitions.",
+      "name": "Jobs"
+    },
+    {
+      "description": "Create and manage durable replication job definitions.",
+      "name": "Jobs"
+    },
+    {
+      "description": "Dispatch, inspect, cancel, retry, and diagnose durable job runs.",
+      "name": "Runs"
+    },
+    {
+      "description": "Recurring Quartz schedules for jobs.",
+      "name": "Schedules"
+    },
+    {
+      "description": "Administrator-visible durable audit history.",
+      "name": "Audit"
+    },
+    {
+      "description": "Permission-aware run and throughput summaries.",
+      "name": "Dashboard"
+    },
+    {
+      "description": "Read and manage one recurring Quartz schedule per job.",
+      "name": "Schedules"
     }
   ]
 }

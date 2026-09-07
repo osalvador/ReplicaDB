@@ -1,5 +1,11 @@
 package org.replicadb.server.job.api;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.replicadb.server.audit.AuditActorResolver;
 import org.replicadb.server.audit.AuditService;
@@ -32,6 +38,8 @@ import java.util.UUID;
 @Profile("api")
 @RequestMapping("/api/v1/jobs/{jobDefinitionId}/schedule")
 @Validated
+@Tag(name = "Schedules", description = "Read and manage one recurring Quartz schedule per job.")
+@SecurityRequirement(name = "sessionCookie")
 public class JobScheduleController {
 
     private final JobDefinitionRepository jobDefinitionRepository;
@@ -56,7 +64,17 @@ public class JobScheduleController {
     }
 
     @PutMapping
-    public JobScheduleResponse upsert(@PathVariable UUID jobDefinitionId,
+        @Operation(operationId = "upsertJobSchedule", summary = "Create or replace a job schedule",
+            description = "Validates and stores the Quartz CRON schedule after EDIT permission, then reconciles the durable scheduler trigger. Blank time zones default to UTC. Protected mutations require the session cookie and CSRF header.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Schedule created or replaced"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
+        public JobScheduleResponse upsert(
+                          @Parameter(description = "Job definition identifier.", required = true) @PathVariable UUID jobDefinitionId,
                                       @Valid @RequestBody JobScheduleRequest request,
                                       Authentication authentication) {
         jobAccessService.require(authentication, jobDefinitionId, JobPermissionType.EDIT);
@@ -75,7 +93,17 @@ public class JobScheduleController {
     }
 
     @GetMapping
-    public JobScheduleResponse get(@PathVariable UUID jobDefinitionId, Authentication authentication) {
+        @Operation(operationId = "getJobSchedule", summary = "Get a job schedule",
+            description = "Returns the recurring schedule and next fire time after VIEW permission. A job without a schedule returns not found.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Schedule returned"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
+        public JobScheduleResponse get(
+            @Parameter(description = "Job definition identifier.", required = true) @PathVariable UUID jobDefinitionId,
+            Authentication authentication) {
         jobAccessService.require(authentication, jobDefinitionId, JobPermissionType.VIEW);
         JobSchedule schedule = jobScheduleRepository.findByJobDefinitionId(jobDefinitionId)
                 .orElseThrow(() -> new NoSuchElementException(
@@ -84,7 +112,17 @@ public class JobScheduleController {
     }
 
     @DeleteMapping
-    public ResponseEntity<Void> delete(@PathVariable UUID jobDefinitionId, Authentication authentication) {
+        @Operation(operationId = "deleteJobSchedule", summary = "Delete a job schedule",
+            description = "Removes the persisted schedule and Quartz trigger after EDIT permission. Repeated deletion is idempotent. Protected mutations require the session cookie and CSRF header.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Schedule removed or already absent"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
+        public ResponseEntity<Void> delete(
+            @Parameter(description = "Job definition identifier.", required = true) @PathVariable UUID jobDefinitionId,
+            Authentication authentication) {
         jobAccessService.require(authentication, jobDefinitionId, JobPermissionType.EDIT);
         jobScheduleRepository.delete(jobDefinitionId);
         quartzScheduleService.unschedule(jobDefinitionId);

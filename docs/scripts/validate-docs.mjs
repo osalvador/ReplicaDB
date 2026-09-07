@@ -33,7 +33,12 @@ export function validateBuiltDocs(root = distRoot) {
     titles.set(title, relative(root, page));
     for (const pattern of prohibitedPatterns) if (pattern.test(html)) throw new Error(`Prohibited content in ${relative(root, page)}: ${pattern}`);
   }
-  for (const path of ['index.html', '404.html', 'api/index.html', 'server/index.html', 'wizard/index.html', 'markdown/converter.html', 'pagefind/pagefind-ui.js', 'sitemap-index.xml', 'robots.txt', '.nojekyll']) {
+  for (const path of [
+    'index.html', '404.html', 'api/index.html', 'server/index.html',
+    'server.html', 'docs/docs.html', 'docs/user-guide.html',
+    'wizard/index.html', 'markdown/converter.html',
+    'pagefind/pagefind-ui.js', 'sitemap-index.xml', 'robots.txt', '.nojekyll'
+  ]) {
     if (!existsSync(join(root, path))) throw new Error(`Missing built docs artifact: ${path}`);
   }
   const internalTargets = new Set(pages.map((page) => `/${relative(root, page).replace(/\\/g, '/')}`));

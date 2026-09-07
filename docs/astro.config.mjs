@@ -3,8 +3,17 @@ import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import starlightOpenAPI, { createOpenAPISidebarGroup } from 'starlight-openapi';
+import { finalizeApiReference } from './scripts/finalize-api-reference.mjs';
 
 const openApiSidebarGroup = createOpenAPISidebarGroup();
+
+/** @type {import('astro').AstroIntegration} */
+const apiReferenceFinalizer = {
+  name: 'replicadb-api-tag-titles',
+  hooks: {
+    'astro:build:done': async ({ dir }) => finalizeApiReference(dir)
+  }
+};
 
 export default defineConfig({
   site: 'https://osalvador.github.io/ReplicaDB',
@@ -13,6 +22,7 @@ export default defineConfig({
     format: 'directory'
   },
   integrations: [
+    apiReferenceFinalizer,
     starlight({
       title: 'ReplicaDB Documentation',
       description: 'Documentation for the ReplicaDB CLI and managed server.',
@@ -151,7 +161,8 @@ export default defineConfig({
           sidebar: {
             label: 'API reference',
             group: openApiSidebarGroup,
-            operations: { labels: 'path', sort: 'alphabetical' }
+            operations: { labels: 'summary', sort: 'document' },
+            tags: { sort: 'document' }
           }
         }])
       ]

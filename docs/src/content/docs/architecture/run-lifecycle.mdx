@@ -22,6 +22,11 @@ transitions durable. A retry starts from the beginning with a new attempt and
 `previous_run_id`; it is not resume semantics. A successful finalization is
 the only path that commits an incremental watermark.
 
+Each retry receives a new lease and re-resolves the current datasource
+profiles at claim time; it does not reuse the previous attempt's encrypted
+snapshot. This makes profile edits visible to later attempts while preserving
+the exact inputs used by an attempt already in progress.
+
 Terminal states are `SUCCEEDED`, `CANCELLED`, and `RETRY_SCHEDULED`. A worker
 loss becomes a retry or failure according to the job policy and attempt count;
 it never silently resumes from an unknown row offset.

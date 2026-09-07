@@ -11,8 +11,9 @@
   "packageManager": "npm@10.9.2",
   "scripts": {
     "dev": "astro dev",
-    "check": "astro check",
-    "build": "astro build && npm run stage:static-tools",
+    "check:content-slugs": "node scripts/check-content-slugs.mjs",
+    "check": "npm run check:content-slugs && astro check",
+    "build": "npm run check:content-slugs && astro build && npm run stage:static-tools",
     "preview": "astro preview",
     "validate": "node scripts/validate-docs.mjs",
     "stage:static-tools": "node scripts/stage-static-tools.mjs",
@@ -34,6 +35,7 @@
     "@axe-core/playwright": "^4.10.2",
     "@playwright/test": "1.49.1",
     "jsdom": "25.0.1",
+    "parse5": "^7.3.0",
     "typescript": "5.7.3",
     "vitest": "3.0.5"
   }

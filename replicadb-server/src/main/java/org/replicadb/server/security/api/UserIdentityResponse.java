@@ -1,12 +1,17 @@
 package org.replicadb.server.security.api;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.replicadb.server.security.auth.ReplicaDbUserDetails;
 import org.replicadb.server.security.domain.GlobalRole;
 import org.springframework.security.core.Authentication;
 
 import java.util.UUID;
 
-public record UserIdentityResponse(UUID id, String username, GlobalRole role) {
+@Schema(description = "Identity associated with the current authenticated session.")
+public record UserIdentityResponse(
+    @Schema(description = "User identifier.", format = "uuid") UUID id,
+    @Schema(description = "Current username.") String username,
+    @Schema(description = "Global authorization role.") GlobalRole role) {
 
     public static UserIdentityResponse from(Authentication authentication) {
         if (!(authentication.getPrincipal() instanceof ReplicaDbUserDetails details)) {

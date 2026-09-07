@@ -27,3 +27,10 @@ Directed signals preserve FIFO order; generic refills use cooldown, jitter,
 and contention backoff. This is approximate fairness, not round-robin
 fairness. Duplicate signals can coalesce and a full directed queue can drop a
 wake-up because polling remains the correctness path.
+
+A `DIRECTED` item attempts the signalled run. If it misses, one `FALLBACK`
+attempt looks for other eligible work before normal `GENERIC` polling refills
+free slots. The defaults add up to 100 ms of jitter, a 250 ms generic cooldown,
+and adaptive contention backoff from 25 ms to 2 s with a 30 s decay half-life.
+These delays schedule claim attempts; they do not hold a worker permit while
+waiting.

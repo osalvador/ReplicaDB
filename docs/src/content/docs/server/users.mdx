@@ -3,11 +3,16 @@ title: Users
 description: Administer users, roles, enabled state, and password resets.
 ---
 
+import ScreenshotFrame from '../../../components/ScreenshotFrame.astro';
+import users from '../../../assets/screenshots/server/users.png';
+
 # Users
 
 `/users` is ADMIN-only. It lists users and supports `Create user`, `Edit`, and
 `Reset password for ...`. User edits change role or enabled state; roles are
 `ADMIN`, `OPERATOR`, and `VIEWER`.
+
+<ScreenshotFrame src={users} alt="ReplicaDB user administration page" caption="Administrators create users, assign roles, change account state, and initiate password resets." width={1440} height={900} loading="eager" />
 
 Password reset is an administrator action and is distinct from the disabled
 self-service fields on `My profile`. Keep the reset flow inside the
