@@ -1,0 +1,27 @@
+---
+title: Distributed topology
+description: See how API and worker profiles share PostgreSQL durable state.
+---
+
+import ArchitectureDiagram from '../../../components/ArchitectureDiagram.astro';
+
+# Distributed topology
+
+An API node serves authenticated HTTP requests and owns Quartz schedule
+registration. Worker nodes claim and execute eligible runs. Both use the same
+external PostgreSQL state store in distributed mode.
+
+<ArchitectureDiagram
+  id="distributed-topology"
+  title="API nodes schedule and signal durable work; workers claim it from PostgreSQL."
+  source={'flowchart TB\n  API1[API node] --> PG[(PostgreSQL)]\n  API2[API node] --> PG\n  API1 -->|wake-up| W1[Worker]\n  API2 -->|wake-up| W2[Worker]\n  W1 --> PG\n  W2 --> PG'}
+  fallback={'Multiple API nodes -> one PostgreSQL state store\nAPI nodes -> notification wake-ups -> workers\nWorkers -> PostgreSQL claims, leases, and outcomes'}
+/>
+
+Notifications are wake-ups, not the source of correctness. Workers retain a
+mandatory polling path for eligible work, cancellation requests, and lease
+recovery. PostgreSQL state remains authoritative when a notification is lost,
+duplicated, delayed, or delivered to a worker that cannot claim the run.
+
+Keep worker management health private. A worker is an executor, not a second
+public API, and mixed in-memory/JDBC scheduler ownership is prohibited.

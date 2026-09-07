@@ -1,0 +1,16 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "exclude": [
+    ".astro",
+    "dist",
+    "markdown",
+    "node_modules",
+    "wizard"
+  ]
+}

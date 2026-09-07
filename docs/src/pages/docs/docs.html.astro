@@ -1,0 +1,9 @@
+---
+import LegacyRedirect from '../../components/LegacyRedirect.astro';
+import { findLegacyRoute } from '../../data/legacy-routes';
+
+const route = findLegacyRoute('/docs/docs.html');
+if (!route) throw new Error('Missing legacy route: /docs/docs.html');
+---
+
+<LegacyRedirect route={route} />

@@ -1,0 +1,87 @@
+---
+title: ReplicaDB Documentation
+description: Choose the right ReplicaDB product and get started.
+template: splash
+hero:
+  title: ReplicaDB
+  tagline: High-performance, non-intrusive bulk replication.
+  actions:
+    - text: Choose CLI or Server
+      link: /ReplicaDB/getting-started/choose-cli-or-server/
+      icon: right-arrow
+---
+
+import ArchitectureDiagram from '../../components/ArchitectureDiagram.astro';
+import ProductChoice from '../../components/ProductChoice.astro';
+import ScreenshotFrame from '../../components/ScreenshotFrame.astro';
+import SupportMatrix from '../../components/SupportMatrix.astro';
+import logo from '../../assets/brand/replicadb-logo.png';
+
+ReplicaDB provides two related products for moving data between supported
+systems: a standalone CLI and a managed server. Start with the
+[product comparison](/ReplicaDB/getting-started/choose-cli-or-server/) and
+choose the operating model that matches your workflow.
+
+<ProductChoice
+  title="Choose your working mode"
+  options={[
+    {
+      title: 'Standalone CLI',
+      summary: 'Run direct, non-intrusive bulk replication without a managed metadata database.',
+      href: '/ReplicaDB/getting-started/cli-quickstart/',
+      action: 'Start with the CLI'
+    },
+    {
+      title: 'Managed Server',
+      summary: 'Operate durable, authenticated jobs from a shared control plane.',
+      href: '/ReplicaDB/getting-started/server-quickstart/',
+      action: 'Start with the server'
+    }
+  ]}
+/>
+
+<ArchitectureDiagram
+  id="replication-boundary"
+  title="CLI and managed server share the replication core but have different operating boundaries."
+  source={'flowchart LR\n  CLI[Standalone CLI] --> Core[Replication core]\n  Server[Managed server] --> Core\n  Server --> State[(Durable state)]'}
+  fallback={'Standalone CLI -> replication core\nManaged server -> replication core\nManaged server -> durable state'}
+/>
+
+<SupportMatrix
+  rows={[
+    {
+      name: 'PostgreSQL',
+      roles: 'Source and sink',
+      modes: ['complete', 'incremental'],
+      staging: 'JDBC or bulk path',
+      caveat: 'Match the server and driver versions used by your deployment.'
+    },
+    {
+      name: 'Amazon S3',
+      roles: 'Sink',
+      modes: ['complete'],
+      staging: 'Object storage',
+      caveat: 'Use an environment-managed credential chain.'
+    }
+  ]}
+/>
+
+<ScreenshotFrame
+  src={logo}
+  alt="ReplicaDB wordmark with its geometric data-movement mark"
+  caption="The documentation portal covers both ReplicaDB operating models."
+  width={323}
+  height={153}
+  loading="eager"
+/>
+
+## A task-oriented starting point
+
+- [Choose CLI or Server](/ReplicaDB/getting-started/choose-cli-or-server/) to
+  compare ownership, state, and operational needs.
+- [CLI quickstart](/ReplicaDB/getting-started/cli-quickstart/) to install a
+  release archive and run a first options-file workflow.
+- [Server quickstart](/ReplicaDB/getting-started/server-quickstart/) to start
+  a durable local server with embedded PostgreSQL.
+- [Core concepts](/ReplicaDB/getting-started/concepts/) for the vocabulary used
+  throughout the guides.

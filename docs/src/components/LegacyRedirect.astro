@@ -1,0 +1,60 @@
+---
+import type { LegacyRoute } from '../data/legacy-routes';
+
+interface Props {
+  route: LegacyRoute;
+}
+
+const { route } = Astro.props;
+const basePath = import.meta.env.BASE_URL.endsWith('/')
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`;
+const canonicalUrl = new URL(`${basePath}${route.canonicalPath.replace(/^\//, '')}`, Astro.site).href;
+const fragmentTargets = Object.fromEntries(
+  Object.entries(route.fragments).map(([fragment, targetPath]) => [
+    fragment,
+    new URL(`${basePath}${targetPath.replace(/^\//, '')}`, Astro.site).href
+  ])
+);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content={route.description} />
+    <link rel="canonical" href={canonicalUrl} />
+    <meta http-equiv="refresh" content={`0;url=${canonicalUrl}`} />
+    <title>{route.title}</title>
+    <style is:inline>
+      :root { color-scheme: light; font-family: sans-serif; color: #1B2926; background: #F3F6F4; }
+      body { margin: 0; }
+      main { max-width: 44rem; margin: 12vh auto; padding: 2rem; background: #FFFFFF; border: 1px solid #C8D5D1; border-radius: 8px; }
+      a { color: #0B6E69; font-weight: 700; }
+    </style>
+  </head>
+  <body data-canonical-url={canonicalUrl} data-fragment-targets={JSON.stringify(fragmentTargets)}>
+    <main>
+      <h1>{route.title}</h1>
+      <p>{route.description}</p>
+      <p><a href={canonicalUrl}>Continue to the current guide</a></p>
+      <noscript>
+        <p>JavaScript is disabled. Use the link above to continue.</p>
+      </noscript>
+    </main>
+    <script is:inline>
+      const canonicalUrl = document.body.dataset.canonicalUrl || '/';
+      const fragmentTargets = JSON.parse(document.body.dataset.fragmentTargets || '{}');
+      const fragment = window.location.hash.slice(1);
+      const mappedTarget = fragmentTargets[fragment];
+      if (mappedTarget) {
+        window.location.replace(mappedTarget);
+      } else {
+        const target = new URL(canonicalUrl);
+        if (fragment) target.hash = fragment;
+        window.location.replace(target.toString());
+      }
+    </script>
+  </body>
+</html>

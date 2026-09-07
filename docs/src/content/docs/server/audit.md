@@ -1,0 +1,19 @@
+---
+title: Audit
+description: Review authenticated actions and resource history as an admin.
+---
+
+# Audit
+
+`/audit` is ADMIN-only. The page loads audit events and supports filters for
+`From`, `To`, `Action`, `Resource type`, `Resource ID`, and `Actor`. Use `Apply
+filters` and `Clear filters` to control the query window.
+
+Selecting an event opens `Event detail` with its context. Audit data is a
+diagnostic record, not a source of raw credentials or internal lease identity.
+Treat event detail as sensitive operational data and keep retention aligned
+with the server deployment policy.
+
+Load failures show the `Loading audit events` transition followed by an
+error-state recovery path. Backend authorization remains required even when a
+user knows the audit URL.

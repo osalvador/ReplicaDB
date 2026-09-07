@@ -1,0 +1,47 @@
+---
+title: Choose CLI or Server
+description: Decide whether a standalone CLI or managed server fits your replication workflow.
+---
+
+# Choose CLI or Server
+
+ReplicaDB keeps the direct transfer tool and the managed control plane as
+separate products. Choose based on who owns state, scheduling, and access.
+
+## Standalone CLI
+
+Choose the CLI when a script, pipeline, or operator owns each replication
+invocation. It runs on Java 17 or newer, accepts command-line options or an
+options file, and does not require ReplicaDB metadata storage.
+
+The CLI is a good fit when you need:
+
+- a direct source-to-sink transfer from a terminal or scheduler;
+- an existing secrets and logging workflow around the process; or
+- the smallest operational footprint for one host.
+
+[Start the CLI quickstart](/ReplicaDB/getting-started/cli-quickstart/).
+
+## Managed Server
+
+Choose the managed server when replication needs durable jobs, schedules,
+authenticated access, run history, diagnostics, or multiple operators. The
+server uses PostgreSQL metadata and exposes a web control plane; local mode
+manages embedded PostgreSQL, while `api` and `worker` deployments use external
+PostgreSQL.
+
+The server is a good fit when you need:
+
+- reusable datasource profiles and jobs;
+- permissions, audit history, and shared visibility; or
+- local or distributed execution with durable recovery state.
+
+[Start the server quickstart](/ReplicaDB/getting-started/server-quickstart/).
+
+## They are related, not interchangeable
+
+Both products use the ReplicaDB replication core and support the same broad
+connector family, subject to connector-specific limits. A server installation
+does not move CLI state, and a CLI invocation does not create managed jobs.
+Keep `REPLICADB_HOME` for CLI installations and
+`REPLICADB_SERVER_HOME` for server installations.

@@ -1,0 +1,40 @@
+---
+title: Connector support
+description: Evidence-backed connector roles, modes, and runtime caveats.
+---
+
+import SupportMatrix from '../../../components/SupportMatrix.astro';
+import capabilities from '../../../data/connector-capabilities.json';
+
+# Connector support
+
+This matrix is generated from the maintained capability source and checked
+against the Java manager registry. Roles describe whether a manager can be a
+source or sink; modes describe the supported user-visible replication modes.
+Connector pages add connection, driver, type, staging, and security details.
+
+<SupportMatrix
+  caption="ReplicaDB connector capability matrix"
+  rows={capabilities.map((connector) => ({
+    name: connector.displayName,
+    roles: connector.roles.join(', '),
+    modes: connector.modes,
+    staging: connector.staging ? 'Supported where the mode requires it' : 'Not provided',
+    caveat: connector.caveats[0]
+  }))}
+/>
+
+## Read the connector guides
+
+- [Oracle](/ReplicaDB/connectors/oracle/)
+- [PostgreSQL](/ReplicaDB/connectors/postgresql/)
+- [MySQL and MariaDB](/ReplicaDB/connectors/mysql-mariadb/)
+- [SQL Server and Azure SQL](/ReplicaDB/connectors/sql-server/)
+- [IBM Db2](/ReplicaDB/connectors/db2/)
+- [SQLite](/ReplicaDB/connectors/sqlite/)
+- [MongoDB](/ReplicaDB/connectors/mongodb/)
+- [CSV and local files](/ReplicaDB/connectors/csv/)
+- [Amazon S3](/ReplicaDB/connectors/amazon-s3/)
+- [Kafka](/ReplicaDB/connectors/kafka/)
+- [Denodo](/ReplicaDB/connectors/denodo/)
+- [Generic JDBC and legacy managers](/ReplicaDB/connectors/generic-jdbc/)

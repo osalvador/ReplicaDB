@@ -187,7 +187,7 @@ ReplicaDB already comes with all the JDBC drivers for the [Compatible Databases]
 
 First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory. Each driver `.jar` file also has a specific driver class that defines the entry-point to the driver.
 
-If your database is JDBC-compliant and not appear in the [Compatible Databases](#compatible-databases) list, you must set the driver class name in the configuration properties as [extra JDBC parameter](https://osalvador.github.io/ReplicaDB/docs/docs.html#32-connecting-to-a-database-server).
+If your database is JDBC-compliant and not appear in the [Compatible Databases](#compatible-databases) list, you must set the driver class name in the configuration properties as [extra JDBC parameter](https://osalvador.github.io/ReplicaDB/connectors/generic-jdbc/).
 
 For example, to replicate a DB2 database table as both source and sink
 
@@ -235,7 +235,9 @@ $ podman run \
 
 # Full Documentation
 
-You can find the full ReplicaDB documentation here: [Docs](https://osalvador.github.io/ReplicaDB/docs/docs.html)
+The canonical user documentation portal is [ReplicaDB Documentation](https://osalvador.github.io/ReplicaDB/).
+The portal covers the standalone CLI, managed server workflows, connector
+capabilities, architecture, operations, and the generated API reference.
 
 # Configuration Wizard
 
@@ -251,7 +253,7 @@ You can create a configuration file for a ReplicaDB process by filling out a sim
 - Source table must exist and be accessible with SELECT permissions
 - Sink table must exist with a compatible schema
 - For `incremental` mode, sink table must have primary keys defined
-- For `incremental` mode, `--incremental-watermark-column` (with an optional `--incremental-watermark-value`) automates the `--source-where` filtering described in the [full documentation](https://osalvador.github.io/ReplicaDB/docs/docs.html)
+- For `incremental` mode, `--incremental-watermark-column` (with an optional `--incremental-watermark-value`) automates the `--source-where` filtering described in the [CLI watermark guide](https://osalvador.github.io/ReplicaDB/cli/incremental-watermarks/)
 
 ```bash
 $ replicadb --mode=complete -j=1 \
@@ -365,7 +367,7 @@ $ replicadb --mode=complete -j=1 \
 | Amazon S3               | :heavy_multiplication_x: | :heavy_check_mark: |            N/A            |           N/A            |     :heavy_check_mark:    |
 | JDBC-Compliant database |    :heavy_check_mark:    | :heavy_check_mark: | :heavy_multiplication_x:  | :heavy_multiplication_x: |     :heavy_check_mark:    |
 
-See [DB2 Documentation](https://osalvador.github.io/ReplicaDB/docs/docs.html) for driver installation and platform-specific details.
+See [DB2 Documentation](https://osalvador.github.io/ReplicaDB/connectors/db2/) for driver installation and platform-specific details.
 
 # Roadmap
 

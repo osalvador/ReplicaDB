@@ -1,8 +1,10 @@
 package org.replicadb.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -10,6 +12,10 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -25,10 +31,16 @@ class OpenApiSpecificationIT {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Value("${replicadb.openapi.output:}")
+    private String outputPath;
+
     @Test
     @WithMockUser(roles = "ADMIN")
     void exposesApiPathsAsJson() throws Exception {
-        mockMvc.perform(get("/v3/api-docs"))
+        MvcResult result = mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.paths['/api/v1/jobs']").exists())
@@ -62,6 +74,14 @@ class OpenApiSpecificationIT {
                 .andExpect(jsonPath("$.components.schemas.JobDefinitionResponse.properties.retryBackoffSeconds").exists())
                 .andExpect(jsonPath("$.components.schemas.JobDefinitionResponse.properties.automaticRetryEnabled").exists())
                 .andExpect(jsonPath("$.components.schemas.JobRunResponse.properties.availableAt").exists())
-                .andExpect(jsonPath("$.components.schemas.JobRunResponse.properties.leaseToken").doesNotExist());
+                .andExpect(jsonPath("$.components.schemas.JobRunResponse.properties.leaseToken").doesNotExist())
+                .andReturn();
+
+            if (outputPath != null && !outputPath.isBlank()) {
+                Path output = Path.of(outputPath);
+                Files.createDirectories(output.toAbsolutePath().getParent());
+                Files.writeString(output, objectMapper.writerWithDefaultPrettyPrinter()
+                .writeValueAsString(objectMapper.readTree(result.getResponse().getContentAsString())) + "\n");
+            }
     }
 }

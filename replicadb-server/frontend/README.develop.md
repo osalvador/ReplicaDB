@@ -1,5 +1,10 @@
 # ReplicaDB Frontend: desarrollo local
 
+The canonical user-facing server documentation is the
+[ReplicaDB documentation portal](https://osalvador.github.io/ReplicaDB/server/).
+This file remains the source for frontend development commands and local
+topology only.
+
 > **Estado:** este frontend está disponible únicamente para desarrollo local. Todavía no está publicado como producto, no forma parte de una release oficial y no debe utilizarse como despliegue de producción.
 
 ## Arquitectura local
