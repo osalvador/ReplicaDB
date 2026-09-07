@@ -44,6 +44,7 @@ test('keeps component color and radius literals inside token scopes', () => {
 
 test('requires accessible component content and stable image dimensions', () => {
   assert.match(homepage, /<ProductChoice/);
+  assert.match(homepage, /home-capabilities/);
   assert.match(homepage, /<ArchitectureDiagram/);
   assert.match(homepage, /<SupportMatrix/);
   assert.match(homepage, /<ScreenshotFrame/);
@@ -61,7 +62,7 @@ test('requires accessible component content and stable image dimensions', () => 
 test('uses the ReplicaDB mark as the Starlight header logo', () => {
   assert.match(astroConfig, /title: 'ReplicaDB'/);
   assert.match(astroConfig, /src: '\.\/src\/assets\/brand\/ReplicaDB\.svg'/);
-  assert.match(astroConfig, /replacesTitle: true/);
+  assert.match(astroConfig, /replacesTitle: false/);
 });
 
 test('built light and dark surfaces retain responsive, readable component contracts', { skip: !existsSync(builtHomepagePath) }, () => {

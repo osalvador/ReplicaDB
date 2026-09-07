@@ -29,7 +29,7 @@ export default defineConfig({
       logo: {
         src: './src/assets/brand/ReplicaDB.svg',
         alt: 'ReplicaDB',
-        replacesTitle: true
+        replacesTitle: false
       },
       favicon: '/favicon.svg',
       customCss: ['./src/styles/custom.css'],
