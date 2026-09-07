@@ -1,0 +1,19 @@
+replicadb-server/frontend/playwright.config.ts
+  s_d1b4b190b0ec2f::t_f7cf0aa1190601 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "420c34417012381810f15b4c0312cda892c66bcd",
+  "prompts": {},
+  "sessions": {
+    "s_d1b4b190b0ec2f": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "0091f38c-5d73-430a-bba6-70feebf975dc",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
