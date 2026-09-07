@@ -1,10 +1,10 @@
 ---
 title: ReplicaDB
-description: Choose the right ReplicaDB product and get started.
+description: High-performance bulk replication between heterogeneous systems, from a CLI or managed server.
 template: splash
 hero:
   title: ReplicaDB
-  tagline: Move data between supported systems with a workflow that fits the way you operate.
+  tagline: High-performance bulk replication between heterogeneous systems.
   image:
     file: ../../assets/brand/ReplicaDB.svg
     alt: ReplicaDB geometric data-movement mark
@@ -12,7 +12,7 @@ hero:
     - text: Choose CLI or Server
       link: /ReplicaDB/getting-started/choose-cli-or-server/
       icon: right-arrow
-    - text: Start a quickstart
+    - text: Run the CLI quickstart
       link: /ReplicaDB/getting-started/cli-quickstart/
       icon: external
 ---
@@ -20,37 +20,37 @@ hero:
 import ArchitectureDiagram from '../../components/ArchitectureDiagram.astro';
 import ProductChoice from '../../components/ProductChoice.astro';
 
-ReplicaDB provides two operating paths over the same replication core. Run a
-direct transfer from a terminal, or operate durable authenticated jobs from a
-shared control plane. The choice is about ownership, state, and repeatability,
-not a different data-movement engine. Read the
+ReplicaDB moves data in parallel between relational, document, file,
+object-storage, and stream systems without requiring source agents or database
+triggers. The standalone CLI and managed server reuse the same replication core;
+choose between them based on ownership, state, and repeatability. Read the
 [product comparison](/ReplicaDB/getting-started/choose-cli-or-server/) if you
 need to compare the two operating models first.
 
 <section class="home-capabilities" aria-labelledby="capabilities-heading">
-  <h2 id="capabilities-heading">A practical path for moving data</h2>
+  <h2 id="capabilities-heading">The technical case for ReplicaDB</h2>
   <div class="home-capabilities__grid">
     <article>
       <span class="home-capabilities__marker" aria-hidden="true">01</span>
       <h3>Heterogeneous systems</h3>
-      <p>Connect supported relational, file, object-storage, document, and stream systems through one replication core.</p>
+      <p>Connect Oracle, PostgreSQL, MySQL, SQL Server, Db2, MongoDB, CSV, S3, Kafka, Denodo, and other JDBC systems through one replication core.</p>
     </article>
     <article>
       <span class="home-capabilities__marker" aria-hidden="true">02</span>
-      <h3>Three replication modes</h3>
-      <p>Choose complete, complete-atomic, or incremental flows based on the data movement and visibility you need.</p>
+      <h3>Bulk and parallel</h3>
+      <p>Partition source work across configured jobs for large transfers, with connector-specific bulk paths where they are supported.</p>
     </article>
     <article>
       <span class="home-capabilities__marker" aria-hidden="true">03</span>
-      <h3>Direct or durable</h3>
-      <p>Run from a terminal, or operate authenticated jobs with scheduling, permissions, and observable state.</p>
+      <h3>Non-intrusive operation</h3>
+      <p>Run on Windows, Linux, or macOS without installing source agents or database triggers.</p>
     </article>
   </div>
 </section>
 
 <ProductChoice
   title="Choose the operating path"
-  description="Use the CLI for direct execution. Use the server when runs need durable state, scheduling, and shared control."
+  description="Use the CLI for direct execution. Use the server when runs need durable state, scheduling, and shared control. Both paths support complete, complete-atomic, and incremental replication where the connector allows it."
   options={[
     {
       title: 'Standalone CLI',
@@ -93,9 +93,9 @@ need to compare the two operating models first.
 <div class="home-capability-link">
   <div>
     <h2>Check connector coverage</h2>
-    <p>Review supported systems, replication modes, delivery paths, and operational caveats.</p>
+    <p>Review source and sink roles, replication modes, delivery paths, and operational caveats for each supported system.</p>
   </div>
-  <a href="/ReplicaDB/connectors/">Explore connectors</a>
+  <a href="/ReplicaDB/connectors/">Explore connector coverage</a>
 </div>
 
 ## A task-oriented starting point
@@ -106,5 +106,7 @@ need to compare the two operating models first.
   release archive and run a first options-file workflow.
 - [Server quickstart](/ReplicaDB/getting-started/server-quickstart/) to start
   a durable local server with embedded PostgreSQL.
+- [Replication modes](/ReplicaDB/cli/replication-modes/) to compare complete,
+  complete-atomic, and incremental flows.
 - [Core concepts](/ReplicaDB/getting-started/concepts/) for the vocabulary used
   throughout the guides.
