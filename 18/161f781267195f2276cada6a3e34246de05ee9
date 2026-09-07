@@ -1,0 +1,275 @@
+docs/astro.config.mjs
+  s_d1b4b190b0ec2f::t_66cf98a6dfe1f7 1-162
+docs/openapi/replicadb-server.json
+  s_d1b4b190b0ec2f::t_4c24bc9ff575d6 1-2421
+docs/package.json
+  s_d1b4b190b0ec2f::t_47ca043e4aabf1 1-40
+docs/public/.nojekyll
+  s_d1b4b190b0ec2f::t_8c2bb91ede78a5 1
+docs/public/robots.txt
+  s_d1b4b190b0ec2f::t_18c7376cd9163b 1-4
+docs/scripts/stage-static-tools.mjs
+  s_d1b4b190b0ec2f::t_2d6a99bfe1cc78 1-93
+docs/scripts/update-openapi.sh
+  s_d1b4b190b0ec2f::t_bf323b315f6e93 1-39
+docs/src/components/ArchitectureDiagram.astro
+  s_d1b4b190b0ec2f::t_cbb45c9be6f0fd 1-27
+docs/src/components/LegacyRedirect.astro
+  s_d1b4b190b0ec2f::t_dea39a54d03c35 1-60
+docs/src/components/ProductChoice.astro
+  s_d1b4b190b0ec2f::t_050c4125abb0f4 1-34
+docs/src/components/ScreenshotFrame.astro
+  s_d1b4b190b0ec2f::t_bbba4365a87ee5 1-38
+docs/src/content.config.ts
+  s_d1b4b190b0ec2f::t_be29453e3d6f39 1-10
+docs/src/content/docs/api/index.md
+  s_d1b4b190b0ec2f::t_01684eedaa8b4c 1-16
+docs/src/content/docs/architecture/concurrency-and-fencing.md
+  s_d1b4b190b0ec2f::t_67a6a49395f3d9 1-21
+docs/src/content/docs/architecture/core-and-server-boundaries.md
+  s_d1b4b190b0ec2f::t_b19ea1c66c8b5e 1-19
+docs/src/content/docs/architecture/dispatch-and-recovery.md
+  s_d1b4b190b0ec2f::t_053e16e292410f 1-25
+docs/src/content/docs/architecture/distributed-topology.mdx
+  s_d1b4b190b0ec2f::t_9f162172ee84f4 1-27
+docs/src/content/docs/architecture/overview.mdx
+  s_d1b4b190b0ec2f::t_caa00b4e221e04 1-28
+docs/src/content/docs/architecture/run-lifecycle.mdx
+  s_d1b4b190b0ec2f::t_2ed8c09d428ed1 1-27
+docs/src/content/docs/architecture/scaling-and-fairness.md
+  s_d1b4b190b0ec2f::t_ad44c5d6244a61 1-29
+docs/src/content/docs/architecture/scheduling-and-ha.md
+  s_d1b4b190b0ec2f::t_ff9be3fd2c2b87 1-20
+docs/src/content/docs/architecture/security-boundaries.md
+  s_d1b4b190b0ec2f::t_e30d5404953cce 1-25
+docs/src/content/docs/cli/configuration.md
+  s_d1b4b190b0ec2f::t_4847457d4a4ee3 2-3,6,8-10,12,14-17,19-21,23,25,33,37,40-43,45,47-51
+docs/src/content/docs/cli/filtering-and-queries.md
+  s_d1b4b190b0ec2f::t_165c94c8cad2ea 1-29
+docs/src/content/docs/cli/incremental-watermarks.md
+  s_d1b4b190b0ec2f::t_55fec7b9f4a236 1-34
+docs/src/content/docs/cli/index.md
+  s_d1b4b190b0ec2f::t_b9b7fb41f8473d 1-33
+docs/src/content/docs/cli/installation.md
+  s_d1b4b190b0ec2f::t_07af7926d2d5ab 1-39
+docs/src/content/docs/cli/multi-table.md
+  s_d1b4b190b0ec2f::t_d4b8edb36d1b48 1-30
+docs/src/content/docs/cli/parallelism.md
+  s_d1b4b190b0ec2f::t_94c4d8933373be 1-31
+docs/src/content/docs/cli/performance.md
+  s_d1b4b190b0ec2f::t_9e7b108ed8f140 1-28
+docs/src/content/docs/cli/replication-modes.md
+  s_d1b4b190b0ec2f::t_a85a0516842aca 1-38
+docs/src/content/docs/cli/troubleshooting.md
+  s_d1b4b190b0ec2f::t_2e65fad9e168ac 1-33
+docs/src/content/docs/connectors/amazon-s3.md
+  s_d1b4b190b0ec2f::t_88eaeb92593ca1 1-15
+docs/src/content/docs/connectors/csv.md
+  s_d1b4b190b0ec2f::t_df73eb5c8bce9c 1-16
+docs/src/content/docs/connectors/db2.md
+  s_d1b4b190b0ec2f::t_f1ffc69504e617 2-3,6,8-10,12-14
+docs/src/content/docs/connectors/denodo.md
+  s_d1b4b190b0ec2f::t_c6edf9899d182a 1-12
+docs/src/content/docs/connectors/generic-jdbc.md
+  s_d1b4b190b0ec2f::t_9b3d2ede8be441 1-18
+docs/src/content/docs/connectors/index.mdx
+  s_d1b4b190b0ec2f::t_86f9ae963477da 1-40
+docs/src/content/docs/connectors/kafka.md
+  s_d1b4b190b0ec2f::t_117167a4c660a5 1-14
+docs/src/content/docs/connectors/mongodb.md
+  s_d1b4b190b0ec2f::t_28e252ddb5054d 1-16
+docs/src/content/docs/connectors/mysql-mariadb.md
+  s_d1b4b190b0ec2f::t_b55507538d927e 1-15
+docs/src/content/docs/connectors/oracle.md
+  s_d1b4b190b0ec2f::t_0b29b74a389b35 1-24
+docs/src/content/docs/connectors/postgresql.md
+  s_d1b4b190b0ec2f::t_0e0b6bc2eaeecc 1-18
+docs/src/content/docs/connectors/sql-server.md
+  s_d1b4b190b0ec2f::t_7b9c40fd04d88c 1-22
+docs/src/content/docs/connectors/sqlite.md
+  s_d1b4b190b0ec2f::t_884436f1a10a03 1-15
+docs/src/content/docs/getting-started/choose-cli-or-server.mdx
+  s_d1b4b190b0ec2f::t_3a2c38485a0f87 1-47
+docs/src/content/docs/getting-started/cli-quickstart.md
+  s_d1b4b190b0ec2f::t_c3c370adaee69f 1-63
+docs/src/content/docs/getting-started/concepts.md
+  s_d1b4b190b0ec2f::t_5de38a53e574b0 1-58
+docs/src/content/docs/getting-started/server-quickstart.md
+  s_d1b4b190b0ec2f::t_e233263eb74b7e 2-3,6,8-10,12,14-15,18,21,26-28,30,32-35,37-38,41-42,45,47-49,51-54
+docs/src/content/docs/index.mdx
+  s_d1b4b190b0ec2f::t_b471e607ea6065 1-87
+docs/src/content/docs/operations/backups-and-restore.md
+  s_d1b4b190b0ec2f::t_b664e786f1bf89 1-19
+docs/src/content/docs/operations/capacity-planning.md
+  s_d1b4b190b0ec2f::t_f42a3c6a8be3c2 1-21
+docs/src/content/docs/operations/configuration.md
+  s_d1b4b190b0ec2f::t_e892fa674273e0 1-19
+docs/src/content/docs/operations/distributed-deployment.md
+  s_d1b4b190b0ec2f::t_fd9f312f6e8585 1-20
+docs/src/content/docs/operations/failure-recovery.md
+  s_d1b4b190b0ec2f::t_300bb6c32bb5f9 1-25
+docs/src/content/docs/operations/health-and-metrics.md
+  s_d1b4b190b0ec2f::t_6ee35b071b3268 1-32
+docs/src/content/docs/operations/index.md
+  s_d1b4b190b0ec2f::t_d11f7fe4e39bf1 1-21
+docs/src/content/docs/operations/key-management.md
+  s_d1b4b190b0ec2f::t_1846edc65953ef 1-23
+docs/src/content/docs/operations/local-server.md
+  s_d1b4b190b0ec2f::t_de479a6f9396ac 1-19
+docs/src/content/docs/operations/security-and-tls.md
+  s_d1b4b190b0ec2f::t_30992b9627112c 1-19
+docs/src/content/docs/operations/troubleshooting.md
+  s_d1b4b190b0ec2f::t_4d5845f0b5eeb5 1-24
+docs/src/content/docs/operations/upgrades.md
+  s_d1b4b190b0ec2f::t_bec39b3acb4686 1-20
+docs/src/content/docs/reference/cli-options.md
+  s_d1b4b190b0ec2f::t_8f5e44ba299180 1-55
+docs/src/content/docs/reference/environment-variables.md
+  s_d1b4b190b0ec2f::t_077c2162187d69 1-29
+docs/src/content/docs/reference/example-options-files.md
+  s_d1b4b190b0ec2f::t_e353e8d5ba3556 1-64
+docs/src/content/docs/server/audit.md
+  s_d1b4b190b0ec2f::t_51030c6243fc95 1-19
+docs/src/content/docs/server/dashboard.md
+  s_d1b4b190b0ec2f::t_26d8bdd361e0ca 1-19
+docs/src/content/docs/server/datasources.md
+  s_d1b4b190b0ec2f::t_de108374eef1d7 1-34
+docs/src/content/docs/server/errors-and-empty-states.md
+  s_d1b4b190b0ec2f::t_0fabc5f97a9192 1-34
+docs/src/content/docs/server/index.md
+  s_d1b4b190b0ec2f::t_82acb32af98318 1-26
+docs/src/content/docs/server/installation.md
+  s_d1b4b190b0ec2f::t_b7828d5a5e33ef 1-32
+docs/src/content/docs/server/jobs.md
+  s_d1b4b190b0ec2f::t_eec97400b42e46 1-32
+docs/src/content/docs/server/permissions.md
+  s_d1b4b190b0ec2f::t_14f30900df64f9 1-34
+docs/src/content/docs/server/runs-and-diagnostics.md
+  s_d1b4b190b0ec2f::t_e9fbdc0a913617 1-21
+docs/src/content/docs/server/schedules.md
+  s_d1b4b190b0ec2f::t_abdfd1db8c25ce 1-19
+docs/src/content/docs/server/sign-in-and-profile.md
+  s_d1b4b190b0ec2f::t_8d9c33422e197e 1-20
+docs/src/content/docs/server/users.md
+  s_d1b4b190b0ec2f::t_d45b1be6f27041 1-17
+docs/src/data/connector-capabilities.json
+  s_d1b4b190b0ec2f::t_f8d4d5e1411b14 1-200
+docs/src/data/legacy-routes.ts
+  s_d1b4b190b0ec2f::t_a2becdfa3a76e7 1-47
+docs/src/data/screenshots.ts
+  s_d1b4b190b0ec2f::t_a3cde906fa071a 1-52
+docs/src/pages/docs/docs.html.astro
+  s_d1b4b190b0ec2f::t_1103f5f01067d3 1-9
+docs/src/pages/docs/user-guide.html.astro
+  s_d1b4b190b0ec2f::t_92b514637cb304 1-9
+docs/src/pages/server.html.astro
+  s_d1b4b190b0ec2f::t_697722566ee156 2-3,5-7,9
+docs/tests/architecture-contract.test.mjs
+  s_d1b4b190b0ec2f::t_fe712dafab68c4 1-47
+docs/tests/change-classification.test.mjs
+  s_0523134ad16641::t_844de254193e34 1-27
+docs/tests/cli-contract.test.mjs
+  s_d1b4b190b0ec2f::t_1fdc646b742614 1-87
+docs/tests/connector-capabilities.test.mjs
+  s_d1b4b190b0ec2f::t_4d6c58ec82ce81 1-83
+docs/tests/content-contract.test.mjs
+  s_d1b4b190b0ec2f::t_f8dfb598429883 1-56
+docs/tests/design-contract.test.mjs
+  s_d1b4b190b0ec2f::t_4fd876ce0de85d 1-69
+docs/tests/openapi-contract.test.mjs
+  s_d1b4b190b0ec2f::t_2efd1541faa00b 1-47
+docs/tests/operations-contract.test.mjs
+  s_d1b4b190b0ec2f::t_3becff9bb958c3 1-39
+docs/tests/server-route-coverage.test.mjs
+  s_d1b4b190b0ec2f::t_a759b1d89a0a0e 1-64
+docs/tests/static-tools.test.mjs
+  s_d1b4b190b0ec2f::t_f17e589d6028a9 1-47
+docs/tsconfig.json
+  s_d1b4b190b0ec2f::t_aeff8ef32343a4 1-16
+replicadb-server/frontend/e2e/visual-regression.spec.ts
+  s_d1b4b190b0ec2f::t_5b56deff2b8ab7 1-29
+replicadb-server/frontend/package-lock.json
+  s_d1b4b190b0ec2f::t_84e9d17e99e51f 26,33,2010-2019,3583-3592
+replicadb-server/frontend/package.json
+  s_d1b4b190b0ec2f::t_f5d795acae32fd 14,34,41
+replicadb-server/frontend/playwright.docs.config.ts
+  s_d1b4b190b0ec2f::t_919d4647ae9fa1 1-20
+replicadb-server/frontend/scripts/seed-docs-screenshots.mjs
+  s_d1b4b190b0ec2f::t_f31f6122cec1a9 1-47
+replicadb-server/frontend/scripts/seed-docs-screenshots.test.mjs
+  s_d1b4b190b0ec2f::t_d0f0ad1205486d 1-24
+.github/workflows/docs-pages.yml
+  s_d1b4b190b0ec2f::t_1241b0e28b5ff4 1-69
+.github/workflows/docs.yml
+  s_d1b4b190b0ec2f::t_c896cd9e187504 1-117
+.gitignore
+  s_d1b4b190b0ec2f::t_8f577df357c27a 30-34
+README.md
+  s_d1b4b190b0ec2f::t_b314b82ae8de1e 190,238-240,256,370
+docs/CONTRIBUTING.md
+  s_d1b4b190b0ec2f::t_826a4def362470 1-23
+docs/PAGES_CUTOVER.md
+  s_d1b4b190b0ec2f::t_10345a784e5467 1-28
+docs/playwright.config.ts
+  s_d1b4b190b0ec2f::t_5ed0e710be078c 1-13
+docs/public/favicon.svg
+  s_d1b4b190b0ec2f::t_0ca65d1d287ad6 1-4
+docs/scripts/classify-changes.mjs
+  s_d1b4b190b0ec2f::t_5dc3ac7896bf03 1-31
+docs/scripts/serve-dist.mjs
+  s_d1b4b190b0ec2f::t_d14065c0533d25 1-31
+docs/scripts/validate-docs.mjs
+  s_d1b4b190b0ec2f::t_506111fc8f6cd2 1-57
+docs/src/components/SupportMatrix.astro
+  s_d1b4b190b0ec2f::t_6e2bf2e78d72bd 1-47
+docs/src/styles/custom.css
+  s_d1b4b190b0ec2f::t_80232101b5e523 1-251
+docs/tests/e2e/accessibility.spec.ts
+  s_d1b4b190b0ec2f::t_64840ec34f4d65 1-10
+docs/tests/e2e/docs-site.spec.ts
+  s_d1b4b190b0ec2f::t_9c3061d13aa117 1-22
+docs/tests/e2e/responsive.spec.ts
+  s_d1b4b190b0ec2f::t_e5b6db20b5c681 1-11
+docs/tests/legacy-routes.test.mjs
+  s_d1b4b190b0ec2f::t_24ad1ce9bbc941 1-74
+docs/tests/ownership-contract.test.mjs
+  s_d1b4b190b0ec2f::t_590d9ba4b0f278 1-24
+docs/tests/pages-workflow.test.mjs
+  s_d1b4b190b0ec2f::t_9ef28c8a7dadd6 1-26
+docs/tests/validate-docs.test.mjs
+  s_d1b4b190b0ec2f::t_f7afc5f8e7d901 1-28
+replicadb-server/README.md
+  s_d1b4b190b0ec2f::t_57f262fe8b0ece 3-5
+replicadb-server/frontend/README.develop.md
+  s_d1b4b190b0ec2f::t_7de34ecb8ffd20 3-7
+replicadb-server/frontend/e2e/docs-screenshots.spec.ts
+  s_d1b4b190b0ec2f::t_6f71968db425ab 1-136
+replicadb-server/frontend/e2e/support/docsScreenshotFixtures.ts
+  s_d1b4b190b0ec2f::t_750800b43704e9 1-142
+scripts/check-phase3-docs.sh
+  s_d1b4b190b0ec2f::t_12b3e93128d5ad 42-52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "18161f781267195f2276cada6a3e34246de05ee9",
+  "prompts": {},
+  "sessions": {
+    "s_0523134ad16641": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "8ad52146-66fd-4b20-bdb9-ed02995b1260",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    },
+    "s_d1b4b190b0ec2f": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "0091f38c-5d73-430a-bba6-70feebf975dc",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
