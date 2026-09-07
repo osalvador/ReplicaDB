@@ -24,8 +24,13 @@ export default defineConfig({
   integrations: [
     apiReferenceFinalizer,
     starlight({
-      title: 'ReplicaDB Documentation',
+      title: 'ReplicaDB',
       description: 'Documentation for the ReplicaDB CLI and managed server.',
+      logo: {
+        src: './src/assets/brand/ReplicaDB.svg',
+        alt: 'ReplicaDB',
+        replacesTitle: true
+      },
       favicon: '/favicon.svg',
       customCss: ['./src/styles/custom.css'],
       defaultLocale: 'root',

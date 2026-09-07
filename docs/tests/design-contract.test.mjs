@@ -6,6 +6,7 @@ import test from 'node:test';
 const root = new URL('..', import.meta.url).pathname;
 const css = readFileSync(join(root, 'src/styles/custom.css'), 'utf8');
 const homepage = readFileSync(join(root, 'src/content/docs/index.mdx'), 'utf8');
+const astroConfig = readFileSync(join(root, 'astro.config.mjs'), 'utf8');
 const builtHomepagePath = join(root, 'dist/index.html');
 
 test('maps the Engineering Ledger palette to Starlight dark and light tokens', () => {
@@ -26,6 +27,8 @@ test('maps the Engineering Ledger palette to Starlight dark and light tokens', (
   }
 
   assert.match(css, /\[data-theme='light'\][\s\S]*--sl-color-accent: #0B6E69/);
+  assert.match(css, /html\[data-theme='dark'\][\s\S]*--replicadb-page-green: #17211F/);
+  assert.match(css, /html\[data-theme='dark'\][\s\S]*--sl-color-text: #E8F0ED/);
   assert.match(css, /--sl-font: "Avenir Next", "Helvetica Neue", sans-serif/);
   assert.match(css, /font-family: Georgia, "Times New Roman", serif/);
 });
@@ -33,7 +36,8 @@ test('maps the Engineering Ledger palette to Starlight dark and light tokens', (
 test('keeps component color and radius literals inside token scopes', () => {
   const outsideTokens = css
     .replace(/:root\s*\{[\s\S]*?\n\}/, '')
-    .replace(/\[data-theme='light'\]\s*\{[\s\S]*?\n\}/, '');
+    .replace(/\[data-theme='light'\]\s*\{[\s\S]*?\n\}/, '')
+    .replace(/html\[data-theme='dark'\]\s*\{[\s\S]*?\n\}/, '');
   assert.doesNotMatch(outsideTokens, /#[0-9A-Fa-f]{6}/);
   assert.doesNotMatch(outsideTokens, /border-radius:\s*\d+px/);
 });
@@ -52,6 +56,12 @@ test('requires accessible component content and stable image dimensions', () => 
   assert.match(readFileSync(join(root, 'src/components/ArchitectureDiagram.astro'), 'utf8'), /mermaid\.render/);
   assert.match(readFileSync(join(root, 'src/components/ProductChoice.astro'), 'utf8'), /aria-labelledby/);
   assert.ok(existsSync(join(root, 'src/assets/brand/replicadb-logo.png')));
+});
+
+test('uses the ReplicaDB mark as the Starlight header logo', () => {
+  assert.match(astroConfig, /title: 'ReplicaDB'/);
+  assert.match(astroConfig, /src: '\.\/src\/assets\/brand\/ReplicaDB\.svg'/);
+  assert.match(astroConfig, /replacesTitle: true/);
 });
 
 test('built light and dark surfaces retain responsive, readable component contracts', { skip: !existsSync(builtHomepagePath) }, () => {
