@@ -3,7 +3,6 @@ title: Local server
 description: Operate the durable embedded-PostgreSQL local profile.
 ---
 
-# Local server
 
 Local mode is a single-node durable deployment. The launcher manages embedded
 PostgreSQL on loopback, migrations, Quartz state, the keyring, jobs, and local

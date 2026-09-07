@@ -3,7 +3,6 @@ title: Dispatch and recovery
 description: Explain directed claims, fallback polling, cancellation, and lease expiry.
 ---
 
-# Dispatch and recovery
 
 `WorkerDispatchCoordinator` has directed, fallback, and generic admission
 paths. A signal for a specific run tries a directed claim first. If that claim

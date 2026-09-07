@@ -5,7 +5,6 @@ description: See how API and worker profiles share PostgreSQL durable state.
 
 import ArchitectureDiagram from '../../../components/ArchitectureDiagram.astro';
 
-# Distributed topology
 
 An API node serves authenticated HTTP requests and owns Quartz schedule
 registration. Worker nodes claim and execute eligible runs. Both use the same

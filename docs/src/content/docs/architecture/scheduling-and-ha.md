@@ -3,7 +3,6 @@ title: Scheduling and high availability
 description: Explain Quartz JDBC clustering and the limits of notification delivery.
 ---
 
-# Scheduling and high availability
 
 Quartz uses JDBC-backed scheduler state in the API profile. Multiple API nodes
 can participate in the same scheduler ownership model; the durable schedule

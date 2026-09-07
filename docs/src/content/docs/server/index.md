@@ -3,7 +3,6 @@ title: Managed server guide
 description: Operate authenticated ReplicaDB jobs, schedules, permissions, and runs.
 ---
 
-# Managed server guide
 
 The managed server adds authenticated durable operation around the ReplicaDB
 replication core. It provides datasource profiles, jobs, schedules, run

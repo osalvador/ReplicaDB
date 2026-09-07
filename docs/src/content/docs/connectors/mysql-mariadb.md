@@ -3,7 +3,6 @@ title: MySQL and MariaDB connectors
 description: MySQL and MariaDB source and sink behavior and driver guidance.
 ---
 
-# MySQL and MariaDB
 
 Use `jdbc:mysql:` for MySQL or `jdbc:mariadb:` for MariaDB. Both managers can
 be source or sink and support complete, complete-atomic, and incremental modes.

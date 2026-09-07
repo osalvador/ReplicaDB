@@ -3,7 +3,6 @@ title: Security boundaries
 description: Keep credentials, leases, sessions, and operational data in their owners.
 ---
 
-# Security boundaries
 
 Datasource security is encrypted before PostgreSQL persistence and is not
 returned to the frontend. Safe connection displays, blank-preserving edits,

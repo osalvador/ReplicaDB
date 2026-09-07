@@ -3,7 +3,6 @@ title: Key management
 description: Protect, rotate, and validate the managed datasource keyring.
 ---
 
-# Key management
 
 The default keyring is `REPLICADB_SECURITY_MASTER_KEY_FILE` or
 `/run/secrets/replicadb-master-key` in a managed container. It contains a

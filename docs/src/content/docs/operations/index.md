@@ -3,7 +3,6 @@ title: Operations guide
 description: Deploy, observe, secure, upgrade, and recover the managed server.
 ---
 
-# Operations guide
 
 Use these runbooks for local embedded mode, external PostgreSQL, API/worker
 topologies, health, metrics, security, backup, upgrade, and recovery.

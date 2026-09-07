@@ -3,7 +3,6 @@ title: Core and server boundaries
 description: Separate standalone CLI behavior from managed server responsibilities.
 ---
 
-# Core and server boundaries
 
 The CLI is Spring-free and owns command parsing, options-file precedence,
 connector selection, task execution, exit codes, and local logs for one

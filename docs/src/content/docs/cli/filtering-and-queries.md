@@ -3,7 +3,6 @@ title: Filtering and queries
 description: Select source rows with tables, predicates, columns, and queries.
 ---
 
-# Filtering and queries
 
 Use `source.table` with `source.where` for a table-backed replication. Use
 `source.columns` to limit the selected columns when the sink mapping supports

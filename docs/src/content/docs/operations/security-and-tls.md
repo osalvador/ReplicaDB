@@ -3,7 +3,6 @@ title: Security and TLS
 description: Secure sessions, login, API exposure, worker health, and runtime secrets.
 ---
 
-# Security and TLS
 
 Put TLS or an authenticated reverse proxy in front of an API exposed beyond a
 trusted host. Production session cookies are HTTP-only, secure, and SameSite

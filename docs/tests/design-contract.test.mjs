@@ -49,6 +49,7 @@ test('requires accessible component content and stable image dimensions', () => 
   assert.match(homepage, /height=\{\d+\}/);
   assert.match(readFileSync(join(root, 'src/components/ArchitectureDiagram.astro'), 'utf8'), /data-mermaid-source/);
   assert.match(readFileSync(join(root, 'src/components/ArchitectureDiagram.astro'), 'utf8'), /data-diagram-fallback/);
+  assert.match(readFileSync(join(root, 'src/components/ArchitectureDiagram.astro'), 'utf8'), /mermaid\.render/);
   assert.match(readFileSync(join(root, 'src/components/ProductChoice.astro'), 'utf8'), /aria-labelledby/);
   assert.ok(existsSync(join(root, 'src/assets/brand/replicadb-logo.png')));
 });

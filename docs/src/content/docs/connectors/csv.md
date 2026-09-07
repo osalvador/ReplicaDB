@@ -3,7 +3,6 @@ title: CSV and local file connector
 description: CSV source/sink formats, local file roles, and mode limitations.
 ---
 
-# CSV and local files
 
 Use the `file:` scheme. The file manager supports source and sink roles for
 complete and incremental sink modes and all three source-side flows, with CSV

@@ -3,7 +3,6 @@ title: PostgreSQL connector
 description: PostgreSQL source and sink behavior including COPY and staging.
 ---
 
-# PostgreSQL
 
 Use `jdbc:postgresql:` for source or sink connections. PostgreSQL supports all
 three replication modes and bandwidth throttling.

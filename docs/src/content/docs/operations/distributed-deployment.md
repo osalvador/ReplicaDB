@@ -3,7 +3,6 @@ title: Distributed deployment
 description: Run API and worker profiles against shared external PostgreSQL.
 ---
 
-# Distributed deployment
 
 Use external PostgreSQL with one or more API instances and one or more worker
 instances. API nodes serve authenticated HTTP and clustered Quartz schedules;

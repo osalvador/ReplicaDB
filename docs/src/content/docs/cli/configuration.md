@@ -3,7 +3,6 @@ title: CLI configuration
 description: Configure options files, precedence, connection settings, and safe substitution.
 ---
 
-# CLI configuration
 
 ReplicaDB accepts long command-line options and Java-properties options files.
 Use an options file for repeatable settings and keep values that change per

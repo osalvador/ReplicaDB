@@ -26,6 +26,7 @@ export default defineConfig({
     starlight({
       title: 'ReplicaDB Documentation',
       description: 'Documentation for the ReplicaDB CLI and managed server.',
+      favicon: '/favicon.svg',
       customCss: ['./src/styles/custom.css'],
       defaultLocale: 'root',
       locales: {

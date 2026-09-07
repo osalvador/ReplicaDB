@@ -3,7 +3,6 @@ title: Operations troubleshooting
 description: Distinguish liveness, readiness, notification delay, and durable failures.
 ---
 
-# Operations troubleshooting
 
 Start with `/actuator/health/liveness` and `/actuator/health/readiness`, then
 inspect logs and bounded metrics. A live process is not necessarily ready for

@@ -3,7 +3,6 @@ title: Upgrades
 description: Apply forward-only migrations and move scheduler ownership safely.
 ---
 
-# Upgrades
 
 Migrations V1 through V21 are forward-only. Apply Flyway migrations before
 starting a new API/worker cluster and keep Quartz schema creation under the

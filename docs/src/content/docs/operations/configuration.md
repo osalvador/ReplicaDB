@@ -3,7 +3,6 @@ title: Runtime configuration
 description: Configure profiles, pools, sessions, worker admission, and logging.
 ---
 
-# Runtime configuration
 
 Set `SPRING_PROFILES_ACTIVE` to `local`, `api`, or `worker`. External profiles
 require `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, and the master-key file. The

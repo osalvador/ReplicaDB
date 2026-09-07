@@ -3,7 +3,6 @@ title: Environment variables
 description: Managed server environment names and their ownership boundaries.
 ---
 
-# Environment variables
 
 Use `replicadb-server.env.example` as the maintained name inventory. Never
 commit resolved values.

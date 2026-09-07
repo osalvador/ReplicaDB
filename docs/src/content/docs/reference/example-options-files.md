@@ -3,7 +3,6 @@ title: Options-file examples
 description: Safe Java-properties patterns for repeatable standalone CLI runs.
 ---
 
-# Options-file examples
 
 The options file is loaded before command-line values. Use environment
 substitution for connection and security values, and pass a one-off override

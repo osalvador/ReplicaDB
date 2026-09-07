@@ -3,7 +3,6 @@ title: Health and metrics
 description: Probe liveness, readiness, actuator metrics, and bounded runtime families.
 ---
 
-# Health and metrics
 
 The API exposes unauthenticated `/actuator/health`,
 `/actuator/health/liveness`, and `/actuator/health/readiness` on port 8080.
