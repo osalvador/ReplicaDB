@@ -69,7 +69,7 @@ test('built light and dark surfaces retain responsive, readable component contra
   assert.match(builtHomepage, /<header\b/);
   assert.match(builtHomepage, /<main\b/);
   assert.match(builtHomepage, /<a href="\/ReplicaDB\//);
-  assert.match(builtHomepage, /aspect-ratio: 323 \/ 153/);
+  assert.match(builtHomepage, /home-capability-link/);
   assert.match(css, /@media \(max-width: 40rem\)[\s\S]*?grid-template-columns: 1fr/);
   assert.match(css, /\.screenshot-frame__viewport/);
   assert.match(css, /\[data-theme='light'\][\s\S]*--sl-color-accent-high: #064A47/);
