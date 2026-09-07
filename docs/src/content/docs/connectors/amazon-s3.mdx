@@ -1,0 +1,22 @@
+---
+title: Amazon S3 connector
+description: Amazon S3 sink behavior, object layout, and credential guidance.
+---
+
+import ScreenshotFrame from '../../../components/ScreenshotFrame.astro';
+import s3 from '../../../assets/media/connector-examples/amazon-s3.png';
+import s3Csv from '../../../assets/media/connector-examples/amazon-s3-csv.png';
+
+# Amazon S3
+
+Use the `s3:` scheme. S3 is sink-only and supports complete replication. It
+does not provide table merge or complete-atomic behavior; choose the object
+layout and replacement convention in the job that consumes the output.
+
+<ScreenshotFrame src={s3} alt="Amazon S3 connector object output configuration" caption="S3 output can be organized as object-per-row or a file for the replication." width={1024} height={768} loading="eager" />
+<ScreenshotFrame src={s3Csv} alt="Amazon S3 connector CSV output example" caption="CSV output is useful when downstream consumers expect one structured object." width={1024} height={768} />
+
+Use the AWS runtime credential chain, workload identity, or an environment
+managed profile. Do not place access keys in a connection string, options file,
+JSON example, or documentation screenshot. Confirm bucket, prefix, region,
+encryption, and object-write permissions before a large transfer.
