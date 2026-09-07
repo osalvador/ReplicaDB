@@ -1,0 +1,19 @@
+docs/PAGES_CUTOVER.md
+  s_d1b4b190b0ec2f::t_30e72672060c81 9-10,12-15,17,26,28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "ad810e389fe641bb8da22fb84fea900ad9e03aeb",
+  "prompts": {},
+  "sessions": {
+    "s_d1b4b190b0ec2f": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "0091f38c-5d73-430a-bba6-70feebf975dc",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
