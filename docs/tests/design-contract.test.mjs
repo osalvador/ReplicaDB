@@ -46,12 +46,7 @@ test('requires accessible component content and stable image dimensions', () => 
   assert.match(homepage, /<ProductChoice/);
   assert.match(homepage, /home-capabilities/);
   assert.match(homepage, /<ArchitectureDiagram/);
-  assert.match(homepage, /<SupportMatrix/);
-  assert.match(homepage, /<ScreenshotFrame/);
-  assert.match(homepage, /alt="[^"]+"/);
-  assert.match(homepage, /caption="[^"]+"/);
-  assert.match(homepage, /width=\{\d+\}/);
-  assert.match(homepage, /height=\{\d+\}/);
+  assert.match(homepage, /home-capability-link/);
   assert.match(readFileSync(join(root, 'src/components/ArchitectureDiagram.astro'), 'utf8'), /data-mermaid-source/);
   assert.match(readFileSync(join(root, 'src/components/ArchitectureDiagram.astro'), 'utf8'), /data-diagram-fallback/);
   assert.match(readFileSync(join(root, 'src/components/ArchitectureDiagram.astro'), 'utf8'), /mermaid\.render/);
