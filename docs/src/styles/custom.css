@@ -136,6 +136,29 @@ nav[aria-labelledby='starlight__on-this-page'] a {
   background: var(--replicadb-brand-teal);
 }
 
+html[data-has-hero] .hero {
+  position: relative;
+  isolation: isolate;
+}
+
+html[data-has-hero] .hero::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0 calc(50% - 50vw);
+  background: linear-gradient(
+    118deg,
+    color-mix(in srgb, var(--replicadb-brand-teal) 16%, var(--replicadb-page-green)) 0%,
+    var(--replicadb-page-green) 52%,
+    color-mix(in srgb, var(--replicadb-terracotta) 14%, var(--replicadb-page-green)) 100%
+  );
+  content: '';
+}
+
+html[data-has-hero] .hero > img {
+  width: min(72%, 17rem);
+  filter: drop-shadow(0 1rem 1.5rem color-mix(in srgb, var(--replicadb-ink) 12%, transparent));
+}
+
 .product-choice {
   margin: 2.75rem 0 2rem;
 }
