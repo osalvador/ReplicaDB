@@ -31,16 +31,32 @@ Do not run `start api local`. The second word is not a modifier: `api` and
 
 <ArchitectureDiagram
   id="distributed-deployment-topology"
-  title="API instances provide the control plane; workers execute durable runs through shared PostgreSQL and keyring state."
-  source={'flowchart LR\n  Browser[Users and automation] --> TLS[TLS ingress or authenticated proxy]\n  TLS --> API1[API instance]\n  TLS --> API2[API instance]\n  API1 <--> PG[(External PostgreSQL)]\n  API2 <--> PG\n  Worker1[Worker instance] <--> PG\n  Worker2[Worker instance] <--> PG\n  API1 --- Key[Shared keyring]\n  API2 --- Key\n  Worker1 --- Key\n  Worker2 --- Key'}
-  fallback={'Users and automation -> TLS ingress -> API instances\nAPI instances and workers -> shared external PostgreSQL\nAPI instances and workers -> shared keyring'}
+   title="API instances serve the frontend and control plane; workers execute durable runs through shared PostgreSQL and keyring state."
+   source={'flowchart LR\n  Browser[Browser frontend] --> TLS[TLS ingress or authenticated proxy]\n  TLS --> API1[API instance with frontend]\n  TLS --> API2[API instance with frontend]\n  API1 <--> PG[(External PostgreSQL)]\n  API2 <--> PG\n  Worker1[Worker instance] <--> PG\n  Worker2[Worker instance] <--> PG\n  API1 --- Key[Shared keyring]\n  API2 --- Key\n  Worker1 --- Key\n  Worker2 --- Key'}
+   fallback={'Browser frontend -> TLS ingress -> API instances serving the frontend and control plane\nAPI instances and workers -> shared external PostgreSQL\nAPI instances and workers -> shared keyring'}
 />
 
-API instances serve the web control plane and REST API, authenticate users,
-store job definitions and datasource profiles, and run the clustered JDBC
-Quartz scheduler. Workers have no product UI, REST controllers, browser
-sessions, or Quartz scheduler. They claim pending runs, resolve their
-encrypted datasource profiles with the shared keyring, and execute ReplicaDB.
+API instances serve the web control plane, its bundled browser frontend, and
+the REST API from the same origin. The ingress routes browser navigation and
+API requests to any healthy API instance; no separate frontend service is
+required for the packaged server. API instances authenticate users, store job
+definitions and datasource profiles, and run the clustered JDBC Quartz
+scheduler. Workers have no product UI, REST controllers, browser sessions, or
+Quartz scheduler. They claim pending runs, resolve their encrypted datasource
+profiles with the shared keyring, and execute ReplicaDB.
+
+## Frontend delivery
+
+The browser frontend is a static SPA bundled into the server artifact and
+served by every `api` instance. Deploy it together with the API version that
+owns its REST contract, and route the public browser origin through the same
+TLS ingress as the API. A load balancer may send consecutive requests to
+different healthy API instances because sessions are stored in shared
+PostgreSQL, not in one frontend process.
+
+Workers never serve the frontend. Keep them on the private control network;
+their management port is only for internal health and metrics. Do not route
+browser traffic, public API traffic, or static frontend assets to a worker.
 
 PostgreSQL is the durable coordination authority for job state, schedules,
 Quartz tables, sessions, audit events, retry chains, worker leases, and login
