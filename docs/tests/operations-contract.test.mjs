@@ -7,7 +7,8 @@ const repoRoot = new URL('../..', import.meta.url).pathname;
 const docsRoot = new URL('..', import.meta.url).pathname;
 const operationsRoot = join(docsRoot, 'src/content/docs/operations');
 const docs = [
-  ...['index', 'local-server', 'distributed-deployment', 'configuration', 'capacity-planning', 'health-and-metrics', 'security-and-tls', 'key-management', 'backups-and-restore', 'upgrades', 'failure-recovery', 'troubleshooting'].map((name) => join(operationsRoot, `${name}.md`)),
+  ...['index', 'local-server', 'configuration', 'capacity-planning', 'health-and-metrics', 'security-and-tls', 'key-management', 'backups-and-restore', 'upgrades', 'failure-recovery', 'troubleshooting'].map((name) => join(operationsRoot, `${name}.md`)),
+  join(operationsRoot, 'distributed-deployment.mdx'),
   join(docsRoot, 'src/content/docs/reference/environment-variables.md')
 ].map((path) => readFileSync(path, 'utf8')).join('\n');
 
@@ -27,7 +28,7 @@ test('covers deployment, health, security, recovery, and metric interpretations'
 });
 
 test('makes the distributed API and worker deployment actionable', () => {
-  const deployment = readFileSync(join(operationsRoot, 'distributed-deployment.md'), 'utf8');
+  const deployment = readFileSync(join(operationsRoot, 'distributed-deployment.mdx'), 'utf8');
   for (const required of [
     'start local', 'start api', 'start worker', 'exactly one mode',
     'External PostgreSQL', 'REPLICADB_WORKER_IDENTITY',
@@ -40,6 +41,7 @@ test('makes the distributed API and worker deployment actionable', () => {
     assert.match(deployment, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), required);
   }
   assert.match(deployment, /Do not run `start api local`/i);
+  assert.match(deployment, /<ArchitectureDiagram/);
 });
 
 test('keeps environment documentation aligned with the maintained example', () => {

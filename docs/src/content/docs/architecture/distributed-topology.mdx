@@ -22,5 +22,24 @@ mandatory polling path for eligible work, cancellation requests, and lease
 recovery. PostgreSQL state remains authoritative when a notification is lost,
 duplicated, delayed, or delivered to a worker that cannot claim the run.
 
+## Responsibilities and failure boundaries
+
+API nodes accept authenticated requests, persist a pending run, and reconcile
+the durable schedule catalog into clustered Quartz. They do not assign work to
+a particular worker. Each worker independently observes durable eligibility,
+claims only the run it can own, renews its lease, and records a fenced outcome.
+This permits API and worker fleets to scale independently.
+
+The database holds the state required to survive a lost API, worker, or
+notification connection. A worker cannot complete an attempt after its lease
+is replaced, and another worker cannot claim it while it remains owned. Network
+notifications affect claim latency, not the correctness of ownership or
+recovery.
+
+## Operational boundary
+
 Keep worker management health private. A worker is an executor, not a second
 public API, and mixed in-memory/JDBC scheduler ownership is prohibited.
+
+The topology explains the design; [distributed deployment](/ReplicaDB/operations/distributed-deployment/)
+explains how to configure, start, probe, scale, and recover these roles.
