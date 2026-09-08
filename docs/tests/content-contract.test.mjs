@@ -56,6 +56,12 @@ test('quickstarts link to installation, configuration, troubleshooting, and secu
   }
 });
 
+test('server quickstart points distributed users to the API and worker runbook', () => {
+  const serverQuickstart = readGuide('server-quickstart.md');
+  assert.match(serverQuickstart, /api` and `worker` as separate processes/i);
+  assert.match(serverQuickstart, /\/ReplicaDB\/operations\/distributed-deployment\//);
+});
+
 test('shell examples parse after documentation placeholders are made inert', () => {
   const guides = ['cli-quickstart.md', 'server-quickstart.md'].map(readGuide);
   for (const guide of guides) {

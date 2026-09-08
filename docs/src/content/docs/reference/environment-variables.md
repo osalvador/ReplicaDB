@@ -9,7 +9,7 @@ commit resolved values.
 
 | Variable | Purpose | Default or scope |
 | --- | --- | --- |
-| `SPRING_PROFILES_ACTIVE` | Selects `local`, `api`, or `worker`. | Required profile choice. |
+| `SPRING_PROFILES_ACTIVE` | Selects the external `api` or `worker` Spring profile. | `local` is the `start local` launcher mode. |
 | `REPLICADB_SERVER_HOME` | Durable server home. | `$HOME/.replicadb`. |
 | `REPLICADB_SECURITY_MASTER_KEY_FILE` | Keyring path. | Server-home keyring or `/run/secrets/replicadb-master-key`. |
 | `REPLICADB_WORKER_IDENTITY` | Unique worker identity. | Required for workers. |

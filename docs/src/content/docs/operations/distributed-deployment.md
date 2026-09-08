@@ -4,16 +4,158 @@ description: Run API and worker profiles against shared external PostgreSQL.
 ---
 
 
-Use external PostgreSQL with one or more API instances and one or more worker
-instances. API nodes serve authenticated HTTP and clustered Quartz schedules;
-workers claim and execute durable runs. All instances use the same database
-and keyring contract.
+Use distributed deployment when execution must scale beyond one host or when
+PostgreSQL metadata must be managed outside ReplicaDB. It runs separate API
+and worker processes against one external PostgreSQL database and one shared
+keyring. It is not an extension of `start local`.
 
-The API listens on product port `8080`. A worker uses `server.port=-1` and
-keeps management health on `127.0.0.1:9091` by default. Set a unique
-`REPLICADB_WORKER_IDENTITY` for every worker and never publish its management
-port.
+## Choose the right mode
 
-Use `LISTEN/NOTIFY` as a wake-up path, not a correctness dependency. Workers
-retain polling for claims, cancellation, and recovery. Keep API scheduler
-ownership on JDBC Quartz; mixed RAM/JDBC ownership is prohibited.
+The packaged launcher accepts exactly one mode. `local` is a launcher mode that
+starts an API profile with embedded PostgreSQL and local execution. It is a
+durable single-node installation, not a profile to combine with `api` or
+`worker`.
+
+| Command | Purpose | Metadata database | Public endpoint |
+| --- | --- | --- | --- |
+| `./bin/replicadb-server start local` | Single-node control plane and execution | Embedded PostgreSQL | API on port `8080` by default |
+| `./bin/replicadb-server start api` | Authenticated control plane and clustered scheduler | External PostgreSQL | API on port `8080` by default |
+| `./bin/replicadb-server start worker` | Claims and executes durable runs | External PostgreSQL | No product API; private management health on `9091` by default |
+
+Do not run `start api local`. The second word is not a modifier: `api` and
+`local` are separate modes. The API and worker commands require `DB_URL`,
+`DB_USERNAME`, and `DB_PASSWORD` before they can start.
+
+## Topology and responsibilities
+
+```mermaid
+flowchart LR
+	 Browser[Users and automation] --> TLS[TLS ingress or authenticated proxy]
+	 TLS --> API1[API instance]
+	 TLS --> API2[API instance]
+	 API1 <--> PG[(External PostgreSQL)]
+	 API2 <--> PG
+	 Worker1[Worker instance] <--> PG
+	 Worker2[Worker instance] <--> PG
+	 API1 --- Key[Shared keyring]
+	 API2 --- Key
+	 Worker1 --- Key
+	 Worker2 --- Key
+```
+
+API instances serve the web control plane and REST API, authenticate users,
+store job definitions and datasource profiles, and run the clustered JDBC
+Quartz scheduler. Workers have no product UI, REST controllers, browser
+sessions, or Quartz scheduler. They claim pending runs, resolve their
+encrypted datasource profiles with the shared keyring, and execute ReplicaDB.
+
+PostgreSQL is the durable coordination authority for job state, schedules,
+Quartz tables, sessions, audit events, retry chains, worker leases, and login
+throttling. `LISTEN/NOTIFY` wakes workers sooner, but polling remains the
+correctness path for claims, cancellation, and recovery.
+
+## Prerequisites
+
+Before starting any instance, provide these resources through the deployment
+platform and secret manager:
+
+- A reachable, backed-up PostgreSQL database for all API and worker instances.
+- The same `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` on every instance.
+- The same readable `REPLICADB_SECURITY_MASTER_KEY_FILE` on every API and
+  worker. Keep it outside PostgreSQL and restrict it to the runtime user.
+- A unique `REPLICADB_WORKER_IDENTITY` for every worker process.
+- An HTTPS ingress or authenticated reverse proxy for externally reachable API
+  traffic. Keep PostgreSQL and worker management endpoints private.
+
+Inject secrets at runtime. Do not place resolved database passwords or keyring
+contents in Compose files, shell history, repository files, logs, or
+documentation. API bootstrap values are needed only for the controlled
+creation of the first administrator.
+
+## Configure each role
+
+All external instances need the database connection and keyring. An API node
+also needs clustered Quartz, which is enabled by the `api` profile. When a
+separate worker fleet owns execution, set
+`REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED=false` on every API node.
+
+Workers need an identity and capacity settings. Start with one concurrent run
+per worker and size its datasource pool with headroom:
+
+$$
+	ext{datasource pool size} \geq \text{max concurrent runs} + 4
+$$
+
+The default worker management listener is `127.0.0.1:9091`. On a container
+network it may bind to a private interface, but it must not be published on the
+public network. See [runtime configuration](/ReplicaDB/operations/configuration/)
+and [environment variables](/ReplicaDB/reference/environment-variables/) for
+the complete setting inventory.
+
+## Start the cluster
+
+Apply forward-only Flyway migrations as part of a controlled API rollout; do
+not enable Quartz schema auto-initialization and never mix RAMJobStore with
+the JDBC Quartz store. Then start roles as separate processes or workloads.
+
+1. Confirm that PostgreSQL is reachable, writable, and backed up, and mount
+	the same keyring into every workload.
+2. Start one API instance with `./bin/replicadb-server start api`. It applies
+	and validates the managed schema and exposes the control plane.
+3. Start additional API instances with the same external configuration. They
+	join the same clustered Quartz scheduler.
+4. Start each worker separately with `./bin/replicadb-server start worker`.
+	Give every worker a different `REPLICADB_WORKER_IDENTITY`.
+5. Create datasource profiles and a job through the API, run a manual job,
+	and confirm that a worker claims and completes the run before enabling a
+	schedule.
+
+The repository's `docker-compose.server.yml` is a local topology reference: it
+runs PostgreSQL, two APIs, and one worker on separate public and internal
+networks. It deliberately exposes API ports only on loopback and keeps the
+worker health port internal. It is a smoke topology, not a production secret
+management solution.
+
+## Verify health and traffic boundaries
+
+Probe API instances on their product port:
+
+```text
+http://api-host:8080/actuator/health/liveness
+http://api-host:8080/actuator/health/readiness
+```
+
+Probe workers only from the private control network:
+
+```text
+http://worker-host:9091/actuator/health/liveness
+http://worker-host:9091/actuator/health/readiness
+```
+
+Liveness answers whether a process is alive. Readiness includes PostgreSQL and
+the role's runtime dependencies: Quartz for an API and polling/executor
+lifecycle for a worker. A worker can report a degraded notification listener
+while polling remains healthy; investigate listener reconnects and polling lag
+before restarting an otherwise ready worker.
+
+## Scale, update, and recover
+
+Scale APIs for control-plane availability and workers for execution capacity.
+Workers distribute work approximately rather than in strict round robin;
+compare normalized busy-slot time when evaluating an uneven fleet. Do not copy
+a worker identity when scaling it.
+
+For a planned worker shutdown, first stop it accepting new work, let active
+runs finish or cancel them according to their sink-risk warning, then stop
+polling and the listener. On unplanned worker loss, wait for the PostgreSQL
+lease to expire and let another worker create a replacement attempt. ReplicaDB
+never resumes the abandoned attempt in place.
+
+Back up PostgreSQL with point-in-time recovery and back up the matching
+keyring. Restore the metadata database before API and worker workloads. During
+key rotation, distribute the expanded keyring to every API and worker before
+re-encrypting datasource profiles; retain old key versions until no stored
+profile references them. See [backups and restore](/ReplicaDB/operations/backups-and-restore/),
+[upgrades](/ReplicaDB/operations/upgrades/), and
+[failure recovery](/ReplicaDB/operations/failure-recovery/) for their detailed
+procedures.
