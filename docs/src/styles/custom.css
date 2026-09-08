@@ -32,6 +32,7 @@
   --sl-color-red: var(--replicadb-error);
   --sl-font: "Avenir Next", "Helvetica Neue", sans-serif;
   --sl-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --sl-content-width: 64rem;
 }
 
 [data-theme='light'] {
@@ -109,7 +110,7 @@ h6 {
 }
 
 .sl-markdown-content {
-  max-width: 72ch;
+  max-width: 90ch;
 }
 
 .sl-markdown-content a,
@@ -435,7 +436,7 @@ html[data-has-hero] .hero > img {
 
 .support-matrix table {
   width: 100%;
-  min-width: 38rem;
+  min-width: 64rem;
   border-collapse: collapse;
 }
 
@@ -468,6 +469,12 @@ html[data-has-hero] .hero > img {
   background: var(--replicadb-mist-green);
   font-size: 0.8125rem;
   font-weight: 700;
+}
+
+@media (max-width: 64rem) {
+  :root {
+    --sl-content-width: 45rem;
+  }
 }
 
 @media (max-width: 40rem) {
