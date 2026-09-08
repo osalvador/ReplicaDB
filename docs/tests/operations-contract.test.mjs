@@ -26,6 +26,22 @@ test('covers deployment, health, security, recovery, and metric interpretations'
   }
 });
 
+test('makes the distributed API and worker deployment actionable', () => {
+  const deployment = readFileSync(join(operationsRoot, 'distributed-deployment.md'), 'utf8');
+  for (const required of [
+    'start local', 'start api', 'start worker', 'exactly one mode',
+    'External PostgreSQL', 'REPLICADB_WORKER_IDENTITY',
+    'REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED=false',
+    'REPLICADB_SECURITY_MASTER_KEY_FILE', 'TLS ingress',
+    'Start the cluster', 'Flyway', 'JDBC Quartz',
+    'actuator/health/liveness', 'actuator/health/readiness',
+    'point-in-time recovery', 'never resumes'
+  ]) {
+    assert.match(deployment, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), required);
+  }
+  assert.match(deployment, /Do not run `start api local`/i);
+});
+
 test('keeps environment documentation aligned with the maintained example', () => {
   const examplePath = join(repoRoot, 'replicadb-server/conf/replicadb-server.env.example');
   const example = readFileSync(examplePath, 'utf8');

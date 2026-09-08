@@ -43,11 +43,14 @@ schedule. Stop the server cleanly after a local test:
 
 ## Keep the boundary clear
 
-Local mode is a durable single-node deployment. Use the `api` and `worker`
-profiles with external PostgreSQL when execution must scale beyond one host.
-The worker management endpoint remains private and is not a public UI.
+Local mode is a durable single-node deployment. When execution must scale
+beyond one host, run `api` and `worker` as separate processes against shared
+external PostgreSQL and a shared keyring; do not combine them as `start api
+local`. The API serves the control plane, while workers claim and execute
+runs. The worker management endpoint remains private and is not a public UI.
 
 Continue with [server installation](/ReplicaDB/server/installation/),
+[distributed deployment](/ReplicaDB/operations/distributed-deployment/),
 [server configuration](/ReplicaDB/operations/configuration/),
 [server troubleshooting](/ReplicaDB/operations/troubleshooting/), and
 [security and TLS](/ReplicaDB/operations/security-and-tls/).
