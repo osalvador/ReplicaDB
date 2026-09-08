@@ -36,7 +36,9 @@ test('makes the distributed API and worker deployment actionable', () => {
     'REPLICADB_SECURITY_MASTER_KEY_FILE', 'TLS ingress',
     'Start the cluster', 'Flyway', 'JDBC Quartz',
     'actuator/health/liveness', 'actuator/health/readiness',
-    'point-in-time recovery', 'never resumes'
+    'point-in-time recovery', 'never resumes',
+    'Frontend delivery', 'bundled browser frontend',
+    'Workers never serve the frontend'
   ]) {
     assert.match(deployment, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), required);
   }
