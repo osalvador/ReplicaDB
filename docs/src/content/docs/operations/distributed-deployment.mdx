@@ -3,6 +3,7 @@ title: Distributed deployment
 description: Run API and worker profiles against shared external PostgreSQL.
 ---
 
+import ArchitectureDiagram from '../../../components/ArchitectureDiagram.astro';
 
 Use distributed deployment when execution must scale beyond one host or when
 PostgreSQL metadata must be managed outside ReplicaDB. It runs separate API
@@ -28,20 +29,12 @@ Do not run `start api local`. The second word is not a modifier: `api` and
 
 ## Topology and responsibilities
 
-```mermaid
-flowchart LR
-	 Browser[Users and automation] --> TLS[TLS ingress or authenticated proxy]
-	 TLS --> API1[API instance]
-	 TLS --> API2[API instance]
-	 API1 <--> PG[(External PostgreSQL)]
-	 API2 <--> PG
-	 Worker1[Worker instance] <--> PG
-	 Worker2[Worker instance] <--> PG
-	 API1 --- Key[Shared keyring]
-	 API2 --- Key
-	 Worker1 --- Key
-	 Worker2 --- Key
-```
+<ArchitectureDiagram
+  id="distributed-deployment-topology"
+  title="API instances provide the control plane; workers execute durable runs through shared PostgreSQL and keyring state."
+  source={'flowchart LR\n  Browser[Users and automation] --> TLS[TLS ingress or authenticated proxy]\n  TLS --> API1[API instance]\n  TLS --> API2[API instance]\n  API1 <--> PG[(External PostgreSQL)]\n  API2 <--> PG\n  Worker1[Worker instance] <--> PG\n  Worker2[Worker instance] <--> PG\n  API1 --- Key[Shared keyring]\n  API2 --- Key\n  Worker1 --- Key\n  Worker2 --- Key'}
+  fallback={'Users and automation -> TLS ingress -> API instances\nAPI instances and workers -> shared external PostgreSQL\nAPI instances and workers -> shared keyring'}
+/>
 
 API instances serve the web control plane and REST API, authenticate users,
 store job definitions and datasource profiles, and run the clustered JDBC
@@ -80,11 +73,8 @@ separate worker fleet owns execution, set
 `REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED=false` on every API node.
 
 Workers need an identity and capacity settings. Start with one concurrent run
-per worker and size its datasource pool with headroom:
-
-$$
-	ext{datasource pool size} \geq \text{max concurrent runs} + 4
-$$
+per worker. The datasource pool size must be at least the maximum concurrent
+runs plus four connections for coordination work.
 
 The default worker management listener is `127.0.0.1:9091`. On a container
 network it may bind to a private interface, but it must not be published on the
@@ -99,16 +89,16 @@ not enable Quartz schema auto-initialization and never mix RAMJobStore with
 the JDBC Quartz store. Then start roles as separate processes or workloads.
 
 1. Confirm that PostgreSQL is reachable, writable, and backed up, and mount
-	the same keyring into every workload.
+   the same keyring into every workload.
 2. Start one API instance with `./bin/replicadb-server start api`. It applies
-	and validates the managed schema and exposes the control plane.
+   and validates the managed schema and exposes the control plane.
 3. Start additional API instances with the same external configuration. They
-	join the same clustered Quartz scheduler.
+   join the same clustered Quartz scheduler.
 4. Start each worker separately with `./bin/replicadb-server start worker`.
-	Give every worker a different `REPLICADB_WORKER_IDENTITY`.
+   Give every worker a different `REPLICADB_WORKER_IDENTITY`.
 5. Create datasource profiles and a job through the API, run a manual job,
-	and confirm that a worker claims and completes the run before enabling a
-	schedule.
+   and confirm that a worker claims and completes the run before enabling a
+   schedule.
 
 The repository's `docker-compose.server.yml` is a local topology reference: it
 runs PostgreSQL, two APIs, and one worker on separate public and internal

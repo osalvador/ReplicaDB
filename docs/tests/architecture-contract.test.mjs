@@ -47,3 +47,17 @@ test('each architecture diagram has a text alternative', () => {
   assert.equal(diagramCount, 3);
   assert.equal(fallbackCount, diagramCount);
 });
+
+test('explains architectural ownership, failure boundaries, and operating handoffs', () => {
+  for (const required of [
+    'The replication core stays reusable', 'The server owns durable coordination',
+    'Responsibilities and failure boundaries', 'Creation, claim, and terminal outcome',
+    'Retry and recovery lineage', 'Claim-time consistency', 'Fence stale processes',
+    'Schedule intent and scheduler mechanics', 'Approximate fairness by design',
+    'Data crosses explicit boundaries', 'Identity and execution are different authorities',
+    '/ReplicaDB/operations/distributed-deployment/',
+    '/ReplicaDB/operations/failure-recovery/', '/ReplicaDB/operations/capacity-planning/'
+  ]) {
+    assert.match(docs, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), required);
+  }
+});

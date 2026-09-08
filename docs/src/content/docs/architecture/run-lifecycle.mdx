@@ -21,6 +21,22 @@ transitions durable. A retry starts from the beginning with a new attempt and
 `previous_run_id`; it is not resume semantics. A successful finalization is
 the only path that commits an incremental watermark.
 
+## Creation, claim, and terminal outcome
+
+A manual trigger or enabled schedule first creates a durable `PENDING` row.
+It does not grant a worker ownership. A worker changes it to `RUNNING` only by
+making an atomic claim that records its identity, lease token, and lease expiry.
+While running, it renews the lease and records fenced progress. Cancellation
+first records `CANCEL_REQUESTED`, so intent survives even when the worker is
+slow to observe it.
+
+`SUCCEEDED` records a completed attempt and may commit an incremental
+watermark. `CANCELLED` records that cancellation won the terminal transition.
+`FAILED` retains the diagnostic reason. No terminal row becomes running again:
+the state machine preserves the historical attempt for audit and diagnosis.
+
+## Retry and recovery lineage
+
 Each retry receives a new lease and re-resolves the current datasource
 profiles at claim time; it does not reuse the previous attempt's encrypted
 snapshot. This makes profile edits visible to later attempts while preserving
@@ -29,3 +45,18 @@ the exact inputs used by an attempt already in progress.
 Terminal states are `SUCCEEDED`, `CANCELLED`, and `RETRY_SCHEDULED`. A worker
 loss becomes a retry or failure according to the job policy and attempt count;
 it never silently resumes from an unknown row offset.
+
+`RETRY_SCHEDULED` is terminal for the old attempt and describes a backoff
+decision, not active execution. Its replacement is a new `PENDING` attempt
+linked through `previous_run_id`. Expired cancellation requests become
+`CANCELLED` without a replacement. This protects operators from mistaking
+attempt count or row counters for resumable progress.
+
+## Boundaries and observability
+
+The lifecycle is durable but not transactional with every external sink write.
+An interrupted destructive `complete` run can leave an indeterminate sink;
+`complete-atomic` and `incremental` provide safer recovery semantics where the
+connector supports them. Use [dispatch and recovery](/ReplicaDB/architecture/dispatch-and-recovery/)
+to follow claim/recovery mechanics and [failure recovery](/ReplicaDB/operations/failure-recovery/)
+for the operational response.

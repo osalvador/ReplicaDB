@@ -22,6 +22,21 @@ replication options contract. They do not create a second connector engine.
 The database is the ownership boundary for run state, leases, cancellation,
 attempt lineage, schedules, permissions, and audit records.
 
+## Read the system by ownership
+
+The CLI owns a single direct execution. The API owns authenticated control
+plane actions and schedule reconciliation. Workers own only the active
+execution work that they have durably claimed. PostgreSQL owns facts that must
+outlive a process: job definitions, datasource bindings, permissions, schedule
+intent, attempts, leases, and audit history.
+
+This separation means the API can create a run without executing it, workers
+can execute without exposing a product API, and a restarted process can recover
+from durable state rather than from memory. A notification wakes work sooner,
+but no notification decides ownership.
+
+## Follow the next boundary
+
 Continue with [topology](/ReplicaDB/architecture/distributed-topology/),
 [run lifecycle](/ReplicaDB/architecture/run-lifecycle/), and
 [concurrency and fencing](/ReplicaDB/architecture/concurrency-and-fencing/).
