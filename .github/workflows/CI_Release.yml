@@ -144,7 +144,7 @@ jobs:
     steps:
     - uses: actions/checkout@v7
     - name: Download release staging
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: release-staging
         path: release-staging
@@ -188,7 +188,7 @@ jobs:
         distribution: 'temurin'
         cache: maven
     - name: Download release staging
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: release-staging
         path: release-staging
@@ -314,7 +314,7 @@ jobs:
     steps:
     - uses: actions/checkout@v7
     - name: Download release staging
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: release-staging
         path: release-staging
