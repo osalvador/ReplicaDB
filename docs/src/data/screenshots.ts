@@ -1,7 +1,7 @@
 export type ScreenshotDefinition = {
   key: string;
   filename: string;
-  viewport: 'desktop' | 'mobile';
+  viewport: 'desktop';
   state: string;
   alt: string;
   caption: string;
@@ -81,24 +81,4 @@ export const screenshotDefinitions: ScreenshotDefinition[] = [
     key: 'unauthorized', filename: 'unauthorized.png', viewport: 'desktop', state: 'unauthorized route state',
     alt: 'ReplicaDB unauthorized page', caption: 'Route visibility does not replace backend authorization.', guide: 'server/errors-and-empty-states'
   },
-  {
-    key: 'login-mobile', filename: 'login-mobile.png', viewport: 'mobile', state: 'mobile sign-in layout',
-    alt: 'ReplicaDB mobile sign-in form', caption: 'The sign-in flow remains readable on a narrow viewport.', guide: 'server/sign-in-and-profile'
-  },
-  {
-    key: 'dashboard-mobile', filename: 'dashboard-mobile.png', viewport: 'mobile', state: 'mobile dashboard layout',
-    alt: 'ReplicaDB mobile dashboard', caption: 'Dashboard metrics stack without horizontal overflow on mobile.', guide: 'server/dashboard'
-  },
-  {
-    key: 'jobs-mobile', filename: 'jobs-mobile.png', viewport: 'mobile', state: 'mobile job catalog',
-    alt: 'ReplicaDB mobile jobs catalog', caption: 'The jobs catalog remains usable on a narrow viewport.', guide: 'server/jobs'
-  },
-  {
-    key: 'datasources-mobile', filename: 'datasources-mobile.png', viewport: 'mobile', state: 'mobile datasource catalog',
-    alt: 'ReplicaDB mobile datasource catalog', caption: 'Datasource rows remain contained on a narrow viewport.', guide: 'server/datasources'
-  },
-  {
-    key: 'run-detail-mobile', filename: 'run-detail-mobile.png', viewport: 'mobile', state: 'mobile run diagnostics',
-    alt: 'ReplicaDB mobile run detail', caption: 'Run diagnostics remain inspectable on mobile.', guide: 'server/runs-and-diagnostics'
-  }
 ];

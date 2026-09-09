@@ -23,6 +23,14 @@ const pageSources = [
   'dashboard', 'datasources', 'jobs', 'schedules', 'runs-and-diagnostics',
   'users', 'permissions', 'audit', 'sign-in-and-profile', 'errors-and-empty-states'
 ].map(readServerGuide).join('\n');
+const serverGuides = [
+  readFileSync(join(contentRoot, 'server/index.md'), 'utf8'),
+  ...[
+  'installation', 'dashboard', 'datasources', 'jobs', 'schedules',
+  'runs-and-diagnostics', 'users', 'permissions', 'audit',
+  'sign-in-and-profile', 'errors-and-empty-states'
+].map(readServerGuide)
+].join('\n');
 
 /** @type {Record<string, string>} */
 const guideByRoute = {
@@ -106,4 +114,17 @@ test('covers ACL vocabulary, error states, and secret-preserving behavior', () =
     assert.doesNotMatch(pageSources, new RegExp(prohibited));
   }
   assert.doesNotMatch(pageSources, /jdbc:[^\s"']+:\/\/[^\s"']*:[^\s"']*@/i);
+});
+
+test('explains workflow effects, validation, and operational recovery', () => {
+  for (const required of [
+    'Follow an operator workflow', 'Create and verify a profile',
+    'Define and validate execution intent', 'Configure and verify recurring work',
+    'Trigger, inspect, and decide', 'Manage access deliberately',
+    'Change access without changing history', 'Investigate a durable change',
+    'Recover without losing context', '/ReplicaDB/operations/troubleshooting/',
+    '/ReplicaDB/operations/health-and-metrics/'
+  ]) {
+    assert.match(serverGuides, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), required);
+  }
 });

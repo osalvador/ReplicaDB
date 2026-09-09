@@ -6,7 +6,6 @@ description: Use the authenticated session and understand profile boundaries.
 import ScreenshotFrame from '../../../components/ScreenshotFrame.astro';
 import login from '../../../assets/screenshots/server/login.png';
 import profile from '../../../assets/screenshots/server/profile.png';
-import loginMobile from '../../../assets/screenshots/server/login-mobile.png';
 
 
 `/login` is the only public frontend route. The sign-in flow obtains CSRF
@@ -22,8 +21,21 @@ disabled fields explain that account self-management is not enabled. An ADMIN
 can reset another user's password from [Users](/ReplicaDB/server/users/).
 
 <ScreenshotFrame src={profile} alt="ReplicaDB profile page" caption="Profile shows identity and role without offering secret self-service." width={1440} height={900} />
-<ScreenshotFrame src={loginMobile} alt="ReplicaDB mobile sign-in form" caption="The sign-in flow remains readable on a narrow viewport." width={390} height={844} />
 
 The frontend must never receive resolved datasource security values. Session
 cookies and CSRF handling belong to the same origin as the API; do not copy
 them into documentation examples or third-party request tools.
+
+## Session and administrative boundaries
+
+The browser session identifies the signed-in user, but backend role and
+resource-permission checks decide each operation. A route guard returns an
+anonymous browser to login after a 401 and shows an unauthorized state after a
+403; neither behavior grants access. Sign out when the shared workstation or
+browser session is no longer trusted.
+
+Profile is intentionally read-only for identity and password management. An
+administrator creates users, changes their global role or enabled state, and
+resets passwords through the dedicated [Users](/ReplicaDB/server/users/) flow.
+This keeps account recovery auditable and prevents a profile screen from
+becoming a secret-management surface.

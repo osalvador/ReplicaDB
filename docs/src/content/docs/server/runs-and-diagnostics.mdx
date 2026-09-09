@@ -5,7 +5,6 @@ description: Trigger, inspect, cancel, retry, and diagnose managed runs.
 
 import ScreenshotFrame from '../../../components/ScreenshotFrame.astro';
 import runDetail from '../../../assets/screenshots/server/run-detail.png';
-import runDetailMobile from '../../../assets/screenshots/server/run-detail-mobile.png';
 
 
 Job details contain run history, and `/runs/:id` opens a run detail page. The
@@ -14,14 +13,37 @@ state, and a bounded diagnostic log. Statuses include pending, running,
 cancel-requested, cancelled, retry-scheduled, succeeded, and failed.
 
 <ScreenshotFrame src={runDetail} alt="ReplicaDB run detail and bounded diagnostics" caption="Run detail shows status, metrics, and bounded operational logs." width={1440} height={900} loading="eager" />
-<ScreenshotFrame src={runDetailMobile} alt="ReplicaDB mobile run detail" caption="Run diagnostics remain inspectable on mobile." width={390} height={844} />
 
 `Cancel run` persists cancellation intent before the best-effort local signal.
 The UI displays a persisted cancellation warning when the sink outcome may be
 indeterminate. `Retry run` starts a new attempt from the beginning; it is not
 resume behavior. Retry availability depends on the run status and permission.
 
+## Trigger, inspect, and decide
+
+Trigger a manual run from job detail only after reviewing its definition and
+bindings. Run detail identifies the attempt, current status, timestamps, row
+counts, and retry eligibility. A pending or running state describes durable
+work that a worker may claim or already owns; it is not proof that all sink
+writes are reversible.
+
+Request cancellation when continuing the run is riskier than an indeterminate
+sink. Wait for the terminal outcome before retrying. A retry creates a new
+attempt linked to the previous run and re-resolves current datasource profiles;
+it never resumes from a row offset. Compare the old and new attempts before
+declaring recovery complete.
+
 Run logs are operational data. They are bounded, redacted, and not a place for
 credentials, keyrings, lease tokens, or resolved datasource security. A log
 load failure offers a retry action and does not turn an absent log into a
 successful run.
+
+## Diagnose safely
+
+Use the detail's status and warnings before interpreting row counts or logs.
+For `complete` mode, interruption can leave the sink empty, truncated, or
+partially populated; verify source and sink outcomes before a retry. A missing
+or truncated log is evidence of bounded diagnostics, not evidence that a run
+succeeded. Escalate persistent queue, lease, or worker-health symptoms through
+[failure recovery](/ReplicaDB/operations/failure-recovery/) and
+[health and metrics](/ReplicaDB/operations/health-and-metrics/).
