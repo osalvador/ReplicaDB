@@ -101,7 +101,7 @@ test('keeps every curated server screenshot registered and owned by one MDX guid
     const absolutePath = join(screenshotRoot, definition.filename);
     assert.ok(existsSync(absolutePath), `${definition.filename} must exist`);
     const metadata = await sharp(absolutePath).metadata();
-    const expected = definition.viewport === 'mobile' ? { width: 390, height: 844 } : { width: 1440, height: 900 };
+    const expected = { width: 1440, height: 900 };
     assert.equal(metadata.width, expected.width, `${definition.filename} width`);
     assert.equal(metadata.height, expected.height, `${definition.filename} height`);
 

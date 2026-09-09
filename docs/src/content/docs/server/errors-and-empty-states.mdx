@@ -36,3 +36,18 @@ value is preserved; clearing requires the explicit `clearSecurityKeys` path.
 Complete mode can truncate the sink before a failure. Read the run warning and
 choose a mode-specific recovery rather than treating a failed run as a safe
 rollback.
+
+## Recover without losing context
+
+Treat an empty state as information before creating new data: it can mean no
+resource exists, the selected filter excludes it, or the current user lacks
+access. Correct field validation in place, then submit again. For a 401, sign
+in again; for a 403, request the appropriate resource permission rather than
+reloading repeatedly.
+
+For a 409, refresh the job, datasource, schedule, or permission view and
+compare the durable state before repeating the mutation. Do not infer that an
+active run is safe to retry from an error banner alone; inspect its attempt,
+warning, and diagnostics first. Use [runs and diagnostics](/ReplicaDB/server/runs-and-diagnostics/)
+for execution outcomes and [troubleshooting](/ReplicaDB/operations/troubleshooting/)
+when the failure points to service health.

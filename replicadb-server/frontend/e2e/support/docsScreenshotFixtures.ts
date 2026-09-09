@@ -10,7 +10,7 @@ export const FIXED_IDS = {
   conflictJob: '00000000-0000-4000-8000-000000000103'
 } as const;
 
-export type DocsViewport = 'desktop' | 'mobile';
+export type DocsViewport = 'desktop';
 
 export type DocsScreenshotDefinition = {
   key: string;
@@ -40,12 +40,7 @@ export const CURATED_SCREENSHOTS: DocsScreenshotDefinition[] = [
   ['job-permissions', 'job-permissions.png', 'desktop', 'job permission matrix', 'ReplicaDB job permissions', 'Admins grant VIEW, EDIT, EXECUTE, and CANCEL permissions.', 'server/permissions'],
   ['users', 'users.png', 'desktop', 'admin user management', 'ReplicaDB user management', 'Admins manage roles, enabled state, and password resets.', 'server/users'],
   ['audit', 'audit.png', 'desktop', 'filtered audit history', 'ReplicaDB audit history', 'Admins filter and inspect durable audit events.', 'server/audit'],
-  ['unauthorized', 'unauthorized.png', 'desktop', 'unauthorized route state', 'ReplicaDB unauthorized page', 'Route visibility does not replace backend authorization.', 'server/errors-and-empty-states'],
-  ['login-mobile', 'login-mobile.png', 'mobile', 'mobile sign-in layout', 'ReplicaDB mobile sign-in form', 'The sign-in flow remains readable on a narrow viewport.', 'server/sign-in-and-profile'],
-  ['dashboard-mobile', 'dashboard-mobile.png', 'mobile', 'mobile dashboard layout', 'ReplicaDB mobile dashboard', 'Dashboard metrics stack without horizontal overflow on mobile.', 'server/dashboard'],
-  ['jobs-mobile', 'jobs-mobile.png', 'mobile', 'mobile job catalog', 'ReplicaDB mobile jobs catalog', 'The jobs catalog remains usable on a narrow viewport.', 'server/jobs'],
-  ['datasources-mobile', 'datasources-mobile.png', 'mobile', 'mobile datasource catalog', 'ReplicaDB mobile datasource catalog', 'Datasource rows remain contained on a narrow viewport.', 'server/datasources'],
-  ['run-detail-mobile', 'run-detail-mobile.png', 'mobile', 'mobile run diagnostics', 'ReplicaDB mobile run detail', 'Run diagnostics remain inspectable on mobile.', 'server/runs-and-diagnostics']
+  ['unauthorized', 'unauthorized.png', 'desktop', 'unauthorized route state', 'ReplicaDB unauthorized page', 'Route visibility does not replace backend authorization.', 'server/errors-and-empty-states']
 ].map(([key, filename, viewport, state, alt, caption, guide]) => ({ key, filename, viewport: viewport as DocsViewport, state, alt, caption, guide }));
 
 export const REDACTION_PATTERNS = [

@@ -8,7 +8,6 @@ import datasourceDetail from '../../../assets/screenshots/server/datasource-deta
 import datasourceEdit from '../../../assets/screenshots/server/datasource-edit.png';
 import datasourceNew from '../../../assets/screenshots/server/datasource-new.png';
 import datasources from '../../../assets/screenshots/server/datasources.png';
-import datasourcesMobile from '../../../assets/screenshots/server/datasources-mobile.png';
 
 
 The `/datasources` catalog lists profiles visible to the current user and can
@@ -17,7 +16,6 @@ capabilities, and permission flags such as `canUse` and `canEdit`; it never
 rehydrates stored security values.
 
 <ScreenshotFrame src={datasources} alt="ReplicaDB datasource catalog" caption="The catalog lists the datasource profiles visible to the signed-in user." width={1440} height={900} loading="eager" />
-<ScreenshotFrame src={datasourcesMobile} alt="ReplicaDB datasource catalog on a mobile viewport" caption="Datasource profiles remain scannable on narrow screens." width={390} height={844} />
 
 ## Actions
 
@@ -36,6 +34,20 @@ When no profiles exist, ADMIN users see `No datasources configured.` with
 with `Ask an administrator for access.` Load failures say `Unable to load
 datasources.` and preserve a retry path.
 
+## Create and verify a profile
+
+Choose a connector and role that match the job's source or sink purpose, then
+enter its technical settings and protected security values in the create form.
+After saving, open the detail page and confirm the supported capabilities,
+redacted connection display, and permission flags before binding it to a job.
+The catalog does not prove a connector can support every replication mode;
+validate the intended job with a manual run.
+
+Deleting a datasource is restricted while a job binding still refers to it.
+Remove or replace bindings deliberately instead of treating deletion as a way
+to invalidate active work. A disabled binding prevents future claims but an
+already running attempt retains its claim-time snapshot.
+
 ## Secret-preserving edits
 
 Edit forms parse only `safeConnectDisplay` and keep security fields in memory.
@@ -45,3 +57,8 @@ path for a selected key; it is not implied by leaving an input blank.
 
 Do not treat a visible edit control as authorization. The API enforces
 datasource `VIEW`, `USE`, and `EDIT` permissions.
+
+If a save conflicts with a concurrent update, refresh the detail, compare the
+safe fields, and apply the intended edit again. See [permissions](/ReplicaDB/server/permissions/)
+for access management and [runs and diagnostics](/ReplicaDB/server/runs-and-diagnostics/)
+to validate a datasource through real execution.
