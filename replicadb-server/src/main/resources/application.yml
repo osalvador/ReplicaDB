@@ -20,7 +20,14 @@ management:
         enabled: true
 replicadb:
   security:
-    master-key-file: ${REPLICADB_SECURITY_MASTER_KEY_FILE:/run/secrets/replicadb-master-key}
+    keyring:
+      file: ${REPLICADB_SECURITY_KEYRING_FILE:${REPLICADB_SECURITY_MASTER_KEY_FILE:/run/secrets/replicadb-master-key}}
+      current:
+        version: ${REPLICADB_SECURITY_KEYRING_CURRENT_VERSION:}
+        key: ${REPLICADB_SECURITY_KEYRING_CURRENT_KEY:}
+      secondary:
+        version: ${REPLICADB_SECURITY_KEYRING_SECONDARY_VERSION:}
+        key: ${REPLICADB_SECURITY_KEYRING_SECONDARY_KEY:}
   server:
     execution:
       pool-size: 4

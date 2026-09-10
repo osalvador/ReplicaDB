@@ -8,6 +8,7 @@ import javax.crypto.SecretKey;
 import java.security.SecureRandom;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -132,6 +133,11 @@ class SecretProtectionServiceTest {
                 return Optional.of(second);
             }
             return Optional.empty();
+        }
+
+        @Override
+        public Set<String> knownVersions() {
+            return Set.of(first.version(), second.version());
         }
 
         void rotate() {

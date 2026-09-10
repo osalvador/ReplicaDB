@@ -6,7 +6,7 @@ description: Back up PostgreSQL state and the encryption keyring together.
 
 PostgreSQL is the source of truth for jobs, schedules, permissions, sessions,
 audit, leases, retry chains, watermarks, and run logs. Back up the database
-and `REPLICADB_SECURITY_MASTER_KEY_FILE` as one recovery set. The PostgreSQL
+and `REPLICADB_SECURITY_KEYRING_FILE` as one recovery set. The PostgreSQL
 bundle cache can be recreated; the keyring cannot.
 
 ## Prepare a recoverable backup

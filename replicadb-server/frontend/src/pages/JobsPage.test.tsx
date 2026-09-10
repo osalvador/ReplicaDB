@@ -4,14 +4,21 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as jobsApi from '../api/jobsApi';
+import type { JobDefinitionPage } from '../api/jobsApi';
 import JobsPage from './JobsPage';
 import { theme } from '../theme/theme';
 
 vi.mock('../api/jobsApi', () => ({ listJobs: vi.fn() }));
 const mockedJobsApi = vi.mocked(jobsApi);
-const jobs = [{ id: 'job-1', name: 'Orders replication', sourceTable: 'orders', sinkTable: 'warehouse_orders', mode: 'incremental' }];
+const jobs: NonNullable<JobDefinitionPage['content']> = [{
+  id: 'job-1',
+  name: 'Orders replication',
+  sourceTable: 'orders',
+  sinkTable: 'warehouse_orders',
+  mode: 'incremental'
+}];
 
-function renderJobs(response = { content: jobs, page: 0, size: 50, totalElements: 1 }) {
+function renderJobs(response: JobDefinitionPage = { content: jobs, page: 0, size: 50, totalElements: 1 }) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   mockedJobsApi.listJobs.mockResolvedValue(response);
   return render(<ThemeProvider theme={theme}><QueryClientProvider client={queryClient}><MemoryRouter initialEntries={['/jobs']}><Routes><Route path="/jobs" element={<JobsPage />} /><Route path="/jobs/:id" element={<div>Job detail destination</div>} /></Routes></MemoryRouter></QueryClientProvider></ThemeProvider>);

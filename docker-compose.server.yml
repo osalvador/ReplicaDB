@@ -168,7 +168,7 @@ volumes:
 
 secrets:
   replicadb-master-key:
-    file: ${REPLICADB_SECURITY_MASTER_KEY_FILE:?REPLICADB_SECURITY_MASTER_KEY_FILE must point to a keyring file}
+    file: ${REPLICADB_SECURITY_KEYRING_FILE:-${REPLICADB_SECURITY_MASTER_KEY_FILE:?REPLICADB_SECURITY_KEYRING_FILE or REPLICADB_SECURITY_MASTER_KEY_FILE must point to a keyring file}}
 
 networks:
   public:

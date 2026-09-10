@@ -40,6 +40,11 @@ public final class FileBackedKeyEncryptionKeyProvider implements KeyEncryptionKe
         return Optional.ofNullable(keys.get(version));
     }
 
+    @Override
+    public java.util.Set<String> knownVersions() {
+        return keys.keySet();
+    }
+
     private static JsonNode readKeyring(Path path, ObjectMapper objectMapper) {
         try {
             return objectMapper.readTree(Files.readString(path, StandardCharsets.UTF_8));

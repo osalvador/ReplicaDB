@@ -52,8 +52,8 @@ export type JobDefinitionMutationInput =
   | JobDefinitionFormInput
   | components['schemas']['JobDefinitionRequest'];
 
-const normalizeOptionalString = (value?: string): string | undefined => value === '' ? undefined : value;
-const normalizeWatermarkColumn = (value?: string): string | undefined => {
+const normalizeOptionalString = (value?: string | null): string | undefined => value === '' ? undefined : value ?? undefined;
+const normalizeWatermarkColumn = (value?: string | null): string | undefined => {
   const normalized = value?.trim();
   return normalized ? normalized : undefined;
 };

@@ -5,6 +5,7 @@ import org.replicadb.server.job.domain.ManagedDataSource;
 import org.replicadb.server.job.domain.ManagedDataSourceSummary;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -22,6 +23,10 @@ public interface ManagedDataSourceStore {
     Optional<ManagedDataSourceSummary> findSummaryById(UUID id);
 
     Optional<ManagedDataSource> findByName(String name);
+
+    Map<String, Long> countByKeyVersion();
+
+    Optional<UUID> findIdPendingReencryption(String currentVersion, Set<String> knownVersions);
 
     List<ManagedDataSourceSummary> findPage(int page, int size,
                                             Set<UUID> restrictToIds,

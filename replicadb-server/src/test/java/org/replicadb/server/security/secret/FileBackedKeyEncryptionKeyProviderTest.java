@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,6 +29,7 @@ class FileBackedKeyEncryptionKeyProviderTest {
         assertEquals("v2", provider.current().version());
         assertEquals(32, provider.current().key().getEncoded().length);
         assertEquals(32, provider.find("v1").orElseThrow().key().getEncoded().length);
+                assertEquals(Set.of("v1", "v2"), provider.knownVersions());
     }
 
     @Test

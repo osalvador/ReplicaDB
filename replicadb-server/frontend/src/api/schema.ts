@@ -368,6 +368,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/keyring/reencrypt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-encrypt datasource envelopes
+         * @description Re-encrypts one bounded batch using the current key version. Repeat until remaining is zero. ADMIN and CSRF are required.
+         */
+        post: operations["reencryptKeyring"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/keyring/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get keyring status
+         * @description Returns known key versions and encrypted datasource envelope counts without key material. ADMIN is required.
+         */
+        get: operations["getKeyringStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs": {
         parameters: {
             query?: never;
@@ -546,7 +586,7 @@ export interface components {
              * @description Audited action category.
              * @enum {string}
              */
-            action?: "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "USER_CREATED" | "USER_UPDATED" | "USER_PASSWORD_CHANGED" | "DATASOURCE_CREATED" | "DATASOURCE_UPDATED" | "DATASOURCE_DELETED" | "DATASOURCE_PERMISSION_REPLACED" | "DATASOURCE_PERMISSION_REVOKED" | "JOB_CREATED" | "JOB_UPDATED" | "JOB_DELETED" | "JOB_DATASOURCE_BINDING_REPLACED" | "JOB_DATASOURCE_BINDING_ENABLED" | "JOB_DATASOURCE_BINDING_DISABLED" | "JOB_PERMISSION_REPLACED" | "JOB_PERMISSION_REVOKED" | "JOB_SCHEDULE_UPSERTED" | "JOB_SCHEDULE_DELETED" | "RUN_TRIGGERED" | "RUN_CANCEL_REQUESTED" | "RUN_RETRIED" | "RUN_SUCCEEDED" | "RUN_FAILED" | "RUN_CANCELLED";
+            action?: "LOGIN_SUCCEEDED" | "LOGIN_FAILED" | "LOGOUT" | "USER_CREATED" | "USER_UPDATED" | "USER_PASSWORD_CHANGED" | "DATASOURCE_CREATED" | "DATASOURCE_UPDATED" | "DATASOURCE_DELETED" | "DATASOURCE_PERMISSION_REPLACED" | "DATASOURCE_PERMISSION_REVOKED" | "KEYRING_REENCRYPTED" | "JOB_CREATED" | "JOB_UPDATED" | "JOB_DELETED" | "JOB_DATASOURCE_BINDING_REPLACED" | "JOB_DATASOURCE_BINDING_ENABLED" | "JOB_DATASOURCE_BINDING_DISABLED" | "JOB_PERMISSION_REPLACED" | "JOB_PERMISSION_REVOKED" | "JOB_SCHEDULE_UPSERTED" | "JOB_SCHEDULE_DELETED" | "RUN_TRIGGERED" | "RUN_CANCEL_REQUESTED" | "RUN_RETRIED" | "RUN_SUCCEEDED" | "RUN_FAILED" | "RUN_CANCELLED";
             /**
              * Format: uuid
              * @description Actor user identifier, or null for a system actor.
@@ -579,7 +619,7 @@ export interface components {
              * @description Type of resource affected by the action.
              * @enum {string}
              */
-            resourceType?: "USER" | "DATASOURCE" | "JOB_DEFINITION" | "JOB_RUN" | "SESSION";
+            resourceType?: "USER" | "DATASOURCE" | "KEYRING" | "JOB_DEFINITION" | "JOB_RUN" | "SESSION";
             /** @description Recorded source address when available. */
             sourceAddress?: string | null;
         };
@@ -1142,6 +1182,29 @@ export interface components {
              * @description Last update timestamp in UTC.
              */
             updatedAt?: string;
+        };
+        KeyringEnvelopeCountResponse: {
+            /** Format: int64 */
+            count?: number;
+            keyVersion?: string;
+            known?: boolean;
+        };
+        KeyringReencryptResponse: {
+            converged?: boolean;
+            /** Format: int32 */
+            reencrypted?: number;
+            /** Format: int64 */
+            remaining?: number;
+        };
+        KeyringStatusResponse: {
+            converged?: boolean;
+            currentVersion?: string;
+            envelopes?: components["schemas"]["KeyringEnvelopeCountResponse"][];
+            knownVersions?: string[];
+            /** Format: int64 */
+            reencryptionRequired?: number;
+            /** Format: int64 */
+            unknownVersionCount?: number;
         };
         /** @description Credentials used only to create a server-owned session. */
         LoginRequest: {
@@ -2192,6 +2255,53 @@ export interface operations {
             401: components["responses"]["UnauthorizedProblem"];
             403: components["responses"]["ForbiddenProblem"];
             404: components["responses"]["NotFoundProblem"];
+        };
+    };
+    reencryptKeyring: {
+        parameters: {
+            query?: {
+                /** @description Maximum number of envelopes to process in this request. */
+                batchSize?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Re-encryption batch completed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["KeyringReencryptResponse"];
+                };
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
+        };
+    };
+    getKeyringStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Keyring status returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["KeyringStatusResponse"];
+                };
+            };
+            401: components["responses"]["UnauthorizedProblem"];
+            403: components["responses"]["ForbiddenProblem"];
         };
     };
     listJobRuns: {

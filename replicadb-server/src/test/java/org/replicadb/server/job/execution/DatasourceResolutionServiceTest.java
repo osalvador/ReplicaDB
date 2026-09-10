@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -156,6 +157,11 @@ class DatasourceResolutionServiceTest {
             @Override
             public Optional<KeyEncryptionKey> find(String version) {
                 return key.version().equals(version) ? Optional.of(key) : Optional.empty();
+            }
+
+            @Override
+            public Set<String> knownVersions() {
+                return Set.of(key.version());
             }
         };
         return new SecretProtectionService(provider, new ObjectMapper());

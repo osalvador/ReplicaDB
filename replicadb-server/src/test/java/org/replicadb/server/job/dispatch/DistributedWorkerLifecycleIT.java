@@ -200,7 +200,7 @@ class DistributedWorkerLifecycleIT {
             "--spring.datasource.username=" + POSTGRES.getUsername(),
             "--spring.datasource.password=" + POSTGRES.getPassword(),
             "--spring.flyway.enabled=false",
-            "--replicadb.security.master-key-file=" + keyringPath,
+            "--replicadb.security.keyring.file=" + keyringPath,
             "--server.port=" + ("worker".equals(profile) ? "-1" : "0"),
             "--management.server.port=0",
             "--replicadb.server.local-execution.enabled=false",

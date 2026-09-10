@@ -145,8 +145,8 @@ startup error. By default, durable state lives under `~/.replicadb`:
 Set `REPLICADB_SERVER_HOME` to move this complete local installation. Keep the
 `security/master-key.json` keyring with the database backup; losing it makes
 encrypted datasource credentials unrecoverable. An explicit
-`REPLICADB_SECURITY_MASTER_KEY_FILE` can point to a separately managed
-keyring.
+`REPLICADB_SECURITY_KEYRING_FILE` can point to a separately managed keyring;
+the old `REPLICADB_SECURITY_MASTER_KEY_FILE` name remains a deprecated alias.
 
 Stop the server before backing up or restoring `data/postgresql` and the
 keyring. The cached native bundle can be recreated if it is absent. Major

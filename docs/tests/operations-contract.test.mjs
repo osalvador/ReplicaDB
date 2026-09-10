@@ -32,7 +32,8 @@ test('makes the distributed API and worker deployment actionable', () => {
   for (const required of [
     'start local', 'start api', 'start worker', 'exactly one mode',
     'External PostgreSQL', 'REPLICADB_WORKER_IDENTITY',
-    'REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED=false',
+    'REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED=false', 'REPLICADB_SECURITY_KEYRING_FILE',
+    'REPLICADB_SECURITY_KEYRING_CURRENT_VERSION', 'REPLICADB_SECURITY_KEYRING_SECONDARY_VERSION',
     'REPLICADB_SECURITY_MASTER_KEY_FILE', 'TLS ingress',
     'Start the cluster', 'Flyway', 'JDBC Quartz',
     'actuator/health/liveness', 'actuator/health/readiness',

@@ -82,6 +82,22 @@ class LocalMasterKeyBootstrapTest {
         assertFalse(Files.exists(home.getKeyringFile()));
     }
 
+        @Test
+        void prefersTheCanonicalSystemPropertyOverTheDeprecatedOne() throws Exception {
+                Path canonicalPath = temporaryDirectory.resolve("canonical-keyring.json");
+                Path deprecatedPath = temporaryDirectory.resolve("deprecated-keyring.json");
+                writeKeyring(canonicalPath);
+                writeKeyring(deprecatedPath);
+                Properties properties = new Properties();
+                properties.setProperty(SecretProtectionProperties.KEYRING_FILE_PROPERTY, canonicalPath.toString());
+                properties.setProperty(SecretProtectionProperties.MASTER_KEY_FILE_PROPERTY, deprecatedPath.toString());
+                EmbeddedPostgresHome home = EmbeddedPostgresHome.from(temporaryDirectory.resolve("replicadb"));
+
+                Path result = new LocalMasterKeyBootstrap().prepare(home, properties, Map.of());
+
+                assertEquals(canonicalPath.toAbsolutePath(), result);
+        }
+
     @Test
     void rejectsMalformedExistingKeyringsAndInvalidConfiguration() throws Exception {
         EmbeddedPostgresHome home = EmbeddedPostgresHome.from(temporaryDirectory.resolve("replicadb"));

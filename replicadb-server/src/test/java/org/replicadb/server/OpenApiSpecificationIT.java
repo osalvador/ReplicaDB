@@ -224,7 +224,8 @@ class OpenApiSpecificationIT {
         Set<String> methods = Set.of("get", "post", "put", "delete", "patch");
         Set<String> publicOperations = Set.of("login", "getCsrfToken");
         Set<String> domainTags = Set.of("Authentication", "Dashboard", "Datasources",
-                "Datasource permissions", "Jobs", "Job permissions", "Schedules", "Runs", "Users", "Audit");
+            "Datasource permissions", "Jobs", "Job permissions", "Schedules", "Runs", "Users", "Audit",
+            "Keyring");
         int operationCount = 0;
 
         Iterator<Map.Entry<String, com.fasterxml.jackson.databind.JsonNode>> paths =
@@ -255,6 +256,6 @@ class OpenApiSpecificationIT {
                 }
             }
         }
-        assertEquals(37, operationCount);
+        assertEquals(39, operationCount);
     }
 }
