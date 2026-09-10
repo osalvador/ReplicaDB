@@ -464,7 +464,8 @@ jobs:
       run: |
         set -euo pipefail
         npm run test:e2e
-        OPENAPI_SCHEMA_OUTPUT="$RUNNER_TEMP/schema.ts" npm run generate:api-types
+        OPENAPI_SCHEMA_FILE="$GITHUB_WORKSPACE/docs/openapi/replicadb-server.json" \
+          OPENAPI_SCHEMA_OUTPUT="$RUNNER_TEMP/schema.ts" npm run generate:api-types
         diff -u src/api/schema.ts "$RUNNER_TEMP/schema.ts"
     - name: Upload Playwright diagnostics
       if: failure()
