@@ -14,7 +14,8 @@ const apiTagTitles = {
   schedules: 'Schedules API',
   runs: 'Runs API',
   users: 'Users API',
-  audit: 'Audit API'
+  audit: 'Audit API',
+  keyring: 'Keyring API'
 };
 
 /** @param {string} directory @returns {Promise<string[]>} */

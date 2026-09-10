@@ -77,7 +77,7 @@ class WorkerExecutionIT {
                         "--spring.datasource.username=" + POSTGRES.getUsername(),
                         "--spring.datasource.password=" + POSTGRES.getPassword(),
                         "--spring.flyway.enabled=false",
-                        "--replicadb.security.master-key-file=" + keyringPath,
+                        "--replicadb.security.keyring.file=" + keyringPath,
                         "--replicadb.worker.identity=" + WORKER_IDENTITY,
                         "--replicadb.worker.max-concurrent-runs=1",
                         "--replicadb.worker.lease-duration=5s",

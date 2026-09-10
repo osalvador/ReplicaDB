@@ -70,9 +70,15 @@ platform and secret manager:
 
 - A reachable, backed-up PostgreSQL database for all API and worker instances.
 - The same `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` on every instance.
-- The same readable `REPLICADB_SECURITY_MASTER_KEY_FILE` on every API and
-  worker. Keep it outside PostgreSQL and restrict it to the runtime user.
-- A unique `REPLICADB_WORKER_IDENTITY` for every worker process.
+- The same readable `REPLICADB_SECURITY_KEYRING_FILE` on every API and worker,
+  or the same `REPLICADB_SECURITY_KEYRING_CURRENT_VERSION`,
+  `REPLICADB_SECURITY_KEYRING_CURRENT_KEY`,
+  `REPLICADB_SECURITY_KEYRING_SECONDARY_VERSION`, and
+  `REPLICADB_SECURITY_KEYRING_SECONDARY_KEY` values. Keep key material outside
+  PostgreSQL and restrict it to the runtime user. The deprecated
+   `REPLICADB_SECURITY_MASTER_KEY_FILE` alias remains accepted during migration.
+- An optional `REPLICADB_WORKER_IDENTITY` for every worker process; an unset
+   value receives a generated `worker-<uuid>` identity at startup.
 - An HTTPS ingress or authenticated reverse proxy for externally reachable API
   traffic. Keep PostgreSQL and worker management endpoints private.
 

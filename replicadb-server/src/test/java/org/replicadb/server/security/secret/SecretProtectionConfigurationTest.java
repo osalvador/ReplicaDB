@@ -25,7 +25,7 @@ class SecretProtectionConfigurationTest {
                 .withUserConfiguration(SecretProtectionConfiguration.class)
                 .withBean(ObjectMapper.class, ObjectMapper::new)
                 .withPropertyValues("spring.profiles.active=api",
-                        "replicadb.security.master-key-file=" + keyring)
+                        "replicadb.security.keyring.file=" + keyring)
                 .run(context -> assertThat(context).hasSingleBean(SecretProtectionService.class)
                         .hasSingleBean(KeyEncryptionKeyProvider.class));
     }
@@ -36,9 +36,52 @@ class SecretProtectionConfigurationTest {
                 .withUserConfiguration(SecretProtectionConfiguration.class)
                 .withBean(ObjectMapper.class, ObjectMapper::new)
                 .withPropertyValues("spring.profiles.active=worker",
-                        "replicadb.security.master-key-file=" + tempDir.resolve("missing.json"))
+                        "replicadb.security.keyring.file=" + tempDir.resolve("missing.json"))
                 .run(context -> assertThat(context.getStartupFailure())
                         .hasMessageContaining("Datasource encryption keyring is unavailable"));
+    }
+
+    @Test
+    void acceptsDeprecatedFileEnvironmentVariable(@TempDir Path tempDir) throws Exception {
+        Path keyring = writeKeyring(tempDir);
+
+        new ApplicationContextRunner()
+                .withUserConfiguration(SecretProtectionConfiguration.class)
+                .withBean(ObjectMapper.class, ObjectMapper::new)
+                .withPropertyValues("spring.profiles.active=api",
+                        "REPLICADB_SECURITY_MASTER_KEY_FILE=" + keyring)
+                .run(context -> assertThat(context).hasSingleBean(KeyEncryptionKeyProvider.class));
+    }
+
+    @Test
+    void rejectsFileAndInlineValuesTogether(@TempDir Path tempDir) throws Exception {
+        Path keyring = writeKeyring(tempDir);
+        String key = Base64.getEncoder().encodeToString(key());
+
+        new ApplicationContextRunner()
+                .withUserConfiguration(SecretProtectionConfiguration.class)
+                .withBean(ObjectMapper.class, ObjectMapper::new)
+                .withPropertyValues("spring.profiles.active=api",
+                        "replicadb.security.keyring.file=" + keyring,
+                        "replicadb.security.keyring.current.version=v1",
+                        "replicadb.security.keyring.current.key=" + key)
+                .run(context -> assertThat(context.getStartupFailure())
+                        .hasMessageContaining("keyring.file")
+                        .hasMessageContaining("inline"));
+    }
+
+    @Test
+    void acceptsInlineKeyringValues(@TempDir Path tempDir) throws Exception {
+        String key = Base64.getEncoder().encodeToString(key());
+
+        new ApplicationContextRunner()
+                .withUserConfiguration(SecretProtectionConfiguration.class)
+                .withBean(ObjectMapper.class, ObjectMapper::new)
+                .withPropertyValues("spring.profiles.active=api",
+                        "replicadb.security.keyring.current.version=v1",
+                        "replicadb.security.keyring.current.key=" + key)
+                .run(context -> assertThat(context.getBean(KeyEncryptionKeyProvider.class))
+                        .isInstanceOf(EnvBackedKeyEncryptionKeyProvider.class));
     }
 
     private static Path writeKeyring(Path tempDir) throws Exception {
@@ -51,4 +94,11 @@ class SecretProtectionConfigurationTest {
         Files.writeString(keyring, content, StandardCharsets.UTF_8);
         return keyring;
     }
+
+        private static byte[] key() throws Exception {
+                KeyGenerator generator = KeyGenerator.getInstance("AES");
+                generator.init(256);
+                SecretKey key = generator.generateKey();
+                return key.getEncoded();
+        }
 }

@@ -90,6 +90,7 @@
               "DATASOURCE_DELETED",
               "DATASOURCE_PERMISSION_REPLACED",
               "DATASOURCE_PERMISSION_REVOKED",
+              "KEYRING_REENCRYPTED",
               "JOB_CREATED",
               "JOB_UPDATED",
               "JOB_DELETED",
@@ -154,6 +155,7 @@
             "enum": [
               "USER",
               "DATASOURCE",
+              "KEYRING",
               "JOB_DEFINITION",
               "JOB_RUN",
               "SESSION"
@@ -1143,6 +1145,69 @@
             "description": "Last update timestamp in UTC.",
             "format": "date-time",
             "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "KeyringEnvelopeCountResponse": {
+        "properties": {
+          "count": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "keyVersion": {
+            "type": "string"
+          },
+          "known": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "KeyringReencryptResponse": {
+        "properties": {
+          "converged": {
+            "type": "boolean"
+          },
+          "reencrypted": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "remaining": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "KeyringStatusResponse": {
+        "properties": {
+          "converged": {
+            "type": "boolean"
+          },
+          "currentVersion": {
+            "type": "string"
+          },
+          "envelopes": {
+            "items": {
+              "$ref": "#/components/schemas/KeyringEnvelopeCountResponse"
+            },
+            "type": "array"
+          },
+          "knownVersions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "reencryptionRequired": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "unknownVersionCount": {
+            "format": "int64",
+            "type": "integer"
           }
         },
         "type": "object"
@@ -3043,6 +3108,88 @@
         ]
       }
     },
+    "/api/v1/keyring/reencrypt": {
+      "post": {
+        "description": "Re-encrypts one bounded batch using the current key version. Repeat until remaining is zero. ADMIN and CSRF are required.",
+        "operationId": "reencryptKeyring",
+        "parameters": [
+          {
+            "description": "Maximum number of envelopes to process in this request.",
+            "in": "query",
+            "name": "batchSize",
+            "required": false,
+            "schema": {
+              "default": "200",
+              "description": "Maximum number of envelopes to process in this request.",
+              "maximum": 1000,
+              "minimum": 1,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyringReencryptResponse"
+                }
+              }
+            },
+            "description": "Re-encryption batch completed"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Re-encrypt datasource envelopes",
+        "tags": [
+          "Keyring"
+        ]
+      }
+    },
+    "/api/v1/keyring/status": {
+      "get": {
+        "description": "Returns known key versions and encrypted datasource envelope counts without key material. ADMIN is required.",
+        "operationId": "getKeyringStatus",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/KeyringStatusResponse"
+                }
+              }
+            },
+            "description": "Keyring status returned"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedProblem"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenProblem"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Get keyring status",
+        "tags": [
+          "Keyring"
+        ]
+      }
+    },
     "/api/v1/runs": {
       "get": {
         "description": "Returns runs only for jobs visible to the authenticated identity, with optional status and UTC time bounds.",
@@ -3667,6 +3814,10 @@
     {
       "description": "ADMIN-filtered, paginated durable audit history.",
       "name": "Audit"
+    },
+    {
+      "description": "Keyring status and datasource re-encryption administration.",
+      "name": "Keyring"
     },
     {
       "description": "Datasource resource grants.",

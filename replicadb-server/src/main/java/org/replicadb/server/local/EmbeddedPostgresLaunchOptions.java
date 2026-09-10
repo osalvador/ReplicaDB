@@ -70,8 +70,8 @@ public final class EmbeddedPostgresLaunchOptions {
         defaults.setProperty("replicadb.security.bootstrap.enabled", "true");
         defaults.setProperty("REPLICADB_SECURITY_BOOTSTRAP_ENABLED", "true");
         defaults.setProperty("replicadb.server.local-execution.enabled", "true");
-        defaults.setProperty("REPLICADB_SECURITY_MASTER_KEY_FILE", keyringPath.toAbsolutePath().toString());
-        defaults.setProperty("replicadb.security.master-key-file", keyringPath.toAbsolutePath().toString());
+        defaults.setProperty("REPLICADB_SECURITY_KEYRING_FILE", keyringPath.toAbsolutePath().toString());
+        defaults.setProperty("replicadb.security.keyring.file", keyringPath.toAbsolutePath().toString());
         copyIfPresent(defaults, "REPLICADB_BOOTSTRAP_ADMIN_USERNAME", environment);
         copyIfPresent(defaults, "REPLICADB_BOOTSTRAP_ADMIN_PASSWORD", environment);
         return defaults;

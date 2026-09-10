@@ -3,12 +3,15 @@ package org.replicadb.server.security.secret;
 import javax.crypto.SecretKey;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 public interface KeyEncryptionKeyProvider {
 
     KeyEncryptionKey current();
 
     Optional<KeyEncryptionKey> find(String version);
+
+    Set<String> knownVersions();
 
     default void validate() {
         KeyEncryptionKey key = current();

@@ -104,8 +104,9 @@ API settings include:
 - `REPLICADB_BOOTSTRAP_ADMIN_USERNAME` and
   `REPLICADB_BOOTSTRAP_ADMIN_PASSWORD` supplied by the secret manager during
   bootstrap
-- `REPLICADB_SECURITY_MASTER_KEY_FILE` when the keyring is mounted somewhere
-  other than `/run/secrets/replicadb-master-key`
+- `REPLICADB_SECURITY_KEYRING_FILE` when the keyring is mounted somewhere
+  other than `/run/secrets/replicadb-master-key` (`REPLICADB_SECURITY_MASTER_KEY_FILE`
+  remains a deprecated compatibility alias)
 - `MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,metrics,prometheus`
 
 Datasource security values are submitted over authenticated TLS and encrypted

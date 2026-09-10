@@ -82,10 +82,10 @@ test('schema contains no implementation-only or sensitive fields', () => {
   assert.doesNotMatch(allStrings, /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/i);
 });
 
-test('committed schema exposes 37 intentional, resolvable public operations', () => {
+test('committed schema exposes 39 intentional, resolvable public operations', () => {
   const schema = JSON.parse(readFileSync(schemaPath, 'utf8'));
   const methods = new Set(['get', 'post', 'put', 'delete', 'patch']);
-  const domainTags = new Set(['Authentication', 'Dashboard', 'Datasources', 'Datasource permissions', 'Jobs', 'Job permissions', 'Schedules', 'Runs', 'Users', 'Audit']);
+  const domainTags = new Set(['Authentication', 'Dashboard', 'Datasources', 'Datasource permissions', 'Jobs', 'Job permissions', 'Schedules', 'Runs', 'Users', 'Audit', 'Keyring']);
   const publicOperations = new Set(['login', 'getCsrfToken']);
   const operations = [];
 
@@ -110,7 +110,7 @@ test('committed schema exposes 37 intentional, resolvable public operations', ()
       }
     }
   }
-  assert.equal(operations.length, 37);
+  assert.equal(operations.length, 39);
 
   for (const reference of references(schema)) {
     assert.ok(resolveReference(schema, reference), `unresolved reference: ${reference}`);
@@ -131,7 +131,7 @@ test('server source owns shared OpenAPI metadata, security, and RFC 7807 compone
   assert.match(openApiConfiguration, /version\("v1"\)/);
   for (const tag of [
     'Authentication', 'Dashboard', 'Datasources', 'Datasource permissions', 'Jobs',
-    'Job permissions', 'Schedules', 'Runs', 'Users', 'Audit'
+    'Job permissions', 'Schedules', 'Runs', 'Users', 'Audit', 'Keyring'
   ]) {
     assert.match(openApiConfiguration, new RegExp(`tag\\("${tag}"`), tag);
   }
@@ -157,7 +157,7 @@ test('human API guide covers cross-cutting integration and links every generated
   }
   for (const tag of [
     'authentication', 'dashboard', 'datasources', 'datasource-permissions', 'jobs',
-    'job-permissions', 'schedules', 'runs', 'users', 'audit'
+    'job-permissions', 'schedules', 'runs', 'users', 'audit', 'keyring'
   ]) {
     assert.match(apiGuide, new RegExp(`/ReplicaDB/api/operations/tags/${tag}/`), tag);
   }
