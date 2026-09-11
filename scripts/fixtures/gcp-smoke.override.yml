@@ -2,11 +2,8 @@ services:
   api-one:
     environment:
       PORT: "9500"
-    volumes:
-      - type: bind
-        source: ${REPLICADB_SECURITY_MASTER_KEY_FILE:?REPLICADB_SECURITY_MASTER_KEY_FILE must point to the smoke keyring}
-        target: /run/secrets/replicadb-master-key
-        read_only: true
+      REPLICADB_SECURITY_KEYRING_CURRENT_VERSION: ${REPLICADB_SECURITY_KEYRING_CURRENT_VERSION:?current keyring version is required}
+      REPLICADB_SECURITY_KEYRING_CURRENT_KEY: ${REPLICADB_SECURITY_KEYRING_CURRENT_KEY:?current keyring key is required}
     ports: !override
       - "127.0.0.1:9500:9500"
     healthcheck:
@@ -16,15 +13,11 @@ services:
       retries: 30
 
   api-two:
-    volumes:
-      - type: bind
-        source: ${REPLICADB_SECURITY_MASTER_KEY_FILE:?REPLICADB_SECURITY_MASTER_KEY_FILE must point to the smoke keyring}
-        target: /run/secrets/replicadb-master-key
-        read_only: true
+    environment:
+      REPLICADB_SECURITY_KEYRING_CURRENT_VERSION: ${REPLICADB_SECURITY_KEYRING_CURRENT_VERSION:?current keyring version is required}
+      REPLICADB_SECURITY_KEYRING_CURRENT_KEY: ${REPLICADB_SECURITY_KEYRING_CURRENT_KEY:?current keyring key is required}
 
   worker-one:
-    volumes:
-      - type: bind
-        source: ${REPLICADB_SECURITY_MASTER_KEY_FILE:?REPLICADB_SECURITY_MASTER_KEY_FILE must point to the smoke keyring}
-        target: /run/secrets/replicadb-master-key
-        read_only: true
+    environment:
+      REPLICADB_SECURITY_KEYRING_CURRENT_VERSION: ${REPLICADB_SECURITY_KEYRING_CURRENT_VERSION:?current keyring version is required}
+      REPLICADB_SECURITY_KEYRING_CURRENT_KEY: ${REPLICADB_SECURITY_KEYRING_CURRENT_KEY:?current keyring key is required}
