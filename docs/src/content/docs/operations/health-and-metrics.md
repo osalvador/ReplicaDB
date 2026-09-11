@@ -10,9 +10,18 @@ The API exposes unauthenticated `/actuator/health`,
 versions expose the same paths only on private management port 9091.
 
 Liveness answers whether the process is alive. Readiness includes PostgreSQL,
-Quartz, queue, and worker-runtime conditions. A worker can be `DEGRADED` when
+Quartz, queue, control-plane, and worker-runtime conditions. The API Quartz
+component reports `scheduler=stale-checkin` when the current node's
+`QRTZ_SCHEDULER_STATE` check-in is stale and exposes bounded `lastCheckinAgeMs`
+detail plus the `replicadb.managed.scheduler.checkin.age` metric. A worker can be `DEGRADED` when
 its notification listener is disconnected but polling and admission remain
 healthy; a listener delay affects latency, not durable correctness.
+
+Readiness groups explicitly include the `quartz` and `controlPlane` components
+for the API, and `controlPlane` and `workerRuntime` for workers. During a rolling
+deployment, a brief readiness dip correlated with deployment timestamps can be
+the old Quartz node's check-in aging while it drains; investigate sustained or
+uncorrelated dips as incidents.
 
 Polling is the correctness path and notifications are a latency optimization.
 When `replicadb.worker.listener.connected` is 0, correlate

@@ -1,0 +1,11 @@
+services:
+  api-one:
+    environment:
+      PORT: "9500"
+    ports: !override
+      - "127.0.0.1:9500:9500"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9500/actuator/health/liveness >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 30

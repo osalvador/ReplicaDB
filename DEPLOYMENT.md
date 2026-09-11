@@ -29,6 +29,10 @@ worker instances * concurrent runs per worker * jobs per run
 `jobs per run` is ReplicaDB's existing internal task parallelism. It is not a
 second scheduler concurrency setting.
 
+For a Google Cloud deployment, see the [Cloud Run operations
+runbook](docs/src/content/docs/operations/gcp-cloud-run.mdx) for the API Service,
+Worker Pool, Cloud SQL Private IP, Direct VPC egress, and readiness configuration.
+
 ## Build
 
 Build the CLI artifact first because the server POM consumes that artifact:

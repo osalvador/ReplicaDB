@@ -10,6 +10,10 @@ See `.github/workflows/INVESTIGATION-SUMMARY.md` for the full context on why thi
 
 ## Tools
 
+### GCP Cloud Run portability smoke
+
+Run `scripts/phase5-gcp-portability-smoke.sh` to verify the API honors an overridden `PORT` and the worker remains HTTP-free in the packaged Compose topology.
+
 ### 1. GitHub Actions Workflow (Recommended)
 
 **File**: `.github/workflows/rebase-dependabot-prs.yml`
