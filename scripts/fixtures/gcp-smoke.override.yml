@@ -2,6 +2,11 @@ services:
   api-one:
     environment:
       PORT: "9500"
+    volumes:
+      - type: bind
+        source: ${REPLICADB_SECURITY_MASTER_KEY_FILE:?REPLICADB_SECURITY_MASTER_KEY_FILE must point to the smoke keyring}
+        target: /run/secrets/replicadb-master-key
+        read_only: true
     ports: !override
       - "127.0.0.1:9500:9500"
     healthcheck:
@@ -9,3 +14,17 @@ services:
       interval: 5s
       timeout: 3s
       retries: 30
+
+  api-two:
+    volumes:
+      - type: bind
+        source: ${REPLICADB_SECURITY_MASTER_KEY_FILE:?REPLICADB_SECURITY_MASTER_KEY_FILE must point to the smoke keyring}
+        target: /run/secrets/replicadb-master-key
+        read_only: true
+
+  worker-one:
+    volumes:
+      - type: bind
+        source: ${REPLICADB_SECURITY_MASTER_KEY_FILE:?REPLICADB_SECURITY_MASTER_KEY_FILE must point to the smoke keyring}
+        target: /run/secrets/replicadb-master-key
+        read_only: true
