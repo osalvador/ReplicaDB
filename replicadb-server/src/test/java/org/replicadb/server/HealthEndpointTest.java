@@ -56,6 +56,17 @@ class HealthEndpointTest {
         }
 
         @Test
+        void readinessGroupIncludesControlPlaneAndQuartzComponents() {
+        ResponseEntity<String> readiness = restTemplate.getForEntity(
+            "http://localhost:" + port + "/actuator/health/readiness", String.class);
+
+        assertEquals(HttpStatus.OK, readiness.getStatusCode());
+        assertTrue(readiness.getBody().contains("\"components\""));
+        assertTrue(readiness.getBody().contains("\"quartz\""));
+        assertTrue(readiness.getBody().contains("\"controlPlane\""));
+        }
+
+        @Test
         void metricsAndPrometheusEndpointsRequireAuthentication() {
         ResponseEntity<String> metrics = restTemplate.getForEntity(
             "http://localhost:" + port + "/actuator/metrics", String.class);

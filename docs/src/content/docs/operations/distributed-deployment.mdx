@@ -10,6 +10,11 @@ PostgreSQL metadata must be managed outside ReplicaDB. It runs separate API
 and worker processes against one external PostgreSQL database and one shared
 keyring. It is not an extension of `start local`.
 
+For Google Cloud Run, use the API profile as an authenticated Cloud Run Service
+and the worker profile as a Cloud Run Worker Pool. See the [Google Cloud Run
+runbook](/ReplicaDB/operations/gcp-cloud-run/) for Private IP, Direct VPC egress,
+minimum instances, and probe configuration.
+
 ## Choose the right mode
 
 The packaged launcher accepts exactly one mode. `local` is a launcher mode that

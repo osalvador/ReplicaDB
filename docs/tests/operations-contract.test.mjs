@@ -9,6 +9,7 @@ const operationsRoot = join(docsRoot, 'src/content/docs/operations');
 const docs = [
   ...['index', 'local-server', 'configuration', 'capacity-planning', 'health-and-metrics', 'security-and-tls', 'key-management', 'backups-and-restore', 'upgrades', 'failure-recovery', 'troubleshooting'].map((name) => join(operationsRoot, `${name}.md`)),
   join(operationsRoot, 'distributed-deployment.mdx'),
+  join(operationsRoot, 'gcp-cloud-run.mdx'),
   join(docsRoot, 'src/content/docs/reference/environment-variables.md')
 ].map((path) => readFileSync(path, 'utf8')).join('\n');
 
@@ -21,7 +22,8 @@ test('covers deployment, health, security, recovery, and metric interpretations'
     'never resumes', 'truncated', 'previous_run_id', 'watermark advances only', 'shutdown-timeout',
     '30 seconds', 'UUID order', '1,024', '250 ms', 'first 75%', 'last 25%',
     '[TRUNCATED: middle omitted]', 'replicadb.worker.listener.connected', 'replicadb.managed.polling.lag',
-    'server.ssl.*', 'PKCS12'
+    'server.ssl.*', 'PKCS12', 'Worker Pool', 'Direct VPC egress', 'min-instances', 'Cloud SQL',
+    'instance-based billing'
   ]) {
     assert.match(docs, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), required);
   }

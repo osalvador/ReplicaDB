@@ -184,6 +184,9 @@ jobs:
     - name: Smoke-test server image
       run: scripts/phase3-image-smoke.sh
 
+    - name: Smoke-test GCP Cloud Run portability
+      run: scripts/phase5-gcp-portability-smoke.sh
+
     - name: Create ephemeral master keyring
       run: |
         set -euo pipefail

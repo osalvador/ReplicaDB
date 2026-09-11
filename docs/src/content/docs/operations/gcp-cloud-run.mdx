@@ -1,0 +1,149 @@
+---
+title: Run on Google Cloud Run
+description: Deploy the ReplicaDB API and workers on Cloud Run with Cloud SQL for PostgreSQL.
+---
+
+Use this topology when ReplicaDB should run on Google Cloud without exposing a worker
+HTTP endpoint. Cloud Run provides two different resources: an authenticated Cloud Run
+Service for the API and a Cloud Run Worker Pool for the always-on worker processes.
+
+## Topology
+
+| Component | Cloud Run resource | Scaling | Network surface |
+| --- | --- | --- | --- |
+| ReplicaDB API | Service, `api` profile | `min-instances=1` is the functional floor; `>=2` is recommended for production redundancy | HTTP endpoint, protected by IAM, IAP, or an authenticated ingress |
+| ReplicaDB worker | Worker Pool, `worker` profile | Fixed operator-managed instance count; at least one instance must be active | No load-balanced endpoint or URL |
+| Metadata store | Cloud SQL for PostgreSQL | Cloud SQL-managed | Private IP from the Cloud Run VPC connection |
+
+The API keeps the clustered JDBC Quartz scheduler. One API instance is sufficient for
+Quartz correctness; a second instance is recommended so a deployment, crash, or platform
+restart does not make the control plane unavailable while Cloud Run starts a replacement.
+
+## Cloud SQL and VPC
+
+Create Cloud SQL for PostgreSQL in the same region as the Cloud Run resources and assign
+it a private IP address. Connect the API service and worker pool to the VPC with Direct
+VPC egress and route private ranges through the VPC. Reserve a subnet with enough space
+for Cloud Run's serverless addresses; Google recommends at least a `/26` range for this
+use case.
+
+Keep the metadata connection as a normal PostgreSQL JDBC URL:
+
+```text
+DB_URL=jdbc:postgresql://10.0.0.10:5432/replicadb
+DB_USERNAME=<database-user>
+DB_PASSWORD=<secret-manager-reference>
+```
+
+Do not put resolved credentials in this file or in a container image. Supply database
+credentials and the shared ReplicaDB keyring through the deployment secret manager. The
+same keyring must be available to every API and worker instance.
+
+Direct VPC egress can take up to a minute to establish on a new instance. Configure a
+startup probe that tolerates this delay and verifies the database path before routing
+traffic. Cloud Run can also reset connections during networking maintenance, so Hikari
+and the application must be allowed to reconnect. Keep the datasource pool bounded and
+apply the capacity rule from the [capacity planning guide](/ReplicaDB/operations/capacity-planning/).
+
+## API service
+
+Deploy the server image with `SPRING_PROFILES_ACTIVE=api`. Cloud Run injects `PORT`; the
+API listens on that value and falls back to `8080` outside Cloud Run. Use instance-based
+billing so CPU remains allocated while the Quartz scheduler performs its cluster
+check-in outside request processing.
+
+Configure the service with:
+
+- `min-instances=1` at minimum. This is enough for a single functioning Quartz node.
+- `min-instances>=2` for production when an instance restart must not interrupt API,
+  frontend, authentication, or schedule operations.
+- Instance-based billing, because request-based billing can throttle the idle Quartz
+  thread pool.
+- `SPRING_PROFILES_ACTIVE=api` and `REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED=false`
+  when workers own execution.
+- A shared keyring and external PostgreSQL credentials from Secret Manager.
+- Private or authenticated ingress. The API endpoint is a product surface; the worker
+  endpoint is not.
+
+A service-level minimum is preferred over revision-level minimums so a rollout does not
+leave an old tagged revision running unexpectedly. Keep the Cloud Run maximum instance
+setting aligned with the Cloud SQL connection budget.
+
+## Worker pool
+
+Deploy the same server image as a Cloud Run Worker Pool with
+`SPRING_PROFILES_ACTIVE=worker`. Worker Pools do not require a public HTTP endpoint and
+are designed for continuous pull-based workloads. ReplicaDB's worker already follows
+this model:
+
+```text
+Cloud SQL LISTEN/NOTIFY -> prompt claim opportunity
+Periodic polling        -> correctness fallback
+Lease heartbeat         -> ownership while a run executes
+```
+
+The worker profile keeps `server.port=-1`. Its Actuator management server is an internal
+operational surface only; do not publish it as a product endpoint. Set a unique
+`REPLICADB_WORKER_IDENTITY` per worker and size the pool from the existing throughput
+formula:
+
+```text
+worker instances * concurrent runs per worker * jobs per run
+```
+
+Worker Pools use manual scaling and do not automatically scale from queue depth. Set at
+least one active instance when work must be processed. A configured count of zero turns
+the pool off; it is not an idle scale-to-zero state. Add a separate autoscaler only if
+queue-driven elasticity becomes a requirement.
+
+## Readiness and rollout
+
+Probe the API service at:
+
+```text
+/actuator/health/liveness
+/actuator/health/readiness
+```
+
+The readiness response includes PostgreSQL, Quartz, queue, and control-plane components.
+The Quartz component checks the current instance's row in `QRTZ_SCHEDULER_STATE` and
+reports `scheduler=stale-checkin` when the last check-in exceeds the configured stale
+factor. Its JDBC query has a bounded timeout and does not expose database errors or
+credentials. The `lastCheckinAgeMs` detail and metric provide an early warning before a
+node becomes stale.
+
+Cloud Run service health and readiness probes require at least one minimum instance in
+each region to produce a meaningful regional health result. This is consistent with the
+`min-instances=1` floor above. During a rolling deployment, an old revision can briefly
+show an aging check-in while it drains; correlate short readiness dips with deployment
+timestamps before treating them as a cluster incident.
+
+Worker management health is available only inside the worker instance or its private
+network path:
+
+```text
+/actuator/health/liveness
+/actuator/health/readiness
+```
+
+Do not configure a public load balancer, Serverless NEG, or browser route for a worker
+pool. Use Cloud Logging, Cloud Monitoring, and the private management path for worker
+operations.
+
+## Operational checklist
+
+1. Create Cloud SQL with private IP and place it in the Cloud Run region.
+2. Create a VPC subnet with enough serverless address capacity and configure Direct VPC
+egress for the service and worker pool.
+3. Store database credentials and the shared ReplicaDB keyring in Secret Manager.
+4. Deploy the API service with `min-instances=1` or more, instance-based billing, and
+an authenticated ingress.
+5. Deploy the worker pool with a fixed active instance count and unique worker identity.
+6. Configure startup and readiness probes, then verify the API readiness components and
+worker private management health before accepting traffic.
+7. Watch Cloud SQL connection counts, `replicadb.managed.scheduler.checkin.age`, queue
+age, polling lag, worker busy slots, and lease recoveries during rollout.
+
+See the [distributed deployment guide](/ReplicaDB/operations/distributed-deployment/)
+for shared PostgreSQL, keyring, migration, and upgrade requirements that apply on GCP as
+well as other container platforms.

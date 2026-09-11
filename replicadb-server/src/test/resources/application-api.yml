@@ -31,6 +31,14 @@ server:
         http-only: true
         secure: true
         same-site: lax
+management:
+  endpoint:
+    health:
+      show-details: when_authorized
+      group:
+        readiness:
+          include: readinessState,controlPlane,quartz,runQueue
+          show-components: always
 replicadb:
   security:
     bootstrap:
@@ -38,3 +46,5 @@ replicadb:
   server:
     execution:
       pool-size: 4
+    scheduler:
+      checkin-stale-factor: 3
