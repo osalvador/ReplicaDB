@@ -45,7 +45,10 @@ export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD=${REPLICADB_BOOTSTRAP_ADMIN_PASSWORD:-
 
 unset REPLICADB_SECURITY_KEYRING_FILE
 REPLICADB_SECURITY_MASTER_KEY_FILE="$state_directory/replicadb-master-key.json"
-printf '{"currentVersion":"smoke","keys":{"smoke":"%s"}}\n' "$(openssl rand -base64 32)" \
+key_material=$(openssl rand -base64 32)
+export REPLICADB_SECURITY_KEYRING_CURRENT_VERSION=smoke
+export REPLICADB_SECURITY_KEYRING_CURRENT_KEY="$key_material"
+printf '{"currentVersion":"smoke","keys":{"smoke":"%s"}}\n' "$key_material" \
     >"$REPLICADB_SECURITY_MASTER_KEY_FILE"
 chmod 600 "$REPLICADB_SECURITY_MASTER_KEY_FILE"
 export REPLICADB_SECURITY_MASTER_KEY_FILE
