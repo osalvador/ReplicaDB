@@ -31,7 +31,7 @@ jobs:
       - name: Run shellcheck when available
         run: |
           if command -v shellcheck >/dev/null 2>&1; then
-            shellcheck deploy/gcp/deploy.sh deploy/gcp/lib/*.sh deploy/gcp/tests/*.sh
+            shellcheck -S error deploy/gcp/deploy.sh deploy/gcp/lib/*.sh deploy/gcp/tests/*.sh
           else
             echo 'shellcheck is not installed on this runner; syntax and deterministic tests still ran.'
           fi
