@@ -43,10 +43,10 @@ if cleanup_destroy >/dev/null 2>&1; then exit 1; fi
 CONFIRMATION='DESTROY REPLICADB'
 cleanup_destroy >/dev/null
 [[ ! -f "$STATE_FILE" ]] || exit 1
-rg -q 'worker-pools delete' "$LOG_FILE"
-rg -q 'services delete' "$LOG_FILE"
-rg -q 'secrets delete owned-a' "$LOG_FILE"
-rg -q 'sql instances delete sql-owned' "$LOG_FILE"
+grep -Eq 'worker-pools delete' "$LOG_FILE"
+grep -Eq 'services delete' "$LOG_FILE"
+grep -Eq 'secrets delete owned-a' "$LOG_FILE"
+grep -Eq 'sql instances delete sql-owned' "$LOG_FILE"
 
 : >"$LOG_FILE"
 state_init "$STATE_FILE"
@@ -62,11 +62,11 @@ state_save
 CLEANUP_KEEP_CLOUD_SQL=true
 CLEANUP_KEEP_SECRETS=true
 cleanup_destroy >/dev/null
-if rg -q 'sql instances delete sql-shared|secrets delete owned-a' "$LOG_FILE"; then exit 1; fi
+if grep -Eq 'sql instances delete sql-shared|secrets delete owned-a' "$LOG_FILE"; then exit 1; fi
 
 rm -f "$STATE_FILE"
 CLEANUP_ORPHAN_REPORT=true
 cleanup_collect
-cleanup_print_plan | rg -q 'api-owned|worker-owned'
+cleanup_print_plan | grep -Eq 'api-owned|worker-owned'
 
 printf 'cleanup tests passed\n'

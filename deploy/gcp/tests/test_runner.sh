@@ -126,7 +126,7 @@ if [[ "$summary_output" == *secret* || "$summary_output" == *example.invalid* ]]
 fi
 
 assert_failure "$DEPLOY" deploy --mode simple --create-cloud-sql --non-interactive
-if rg -q '(^| )(run deploy|worker-pools deploy|sql instances create|sql databases create|sql users create|secrets create|delete)' "$LOG_FILE"; then
+if grep -Eq '(^| )(run deploy|worker-pools deploy|sql instances create|sql databases create|sql users create|secrets create|delete)' "$LOG_FILE"; then
     printf 'test failed: refused Cloud SQL creation was mutating\n' >&2
     cat "$LOG_FILE" >&2
     exit 1

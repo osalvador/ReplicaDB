@@ -41,7 +41,7 @@ source "$TEST_DIR/../lib/verify.sh"
 
 VERIFY_SCENARIO=healthy
 verify_deployment
-if rg -q 'identity-token-must-not-print' <<<"$(verify_deployment)"; then exit 1; fi
+if grep -q 'identity-token-must-not-print' <<<"$(verify_deployment)"; then exit 1; fi
 
 for scenario in token-failure degraded; do
     export VERIFY_SCENARIO="$scenario"

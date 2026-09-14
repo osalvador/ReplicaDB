@@ -31,16 +31,16 @@ source "$TEST_DIR/../lib/naming.sh"
 source "$TEST_DIR/../lib/worker_pool.sh"
 
 worker_pool_deploy
-rg -q 'worker-pools deploy' "$LOG_FILE"
-rg -q 'SERVER_PORT=-1' "$LOG_FILE"
-rg -q 'REPLICADB_WORKER_MANAGEMENT_ADDRESS=0.0.0.0' "$LOG_FILE"
-rg -q 'DB_USERNAME=db-user:3' "$LOG_FILE"
-rg -q 'tcpSocket.port=9091' "$LOG_FILE"
-if rg -q 'allow-unauthenticated|run.invoker' "$LOG_FILE"; then exit 1; fi
+grep -Eq 'worker-pools deploy' "$LOG_FILE"
+grep -Eq 'SERVER_PORT=-1' "$LOG_FILE"
+grep -Eq 'REPLICADB_WORKER_MANAGEMENT_ADDRESS=0.0.0.0' "$LOG_FILE"
+grep -Eq 'DB_USERNAME=db-user:3' "$LOG_FILE"
+grep -Eq 'tcpSocket.port=9091' "$LOG_FILE"
+if grep -Eq 'allow-unauthenticated|run.invoker' "$LOG_FILE"; then exit 1; fi
 
 WORKER_INSTANCES=0
 worker_pool_deploy
-rg -q 'worker-pools update.*instances=0' "$LOG_FILE"
+grep -Eq 'worker-pools update.*instances=0' "$LOG_FILE"
 
 WORKER_INSTANCES=1
 REPLICADB_WORKER_PLATFORM_PROBE=false

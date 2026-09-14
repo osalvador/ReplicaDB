@@ -34,23 +34,23 @@ export BOOTSTRAP_PASSWORD_SECRET_NAME=bootstrap-password BOOTSTRAP_PASSWORD_SECR
 
 output="$TEMP_ROOT/service.yaml"
 cloud_run_render_service "$output" true
-rg -q 'SPRING_PROFILES_ACTIVE' "$output"
-rg -q 'REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED' "$output"
-rg -q 'value: "true"' "$output"
-rg -q 'path: /actuator/health/liveness' "$output"
-rg -q 'path: /actuator/health/readiness' "$output"
-rg -q 'key: "8"' "$output"
-rg -q 'cpu-throttling: "false"' "$output"
-rg -q 'minScale: "1"' "$output"
-rg -q 'maxScale: "7"' "$output"
-if rg -q 'name: PORT' "$output"; then exit 1; fi
-if rg -q 'allow-unauthenticated|roles/run.invoker' "$output"; then exit 1; fi
-if rg -q 'secret|password' "$output" && rg -q 'value: .*password|value: .*secret' "$output"; then exit 1; fi
+grep -Eq 'SPRING_PROFILES_ACTIVE' "$output"
+grep -Eq 'REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED' "$output"
+grep -Eq 'value: "true"' "$output"
+grep -Eq 'path: /actuator/health/liveness' "$output"
+grep -Eq 'path: /actuator/health/readiness' "$output"
+grep -Eq 'key: "8"' "$output"
+grep -Eq 'cpu-throttling: "false"' "$output"
+grep -Eq 'minScale: "1"' "$output"
+grep -Eq 'maxScale: "7"' "$output"
+if grep -Eq 'name: PORT' "$output"; then exit 1; fi
+if grep -Eq 'allow-unauthenticated|roles/run.invoker' "$output"; then exit 1; fi
+if grep -Eq 'secret|password' "$output" && grep -Eq 'value: .*password|value: .*secret' "$output"; then exit 1; fi
 
 cloud_run_deploy_service true >/dev/null
 first_name=$CLOUD_RUN_SERVICE_NAME
 cloud_run_deploy_service true >/dev/null
 [[ "$CLOUD_RUN_SERVICE_NAME" == "$first_name" ]] || exit 1
-[[ "$(rg -c 'run services replace' "$CLOUD_RUN_LOG")" == 2 ]] || exit 1
+[[ "$(grep -Ec 'run services replace' "$CLOUD_RUN_LOG")" == 2 ]] || exit 1
 
 printf 'cloud run service tests passed\n'

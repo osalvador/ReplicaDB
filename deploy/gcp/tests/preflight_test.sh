@@ -49,7 +49,7 @@ export SUBNET=subnet
 source "$TEST_DIR/../lib/preflight.sh"
 
 preflight_run
-if rg -q '(^| )(run deploy|worker-pools deploy|sql instances create|secrets create|delete)' "$LOG_FILE"; then
+if grep -Eq '(^| )(run deploy|worker-pools deploy|sql instances create|secrets create|delete)' "$LOG_FILE"; then
     printf 'preflight invoked a mutating-looking gcloud command\n' >&2
     cat "$LOG_FILE" >&2
     exit 1

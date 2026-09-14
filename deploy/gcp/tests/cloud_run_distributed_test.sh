@@ -20,8 +20,8 @@ export BOOTSTRAP_USERNAME_SECRET_NAME=bootstrap-user BOOTSTRAP_USERNAME_SECRET_V
 export BOOTSTRAP_PASSWORD_SECRET_NAME=bootstrap-password BOOTSTRAP_PASSWORD_SECRET_VERSION=8
 
 cloud_run_render_service "$TEMP_ROOT/service.yaml" false
-rg -q 'value: "false"' "$TEMP_ROOT/service.yaml"
-rg -q 'SPRING_PROFILES_ACTIVE' "$TEMP_ROOT/service.yaml"
-if rg -q 'worker-pools|roles/run.invoker|allow-unauthenticated' "$TEMP_ROOT/service.yaml"; then exit 1; fi
+grep -Eq 'value: "false"' "$TEMP_ROOT/service.yaml"
+grep -Eq 'SPRING_PROFILES_ACTIVE' "$TEMP_ROOT/service.yaml"
+if grep -Eq 'worker-pools|roles/run.invoker|allow-unauthenticated' "$TEMP_ROOT/service.yaml"; then exit 1; fi
 
 printf 'distributed cloud run service tests passed\n'
