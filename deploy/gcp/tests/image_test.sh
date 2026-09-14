@@ -20,14 +20,15 @@ EOF
 cat >"$STUB_BIN/jq" <<'EOF'
 #!/usr/bin/env bash
 input=$(cat)
-if printf '%s\n' "$input" | rg -q 'architecture.*amd64'; then
-    case "$*" in
-        *'unique'*) printf 'amd64\n' ;;
-        *) printf 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n' ;;
-    esac
-else
-    printf '\n'
-fi
+case "$input" in
+    *architecture*amd64*)
+        case "$*" in
+            *'unique'*) printf 'amd64\n' ;;
+            *) printf 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n' ;;
+        esac
+        ;;
+    *) printf '\n' ;;
+esac
 EOF
 chmod 755 "$STUB_BIN/docker" "$STUB_BIN/jq"
 export PATH="$STUB_BIN:$PATH"
