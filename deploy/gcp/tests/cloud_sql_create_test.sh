@@ -39,18 +39,18 @@ source "$TEST_DIR/../lib/cloud_sql.sh"
 
 cloud_sql_create
 [[ "$CLOUD_SQL_CREATED_INSTANCE" == true && "$CLOUD_SQL_CREATED_DATABASE" == true && "$CLOUD_SQL_CREATED_USER" == true ]] || exit 1
-if rg -q 'do-not-print-this-password' "$LOG_FILE"; then
+if grep -q 'do-not-print-this-password' "$LOG_FILE"; then
     printf 'password appeared in the command log fixture\n' >&2
     exit 1
 fi
-order=$(rg -n 'instances create|databases create|users create' "$LOG_FILE" | cut -d: -f1 | tr '\n' ' ')
+order=$(grep -En 'instances create|databases create|users create' "$LOG_FILE" | cut -d: -f1 | tr '\n' ' ')
 [[ "$order" == '2 4 5 ' ]] || { printf 'unexpected create ordering: %s\n' "$order" >&2; exit 1; }
 
 for scenario in database-failure user-failure; do
     rollback_reset
     export CLOUD_SQL_CREATE_SCENARIO="$scenario"
     if cloud_sql_create >/dev/null 2>&1; then exit 1; fi
-    rg -q 'instances delete' "$LOG_FILE" || { printf 'rollback did not delete instance\n' >&2; exit 1; }
+    grep -Eq 'instances delete' "$LOG_FILE" || { printf 'rollback did not delete instance\n' >&2; exit 1; }
 done
 
 export CLOUD_SQL_CREATE_SCENARIO=valid
