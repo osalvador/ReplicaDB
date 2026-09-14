@@ -2,6 +2,20 @@
 
 This directory contains tools to help rebase Dependabot PRs when they need to pick up fixes from the master branch.
 
+## GCP Cloud Run deployment bundle
+
+The deterministic shell suite for the self-managed Cloud Run bundle is run with:
+
+```bash
+deploy/gcp/tests/test_runner.sh
+```
+
+It uses isolated stub `gcloud`, Docker, and `jq` commands and never contacts
+Google Cloud. Run `bash -n deploy/gcp/deploy.sh deploy/gcp/lib/*.sh` before a
+manual deployment. A real preflight or deployment is always an explicit local
+operation and must use a disposable project, an immutable image, and a planned
+cleanup confirmation.
+
 ## Background
 
 When Dependabot PRs are created before critical fixes are merged to master (e.g., TestContainers version upgrades), the PRs may fail CI tests. Rebasing these PRs allows them to pick up the fixes and pass CI, enabling the auto-merge workflow to complete.

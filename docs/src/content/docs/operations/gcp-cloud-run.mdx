@@ -7,6 +7,12 @@ Use this topology when ReplicaDB should run on Google Cloud without exposing a w
 HTTP endpoint. Cloud Run provides two different resources: an authenticated Cloud Run
 Service for the API and a Cloud Run Worker Pool for the always-on worker processes.
 
+For a guided installation from a checkout or extracted server package, use the
+[Cloud Run deployment bundle](/ReplicaDB/operations/gcp-deploy-bundle/). It supports
+`simple` and `distributed` modes, immutable image digests, explicit Cloud SQL creation,
+version-pinned Secret Manager references, authenticated verification, and ownership-aware
+cleanup. It is self-managed Cloud Run packaging, not a Google Cloud Marketplace product.
+
 ## Topology
 
 | Component | Cloud Run resource | Scaling | Network surface |

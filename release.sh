@@ -14,8 +14,8 @@ VERSION_SURFACE_FILES=(
     "RELEASE_GUIDE.md"
     "CONTRIBUTING.md"
     "PRODUCT.md"
-    "docs/index.md"
-    "docs/server.md"
+    "docs/src/content/docs/cli/index.md"
+    "docs/src/content/docs/server/index.md"
     "replicadb-server/README.md"
     "replicadb-server/frontend/README.develop.md"
     "replicadb-server/Dockerfile"
@@ -33,6 +33,7 @@ RELEASE_FILES=(
     "scripts/phase3-image-smoke.sh"
     "replicadb-server/bin/replicadb-server"
     "replicadb-server/bin/replicadb-server.cmd"
+    "deploy/gcp"
     ".github/workflows/CI_Release.yml"
     ".github/workflows/CT_Push.yml"
     ".github/skills/replicadb-release/SKILL.md"
@@ -112,6 +113,9 @@ path_is_release_file() {
 
     case "$path" in
         .github/skills/replicadb-release/*)
+            return 0
+            ;;
+        deploy/gcp/*)
             return 0
             ;;
     esac
