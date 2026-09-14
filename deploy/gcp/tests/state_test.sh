@@ -19,7 +19,12 @@ state_save
 [[ -f "$TEMP_ROOT/deployment.state" ]] || { printf 'state file missing\n' >&2; exit 1; }
 [[ "$(state_get mode)" == distributed ]] || { printf 'state round trip failed\n' >&2; exit 1; }
 [[ "$(state_get dbPasswordSecretVersion)" == 3 ]] || { printf 'secret version round trip failed\n' >&2; exit 1; }
-[[ "$(stat -f '%Lp' "$TEMP_ROOT/deployment.state")" == 600 ]] || { printf 'state permissions are too broad\n' >&2; exit 1; }
+if stat -f '%Lp' "$TEMP_ROOT/deployment.state" >/dev/null 2>&1; then
+    state_mode=$(stat -f '%Lp' "$TEMP_ROOT/deployment.state")
+else
+    state_mode=$(stat -c '%a' "$TEMP_ROOT/deployment.state")
+fi
+[[ "$state_mode" == 600 ]] || { printf 'state permissions are too broad\n' >&2; exit 1; }
 
 state_put mode simple
 state_save
