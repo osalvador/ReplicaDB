@@ -10,6 +10,7 @@ const docs = [
   ...['index', 'local-server', 'configuration', 'capacity-planning', 'health-and-metrics', 'security-and-tls', 'key-management', 'backups-and-restore', 'upgrades', 'failure-recovery', 'troubleshooting'].map((name) => join(operationsRoot, `${name}.md`)),
   join(operationsRoot, 'distributed-deployment.mdx'),
   join(operationsRoot, 'gcp-cloud-run.mdx'),
+  join(operationsRoot, 'gcp-deploy-bundle.mdx'),
   join(docsRoot, 'src/content/docs/reference/environment-variables.md')
 ].map((path) => readFileSync(path, 'utf8')).join('\n');
 
@@ -23,7 +24,9 @@ test('covers deployment, health, security, recovery, and metric interpretations'
     '30 seconds', 'UUID order', '1,024', '250 ms', 'first 75%', 'last 25%',
     '[TRUNCATED: middle omitted]', 'replicadb.worker.listener.connected', 'replicadb.managed.polling.lag',
     'server.ssl.*', 'PKCS12', 'Worker Pool', 'Direct VPC egress', 'min-instances', 'Cloud SQL',
-    'instance-based billing'
+    'instance-based billing', 'simple', 'distributed', 'Secret Manager', 'Marketplace Container Image Product',
+    'GKE Marketplace App', 'Marketplace SaaS', 'CREATE CLOUD SQL', 'DESTROY REPLICADB', '--orphan-report',
+    'immutable', 'gcp-deploy-bundle'
   ]) {
     assert.match(docs, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), required);
   }
@@ -47,6 +50,19 @@ test('makes the distributed API and worker deployment actionable', () => {
   }
   assert.match(deployment, /Do not run `start api local`/i);
   assert.match(deployment, /<ArchitectureDiagram/);
+});
+
+test('documents the guided Cloud Run deployment bundle', () => {
+  const bundle = readFileSync(join(operationsRoot, 'gcp-deploy-bundle.mdx'), 'utf8');
+  for (const required of [
+    'deploy/gcp/deploy.sh', '--mode simple', '--mode distributed', '--image-digest',
+    '--create-cloud-sql', 'CREATE CLOUD SQL', 'Secret Manager', '--confirmation',
+    'DESTROY REPLICADB', '--keep-cloud-sql', '--keep-secrets', '--orphan-report',
+    'REPLICADB_VERIFY_SMOKE', 'ReplicaDB-server-VERSION.tar.gz', 'Marketplace Container Image Product',
+    'GKE Marketplace App', 'Marketplace SaaS', 'public product HTTP endpoint'
+  ]) {
+    assert.match(bundle, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), required);
+  }
 });
 
 test('keeps environment documentation aligned with the maintained example', () => {

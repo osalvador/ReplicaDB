@@ -34,6 +34,11 @@ jobs:
     - name: Verify standalone CLI compatibility
       run: scripts/phase3-cli-compatibility.sh
 
+    - name: Validate Cloud Run deployment bundle
+      run: |
+        bash -n deploy/gcp/deploy.sh deploy/gcp/lib/*.sh deploy/gcp/tests/*.sh
+        deploy/gcp/tests/test_runner.sh
+
     - name: Get version
       id: release_version
       run: |
@@ -115,6 +120,10 @@ jobs:
         tar -xOf "ReplicaDB-server-${{ env.version }}.tar.gz" \
           "ReplicaDB-server-${{ env.version }}/lib/replicadb-server-${{ env.version }}.jar" \
           | cmp - "replicadb-server-${{ env.version }}.jar"
+        tar -tzf "ReplicaDB-server-${{ env.version }}.tar.gz" \
+          | grep -Eq "ReplicaDB-server-${{ env.version }}/deploy/gcp/deploy.sh$"
+        tar -tzf "ReplicaDB-server-${{ env.version }}.tar.gz" \
+          | grep -Eq "ReplicaDB-server-${{ env.version }}/deploy/gcp/config.example.env$"
         if jar tf "replicadb-server-${{ env.version }}.jar" | grep -Eq '(^|/)postgres-[^/]*\.txz$'; then
           echo 'server JAR contains a native PostgreSQL bundle' >&2
           exit 1
