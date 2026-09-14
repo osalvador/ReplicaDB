@@ -59,14 +59,15 @@ case "$*" in
     *'.connectionName'*) printf 'test-project:europe-west4:existing\n' ;;
     *'PRIVATE'*) printf '10.0.0.4\n' ;;
     *)
-        if printf '%s\n' "$input" | rg -q 'architecture.*amd64'; then
+        case "$input" in
+            *architecture*amd64*)
             case "$*" in
                 *'unique'*) printf 'amd64\n' ;;
                 *) printf 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n' ;;
             esac
-        else
-            printf '\n'
-        fi
+            ;;
+            *) printf '\n' ;;
+        esac
         ;;
 esac
 EOF
