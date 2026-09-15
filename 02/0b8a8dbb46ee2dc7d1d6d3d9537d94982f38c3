@@ -1,0 +1,37 @@
+DEPLOYMENT.md
+  s_2ca77119db1092::t_d292ba1840222f 57-58
+README.md
+  s_2ca77119db1092::t_a03c62cb074fcd 77,93-94,179-180
+RELEASE_GUIDE.md
+  s_2ca77119db1092::t_f2f348dcd47be6 3,42,48,57,63-64,73-77,130
+docker-compose.server.yml
+  s_2ca77119db1092::t_ed70b6c945b403 23,55,87,130
+pom.xml
+  s_2ca77119db1092::t_3422a6a51cc86e 9
+replicadb-server/Dockerfile
+  s_2ca77119db1092::t_9c1b410ea1f405 3
+replicadb-server/README.md
+  s_2ca77119db1092::t_5d5039707b8936 1,11
+replicadb-server/frontend/README.develop.md
+  s_2ca77119db1092::t_53ee9b7878d5f2 374
+replicadb-server/pom.xml
+  s_2ca77119db1092::t_1448a084252775 16,42
+.github/workflows/CI_Release.yml
+  s_2ca77119db1092::t_70e49b41f70e11 124,126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "020b8a8dbb46ee2dc7d1d6d3d9537d94982f38c3",
+  "prompts": {},
+  "sessions": {
+    "s_2ca77119db1092": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "edf997f9-3276-4006-b6ba-ec2fdfffa114",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
