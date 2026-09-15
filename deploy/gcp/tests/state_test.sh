@@ -11,6 +11,7 @@ source "$TEST_DIR/../lib/state.sh"
 state_init "$TEMP_ROOT/deployment.state"
 state_put deploymentId deployment-one
 state_put mode distributed
+state_put publicAccess true
 state_put image osalvador/replicadb-server@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 state_put dbPasswordSecretName replicadb-password
 state_put dbPasswordSecretVersion 3
@@ -18,6 +19,7 @@ state_save
 
 [[ -f "$TEMP_ROOT/deployment.state" ]] || { printf 'state file missing\n' >&2; exit 1; }
 [[ "$(state_get mode)" == distributed ]] || { printf 'state round trip failed\n' >&2; exit 1; }
+[[ "$(state_get publicAccess)" == true ]] || { printf 'public access state round trip failed\n' >&2; exit 1; }
 [[ "$(state_get dbPasswordSecretVersion)" == 3 ]] || { printf 'secret version round trip failed\n' >&2; exit 1; }
 if stat -f '%Lp' "$TEMP_ROOT/deployment.state" >/dev/null 2>&1; then
     state_mode=$(stat -f '%Lp' "$TEMP_ROOT/deployment.state")

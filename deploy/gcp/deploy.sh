@@ -37,6 +37,7 @@ Common options:
   --service-account EMAIL   API service account
   --worker-service-account EMAIL
                             Worker service account
+    --public-access          Expose the API Cloud Run service to the Internet
   --api-min-instances N     API minimum instances (default: 1)
   --api-max-instances N     API maximum instances (default: 10)
   --worker-instances N      Worker count (default: 1 in distributed mode)
@@ -87,6 +88,7 @@ initialize_config() {
     DB_URL="${REPLICADB_DB_URL:-}"
     SERVICE_ACCOUNT="${REPLICADB_API_SERVICE_ACCOUNT:-}"
     WORKER_SERVICE_ACCOUNT="${REPLICADB_WORKER_SERVICE_ACCOUNT:-}"
+    PUBLIC_ACCESS="${REPLICADB_PUBLIC_ACCESS:-false}"
     API_MIN_INSTANCES="${REPLICADB_API_MIN_INSTANCES:-1}"
     API_MAX_INSTANCES="${REPLICADB_API_MAX_INSTANCES:-10}"
     WORKER_INSTANCES="${REPLICADB_WORKER_INSTANCES:-1}"
@@ -142,6 +144,10 @@ validate_common() {
     [[ "$API_MAX_INSTANCES" =~ ^[0-9]+$ ]] || die 'api maximum instances must be a non-negative integer'
     (( API_MIN_INSTANCES <= API_MAX_INSTANCES )) || die 'api minimum instances cannot exceed maximum instances'
     [[ "$WORKER_INSTANCES" =~ ^[0-9]+$ ]] || die 'worker instances must be a non-negative integer'
+    [[ "$PUBLIC_ACCESS" == true || "$PUBLIC_ACCESS" == false ]] || die 'public access must be true or false'
+    if [[ "$PUBLIC_ACCESS" == true && "$API_MIN_INSTANCES" == 0 ]]; then
+        die 'public access requires --api-min-instances at least 1 so Quartz scheduling remains active; use a private deployment for scale-to-zero smoke tests'
+    fi
     if [[ "$MODE" == distributed && "$WORKER_INSTANCES" -lt 1 ]]; then
         die 'distributed mode requires at least one worker; use simple mode to disable workers'
     fi
@@ -170,7 +176,7 @@ redacted_summary() {
     printf '  database credentials: %s\n' "$([[ -n "$DB_URL" ]] && printf 'configured' || printf 'Secret Manager references required')"
     printf '  network: %s\n' "${NETWORK:-not configured}"
     printf '  subnet: %s\n' "${SUBNET:-not configured}"
-    printf '  public unauthenticated access: disabled\n'
+    printf '  public unauthenticated access: %s\n' "$([[ "$PUBLIC_ACCESS" == true ]] && printf 'enabled' || printf 'disabled')"
 }
 
 require_cloud_tools() {
@@ -218,6 +224,7 @@ parse_args() {
             --db-url) [[ $# -ge 2 ]] || die '--db-url requires a value'; DB_URL=$2; shift 2 ;;
             --service-account) [[ $# -ge 2 ]] || die '--service-account requires a value'; SERVICE_ACCOUNT=$2; shift 2 ;;
             --worker-service-account) [[ $# -ge 2 ]] || die '--worker-service-account requires a value'; WORKER_SERVICE_ACCOUNT=$2; shift 2 ;;
+            --public-access) PUBLIC_ACCESS=true; shift ;;
             --api-min-instances) [[ $# -ge 2 ]] || die '--api-min-instances requires a value'; API_MIN_INSTANCES=$2; shift 2 ;;
             --api-max-instances) [[ $# -ge 2 ]] || die '--api-max-instances requires a value'; API_MAX_INSTANCES=$2; shift 2 ;;
             --worker-instances) [[ $# -ge 2 ]] || die '--worker-instances requires a value'; WORKER_INSTANCES=$2; shift 2 ;;
@@ -294,6 +301,7 @@ main() {
             state_put subnet "${SUBNET:-}"
             state_put apiServiceAccount "${SERVICE_ACCOUNT:-}"
             state_put workerServiceAccount "${WORKER_SERVICE_ACCOUNT:-}"
+            state_put publicAccess "$PUBLIC_ACCESS"
             state_put apiMinInstances "$API_MIN_INSTANCES"
             state_put apiMaxInstances "$API_MAX_INSTANCES"
             state_put workerInstances "$WORKER_INSTANCES"
@@ -311,6 +319,8 @@ main() {
             state_put keyringVersionSecretVersion "$KEYRING_VERSION_SECRET_VERSION"
             state_put keyringKeySecretName "$KEYRING_KEY_SECRET_NAME"
             state_put keyringKeySecretVersion "$KEYRING_KEY_SECRET_VERSION"
+            state_put keyringFileSecretName "$KEYRING_FILE_SECRET_NAME"
+            state_put keyringFileSecretVersion "$KEYRING_FILE_SECRET_VERSION"
             state_save
             printf 'Deployment execution will be enabled by the next bundle stages.\n'
             ;;

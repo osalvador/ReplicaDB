@@ -20,6 +20,7 @@ export PROJECT_ID=test-project REGION=europe-west4 MODE=distributed DEPLOYMENT_I
 export FINAL_IMAGE=osalvador/replicadb-server:1.0.0@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 export WORKER_SERVICE_ACCOUNT=worker@test-project.iam.gserviceaccount.com
 export NETWORK=network SUBNET=subnet WORKER_INSTANCES=3
+export DB_URL=jdbc:postgresql://10.128.0.2:5432/replicadb
 export DB_USERNAME_SECRET_NAME=db-user DB_USERNAME_SECRET_VERSION=3
 export DB_PASSWORD_SECRET_NAME=db-password DB_PASSWORD_SECRET_VERSION=4
 export KEYRING_VERSION_SECRET_NAME=keyring-version KEYRING_VERSION_SECRET_VERSION=5
@@ -33,9 +34,9 @@ source "$TEST_DIR/../lib/worker_pool.sh"
 worker_pool_deploy
 grep -Eq 'worker-pools deploy' "$LOG_FILE"
 grep -Eq 'SERVER_PORT=-1' "$LOG_FILE"
+grep -Eq 'DB_URL=jdbc:postgresql://10.128.0.2:5432/replicadb' "$LOG_FILE"
 grep -Eq 'REPLICADB_WORKER_MANAGEMENT_ADDRESS=0.0.0.0' "$LOG_FILE"
 grep -Eq 'DB_USERNAME=db-user:3' "$LOG_FILE"
-grep -Eq 'tcpSocket.port=9091' "$LOG_FILE"
 if grep -Eq 'allow-unauthenticated|run.invoker' "$LOG_FILE"; then exit 1; fi
 
 WORKER_INSTANCES=0

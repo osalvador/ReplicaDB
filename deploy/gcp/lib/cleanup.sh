@@ -27,6 +27,7 @@ cleanup_collect() {
         REGION=$(state_get region)
         MODE=$(state_get mode)
         DEPLOYMENT_ID=$(state_get deploymentId)
+        PUBLIC_ACCESS=$(state_get publicAccess)
         CLEANUP_CLOUD_SQL_INSTANCE=$(state_get cloudSqlInstance)
         CLEANUP_CLOUD_SQL_OWNED=$(state_get cloudSqlOwned)
         [[ -n "$(state_get apiServiceName)" ]] && CLEANUP_SERVICES+=("$(state_get apiServiceName)")
@@ -89,6 +90,9 @@ cleanup_destroy() {
     fi
     if [[ ${#CLEANUP_SERVICES[@]} -gt 0 ]]; then
     for item in "${CLEANUP_SERVICES[@]}"; do
+        cloud_run_set_public_access "$item" false || {
+            cleanup_fail "could not remove public Invoker access: $item"; return 1;
+        }
         gcloud run services delete "$item" --project="$PROJECT_ID" --region="$REGION" --quiet >/dev/null || {
             cleanup_fail "could not delete Cloud Run service: $item"; return 1;
         }

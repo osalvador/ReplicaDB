@@ -19,16 +19,22 @@ case "$*" in
         secretmanager.googleapis.com compute.googleapis.com servicenetworking.googleapis.com \
         serviceusage.googleapis.com; [[ "${PREFLIGHT_MISSING_API:-false}" == true ]] || printf 'iamcredentials.googleapis.com\n' ;;
     *'run regions list'*) [[ "${PREFLIGHT_MISSING_REGION:-false}" == true ]] || printf 'europe-west4\n' ;;
-    *'test-iam-permissions'*) printf '%s\n' \
-        run.services.create run.services.update run.services.get iam.serviceAccounts.actAs \
-        run.workerPools.create run.workerPools.update; \
-        [[ "${PREFLIGHT_MISSING_PERMISSION:-false}" == true ]] || printf '%s\n' secretmanager.secrets.get sql.instances.get ;;
+    *'print-access-token'*) printf 'test-token\n' ;;
     *'worker-pools --help'*) [[ "${PREFLIGHT_MISSING_WORKER:-false}" == true ]] && exit 1 || exit 0 ;;
     *'networks describe'*) [[ "${PREFLIGHT_MISSING_NETWORK:-false}" == true ]] && exit 1 || printf 'network\n' ;;
     *'subnets describe'*) [[ "${PREFLIGHT_MISSING_SUBNET:-false}" == true ]] && exit 1 || printf 'subnet\n' ;;
 esac
 EOF
 chmod 755 "$STUB_BIN/gcloud"
+cat >"$STUB_BIN/curl" <<'EOF'
+#!/usr/bin/env bash
+if [[ "${PREFLIGHT_MISSING_PERMISSION:-false}" == true ]]; then
+    printf '%s\n' '{"permissions":["run.services.create","run.services.update","run.services.get","iam.serviceAccounts.actAs"]}'
+else
+    printf '%s\n' '{"permissions":["run.services.create","run.services.update","run.services.get","iam.serviceAccounts.actAs","secretmanager.secrets.get"]}'
+fi
+EOF
+chmod 755 "$STUB_BIN/curl"
 cat >"$STUB_BIN/docker" <<'EOF'
 #!/usr/bin/env bash
 exit "${PREFLIGHT_DOCKER_EXIT:-0}"

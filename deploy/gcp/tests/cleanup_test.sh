@@ -23,6 +23,7 @@ export PROJECT_ID=test-project REGION=europe-west4 DEPLOYMENT_ID=cleanup-test
 export STATE_FILE="$TEMP_ROOT/deployment.state"
 # shellcheck disable=SC1091
 source "$TEST_DIR/../lib/state.sh"
+source "$TEST_DIR/../lib/cloud_run_service.sh"
 # shellcheck disable=SC1091
 source "$TEST_DIR/../lib/cleanup.sh"
 
@@ -31,6 +32,7 @@ state_put deploymentId cleanup-test
 state_put projectId test-project
 state_put region europe-west4
 state_put mode distributed
+state_put publicAccess true
 state_put apiServiceName api-owned
 state_put workerPoolName worker-owned
 state_put cloudSqlInstance sql-owned
@@ -45,6 +47,9 @@ cleanup_destroy >/dev/null
 [[ ! -f "$STATE_FILE" ]] || exit 1
 grep -Eq 'worker-pools delete' "$LOG_FILE"
 grep -Eq 'services delete' "$LOG_FILE"
+remove_line=$(grep -n 'remove-iam-policy-binding' "$LOG_FILE" | head -1 | cut -d: -f1)
+delete_line=$(grep -n 'services delete' "$LOG_FILE" | head -1 | cut -d: -f1)
+(( remove_line < delete_line ))
 grep -Eq 'secrets delete owned-a' "$LOG_FILE"
 grep -Eq 'sql instances delete sql-owned' "$LOG_FILE"
 

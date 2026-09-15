@@ -22,6 +22,20 @@ VERSION_SURFACE_FILES=(
     "docker-compose.server.yml"
     "replicadb-server/src/main/java/org/replicadb/server/local/EmbeddedPostgresProperties.java"
     "replicadb-server/src/test/java/org/replicadb/server/local/EmbeddedPostgresPropertiesTest.java"
+    ".github/workflows/gcp-deploy-bundle.yml"
+    "docs/src/content/docs/operations/gcp-cloud-run.mdx"
+    "docs/src/content/docs/operations/gcp-deploy-bundle.mdx"
+    "docs/src/content/docs/operations/index.md"
+    "docs/tests/operations-contract.test.mjs"
+    "replicadb-server/frontend/src/api/client.test.ts"
+    "replicadb-server/frontend/e2e/public-cloud-run-smoke.spec.ts"
+    "replicadb-server/src/main/java/org/replicadb/server/security/config/SecurityConfig.java"
+    "replicadb-server/src/main/java/org/replicadb/server/web/SpaFallbackController.java"
+    "replicadb-server/src/test/java/org/replicadb/server/HealthEndpointTest.java"
+    "replicadb-server/src/test/java/org/replicadb/server/security/config/SecurityConfigTest.java"
+    "scripts/README.md"
+    "scripts/phase5-gcp-frontend-smoke.sh"
+    "scripts/phase5-gcp-frontend-smoke.test.sh"
 )
 
 RELEASE_FILES=(

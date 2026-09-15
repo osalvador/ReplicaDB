@@ -1,6 +1,6 @@
 FROM eclipse-temurin:17-jre-noble
 
-ARG SERVER_VERSION=1.0.0
+ARG SERVER_VERSION=1.0.1
 ARG SERVER_JAR=target/replicadb-server-${SERVER_VERSION}.jar
 
 ENV SPRING_PROFILES_ACTIVE=api
