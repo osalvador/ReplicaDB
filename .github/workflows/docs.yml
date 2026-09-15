@@ -19,6 +19,7 @@ on:
       - 'replicadb-server/src/test/java/org/replicadb/server/OpenApiSpecificationIT.java'
       - 'replicadb-server/pom.xml'
       - 'scripts/check-phase3-docs.sh'
+      - '.github/workflows/docs.yml'
   push:
     branches: [ master ]
     paths:
@@ -37,6 +38,7 @@ on:
       - 'replicadb-server/src/test/java/org/replicadb/server/OpenApiSpecificationIT.java'
       - 'replicadb-server/pom.xml'
       - 'scripts/check-phase3-docs.sh'
+      - '.github/workflows/docs.yml'
   workflow_dispatch:
 
 permissions:
@@ -57,10 +59,14 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.sha }}" > /tmp/changed-files
+            base_sha="${{ github.event.pull_request.base.sha }}"
           else
-            git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" > /tmp/changed-files
+            base_sha="${{ github.event.before }}"
+            if [[ -z "$base_sha" || "$base_sha" == "0000000000000000000000000000000000000000" ]]; then
+              base_sha="$(git rev-parse '${{ github.sha }}^')"
+            fi
           fi
+          git diff --name-only "$base_sha" "${{ github.sha }}" > /tmp/changed-files
           node docs/scripts/classify-changes.mjs < /tmp/changed-files > /tmp/classification.json
           echo "api=$(python3 -c 'import json; print(str(json.load(open("/tmp/classification.json"))["api"]).lower())')" >> "$GITHUB_OUTPUT"
           echo "frontend=$(python3 -c 'import json; print(str(json.load(open("/tmp/classification.json"))["frontend"]).lower())')" >> "$GITHUB_OUTPUT"
