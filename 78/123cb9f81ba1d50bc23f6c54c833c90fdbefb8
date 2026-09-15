@@ -1,0 +1,71 @@
+.github/workflows/gcp-deploy-bundle.yml
+  s_2ca77119db1092::t_c44265920ece82 60
+DEPLOYMENT.md
+  s_2ca77119db1092::t_39f83c6d9849b3 33-34,57-58
+README.md
+  s_2ca77119db1092::t_426b6054f5691b 77,93-94,179-180
+RELEASE_GUIDE.md
+  s_2ca77119db1092::t_3b22b5507ebd76 3,42,48,57,63-64,73-77,130
+docker-compose.server.yml
+  s_2ca77119db1092::t_4d46b31107f5eb 23,55,87,130
+docs/src/content/docs/operations/gcp-cloud-run.mdx
+  s_2ca77119db1092::t_644783ad72968f 7-8,16-39,98-103,176-177,184-188
+docs/src/content/docs/operations/gcp-deploy-bundle.mdx
+  s_2ca77119db1092::t_d818ab35530a47 41,157
+docs/src/content/docs/operations/index.md
+  s_2ca77119db1092::t_3ff553a51ce5b3 12
+docs/tests/operations-contract.test.mjs
+  s_2ca77119db1092::t_a4a953cce76686 68-83
+pom.xml
+  s_2ca77119db1092::t_7a8fa2c948e946 9
+replicadb-server/Dockerfile
+  s_2ca77119db1092::t_3ca38de93e5faf 3
+replicadb-server/README.md
+  s_2ca77119db1092::t_80a31d9e924a8b 1,11
+replicadb-server/frontend/README.develop.md
+  s_2ca77119db1092::t_5d9d32d20e8716 374
+replicadb-server/frontend/e2e/public-cloud-run-smoke.spec.ts
+  s_2ca77119db1092::t_917fe152857b7a 1-40
+replicadb-server/frontend/src/api/client.test.ts
+  s_2ca77119db1092::t_d0117beea71fb4 3,25-48
+replicadb-server/pom.xml
+  s_2ca77119db1092::t_adc30488d7f28a 16,42
+replicadb-server/src/main/java/org/replicadb/server/security/config/SecurityConfig.java
+  s_2ca77119db1092::t_aa9ef32c15ecdd 39-40
+replicadb-server/src/main/java/org/replicadb/server/web/SpaFallbackController.java
+  s_2ca77119db1092::t_52b0f0476ae6c6 1-24
+replicadb-server/src/test/java/org/replicadb/server/HealthEndpointTest.java
+  s_2ca77119db1092::t_75eb5b49c63699 37-50
+deploy/gcp/lib/secrets.sh
+  s_a778eb52f65ca9::t_d82395778bc54e 14,21,44-49,99-100,122-124,140
+deploy/gcp/lib/worker_pool.sh
+  s_a778eb52f65ca9::t_a6146a7cbb3779 5-7,32,44-53,56,60
+deploy/gcp/tests/preflight_test.sh
+  s_2ca77119db1092::t_b1203b5cc02857 22,29-37,97
+deploy/gcp/tests/worker_pool_test.sh
+  s_a778eb52f65ca9::t_b0a5a04035c936 23,37,55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "78123cb9f81ba1d50bc23f6c54c833c90fdbefb8",
+  "prompts": {},
+  "sessions": {
+    "s_2ca77119db1092": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "edf997f9-3276-4006-b6ba-ec2fdfffa114",
+        "model": "copilot/gpt-5.6-luna"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    },
+    "s_a778eb52f65ca9": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "d37d366a-373f-41af-b746-d670810a3823",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
