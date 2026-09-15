@@ -121,9 +121,9 @@ jobs:
           "ReplicaDB-server-${{ env.version }}/lib/replicadb-server-${{ env.version }}.jar" \
           | cmp - "replicadb-server-${{ env.version }}.jar"
         tar -tzf "ReplicaDB-server-${{ env.version }}.tar.gz" \
-          | grep -Eq "ReplicaDB-server-${{ env.version }}/deploy/gcp/deploy.sh$"
+          | grep -E "ReplicaDB-server-${{ env.version }}/deploy/gcp/deploy.sh$" >/dev/null
         tar -tzf "ReplicaDB-server-${{ env.version }}.tar.gz" \
-          | grep -Eq "ReplicaDB-server-${{ env.version }}/deploy/gcp/config.example.env$"
+          | grep -E "ReplicaDB-server-${{ env.version }}/deploy/gcp/config.example.env$" >/dev/null
         if jar tf "replicadb-server-${{ env.version }}.jar" | grep -Eq '(^|/)postgres-[^/]*\.txz$'; then
           echo 'server JAR contains a native PostgreSQL bundle' >&2
           exit 1

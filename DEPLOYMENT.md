@@ -54,8 +54,8 @@ system PostgreSQL installation, extract the server package and use its
 launcher:
 
 ```bash
-tar -xzf ReplicaDB-server-1.0.1.tar.gz
-cd ReplicaDB-server-1.0.1
+tar -xzf ReplicaDB-server-1.0.2.tar.gz
+cd ReplicaDB-server-1.0.2
 export REPLICADB_SERVER_HOME="${REPLICADB_SERVER_HOME:-$HOME/.replicadb}"
 export REPLICADB_BOOTSTRAP_ADMIN_USERNAME='local-admin'
 export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD='<local-password>'
