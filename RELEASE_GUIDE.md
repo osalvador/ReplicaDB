@@ -1,6 +1,6 @@
 # ReplicaDB Release Guide
 
-This guide defines the controlled publication flow for `v1.0.1` and later
+This guide defines the controlled publication flow for `v1.0.2` and later
 releases. A release is not published until local gates and the required remote
 workflows are green.
 
@@ -39,13 +39,13 @@ blocks `prepare`, `tag`, and `push-tag`.
 2. Run the local checks and the read-only contract check:
 
    ```bash
-   ./release.sh validate 1.0.1
+   ./release.sh validate 1.0.2
    ```
 
 3. Prepare and push the release candidate:
 
    ```bash
-   ./release.sh prepare 1.0.1
+   ./release.sh prepare 1.0.2
    ```
 
 4. Wait for the exact pushed commit to pass the `Only CI/CT` workflow,
@@ -54,14 +54,14 @@ blocks `prepare`, `tag`, and `push-tag`.
 5. After the remote gates are green, create the local tag:
 
    ```bash
-   ./release.sh tag 1.0.1 --ci-green
+   ./release.sh tag 1.0.2 --ci-green
    ```
 
 6. Inspect the annotated tag, then publish it explicitly:
 
    ```bash
-   git show v1.0.1
-   ./release.sh push-tag 1.0.1
+   git show v1.0.2
+   ./release.sh push-tag 1.0.2
    ```
 
 7. Wait for `CI_Release.yml` and verify the complete GitHub release asset set.
@@ -70,11 +70,11 @@ blocks `prepare`, `tag`, and `push-tag`.
 
 The release workflow must publish all of these assets together:
 
-- `ReplicaDB-1.0.1.tar.gz`
-- `ReplicaDB-1.0.1.zip`
-- `ReplicaDB-server-1.0.1.tar.gz`
-- `ReplicaDB-server-1.0.1.zip`
-- `replicadb-server-1.0.1.jar`
+- `ReplicaDB-1.0.2.tar.gz`
+- `ReplicaDB-1.0.2.zip`
+- `ReplicaDB-server-1.0.2.tar.gz`
+- `ReplicaDB-server-1.0.2.zip`
+- `replicadb-server-1.0.2.jar`
 - `SHA256SUMS`
 
 The direct JAR must match the server archive JAR and must not contain native
@@ -127,7 +127,7 @@ automatic tag deletion as recovery steps.
 
 ## Post-Publication Checks
 
-After `v1.0.1` is published, download the CLI and server archives into clean
+After `v1.0.2` is published, download the CLI and server archives into clean
 directories, verify `SHA256SUMS`, and run `help`, `start local`, `status`, and
 `stop`. Confirm that the CLI uses `REPLICADB_HOME`, the server uses
 `REPLICADB_SERVER_HOME`, and no Java or PostgreSQL process remains after the
