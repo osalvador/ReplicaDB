@@ -1,4 +1,4 @@
-# ReplicaDB Server 1.0.0
+# ReplicaDB Server 1.0.1
 
 For user-facing installation, workflow, operations, and API guidance, use the
 [ReplicaDB documentation portal](https://osalvador.github.io/ReplicaDB/).
@@ -8,7 +8,7 @@ a system PostgreSQL installation. Java 17 is required.
 
 ## Install
 
-Extract `ReplicaDB-server-1.0.0.tar.gz` or the matching ZIP, then run the
+Extract `ReplicaDB-server-1.0.1.tar.gz` or the matching ZIP, then run the
 launcher from the extracted directory:
 
 ```bash

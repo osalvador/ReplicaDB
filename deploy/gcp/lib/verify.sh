@@ -70,6 +70,20 @@ verify_worker_pool() {
     [[ -n "$logs" ]] || { verify_fail 'Worker Pool has no recent logs'; return 1; }
 }
 
+verify_public_access() {
+    local service_name=$1
+    local policy
+    [[ "$VERIFY_PUBLIC_ACCESS" == true ]] || return 0
+    policy=$(gcloud run services get-iam-policy "$service_name" --project="$PROJECT_ID" --region="$REGION" --format=json) || {
+        verify_fail 'public Cloud Run IAM policy could not be read'
+        return 1
+    }
+    printf '%s\n' "$policy" | jq -e '[.bindings[]? | select(.role == "roles/run.invoker") | .members[]?] | index("allUsers") != null' >/dev/null || {
+        verify_fail 'public Cloud Run Invoker access is not configured'
+        return 1
+    }
+}
+
 verify_bootstrap_smoke() {
     local username password payload_file response token=$1
     username=$(gcloud secrets versions access "${BOOTSTRAP_USERNAME_SECRET_VERSION}" \
@@ -99,10 +113,17 @@ verify_bootstrap_smoke() {
 }
 
 verify_deployment() {
-    local token
-    API_SERVICE_URL=${API_SERVICE_URL:-$(gcloud run services describe "${CLOUD_RUN_SERVICE_NAME:-$(naming_resource_name api "${REPLICADB_GCP_PREFIX:-replicadb}" "$DEPLOYMENT_ID")}" \
+    local token service_name
+    if [[ -n "${STATE_FILE:-}" && -f "$STATE_FILE" ]] && declare -F state_load >/dev/null; then
+        state_load "$STATE_FILE"
+        [[ -n "$(state_get publicAccess)" ]] && VERIFY_PUBLIC_ACCESS=$(state_get publicAccess)
+    fi
+    service_name=${CLOUD_RUN_SERVICE_NAME:-$(naming_resource_name api "${REPLICADB_GCP_PREFIX:-replicadb}" "$DEPLOYMENT_ID")}
+    CLOUD_RUN_SERVICE_NAME=$service_name
+    API_SERVICE_URL=${API_SERVICE_URL:-$(gcloud run services describe "$service_name" \
         --project="$PROJECT_ID" --region="$REGION" --format='value(status.url)')}
     [[ -n "$API_SERVICE_URL" ]] || { verify_fail 'API service URL is unavailable'; return 1; }
+    verify_public_access "$service_name" || return 1
     token=$(verify_token "$API_SERVICE_URL") || return 1
     verify_api_health "$token" || return 1
     if [[ "$MODE" == distributed ]]; then

@@ -49,9 +49,24 @@ case "$*" in
 esac
 EOF
 chmod 755 "$STUB_BIN/docker"
+cat >"$STUB_BIN/curl" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' '{"permissions":["run.services.create","run.services.update","run.services.get","iam.serviceAccounts.actAs","secretmanager.secrets.get"]}'
+EOF
+chmod 755 "$STUB_BIN/curl"
 cat >"$STUB_BIN/jq" <<'EOF'
 #!/usr/bin/env bash
+if [[ "${1:-}" == *n* ]]; then
+    printf '%s\n' '{"permissions":["run.services.create","run.services.update","run.services.get","iam.serviceAccounts.actAs","secretmanager.secrets.get"]}'
+    exit 0
+fi
 input=$(cat)
+if [[ "$*" == *'.permissions[]?'* ]]; then
+    for permission in run.services.create run.services.update run.services.get iam.serviceAccounts.actAs secretmanager.secrets.get; do
+        [[ "$input" == *"$permission"* ]] && printf '%s\n' "$permission"
+    done
+    exit 0
+fi
 case "$*" in
     *'.region'*) printf 'europe-west4\n' ;;
     *'.databaseVersion'*) printf 'POSTGRES_15\n' ;;
@@ -115,6 +130,11 @@ assert_failure env -u REPLICADB_GCP_PROJECT "$DEPLOY" deploy --cloud-sql-instanc
 assert_failure env PATH=/usr/bin:/bin REPLICADB_GCP_PROJECT=test-project "$DEPLOY" deploy --cloud-sql-instance existing
 assert_failure "$DEPLOY" deploy --mode invalid
 assert_failure "$DEPLOY" deploy --api-min-instances nope
+assert_failure "$DEPLOY" deploy --public-access --api-min-instances 0 --cloud-sql-instance existing
+if [[ -f "$LOG_FILE" ]] && grep -Eq 'run services (replace|update)|add-iam-policy-binding|remove-iam-policy-binding' "$LOG_FILE"; then
+    printf 'test failed: public min-instances validation mutated Cloud Run\n' >&2
+    exit 1
+fi
 assert_failure "$DEPLOY" deploy --worker-instances 0 --mode distributed
 assert_failure "$DEPLOY" deploy --image 'not-an-image'
 
@@ -124,6 +144,10 @@ if [[ "$summary_output" == *secret* || "$summary_output" == *example.invalid* ]]
     printf 'test failed: database URL leaked in summary\n' >&2
     exit 1
 fi
+
+public_summary="$($DEPLOY deploy --mode simple --public-access --cloud-sql-instance existing --db-url 'postgres://user:secret@example.invalid/db')"
+assert_contains 'public unauthenticated access: enabled' "$public_summary"
+grep -Eq '^publicAccess=true$' "$REPLICADB_STATE_FILE"
 
 assert_failure "$DEPLOY" deploy --mode simple --create-cloud-sql --non-interactive
 if grep -Eq '(^| )(run deploy|worker-pools deploy|sql instances create|sql databases create|sql users create|secrets create|delete)' "$LOG_FILE"; then

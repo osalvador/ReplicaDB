@@ -30,8 +30,8 @@ worker instances * concurrent runs per worker * jobs per run
 second scheduler concurrency setting.
 
 For a Google Cloud deployment, see the [Cloud Run operations
-runbook](docs/src/content/docs/operations/gcp-cloud-run.mdx) for the API Service,
-Worker Pool, Cloud SQL Private IP, Direct VPC egress, and readiness configuration.
+runbook](docs/src/content/docs/operations/gcp-cloud-run.mdx), including the optional
+public frontend boundary and private Worker Pool/VM topology.
 
 ## Build
 
@@ -54,8 +54,8 @@ system PostgreSQL installation, extract the server package and use its
 launcher:
 
 ```bash
-tar -xzf ReplicaDB-server-1.0.0.tar.gz
-cd ReplicaDB-server-1.0.0
+tar -xzf ReplicaDB-server-1.0.1.tar.gz
+cd ReplicaDB-server-1.0.1
 export REPLICADB_SERVER_HOME="${REPLICADB_SERVER_HOME:-$HOME/.replicadb}"
 export REPLICADB_BOOTSTRAP_ADMIN_USERNAME='local-admin'
 export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD='<local-password>'

@@ -65,6 +65,22 @@ test('documents the guided Cloud Run deployment bundle', () => {
   }
 });
 
+test('keeps the public frontend command guide and conceptual runbook distinct', () => {
+  const commandGuide = readFileSync(join(repoRoot, 'deploy/gcp/README.md'), 'utf8');
+  const conceptual = readFileSync(join(operationsRoot, 'gcp-cloud-run.mdx'), 'utf8');
+  const index = readFileSync(join(operationsRoot, 'index.md'), 'utf8');
+  const astro = readFileSync(join(docsRoot, 'astro.config.mjs'), 'utf8');
+
+  for (const required of ['REPLICADB_PUBLIC_ACCESS', '--public-access', 'phase5-gcp-frontend-smoke.sh', 'destroy']) {
+    assert.ok(commandGuide.includes(required), required);
+  }
+  for (const required of ['same origin', 'index.html', 'roles/run.invoker', 'CSRF', 'min-instances=1', 'allUsers', 'Worker Pool', 'private IP']) {
+    assert.ok(conceptual.toLowerCase().includes(required.toLowerCase()), required);
+  }
+  assert.match(index, /operations\/gcp-cloud-run\//i);
+  assert.match(astro, /operations\/gcp-cloud-run/i);
+});
+
 test('keeps environment documentation aligned with the maintained example', () => {
   const examplePath = join(repoRoot, 'replicadb-server/conf/replicadb-server.env.example');
   const example = readFileSync(examplePath, 'utf8');

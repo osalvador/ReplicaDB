@@ -16,6 +16,22 @@ manual deployment. A real preflight or deployment is always an explicit local
 operation and must use a disposable project, an immutable image, and a planned
 cleanup confirmation.
 
+## Public frontend smoke
+
+Run the read-only HTTP boundary check against an already deployed public API
+service:
+
+```bash
+scripts/phase5-gcp-frontend-smoke.sh --url https://SERVICE_URL
+```
+
+The smoke checks the SPA shell, direct `/login` navigation, CSRF cookie
+bootstrap, and the unauthenticated `401` problem response from `/api/v1/jobs`.
+It does not deploy resources or change IAM. Add `--playwright` only with
+`REPLICADB_PUBLIC_SMOKE_USERNAME` and
+`REPLICADB_PUBLIC_SMOKE_PASSWORD_FILE` set; the password is read from that
+file at runtime and is never passed as a command argument.
+
 ## Background
 
 When Dependabot PRs are created before critical fixes are merged to master (e.g., TestContainers version upgrades), the PRs may fail CI tests. Rebasing these PRs allows them to pick up the fixes and pass CI, enabling the auto-merge workflow to complete.

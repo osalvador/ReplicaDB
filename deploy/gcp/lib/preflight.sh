@@ -61,14 +61,35 @@ preflight_check_apis() {
 }
 
 preflight_check_permissions() {
-    local permissions granted required missing
-    permissions='run.services.create,run.services.update,run.services.get,iam.serviceAccounts.actAs,secretmanager.secrets.get,sql.instances.get'
-    if [[ "$MODE" == distributed ]]; then
-        permissions="$permissions,run.workerPools.create,run.workerPools.update"
-    fi
-    granted=$(gcloud projects test-iam-permissions "$PROJECT_ID" \
-        --permissions="$permissions" --format='value(permissions)' 2>/dev/null) || {
+    local permissions granted required missing access_token payload response
+    permissions='run.services.create,run.services.update,run.services.get,iam.serviceAccounts.actAs,secretmanager.secrets.get'
+    command -v curl >/dev/null 2>&1 || {
+        preflight_fail 'curl is required to test deployment permissions'
+        return 1
+    }
+    command -v jq >/dev/null 2>&1 || {
+        preflight_fail 'jq is required to test deployment permissions'
+        return 1
+    }
+    access_token=$(gcloud auth print-access-token 2>/dev/null) || {
+        preflight_fail 'cannot obtain an access token to test deployment permissions'
+        return 1
+    }
+    payload=$(jq -cn --arg permissions "$permissions" '{permissions: ($permissions | split(","))}') || {
+        preflight_fail 'cannot build the deployment permission request'
+        return 1
+    }
+    response=$(curl -fsS -X POST \
+        -H "Authorization: Bearer ${access_token}" \
+        -H 'Content-Type: application/json' \
+        --data "$payload" \
+        "https://cloudresourcemanager.googleapis.com/v1/projects/${PROJECT_ID}:testIamPermissions" 2>/dev/null) || {
         preflight_fail "cannot test deployment permissions in project $PROJECT_ID"
+        return 1
+    }
+    unset access_token payload
+    granted=$(printf '%s\n' "$response" | jq -r '.permissions[]?') || {
+        preflight_fail "cannot parse deployment permissions in project $PROJECT_ID"
         return 1
     }
     IFS=',' read -r -a required_permissions <<<"$permissions"

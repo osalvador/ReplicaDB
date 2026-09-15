@@ -4,14 +4,38 @@ description: Deploy the ReplicaDB API and workers on Cloud Run with Cloud SQL fo
 ---
 
 Use this topology when ReplicaDB should run on Google Cloud without exposing a worker
-HTTP endpoint. Cloud Run provides two different resources: an authenticated Cloud Run
-Service for the API and a Cloud Run Worker Pool for the always-on worker processes.
+HTTP endpoint. Cloud Run provides two different resources: a Cloud Run Service for the
+API and bundled SPA, and a Cloud Run Worker Pool for the always-on worker processes.
 
 For a guided installation from a checkout or extracted server package, use the
 [Cloud Run deployment bundle](/ReplicaDB/operations/gcp-deploy-bundle/). It supports
 `simple` and `distributed` modes, immutable image digests, explicit Cloud SQL creation,
 version-pinned Secret Manager references, authenticated verification, and ownership-aware
 cleanup. It is self-managed Cloud Run packaging, not a Google Cloud Marketplace product.
+
+## Public frontend access
+
+The released API image contains the React SPA, so the API Cloud Run Service serves both
+the browser shell and relative `/api/v1` requests on the same origin. The server forwards the
+allowlisted frontend routes such as `/login`, `/jobs`, `/datasources`, and `/runs/{id}`
+to `index.html`; API, Actuator, OpenAPI, asset, and unknown backend paths are not
+converted into HTML. This makes a direct browser refresh work without weakening API
+authorization.
+
+The deployment bundle is private by default. Set `REPLICADB_PUBLIC_ACCESS=true` or pass
+`--public-access` to opt into `run.googleapis.com/ingress: all` and grant
+`roles/run.invoker` to `allUsers` on the API service. The Worker Pool and PostgreSQL
+private IP remain private and receive no public Invoker binding. Public Cloud Run IAM is
+only the network gate: Spring Security still requires a ReplicaDB session for protected
+resources, while `/api/v1/auth/csrf` and `/api/v1/auth/login` remain public bootstrap
+endpoints.
+
+Because the SPA and API share an origin, the browser keeps the `SESSION` and
+`XSRF-TOKEN` cookies in the same site. The frontend calls relative `/api/v1` URLs with
+credentials, bootstraps CSRF before login, and sends `X-XSRF-TOKEN` for protected
+mutations. Public reachability is therefore not anonymous data access. Enabling
+`allUsers` is unsuitable without application hardening, rate monitoring, secure HTTPS
+ingress, and regular bootstrap-credential rotation.
 
 ## Topology
 
@@ -70,6 +94,12 @@ Configure the service with:
 - A shared keyring and external PostgreSQL credentials from Secret Manager.
 - Private or authenticated ingress. The API endpoint is a product surface; the worker
   endpoint is not.
+
+For the public frontend trial, use the explicit public-access flag and keep
+`min-instances=1`. One continuously running instance has a cost even without browser
+traffic, but it keeps Quartz scheduling active while the service is idle. The bundle
+rejects `--public-access --api-min-instances 0`; private, non-scheduled smoke
+deployments may still use zero instances.
 
 A service-level minimum is preferred over revision-level minimums so a rollout does not
 leave an old tagged revision running unexpectedly. Keep the Cloud Run maximum instance
@@ -143,12 +173,18 @@ operations.
 egress for the service and worker pool.
 3. Store database credentials and the shared ReplicaDB keyring in Secret Manager.
 4. Deploy the API service with `min-instances=1` or more, instance-based billing, and
-an authenticated ingress.
+  an authenticated ingress. Add `--public-access` only when the browser trial is
+  explicitly enabled.
 5. Deploy the worker pool with a fixed active instance count and unique worker identity.
 6. Configure startup and readiness probes, then verify the API readiness components and
 worker private management health before accepting traffic.
 7. Watch Cloud SQL connection counts, `replicadb.managed.scheduler.checkin.age`, queue
 age, polling lag, worker busy slots, and lease recoveries during rollout.
+
+After public access is enabled, run the read-only
+`scripts/phase5-gcp-frontend-smoke.sh` command from the deployment bundle guide. It
+checks the SPA shell, direct `/login`, CSRF cookie initialization, and the protected
+jobs `401` problem response without changing IAM or printing response bodies.
 
 See the [distributed deployment guide](/ReplicaDB/operations/distributed-deployment/)
 for shared PostgreSQL, keyring, migration, and upgrade requirements that apply on GCP as

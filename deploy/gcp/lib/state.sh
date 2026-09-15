@@ -13,7 +13,7 @@ state_init() {
 
 state_key_allowed() {
     case "$1" in
-        schemaVersion|deploymentId|projectId|region|mode|image|imageDigest|apiServiceName|workerPoolName|cloudSqlInstance|cloudSqlConnection|databaseName|dbUser|network|subnet|apiServiceAccount|workerServiceAccount|apiMinInstances|apiMaxInstances|workerInstances|cloudSqlOwned|secretsOwned|createdAt|updatedAt|*SecretName|*SecretVersion)
+        schemaVersion|deploymentId|projectId|region|mode|image|imageDigest|apiServiceName|workerPoolName|cloudSqlInstance|cloudSqlConnection|databaseName|dbUser|network|subnet|apiServiceAccount|workerServiceAccount|publicAccess|apiMinInstances|apiMaxInstances|workerInstances|cloudSqlOwned|secretsOwned|createdAt|updatedAt|*SecretName|*SecretVersion)
             return 0
             ;;
         *)

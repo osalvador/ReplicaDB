@@ -9,6 +9,8 @@ source "$CLOUD_RUN_LIB_DIR/naming.sh"
 CLOUD_RUN_SERVICE_NAME=""
 API_SERVICE_URL=""
 CLOUD_RUN_SERVICE_YAML=""
+KEYRING_FILE_SECRET_NAME="${KEYRING_FILE_SECRET_NAME:-replicadb-master-key}"
+KEYRING_FILE_SECRET_VERSION="${KEYRING_FILE_SECRET_VERSION:-1}"
 
 cloud_run_fail() {
     printf 'Cloud Run service error: %s\n' "$*" >&2
@@ -20,11 +22,11 @@ cloud_run_secret_env() {
     local secret_name=$2
     local secret_version=$3
     cat <<EOF
-        - name: ${env_name}
-          valueFrom:
-            secretKeyRef:
-              name: ${secret_name}
-              key: "${secret_version}"
+            - name: ${env_name}
+              valueFrom:
+                secretKeyRef:
+                  name: ${secret_name}
+                  key: "${secret_version}"
 EOF
 }
 
@@ -39,20 +41,49 @@ cloud_run_database_url() {
     fi
 }
 
+cloud_run_set_public_access() {
+  local service_name=${1:-$CLOUD_RUN_SERVICE_NAME}
+  local public_access=${2:-${PUBLIC_ACCESS:-false}}
+  local ingress=internal-and-cloud-load-balancing
+  if [[ "$public_access" == true ]]; then
+    ingress=all
+  fi
+  gcloud run services update "$service_name" --project="$PROJECT_ID" --region="$REGION" \
+    --update-annotations="run.googleapis.com/ingress=${ingress}" --quiet >/dev/null || {
+    cloud_run_fail "could not set Cloud Run ingress for service: $service_name"
+    return 1
+  }
+  if [[ "$public_access" == true ]]; then
+    gcloud run services add-iam-policy-binding "$service_name" --project="$PROJECT_ID" --region="$REGION" \
+      --member=allUsers --role=roles/run.invoker --quiet >/dev/null || {
+      cloud_run_fail "could not grant public Invoker access for service: $service_name"
+      return 1
+    }
+  else
+    gcloud run services remove-iam-policy-binding "$service_name" --project="$PROJECT_ID" --region="$REGION" \
+      --member=allUsers --role=roles/run.invoker --quiet >/dev/null || {
+      cloud_run_fail "could not remove public Invoker access for service: $service_name"
+      return 1
+    }
+  fi
+}
+
 cloud_run_render_service() {
     local output_path=$1
     local local_execution=$2
     local service_account=${SERVICE_ACCOUNT:-}
     local database_url
     local network_annotation=''
+    local ingress=internal-and-cloud-load-balancing
     [[ -n "$FINAL_IMAGE" ]] || { cloud_run_fail 'immutable FINAL_IMAGE is required'; return 1; }
     [[ -n "$service_account" ]] || { cloud_run_fail 'API service account is required'; return 1; }
     [[ -n "${DB_USERNAME_SECRET_VERSION:-}" && -n "${DB_PASSWORD_SECRET_VERSION:-}" ]] || {
         cloud_run_fail 'database secret versions are required'; return 1;
     }
     database_url=$(cloud_run_database_url) || return 1
+    [[ "${PUBLIC_ACCESS:-false}" == true ]] && ingress=all
     if [[ -n "${NETWORK:-}" && -n "${SUBNET:-}" ]]; then
-      network_annotation="        run.googleapis.com/network-interfaces: '[{\"network\":\"${NETWORK}\",\"subnetwork\":\"${SUBNET}\"}]'"
+      network_annotation="  run.googleapis.com/network-interfaces: '[{\"network\":\"${NETWORK}\",\"subnetwork\":\"${SUBNET}\"}]'"
     fi
     CLOUD_RUN_SERVICE_NAME=${CLOUD_RUN_SERVICE_NAME:-$(naming_resource_name api "${REPLICADB_GCP_PREFIX:-replicadb}" "$DEPLOYMENT_ID")}
     mkdir -p "$(dirname "$output_path")"
@@ -65,7 +96,7 @@ metadata:
   labels:
     replicadb-deployment: ${DEPLOYMENT_ID}
   annotations:
-    run.googleapis.com/ingress: internal-and-cloud-load-balancing
+    run.googleapis.com/ingress: ${ingress}
 spec:
   template:
     metadata:
@@ -95,6 +126,7 @@ $(cloud_run_secret_env DB_USERNAME "$DB_USERNAME_SECRET_NAME" "$DB_USERNAME_SECR
 $(cloud_run_secret_env DB_PASSWORD "$DB_PASSWORD_SECRET_NAME" "$DB_PASSWORD_SECRET_VERSION")
 $(cloud_run_secret_env REPLICADB_SECURITY_KEYRING_CURRENT_VERSION "$KEYRING_VERSION_SECRET_NAME" "$KEYRING_VERSION_SECRET_VERSION")
 $(cloud_run_secret_env REPLICADB_SECURITY_KEYRING_CURRENT_KEY "$KEYRING_KEY_SECRET_NAME" "$KEYRING_KEY_SECRET_VERSION")
+$(cloud_run_secret_env REPLICADB_SECURITY_MASTER_KEY_JSON "$KEYRING_FILE_SECRET_NAME" "$KEYRING_FILE_SECRET_VERSION")
 $(cloud_run_secret_env REPLICADB_BOOTSTRAP_ADMIN_USERNAME "$BOOTSTRAP_USERNAME_SECRET_NAME" "$BOOTSTRAP_USERNAME_SECRET_VERSION")
 $(cloud_run_secret_env REPLICADB_BOOTSTRAP_ADMIN_PASSWORD "$BOOTSTRAP_PASSWORD_SECRET_NAME" "$BOOTSTRAP_PASSWORD_SECRET_VERSION")
           startupProbe:
@@ -115,7 +147,18 @@ $(cloud_run_secret_env REPLICADB_BOOTSTRAP_ADMIN_PASSWORD "$BOOTSTRAP_PASSWORD_S
               path: /actuator/health/readiness
             timeoutSeconds: 5
             periodSeconds: 10
-            failureThreshold: 6
+            failureThreshold: 3
+          volumeMounts:
+            - name: replicadb-master-key
+              mountPath: /run/secrets
+              readOnly: true
+      volumes:
+        - name: replicadb-master-key
+          secret:
+            secretName: ${KEYRING_FILE_SECRET_NAME}
+            items:
+              - key: "${KEYRING_FILE_SECRET_VERSION}"
+                path: replicadb-master-key
 EOF
     CLOUD_RUN_SERVICE_YAML=$output_path
 }
@@ -136,6 +179,10 @@ cloud_run_deploy_service() {
         cloud_run_fail 'Cloud Run service was deployed but its URL could not be read'
         return 1
     }
+      cloud_run_set_public_access "$CLOUD_RUN_SERVICE_NAME" "${PUBLIC_ACCESS:-false}" || {
+        rm -f "$yaml_path"
+        return 1
+      }
     rm -f "$yaml_path"
     printf 'Cloud Run API service deployed: %s\n' "$CLOUD_RUN_SERVICE_NAME"
 }

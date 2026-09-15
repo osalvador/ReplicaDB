@@ -48,7 +48,7 @@ SECRETS_SCENARIO=create
 export SECRETS_SCENARIO
 SECRET_CREATED_NAMES=()
 secrets_prepare >/dev/null
-[[ ${#SECRET_CREATED_NAMES[@]} -eq 6 ]] || exit 1
+[[ ${#SECRET_CREATED_NAMES[@]} -eq 7 ]] || exit 1
 if grep -Eq 'database-password-must-not-leak|secret-payload-must-not-leak' "$LOG_FILE"; then
     printf 'secret payload appeared in command diagnostics\n' >&2
     exit 1

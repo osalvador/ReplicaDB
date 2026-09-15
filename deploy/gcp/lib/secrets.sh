@@ -11,12 +11,14 @@ BOOTSTRAP_USERNAME_SECRET_NAME="${REPLICADB_BOOTSTRAP_USERNAME_SECRET:-replicadb
 BOOTSTRAP_PASSWORD_SECRET_NAME="${REPLICADB_BOOTSTRAP_PASSWORD_SECRET:-replicadb-bootstrap-admin-password}"
 KEYRING_VERSION_SECRET_NAME="${REPLICADB_KEYRING_VERSION_SECRET:-replicadb-keyring-current-version}"
 KEYRING_KEY_SECRET_NAME="${REPLICADB_KEYRING_KEY_SECRET:-replicadb-keyring-current-key}"
+KEYRING_FILE_SECRET_NAME="${REPLICADB_KEYRING_FILE_SECRET:-replicadb-master-key}"
 DB_USERNAME_SECRET_VERSION="${REPLICADB_DB_USERNAME_SECRET_VERSION:-}"
 DB_PASSWORD_SECRET_VERSION="${REPLICADB_DB_PASSWORD_SECRET_VERSION:-}"
 BOOTSTRAP_USERNAME_SECRET_VERSION="${REPLICADB_BOOTSTRAP_USERNAME_SECRET_VERSION:-}"
 BOOTSTRAP_PASSWORD_SECRET_VERSION="${REPLICADB_BOOTSTRAP_PASSWORD_SECRET_VERSION:-}"
 KEYRING_VERSION_SECRET_VERSION="${REPLICADB_KEYRING_VERSION_SECRET_VERSION:-}"
 KEYRING_KEY_SECRET_VERSION="${REPLICADB_KEYRING_KEY_SECRET_VERSION:-}"
+KEYRING_FILE_SECRET_VERSION="${REPLICADB_KEYRING_FILE_SECRET_VERSION:-}"
 
 secrets_fail() {
     printf 'Secret Manager error: %s\n' "$*" >&2
@@ -37,6 +39,12 @@ secrets_generate_value() {
     else
         od -An -N24 -tx1 /dev/urandom | tr -d ' \n'
     fi
+}
+
+secrets_generate_keyring() {
+    local key
+    key=$(openssl rand -base64 32 | tr -d '\n')
+    printf '{"currentVersion":"v1","keys":{"v1":"%s"}}\n' "$key"
 }
 
 secrets_latest_version() {
@@ -88,7 +96,8 @@ secrets_prepare() {
     local bootstrap_username_value=${REPLICADB_BOOTSTRAP_ADMIN_USERNAME:-admin}
     local bootstrap_password_value=${REPLICADB_BOOTSTRAP_ADMIN_PASSWORD:-}
     local keyring_version_value=${REPLICADB_SECURITY_KEYRING_CURRENT_VERSION_VALUE:-1}
-    local keyring_key_value=${REPLICADB_SECURITY_KEYRING_CURRENT_KEY_VALUE:-}
+    local keyring_key_value=${REPLICADB_SECURITY_KEYRING_CURRENT_KEY_VALUE:-$(openssl rand -base64 32 | tr -d '\n')}
+    local keyring_file_value=${REPLICADB_SECURITY_KEYRING_FILE_VALUE:-$(secrets_generate_keyring)}
     local api_account=${SERVICE_ACCOUNT:-}
     local worker_account=${WORKER_SERVICE_ACCOUNT:-}
     secrets_require_tools
@@ -110,7 +119,9 @@ secrets_prepare() {
     KEYRING_VERSION_SECRET_VERSION=$SECRET_LAST_VERSION
     secrets_create_or_reuse "$KEYRING_KEY_SECRET_NAME" "$keyring_key_value" "$KEYRING_KEY_SECRET_VERSION" || { secrets_rollback_created; return 1; }
     KEYRING_KEY_SECRET_VERSION=$SECRET_LAST_VERSION
-    for secret_name in "$DB_USERNAME_SECRET_NAME" "$DB_PASSWORD_SECRET_NAME" "$BOOTSTRAP_USERNAME_SECRET_NAME" "$BOOTSTRAP_PASSWORD_SECRET_NAME" "$KEYRING_VERSION_SECRET_NAME" "$KEYRING_KEY_SECRET_NAME"; do
+    secrets_create_or_reuse "$KEYRING_FILE_SECRET_NAME" "$keyring_file_value" "$KEYRING_FILE_SECRET_VERSION" || { secrets_rollback_created; return 1; }
+    KEYRING_FILE_SECRET_VERSION=$SECRET_LAST_VERSION
+    for secret_name in "$DB_USERNAME_SECRET_NAME" "$DB_PASSWORD_SECRET_NAME" "$BOOTSTRAP_USERNAME_SECRET_NAME" "$BOOTSTRAP_PASSWORD_SECRET_NAME" "$KEYRING_VERSION_SECRET_NAME" "$KEYRING_KEY_SECRET_NAME" "$KEYRING_FILE_SECRET_NAME"; do
         secrets_grant_accessor "$api_account" "$secret_name" || { secrets_rollback_created; return 1; }
         if [[ "$MODE" == distributed ]]; then
             secrets_grant_accessor "$worker_account" "$secret_name" || { secrets_rollback_created; return 1; }

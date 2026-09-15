@@ -12,6 +12,7 @@ cat >"$STUB_BIN/gcloud" <<'EOF'
 case "$*" in
     *'print-identity-token'*) [[ "${VERIFY_SCENARIO:-healthy}" == token-failure ]] && exit 1 || printf 'identity-token-must-not-print\n' ;;
     *'services describe'*) printf 'https://api.example.invalid\n' ;;
+    *'get-iam-policy'*) [[ "${VERIFY_PUBLIC_BINDING:-present}" == present ]] && printf '{"bindings":[{"role":"roles/run.invoker","members":["allUsers"]}]}\n' || printf '{"bindings":[]}\n' ;;
     *'worker-pools describe'*) printf '%s\n' "${VERIFY_WORKER_STATUS:-READY}" ;;
     *'logging read'*) [[ "${VERIFY_WORKER_LOGS:-present}" == present ]] && printf 'worker started\n' ;;
     *'secrets versions access'*) printf 'bootstrap-value\n' ;;
@@ -30,12 +31,19 @@ cat >"$STUB_BIN/jq" <<'EOF'
 #!/usr/bin/env bash
 input=$(cat)
 if [[ "$*" == *'-n'* ]]; then printf '{"username":"bootstrap","password":"redacted"}\n'; exit 0; fi
-[[ "$input" == *'"status":"UP"'* && "$input" != *'"status":"DOWN"'* && "$input" != *'"status":"DEGRADED"'* ]]
+if [[ "$*" == *'allUsers'* ]]; then
+    [[ "$input" == *allUsers* ]]
+    exit $?
+fi
+[[ "$input" == *'"status":"UP"'* && "$input" != *'"status":"DOWN"'* && "$input" != *'"status":"DEGRADED"'* ]] || exit 1
 EOF
 chmod 755 "$STUB_BIN"/*
 export PATH="$STUB_BIN:$PATH"
 export PROJECT_ID=test-project REGION=europe-west4 MODE=simple DEPLOYMENT_ID=verify-test
+export CLOUD_RUN_SERVICE_NAME=api-verify-test
 export API_SERVICE_URL=https://api.example.invalid VERIFY_PUBLIC_ACCESS=false
+# shellcheck disable=SC1091
+source "$TEST_DIR/../lib/naming.sh"
 # shellcheck disable=SC1091
 source "$TEST_DIR/../lib/verify.sh"
 
@@ -56,6 +64,13 @@ unset VERIFY_QUARTZ_STATUS
 export VERIFY_DB_STATUS=DOWN
 if verify_deployment >/dev/null 2>&1; then exit 1; fi
 unset VERIFY_DB_STATUS
+
+VERIFY_PUBLIC_ACCESS=true
+export VERIFY_PUBLIC_BINDING=present
+verify_deployment
+export VERIFY_PUBLIC_BINDING=missing
+if verify_deployment >/dev/null 2>&1; then exit 1; fi
+VERIFY_PUBLIC_ACCESS=false
 
 MODE=distributed
 WORKER_POOL_NAME=worker-pool

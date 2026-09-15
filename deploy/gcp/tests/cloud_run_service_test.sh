@@ -11,6 +11,7 @@ cat >"$TEMP_ROOT/bin/gcloud" <<'EOF'
 printf '%s\n' "$*" >>"${CLOUD_RUN_LOG:?}"
 case "$*" in
 	*'services describe'*) printf 'https://api.example.invalid\n' ;;
+	*'add-iam-policy-binding'*) [[ "${CLOUD_RUN_IAM_FAIL:-false}" == true ]] && exit 1 || : ;;
 esac
 EOF
 chmod 755 "$TEMP_ROOT/bin/gcloud"
@@ -43,6 +44,7 @@ grep -Eq 'key: "8"' "$output"
 grep -Eq 'cpu-throttling: "false"' "$output"
 grep -Eq 'minScale: "1"' "$output"
 grep -Eq 'maxScale: "7"' "$output"
+grep -Eq 'run.googleapis.com/ingress: internal-and-cloud-load-balancing' "$output"
 if grep -Eq 'name: PORT' "$output"; then exit 1; fi
 if grep -Eq 'allow-unauthenticated|roles/run.invoker' "$output"; then exit 1; fi
 if grep -Eq 'secret|password' "$output" && grep -Eq 'value: .*password|value: .*secret' "$output"; then exit 1; fi
@@ -52,5 +54,17 @@ first_name=$CLOUD_RUN_SERVICE_NAME
 cloud_run_deploy_service true >/dev/null
 [[ "$CLOUD_RUN_SERVICE_NAME" == "$first_name" ]] || exit 1
 [[ "$(grep -Ec 'run services replace' "$CLOUD_RUN_LOG")" == 2 ]] || exit 1
+
+PUBLIC_ACCESS=true
+cloud_run_render_service "$output" true
+grep -Eq 'run.googleapis.com/ingress: all' "$output"
+cloud_run_set_public_access "$CLOUD_RUN_SERVICE_NAME" true
+[[ "$(grep -Ec 'add-iam-policy-binding.*allUsers.*roles/run.invoker' "$CLOUD_RUN_LOG")" == 1 ]] || exit 1
+export CLOUD_RUN_IAM_FAIL=true
+if cloud_run_set_public_access "$CLOUD_RUN_SERVICE_NAME" true >/dev/null 2>&1; then exit 1; fi
+export CLOUD_RUN_IAM_FAIL=false
+PUBLIC_ACCESS=false
+cloud_run_set_public_access "$CLOUD_RUN_SERVICE_NAME" false
+grep -Eq 'remove-iam-policy-binding.*allUsers.*roles/run.invoker' "$CLOUD_RUN_LOG"
 
 printf 'cloud run service tests passed\n'
