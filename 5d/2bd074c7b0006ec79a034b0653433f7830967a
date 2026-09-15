@@ -1,0 +1,19 @@
+.github/workflows/docs.yml
+  s_2ca77119db1092::t_f1c5d79ba40384 22,41,62,64-67,69
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5d2bd074c7b0006ec79a034b0653433f7830967a",
+  "prompts": {},
+  "sessions": {
+    "s_2ca77119db1092": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "edf997f9-3276-4006-b6ba-ec2fdfffa114",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
