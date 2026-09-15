@@ -102,6 +102,8 @@ jobs:
       - name: Install frontend schema tooling
         working-directory: replicadb-server/frontend
         run: npm ci
+      - name: Install CLI artifact for API contract generation
+        run: mvn -B install -DskipTests --file pom.xml
       - name: Regenerate and compare API contracts
         run: |
           bash docs/scripts/update-openapi.sh

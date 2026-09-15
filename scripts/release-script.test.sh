@@ -71,6 +71,7 @@ copy_fixture_files() {
 
 set_fixture_version() {
     local fixture=$1
+    local current_version
     local file
     local files=(
         "pom.xml"
@@ -88,8 +89,10 @@ set_fixture_version() {
         "docker-compose.server.yml"
     )
 
+    current_version=$(sed -n 's/^[[:space:]]*<version>\([^<]*\)<\/version>[[:space:]]*$/\1/p' \
+        "$fixture/pom.xml" | head -n 1)
     for file in "${files[@]}"; do
-        perl -0pi -e 's/1\.0\.0/0.19.0/g' "$fixture/$file"
+        perl -0pi -e 's/\Q'"$current_version"'\E/0.19.0/g' "$fixture/$file"
     done
 }
 
