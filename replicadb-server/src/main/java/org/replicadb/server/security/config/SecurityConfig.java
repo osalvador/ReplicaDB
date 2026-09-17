@@ -36,6 +36,8 @@ public class SecurityConfig {
                         .ignoringRequestMatchers("/api/v1/auth/login"))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/", "/index.html", "/assets/**", "/favicon.ico",
+                                "/login", "/profile", "/jobs/**", "/datasources/**", "/runs/**",
+                                "/audit", "/users",
                                 "/api/v1/auth/login", "/api/v1/auth/csrf", "/actuator/health",
                                         "/actuator/health/**",
                                 "/v3/api-docs/**").permitAll()

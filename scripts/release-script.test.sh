@@ -50,8 +50,8 @@ copy_fixture_files() {
         "RELEASE_GUIDE.md"
         "CONTRIBUTING.md"
         "PRODUCT.md"
-        "docs/index.md"
-        "docs/server.md"
+        "docs/src/content/docs/cli/index.md"
+        "docs/src/content/docs/server/index.md"
         "replicadb-server/pom.xml"
         "replicadb-server/README.md"
         "replicadb-server/frontend/README.develop.md"
@@ -65,10 +65,13 @@ copy_fixture_files() {
         mkdir -p "$(dirname "$destination/$file")"
         cp "$PROJECT_ROOT/$file" "$destination/$file"
     done
+    mkdir -p "$destination/deploy"
+    cp -R "$PROJECT_ROOT/deploy/gcp" "$destination/deploy/gcp"
 }
 
 set_fixture_version() {
     local fixture=$1
+    local current_version
     local file
     local files=(
         "pom.xml"
@@ -77,8 +80,8 @@ set_fixture_version() {
         "RELEASE_GUIDE.md"
         "CONTRIBUTING.md"
         "PRODUCT.md"
-        "docs/index.md"
-        "docs/server.md"
+        "docs/src/content/docs/cli/index.md"
+        "docs/src/content/docs/server/index.md"
         "replicadb-server/pom.xml"
         "replicadb-server/README.md"
         "replicadb-server/frontend/README.develop.md"
@@ -86,8 +89,10 @@ set_fixture_version() {
         "docker-compose.server.yml"
     )
 
+    current_version=$(sed -n 's/^[[:space:]]*<version>\([^<]*\)<\/version>[[:space:]]*$/\1/p' \
+        "$fixture/pom.xml" | head -n 1)
     for file in "${files[@]}"; do
-        perl -0pi -e 's/1\.0\.0/0.19.0/g' "$fixture/$file"
+        perl -0pi -e 's/\Q'"$current_version"'\E/0.19.0/g' "$fixture/$file"
     done
 }
 
@@ -246,6 +251,30 @@ test_tag_rejects_dirty_worktree() {
     assert_no_tag "v1.0.0"
 }
 
+test_server_package_contains_cloud_run_bundle() {
+    local jar_root output_dir extracted_dir
+
+    jar_root="${TEMP_ROOT}/jar-content"
+    output_dir="${TEMP_ROOT}/server-package-output"
+    extracted_dir="${TEMP_ROOT}/server-package-extracted"
+    mkdir -p "$jar_root" "$output_dir" "$extracted_dir"
+    printf 'fixture\n' >"$jar_root/fixture.txt"
+    jar cf "${TEMP_ROOT}/server.jar" -C "$jar_root" fixture.txt >/dev/null
+    (cd "$TEMP_ROOT" && "$PROJECT_ROOT/scripts/package-server-release.sh" 1.0.0 \
+        "${TEMP_ROOT}/server.jar" "$output_dir") >/dev/null
+
+    tar -xzf "$output_dir/ReplicaDB-server-1.0.0.tar.gz" -C "$extracted_dir"
+    test -x "$extracted_dir/ReplicaDB-server-1.0.0/deploy/gcp/deploy.sh"
+    test -x "$extracted_dir/ReplicaDB-server-1.0.0/deploy/gcp/tests/test_runner.sh"
+    test -f "$extracted_dir/ReplicaDB-server-1.0.0/deploy/gcp/config.example.env"
+    unzip -Z1 "$output_dir/ReplicaDB-server-1.0.0.zip" | rg -q 'ReplicaDB-server-1.0.0/deploy/gcp/deploy.sh$'
+    if rg -n -P '(?i)(password|api[_-]?key|access[_-]?token)\s*[:=]\s*[^<\$\{[:space:]]' \
+        "$extracted_dir/ReplicaDB-server-1.0.0/deploy/gcp/config.example.env" \
+        "$extracted_dir/ReplicaDB-server-1.0.0/deploy/gcp/README.md"; then
+        fail 'packaged Cloud Run bundle contains a resolved secret-looking value'
+    fi
+}
+
 test_invalid_arguments
 test_validate_is_read_only
 test_version_mismatch
@@ -254,5 +283,6 @@ test_prepare_rejects_dirty_scope
 test_prepare_pushes_without_tag
 test_tag_requires_gate_and_rejects_duplicates
 test_tag_rejects_dirty_worktree
+test_server_package_contains_cloud_run_bundle
 
 printf 'release-script tests passed\n'

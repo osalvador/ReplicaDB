@@ -29,6 +29,10 @@ worker instances * concurrent runs per worker * jobs per run
 `jobs per run` is ReplicaDB's existing internal task parallelism. It is not a
 second scheduler concurrency setting.
 
+For a Google Cloud deployment, see the [Cloud Run operations
+runbook](docs/src/content/docs/operations/gcp-cloud-run.mdx), including the optional
+public frontend boundary and private Worker Pool/VM topology.
+
 ## Build
 
 Build the CLI artifact first because the server POM consumes that artifact:
@@ -50,8 +54,8 @@ system PostgreSQL installation, extract the server package and use its
 launcher:
 
 ```bash
-tar -xzf ReplicaDB-server-1.0.0.tar.gz
-cd ReplicaDB-server-1.0.0
+tar -xzf ReplicaDB-server-1.0.2.tar.gz
+cd ReplicaDB-server-1.0.2
 export REPLICADB_SERVER_HOME="${REPLICADB_SERVER_HOME:-$HOME/.replicadb}"
 export REPLICADB_BOOTSTRAP_ADMIN_USERNAME='local-admin'
 export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD='<local-password>'
@@ -104,8 +108,9 @@ API settings include:
 - `REPLICADB_BOOTSTRAP_ADMIN_USERNAME` and
   `REPLICADB_BOOTSTRAP_ADMIN_PASSWORD` supplied by the secret manager during
   bootstrap
-- `REPLICADB_SECURITY_MASTER_KEY_FILE` when the keyring is mounted somewhere
-  other than `/run/secrets/replicadb-master-key`
+- `REPLICADB_SECURITY_KEYRING_FILE` when the keyring is mounted somewhere
+  other than `/run/secrets/replicadb-master-key` (`REPLICADB_SECURITY_MASTER_KEY_FILE`
+  remains a deprecated compatibility alias)
 - `MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,metrics,prometheus`
 
 Datasource security values are submitted over authenticated TLS and encrypted

@@ -60,7 +60,8 @@ public class OpenApiConfiguration {
                         tag("Schedules", "Recurring Quartz schedules for jobs."),
                         tag("Runs", "Run dispatch, state, diagnostics, cancellation, and retry."),
                         tag("Users", "Administrator-managed users and roles."),
-                        tag("Audit", "Administrator-visible durable audit history.")))
+                        tag("Audit", "Administrator-visible durable audit history."),
+                        tag("Keyring", "Keyring status and datasource re-encryption administration.")))
                 .components(components);
     }
 

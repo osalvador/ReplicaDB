@@ -1,0 +1,60 @@
+name: GCP deployment bundle
+
+on:
+  push:
+    paths:
+      - 'deploy/gcp/**'
+      - '.github/workflows/gcp-deploy-bundle.yml'
+      - 'scripts/README.md'
+  pull_request:
+    paths:
+      - 'deploy/gcp/**'
+      - '.github/workflows/gcp-deploy-bundle.yml'
+      - 'scripts/README.md'
+  workflow_dispatch:
+    inputs:
+      run_real_preflight:
+        description: Run an authenticated preflight against an explicitly supplied project
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  shell-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check shell syntax
+        run: bash -n deploy/gcp/deploy.sh deploy/gcp/lib/*.sh deploy/gcp/tests/*.sh
+      - name: Run deterministic bundle tests
+        run: deploy/gcp/tests/test_runner.sh
+      - name: Run shellcheck when available
+        run: |
+          if command -v shellcheck >/dev/null 2>&1; then
+            shellcheck -S error deploy/gcp/deploy.sh deploy/gcp/lib/*.sh deploy/gcp/tests/*.sh
+          else
+            echo 'shellcheck is not installed on this runner; syntax and deterministic tests still ran.'
+          fi
+
+  real-preflight:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_real_preflight == true }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOYMENT_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Run explicit project preflight only
+        env:
+          REPLICADB_GCP_PROJECT: ${{ vars.REPLICADB_GCP_PROJECT }}
+          REPLICADB_SERVER_DIGEST: ${{ vars.REPLICADB_SERVER_DIGEST }}
+        run: |
+          test -n "$REPLICADB_GCP_PROJECT"
+          test "$REPLICADB_GCP_PROJECT" != "default"
+          test -n "$REPLICADB_SERVER_DIGEST"
+          deploy/gcp/deploy.sh preflight --project "$REPLICADB_GCP_PROJECT" --image-digest "$REPLICADB_SERVER_DIGEST"

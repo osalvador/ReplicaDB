@@ -14,8 +14,8 @@ VERSION_SURFACE_FILES=(
     "RELEASE_GUIDE.md"
     "CONTRIBUTING.md"
     "PRODUCT.md"
-    "docs/index.md"
-    "docs/server.md"
+    "docs/src/content/docs/cli/index.md"
+    "docs/src/content/docs/server/index.md"
     "replicadb-server/README.md"
     "replicadb-server/frontend/README.develop.md"
     "replicadb-server/Dockerfile"
@@ -33,9 +33,25 @@ RELEASE_FILES=(
     "scripts/phase3-image-smoke.sh"
     "replicadb-server/bin/replicadb-server"
     "replicadb-server/bin/replicadb-server.cmd"
+    "deploy/gcp"
     ".github/workflows/CI_Release.yml"
     ".github/workflows/CT_Push.yml"
+    ".github/workflows/gcp-deploy-bundle.yml"
+    ".github/workflows/docs.yml"
     ".github/skills/replicadb-release/SKILL.md"
+    "docs/src/content/docs/operations/gcp-cloud-run.mdx"
+    "docs/src/content/docs/operations/gcp-deploy-bundle.mdx"
+    "docs/src/content/docs/operations/index.md"
+    "docs/tests/operations-contract.test.mjs"
+    "replicadb-server/frontend/src/api/client.test.ts"
+    "replicadb-server/frontend/e2e/public-cloud-run-smoke.spec.ts"
+    "replicadb-server/src/main/java/org/replicadb/server/security/config/SecurityConfig.java"
+    "replicadb-server/src/main/java/org/replicadb/server/web/SpaFallbackController.java"
+    "replicadb-server/src/test/java/org/replicadb/server/HealthEndpointTest.java"
+    "replicadb-server/src/test/java/org/replicadb/server/security/config/SecurityConfigTest.java"
+    "scripts/README.md"
+    "scripts/phase5-gcp-frontend-smoke.sh"
+    "scripts/phase5-gcp-frontend-smoke.test.sh"
     "${VERSION_SURFACE_FILES[@]}"
 )
 
@@ -112,6 +128,9 @@ path_is_release_file() {
 
     case "$path" in
         .github/skills/replicadb-release/*)
+            return 0
+            ;;
+        deploy/gcp/*)
             return 0
             ;;
     esac
