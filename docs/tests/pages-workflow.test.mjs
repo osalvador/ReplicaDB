@@ -12,10 +12,10 @@ const cutover = readFileSync(join(repoRoot, 'docs/PAGES_CUTOVER.md'), 'utf8');
 test('Pages workflow is preview-safe and gated for production deployment', () => {
   assert.match(workflow, /node-version: ['"]22['"]/);
   assert.match(workflow, /npm run check && npm run build && npm run validate && npm test/);
-  assert.match(workflow, /actions\/configure-pages@v5/);
-  assert.match(workflow, /actions\/upload-pages-artifact@v3/);
+  assert.match(workflow, /actions\/configure-pages@v6/);
+  assert.match(workflow, /actions\/upload-pages-artifact@v5/);
   assert.match(workflow, /path:\s*docs\/dist/);
-  assert.match(workflow, /actions\/deploy-pages@v4/);
+  assert.match(workflow, /actions\/deploy-pages@v5/);
   assert.match(workflow, /needs:\s*build/);
   assert.match(workflow, /DOCS_PAGES_SOURCE == ['"]actions['"]/);
   assert.match(workflow, /event_name != ['"]pull_request['"]/);
