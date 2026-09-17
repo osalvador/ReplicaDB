@@ -33,7 +33,7 @@
   "devDependencies": {
     "@astrojs/check": "0.9.10",
     "@axe-core/playwright": "^4.10.2",
-    "@playwright/test": "1.49.1",
+    "@playwright/test": "1.63.0",
     "jsdom": "25.0.1",
     "parse5": "^7.3.0",
     "typescript": "5.7.3",
