@@ -11,8 +11,8 @@ ReplicaDB is not being extended into a CDC, ETL, schema-migration, or universal 
 The control plane does not resume interrupted work. A run either completes or is executed again from the beginning. Safety comes from the staging-based replication modes, not from progress checkpoints.
 
 **Date**: August 13, 2026
-**Last decision review**: September 2, 2026
-**Status**: Approved direction; Phase 0-a, Phase 0-b1, Phase 0-b2, Phase 1a (artifact split), Phase 1b (state layer), Phase 1c-1 (REST API core), Phase 1c-2 (scheduler), Phase 1c-3a+b+c (authentication, global roles, per-job ACLs, audit events, retention, and persisted cancellation warnings), Phase 2a/2b/2c (frontend authentication, monitoring, job actions, scheduling, user administration, and job permissions), Phase 3.1 (distributed state contract, leases, retries, and fencing), Phase 3.2 (worker runtime and PostgreSQL dispatch), Phase 3.3 (API high availability, shared throttling, observability, packaging, and process validation), Phase 3.4 (hybrid worker load distribution and standalone CLI compatibility validation), and Phase 4 (reusable managed datasources with encrypted credentials) implemented and validated
+**Last decision review**: September 17, 2026
+**Status**: Approved direction; Phases 0 through 4 are implemented and validated. Post-Phase 4 run diagnostics, keyring lifecycle operations, the local server lifecycle, server release packaging, and the guided Cloud Run deployment bundle are implemented. Decisions 9 through 13 remain the next product roadmap; Decision 13 is partially implemented through bounded run logs and core diagnostics, while its termination-reason response contract remains pending. Public Cloud Run frontend acceptance is in progress.
 **Owner**: Development Team
 
 ---
@@ -572,6 +572,24 @@ The run detail view already shows the persisted error message and the bounded `r
 - This decision does not introduce a `primaryFailure`/`cleanupFailures` split. That split depends on widening `ReplicaDB.processReplica(ToolOptions)`'s exit-code-only error contract (see Constraints and Limitations > Current core) and remains an open, unformalized item until that prerequisite is scheduled.
 - No new permission is introduced; the job `VIEW` permission that already grants run-history access covers the new fields.
 
+### Post-Phase 4 roadmap
+
+The following decisions are approved for planning and are not yet complete. They
+are intentionally separate from the implemented Phase 0-4 foundation.
+
+| Roadmap item | Current status |
+| --- | --- |
+| Decision 9: bounded datasource connection validation | Not started |
+| Decision 10: managed `sinkAutoCreate` | Not started |
+| Decision 11: pre-execution job validation | Not started |
+| Decision 12: datasource schema explorer | Not started |
+| Decision 13: enhanced run diagnostics | Partially implemented: bounded redacted run logs, attempt lineage, executor identity, lease/heartbeat timestamps, and core diagnostics are available; `terminationReason` and the final detail presentation remain pending |
+
+Separate operational follow-up is the final disposable-deployment acceptance
+for optional public Cloud Run frontend access. Public access is opt-in; the
+API remains the only public component and the worker/database topology remains
+private.
+
 ---
 
 ## Implementation Phases
@@ -1084,7 +1102,7 @@ The managed server is not in production and no managed jobs need to survive this
 - A job binding change requires job edit permission and datasource `USE` permission. Manual execution still requires job `EXECUTE`; scheduling and worker execution use the active binding flags as the durable authorization boundary.
 - The server reuses connection configuration, not live JDBC connections. Every core task continues to own its source and sink connection lifecycle.
 - The logical `connect.security` map uses relative CLI property keys: `connect`, `user`, `password`, `auth.*`, and sensitive `connect.parameter.*` entries. It is encrypted as one authenticated bundle in PostgreSQL. `technicalParams` contains only non-secret values such as file format, Kafka topic/partition/acks, S3 mode, or driver tuning; the validator rejects secret-looking keys and values in that map.
-- The initial keyring is loaded from `replicadb.security.master-key-file` (default `/run/secrets/replicadb-master-key`). It contains a current key version and Base64-encoded 256-bit key material, with previous versions available during rotation. No source or sink credential is loaded from process environment variables. If the keyring is missing or invalid, the `api` or `worker` process fails startup.
+- The initial keyring is loaded from `replicadb.security.keyring.file` (default `/run/secrets/replicadb-master-key`) or the supported flat keyring environment slots. `REPLICADB_SECURITY_MASTER_KEY_FILE` remains a deprecated alias. It contains a current key version and Base64-encoded 256-bit key material, with previous versions available during rotation. No source or sink credential is loaded from process environment variables. If the keyring is missing or invalid, the `api` or `worker` process fails startup.
 - The managed execution path never creates an options file. A server-side resolver decrypts the bundle in memory and calls the additive root-artifact `ToolOptionsBuilder`; only standalone CLI invocations use `OptionsFile` and environment expansion.
 
 #### Target flow
@@ -1440,7 +1458,7 @@ Manual triggers and Quartz triggers reject a job whose source or sink use flag i
 
 ### Deployment
 
-- PostgreSQL is mandatory for the `api` and `worker` profiles; the CLI does not use it. **Implemented through Phase 3.4**: `application-api.yml` and `application-worker.yml` wire `spring.datasource`/`spring.flyway`, and the current `job_definition`, `job_run`, `job_schedule`, `audit_event`, cancellation-warning, retry-policy, eligibility, lease-fencing, Quartz, and login-throttle schema plus supporting indexes are versioned by Flyway migrations V1 through V20. **Implemented in Phase 4**: the managed datasource catalog, datasource ACLs, job datasource references, and binding-use flags are added by forward-only migrations V17 through V19 under the explicit pre-production reset rule. The worker dispatch, hybrid admission, Quartz JDBC clustering, shared throttle runtime, and future datasource catalog remain isolated from the CLI artifact.
+- PostgreSQL is mandatory for the `api` and `worker` profiles; the CLI does not use it. **Implemented through Phase 4**: `application-api.yml` and `application-worker.yml` wire `spring.datasource`/`spring.flyway`, and the current managed state, run diagnostics, datasource catalog, ACL, Quartz, login-throttle, and job-deletion schema is versioned by Flyway migrations V1 through V21. The worker dispatch, hybrid admission, Quartz JDBC clustering, shared throttle runtime, encrypted datasource catalog, and keyring lifecycle remain isolated from the CLI artifact.
 - SQLite is limited to isolated CLI fixtures or unit tests.
 - The CLI remains available in every implementation phase and deployment model.
 - The `api` profile may run as multiple stateless instances; Quartz uses PostgreSQL JDBC clustering in Phase 3.
@@ -1550,4 +1568,4 @@ Manual triggers and Quartz triggers reject a job whose source or sink use flag i
 
 **Document Version**: 4.6
 **Last Updated**: September 2, 2026
-**Next Review**: When Decision 9, 10, 11, 12, or 13 is scheduled for implementation
+**Next Review**: Before scheduling Decision 9, 10, 11, 12, or 13, or when the public Cloud Run frontend acceptance is closed

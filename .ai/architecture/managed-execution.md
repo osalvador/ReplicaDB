@@ -6,10 +6,10 @@ sources:
     resource: replicadb-server/src/main/java/org/replicadb/server/job/execution/JobExecutionService.java
   - id: coordinator
     resource: replicadb-server/src/main/java/org/replicadb/server/job/execution/RunExecutionCoordinator.java
-  - id: resolver
-    resource: replicadb-server/src/main/java/org/replicadb/server/job/execution/JobDefinitionEnvResolver.java
-  - id: options-file
-    resource: replicadb-server/src/main/java/org/replicadb/server/job/execution/JobDefinitionOptionsFileWriter.java
+  - id: datasource-resolution
+    resource: replicadb-server/src/main/java/org/replicadb/server/job/execution/DatasourceResolutionService.java
+  - id: options-builder
+    resource: replicadb-server/src/main/java/org/replicadb/server/job/execution/ManagedToolOptionsFactory.java
   - id: lease
     resource: replicadb-server/src/main/java/org/replicadb/server/job/application/RunLeaseService.java
   - id: finalization
@@ -32,7 +32,7 @@ generated: { by: itx-init/2.1, at: "2026-09-04T05:47:18Z" }
 status: stable
 ---
 
-`RunExecutionCoordinator` submits a directed claim for the pending run created by an API or scheduler trigger and tracks only the local `ToolOptions` needed for immediate cancellation. `RunLeaseService` and `JobRunStore` perform the lease claim; `JobExecutionService` loads the definition, finds the prior committed watermark, resolves environment references, writes a temporary options file, constructs `ToolOptions`, and calls `ReplicaDB.processReplica`. `RunFinalizationService` passes the claimed opaque token to fenced progress and terminal updates. A stale worker receives a fenced result and cannot emit a second terminal audit or advance state. The temporary options file is deleted in a finally path.
+`RunExecutionCoordinator` submits a directed claim for the pending run created by an API or scheduler trigger and tracks only the local `ToolOptions` needed for immediate cancellation. `RunLeaseService` and `JobRunStore` perform the lease claim; `JobExecutionService` loads the definition, finds the prior committed watermark, resolves the selected datasource snapshots, decrypts their security bundle in memory, constructs `ToolOptions` through `ToolOptionsBuilder`, and calls `ReplicaDB.processReplica`. `RunFinalizationService` passes the claimed opaque token to fenced progress and terminal updates. A stale worker receives a fenced result and cannot emit a second terminal audit or advance state. Managed execution does not create an options file.
 
 Quartz integration creates stable schedule identities, reconciles enabled database schedules into the clustered JDBC scheduler, and inserts pending runs through the same dispatch boundary. Scheduled execution and manual trigger therefore share the run repository and overlap constraints. Worker notifications carry only durable run identifiers; startup, reconnect, and periodic polling remain correctness paths when notifications are missed.
 

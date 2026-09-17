@@ -105,8 +105,9 @@ prompt from an interactive terminal. The server home defaults to
 network access.
 
 For source builds and development profiles, see
-[`CONTRIBUTING.md`](CONTRIBUTING.md) and
-[`docs/server.md`](docs/server.md).
+[`CONTRIBUTING.md`](CONTRIBUTING.md), the
+[server quickstart](docs/src/content/docs/getting-started/server-quickstart.md),
+and [`replicadb-server/README.md`](replicadb-server/README.md).
 
 ### Local single-node server without Docker
 
@@ -371,18 +372,35 @@ See [DB2 Documentation](https://osalvador.github.io/ReplicaDB/connectors/db2/) f
 
 # Roadmap
 
-Features: 
-- Automatic table discovery with wildcard or regular-expression filters
-- Scheduling
-- Web interface
-- Server mode with API 
-- Kubernetes compliant
+The current managed-platform foundation is implemented: authenticated jobs,
+Quartz scheduling, durable PostgreSQL state, distributed workers, encrypted
+managed datasources, run diagnostics, and the standalone CLI compatibility
+boundary are all shipped. The next planned product capabilities are:
 
-New Databases: 
-- Elasticsearch
-- Redis
-- GCP BigQuery
-- Azure Synapse
+- **Datasource connection test** with bounded, redacted outcomes (Decision 9).
+- **Pre-execution job validation** against the live source and sink profiles
+  (Decision 11).
+- **Datasource schema explorer** for schemas, tables, views, and columns
+  where the connector supports metadata browsing (Decision 12).
+- **Managed sink auto-create** exposed as an explicit job option (Decision 10).
+- **Enhanced run detail** with termination reasons and complete attempt
+  context; bounded diagnostic logs are already available (Decision 13).
+
+Operational follow-up currently includes completing the disposable-deployment
+acceptance for the optional public Cloud Run frontend. The API remains the
+only public component; workers and PostgreSQL stay private.
+
+The following older roadmap items are intentionally not scheduled:
+
+- Automatic table discovery with wildcard or regular-expression filters. The
+  CLI supports explicit indexed multi-table entries; managed jobs remain one
+  source/sink table pair.
+- Kubernetes manifests and autoscaling as a product packaging surface. Docker,
+  Compose, local server mode, and the GCP Cloud Run bundle are the supported
+  deployment paths today.
+
+Potential future connectors such as Elasticsearch, Redis, GCP BigQuery, and
+Azure Synapse remain unscheduled candidates, not current product commitments.
 
 # Contributing
 

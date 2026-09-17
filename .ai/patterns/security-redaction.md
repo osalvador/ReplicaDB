@@ -7,7 +7,7 @@ sources:
   - id: domain
     resource: replicadb-server/src/main/java/org/replicadb/server/job/domain/ConnectionCredentials.java
   - id: resolver
-    resource: replicadb-server/src/main/java/org/replicadb/server/job/execution/JobDefinitionEnvResolver.java
+    resource: replicadb-server/src/main/java/org/replicadb/server/job/execution/DatasourceResolutionService.java
   - id: api
     resource: replicadb-server/src/main/java/org/replicadb/server/job/api/GlobalExceptionHandler.java
   - id: options
@@ -18,8 +18,8 @@ generated: { by: itx-code, at: "2026-08-25T13:42:47Z" }
 status: stable
 ---
 
-Managed job definitions retain environment references rather than resolved passwords. Domain validation also checks credential-bearing connection-string forms. The executor resolves references immediately before constructing `ToolOptions`; temporary options files are deleted after execution.
+Managed datasource profiles retain encrypted security bundles rather than plaintext passwords. The executor decrypts the selected profile only in memory immediately before constructing `ToolOptions`; managed execution never creates an options file. Standalone CLI options files and their environment expansion remain a separate compatibility boundary.
 
 `CredentialRedactor` is applied before API problem details, persisted failure text, audit details, Log4j2/Sentry output, options-file diagnostic output, and operational telemetry. Metrics use bounded tags and never include usernames, job/run ids, DSNs, lease tokens, or resolved credentials. Security tests cover prefixed configuration names, DSN-like values, and connection-string forms. Generated context follows the same rule and records only paths or finding types.
 
-Reference implementations: `CredentialRedactor.java`, `JobDefinitionEnvResolver.java`, and `GlobalExceptionHandler.java`.
+Reference implementations: `CredentialRedactor.java`, `DatasourceResolutionService.java`, and `GlobalExceptionHandler.java`.

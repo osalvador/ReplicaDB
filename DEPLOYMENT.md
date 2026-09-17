@@ -96,8 +96,11 @@ is configured. It is not a distributed deployment and does not start workers.
 
 Provide `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` through the deployment
 secret manager. Do not commit them, put them in Compose files, or print them
-in diagnostics. Managed job definitions store `${env:VARIABLE}` references;
-the worker resolves them immediately before execution.
+in diagnostics. Managed datasource credentials are submitted through the
+authenticated API, encrypted before PostgreSQL persistence, and decrypted only
+in memory when a run is prepared. Source and sink credentials must not be
+supplied through process environment variables; the worker resolves the
+selected datasource profiles immediately before execution.
 
 API settings include:
 
@@ -215,6 +218,8 @@ cluster:
 - V17: managed datasource profiles and datasource ACLs.
 - V18: datasource-only job bindings with restrictive foreign keys.
 - V19: claim-time resolved datasource identifiers and timestamps.
+- V20: bounded per-run diagnostic logs and retention metadata.
+- V21: cascading job-owned state and concurrency-safe job deletion.
 
 Do not run Quartz's automatic schema initializer. Do not edit or remove an
 applied migration. PostgreSQL is the only durable source of truth for product
