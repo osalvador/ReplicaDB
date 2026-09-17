@@ -1,0 +1,19 @@
+docs/tests/pages-workflow.test.mjs
+  s_fe28aa42458224::t_603d8065bc5021 15-16,18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dcd86f29feba2307ff7aad91dbcfb8e383c072de",
+  "prompts": {},
+  "sessions": {
+    "s_fe28aa42458224": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "ab1e24f0-6652-4ad4-ac29-58e3ec1158e1",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
