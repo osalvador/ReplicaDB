@@ -24,8 +24,14 @@ export default defineConfig({
   integrations: [
     apiReferenceFinalizer,
     starlight({
-      title: 'ReplicaDB Documentation',
+      title: 'ReplicaDB',
       description: 'Documentation for the ReplicaDB CLI and managed server.',
+      logo: {
+        src: './src/assets/brand/ReplicaDB.svg',
+        alt: 'ReplicaDB',
+        replacesTitle: false
+      },
+      favicon: '/favicon.svg',
       customCss: ['./src/styles/custom.css'],
       defaultLocale: 'root',
       locales: {
@@ -125,6 +131,8 @@ export default defineConfig({
                 'operations',
                 'operations/local-server',
                 'operations/distributed-deployment',
+                'operations/gcp-cloud-run',
+                'operations/gcp-deploy-bundle',
                 'operations/configuration',
                 'operations/capacity-planning',
                 'operations/health-and-metrics',

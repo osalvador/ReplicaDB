@@ -3,7 +3,6 @@ title: Kafka connector
 description: Kafka sink behavior and JSON row serialization guidance.
 ---
 
-# Kafka
 
 Use the `kafka:` scheme. Kafka is sink-only and the maintained capability is
 complete-mode publishing. Rows are serialized as JSON messages; topic,

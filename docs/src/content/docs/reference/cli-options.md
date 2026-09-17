@@ -3,7 +3,6 @@ title: CLI option reference
 description: Exact long options supported by the standalone ReplicaDB CLI.
 ---
 
-# CLI option reference
 
 These names are the maintained long-option contract. Run `./bin/replicadb
 --help` for the generated descriptions and argument names.

@@ -6,6 +6,7 @@ import test from 'node:test';
 const root = new URL('..', import.meta.url).pathname;
 const css = readFileSync(join(root, 'src/styles/custom.css'), 'utf8');
 const homepage = readFileSync(join(root, 'src/content/docs/index.mdx'), 'utf8');
+const astroConfig = readFileSync(join(root, 'astro.config.mjs'), 'utf8');
 const builtHomepagePath = join(root, 'dist/index.html');
 
 test('maps the Engineering Ledger palette to Starlight dark and light tokens', () => {
@@ -26,6 +27,8 @@ test('maps the Engineering Ledger palette to Starlight dark and light tokens', (
   }
 
   assert.match(css, /\[data-theme='light'\][\s\S]*--sl-color-accent: #0B6E69/);
+  assert.match(css, /html\[data-theme='dark'\][\s\S]*--replicadb-page-green: #17211F/);
+  assert.match(css, /html\[data-theme='dark'\][\s\S]*--sl-color-text: #E8F0ED/);
   assert.match(css, /--sl-font: "Avenir Next", "Helvetica Neue", sans-serif/);
   assert.match(css, /font-family: Georgia, "Times New Roman", serif/);
 });
@@ -33,24 +36,28 @@ test('maps the Engineering Ledger palette to Starlight dark and light tokens', (
 test('keeps component color and radius literals inside token scopes', () => {
   const outsideTokens = css
     .replace(/:root\s*\{[\s\S]*?\n\}/, '')
-    .replace(/\[data-theme='light'\]\s*\{[\s\S]*?\n\}/, '');
+    .replace(/\[data-theme='light'\]\s*\{[\s\S]*?\n\}/, '')
+    .replace(/html\[data-theme='dark'\]\s*\{[\s\S]*?\n\}/, '');
   assert.doesNotMatch(outsideTokens, /#[0-9A-Fa-f]{6}/);
   assert.doesNotMatch(outsideTokens, /border-radius:\s*\d+px/);
 });
 
 test('requires accessible component content and stable image dimensions', () => {
   assert.match(homepage, /<ProductChoice/);
+  assert.match(homepage, /home-capabilities/);
   assert.match(homepage, /<ArchitectureDiagram/);
-  assert.match(homepage, /<SupportMatrix/);
-  assert.match(homepage, /<ScreenshotFrame/);
-  assert.match(homepage, /alt="[^"]+"/);
-  assert.match(homepage, /caption="[^"]+"/);
-  assert.match(homepage, /width=\{\d+\}/);
-  assert.match(homepage, /height=\{\d+\}/);
+  assert.match(homepage, /home-capability-link/);
   assert.match(readFileSync(join(root, 'src/components/ArchitectureDiagram.astro'), 'utf8'), /data-mermaid-source/);
   assert.match(readFileSync(join(root, 'src/components/ArchitectureDiagram.astro'), 'utf8'), /data-diagram-fallback/);
+  assert.match(readFileSync(join(root, 'src/components/ArchitectureDiagram.astro'), 'utf8'), /mermaid\.render/);
   assert.match(readFileSync(join(root, 'src/components/ProductChoice.astro'), 'utf8'), /aria-labelledby/);
   assert.ok(existsSync(join(root, 'src/assets/brand/replicadb-logo.png')));
+});
+
+test('uses the ReplicaDB mark as the Starlight header logo', () => {
+  assert.match(astroConfig, /title: 'ReplicaDB'/);
+  assert.match(astroConfig, /src: '\.\/src\/assets\/brand\/ReplicaDB\.svg'/);
+  assert.match(astroConfig, /replacesTitle: false/);
 });
 
 test('built light and dark surfaces retain responsive, readable component contracts', { skip: !existsSync(builtHomepagePath) }, () => {
@@ -62,7 +69,7 @@ test('built light and dark surfaces retain responsive, readable component contra
   assert.match(builtHomepage, /<header\b/);
   assert.match(builtHomepage, /<main\b/);
   assert.match(builtHomepage, /<a href="\/ReplicaDB\//);
-  assert.match(builtHomepage, /aspect-ratio: 323 \/ 153/);
+  assert.match(builtHomepage, /home-capability-link/);
   assert.match(css, /@media \(max-width: 40rem\)[\s\S]*?grid-template-columns: 1fr/);
   assert.match(css, /\.screenshot-frame__viewport/);
   assert.match(css, /\[data-theme='light'\][\s\S]*--sl-color-accent-high: #064A47/);

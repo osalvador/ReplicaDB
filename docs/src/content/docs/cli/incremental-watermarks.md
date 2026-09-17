@@ -3,7 +3,6 @@ title: Incremental watermarks
 description: Use explicit source watermarks for repeatable incremental CLI runs.
 ---
 
-# Incremental watermarks
 
 Automated watermarking is an explicit incremental-mode contract. Set
 `--incremental-watermark-column` for a column exposed by `--source-table` and

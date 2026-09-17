@@ -3,7 +3,6 @@ title: Oracle connector
 description: Oracle source and sink behavior, partitioning, staging, and security.
 ---
 
-# Oracle
 
 Use the `jdbc:oracle:` scheme. Oracle is supported as both source and sink for
 `complete`, `complete-atomic`, and `incremental` replication.

@@ -3,7 +3,6 @@ title: Multi-table replication
 description: Configure a sequential table catalog for the standalone CLI.
 ---
 
-# Multi-table replication
 
 Define an explicit catalog in the options file with contiguous one-based
 indexes. Each entry needs both a source and sink table:

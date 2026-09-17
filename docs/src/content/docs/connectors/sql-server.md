@@ -3,7 +3,6 @@ title: SQL Server and Azure SQL connector
 description: SQL Server bulk copy, modes, and Microsoft Entra guidance.
 ---
 
-# SQL Server and Azure SQL
 
 Use `jdbc:sqlserver:`. SQL Server supports source and sink roles and all three
 replication modes. Its bulk-copy sink path does not expose the generic

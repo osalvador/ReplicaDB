@@ -3,7 +3,6 @@ title: CLI guide
 description: Task-oriented reference for the standalone ReplicaDB command-line tool.
 ---
 
-# CLI guide
 
 The standalone CLI performs direct bulk replication from one source to one
 sink, or through a sequential multi-table catalog. It is Spring-free, runs on

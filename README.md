@@ -74,7 +74,7 @@ ReplicaDB has two separate releases:
 | | CLI | Server |
 | --- | --- | --- |
 | Use it for | Direct transfers from scripts or a terminal | Shared jobs, schedules, users, audit, and run history |
-| Download | `ReplicaDB-1.0.0.tar.gz` or `.zip` | `ReplicaDB-server-1.0.0.tar.gz` or `.zip` |
+| Download | `ReplicaDB-1.0.2.tar.gz` or `.zip` | `ReplicaDB-server-1.0.2.tar.gz` or `.zip` |
 | PostgreSQL | Only the source and sink databases | Embedded in `local`; external in `api` and `worker` |
 | State | `REPLICADB_HOME` | `REPLICADB_SERVER_HOME` |
 | Interface | CLI | Authenticated API/frontend and private worker health endpoint |
@@ -90,8 +90,8 @@ The server package requires Java 17, but not Maven, npm, Docker, or a system
 PostgreSQL installation. Extract it and start the local server:
 
 ```bash
-tar -xzf ReplicaDB-server-1.0.0.tar.gz
-cd ReplicaDB-server-1.0.0
+tar -xzf ReplicaDB-server-1.0.2.tar.gz
+cd ReplicaDB-server-1.0.2
 ./bin/replicadb-server start local
 ./bin/replicadb-server status
 ```
@@ -145,8 +145,8 @@ startup error. By default, durable state lives under `~/.replicadb`:
 Set `REPLICADB_SERVER_HOME` to move this complete local installation. Keep the
 `security/master-key.json` keyring with the database backup; losing it makes
 encrypted datasource credentials unrecoverable. An explicit
-`REPLICADB_SECURITY_MASTER_KEY_FILE` can point to a separately managed
-keyring.
+`REPLICADB_SECURITY_KEYRING_FILE` can point to a separately managed keyring;
+the old `REPLICADB_SECURITY_MASTER_KEY_FILE` name remains a deprecated alias.
 
 Stop the server before backing up or restoring `data/postgresql` and the
 keyring. The cached native bundle can be recreated if it is absent. Major
@@ -176,8 +176,8 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Download the latest release from GitHub and extract the archive:
 
 ```bash
-$ curl -o ReplicaDB-1.0.0.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v1.0.0/ReplicaDB-1.0.0.tar.gz"
-$ tar -xvzf ReplicaDB-1.0.0.tar.gz
+$ curl -o ReplicaDB-1.0.2.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v1.0.2/ReplicaDB-1.0.2.tar.gz"
+$ tar -xvzf ReplicaDB-1.0.2.tar.gz
 $ ./bin/replicadb --help
 ```
 

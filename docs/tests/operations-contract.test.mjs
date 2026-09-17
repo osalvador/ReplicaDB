@@ -7,7 +7,10 @@ const repoRoot = new URL('../..', import.meta.url).pathname;
 const docsRoot = new URL('..', import.meta.url).pathname;
 const operationsRoot = join(docsRoot, 'src/content/docs/operations');
 const docs = [
-  ...['index', 'local-server', 'distributed-deployment', 'configuration', 'capacity-planning', 'health-and-metrics', 'security-and-tls', 'key-management', 'backups-and-restore', 'upgrades', 'failure-recovery', 'troubleshooting'].map((name) => join(operationsRoot, `${name}.md`)),
+  ...['index', 'local-server', 'configuration', 'capacity-planning', 'health-and-metrics', 'security-and-tls', 'key-management', 'backups-and-restore', 'upgrades', 'failure-recovery', 'troubleshooting'].map((name) => join(operationsRoot, `${name}.md`)),
+  join(operationsRoot, 'distributed-deployment.mdx'),
+  join(operationsRoot, 'gcp-cloud-run.mdx'),
+  join(operationsRoot, 'gcp-deploy-bundle.mdx'),
   join(docsRoot, 'src/content/docs/reference/environment-variables.md')
 ].map((path) => readFileSync(path, 'utf8')).join('\n');
 
@@ -20,10 +23,62 @@ test('covers deployment, health, security, recovery, and metric interpretations'
     'never resumes', 'truncated', 'previous_run_id', 'watermark advances only', 'shutdown-timeout',
     '30 seconds', 'UUID order', '1,024', '250 ms', 'first 75%', 'last 25%',
     '[TRUNCATED: middle omitted]', 'replicadb.worker.listener.connected', 'replicadb.managed.polling.lag',
-    'server.ssl.*', 'PKCS12'
+    'server.ssl.*', 'PKCS12', 'Worker Pool', 'Direct VPC egress', 'min-instances', 'Cloud SQL',
+    'instance-based billing', 'simple', 'distributed', 'Secret Manager', 'Marketplace Container Image Product',
+    'GKE Marketplace App', 'Marketplace SaaS', 'CREATE CLOUD SQL', 'DESTROY REPLICADB', '--orphan-report',
+    'immutable', 'gcp-deploy-bundle'
   ]) {
     assert.match(docs, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), required);
   }
+});
+
+test('makes the distributed API and worker deployment actionable', () => {
+  const deployment = readFileSync(join(operationsRoot, 'distributed-deployment.mdx'), 'utf8');
+  for (const required of [
+    'start local', 'start api', 'start worker', 'exactly one mode',
+    'External PostgreSQL', 'REPLICADB_WORKER_IDENTITY',
+    'REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED=false', 'REPLICADB_SECURITY_KEYRING_FILE',
+    'REPLICADB_SECURITY_KEYRING_CURRENT_VERSION', 'REPLICADB_SECURITY_KEYRING_SECONDARY_VERSION',
+    'REPLICADB_SECURITY_MASTER_KEY_FILE', 'TLS ingress',
+    'Start the cluster', 'Flyway', 'JDBC Quartz',
+    'actuator/health/liveness', 'actuator/health/readiness',
+    'point-in-time recovery', 'never resumes',
+    'Frontend delivery', 'bundled browser frontend',
+    'Workers never serve the frontend'
+  ]) {
+    assert.match(deployment, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), required);
+  }
+  assert.match(deployment, /Do not run `start api local`/i);
+  assert.match(deployment, /<ArchitectureDiagram/);
+});
+
+test('documents the guided Cloud Run deployment bundle', () => {
+  const bundle = readFileSync(join(operationsRoot, 'gcp-deploy-bundle.mdx'), 'utf8');
+  for (const required of [
+    'deploy/gcp/deploy.sh', '--mode simple', '--mode distributed', '--image-digest',
+    '--create-cloud-sql', 'CREATE CLOUD SQL', 'Secret Manager', '--confirmation',
+    'DESTROY REPLICADB', '--keep-cloud-sql', '--keep-secrets', '--orphan-report',
+    'REPLICADB_VERIFY_SMOKE', 'ReplicaDB-server-VERSION.tar.gz', 'Marketplace Container Image Product',
+    'GKE Marketplace App', 'Marketplace SaaS', 'public product HTTP endpoint'
+  ]) {
+    assert.match(bundle, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), required);
+  }
+});
+
+test('keeps the public frontend command guide and conceptual runbook distinct', () => {
+  const commandGuide = readFileSync(join(repoRoot, 'deploy/gcp/README.md'), 'utf8');
+  const conceptual = readFileSync(join(operationsRoot, 'gcp-cloud-run.mdx'), 'utf8');
+  const index = readFileSync(join(operationsRoot, 'index.md'), 'utf8');
+  const astro = readFileSync(join(docsRoot, 'astro.config.mjs'), 'utf8');
+
+  for (const required of ['REPLICADB_PUBLIC_ACCESS', '--public-access', 'phase5-gcp-frontend-smoke.sh', 'destroy']) {
+    assert.ok(commandGuide.includes(required), required);
+  }
+  for (const required of ['same origin', 'index.html', 'roles/run.invoker', 'CSRF', 'min-instances=1', 'allUsers', 'Worker Pool', 'private IP']) {
+    assert.ok(conceptual.toLowerCase().includes(required.toLowerCase()), required);
+  }
+  assert.match(index, /operations\/gcp-cloud-run\//i);
+  assert.match(astro, /operations\/gcp-cloud-run/i);
 });
 
 test('keeps environment documentation aligned with the maintained example', () => {

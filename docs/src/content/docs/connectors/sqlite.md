@@ -3,7 +3,6 @@ title: SQLite connector
 description: SQLite file-based JDBC behavior and mode limitations.
 ---
 
-# SQLite
 
 Use the `jdbc:sqlite` scheme for a file or in-memory database. SQLite can be a
 source or sink for complete and incremental replication. Its sink does not

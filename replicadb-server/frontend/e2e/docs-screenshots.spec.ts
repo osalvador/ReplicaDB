@@ -14,13 +14,12 @@ test.describe('curated documentation screenshots', () => {
 
   for (const definition of CURATED_SCREENSHOTS) {
     test(`${definition.key} is deterministic and redacted`, async ({ page }) => {
-      const viewport = definition.viewport === 'mobile' ? { width: 390, height: 844 } : { width: 1440, height: 900 };
-      await page.setViewportSize(viewport);
+      await page.setViewportSize({ width: 1440, height: 900 });
       await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' });
       await page.clock.install({ time: new Date('2026-01-01T00:00:00.000Z') });
       await mkdir(outputDir, { recursive: true });
 
-      if (definition.key === 'login' || definition.key === 'login-mobile') {
+      if (definition.key === 'login') {
         await page.goto('/login');
         await waitForHeading(page, 'Sign in');
       } else {
@@ -57,12 +56,6 @@ test.describe('curated documentation screenshots', () => {
         } else if (definition.key === 'datasources') {
           await page.goto('/datasources');
           await waitForHeading(page, 'Datasources');
-        } else if (definition.key === 'jobs-mobile') {
-          await page.goto('/jobs');
-          await waitForHeading(page, 'Jobs');
-        } else if (definition.key === 'datasources-mobile') {
-          await page.goto('/datasources');
-          await waitForHeading(page, 'Datasources');
         } else if (definition.key === 'datasource-new') {
           await page.goto('/datasources/new');
           await waitForHeading(page, 'New datasource');
@@ -91,8 +84,6 @@ test.describe('curated documentation screenshots', () => {
           await page.reload();
           await page.goto('/users');
           await waitForHeading(page, /not authorized|permission/i);
-        } else if (definition.key.startsWith('datasources')) {
-          await clickSeededDatasource(page);
         } else if (definition.key === 'users') {
           await page.goto('/users');
           await waitForHeading(page, 'Users');

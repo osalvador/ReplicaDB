@@ -2,6 +2,8 @@
 interface ProductOption {
   title: string;
   summary: string;
+  fit: string;
+  detail: string;
   href: string;
   action: string;
 }
@@ -25,9 +27,17 @@ const {
   <div class="product-choice__grid">
     {options.map((option) => (
       <article class="product-choice__option">
+        <div class="product-choice__meta">
+          <span class="product-choice__signal" aria-hidden="true"></span>
+          <span>{option.fit}</span>
+        </div>
         <h3>{option.title}</h3>
         <p>{option.summary}</p>
-        <a class="product-choice__link" href={option.href}>{option.action}</a>
+        <p class="product-choice__detail">{option.detail}</p>
+        <a class="product-choice__link" href={option.href}>
+          <span>{option.action}</span>
+          <span aria-hidden="true">-&gt;</span>
+        </a>
       </article>
     ))}
   </div>

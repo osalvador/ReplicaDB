@@ -1,0 +1,178 @@
+---
+title: Distributed deployment
+description: Run API and worker profiles against shared external PostgreSQL.
+---
+
+import ArchitectureDiagram from '../../../components/ArchitectureDiagram.astro';
+
+Use distributed deployment when execution must scale beyond one host or when
+PostgreSQL metadata must be managed outside ReplicaDB. It runs separate API
+and worker processes against one external PostgreSQL database and one shared
+keyring. It is not an extension of `start local`.
+
+For Google Cloud Run, use the API profile as an authenticated Cloud Run Service
+and the worker profile as a Cloud Run Worker Pool. See the [Google Cloud Run
+runbook](/ReplicaDB/operations/gcp-cloud-run/) for Private IP, Direct VPC egress,
+minimum instances, and probe configuration.
+
+## Choose the right mode
+
+The packaged launcher accepts exactly one mode. `local` is a launcher mode that
+starts an API profile with embedded PostgreSQL and local execution. It is a
+durable single-node installation, not a profile to combine with `api` or
+`worker`.
+
+| Command | Purpose | Metadata database | Public endpoint |
+| --- | --- | --- | --- |
+| `./bin/replicadb-server start local` | Single-node control plane and execution | Embedded PostgreSQL | API on port `8080` by default |
+| `./bin/replicadb-server start api` | Authenticated control plane and clustered scheduler | External PostgreSQL | API on port `8080` by default |
+| `./bin/replicadb-server start worker` | Claims and executes durable runs | External PostgreSQL | No product API; private management health on `9091` by default |
+
+Do not run `start api local`. The second word is not a modifier: `api` and
+`local` are separate modes. The API and worker commands require `DB_URL`,
+`DB_USERNAME`, and `DB_PASSWORD` before they can start.
+
+## Topology and responsibilities
+
+<ArchitectureDiagram
+  id="distributed-deployment-topology"
+   title="API instances serve the frontend and control plane; workers execute durable runs through shared PostgreSQL and keyring state."
+   source={'flowchart LR\n  Browser[Browser frontend] --> TLS[TLS ingress or authenticated proxy]\n  TLS --> API1[API instance with frontend]\n  TLS --> API2[API instance with frontend]\n  API1 <--> PG[(External PostgreSQL)]\n  API2 <--> PG\n  Worker1[Worker instance] <--> PG\n  Worker2[Worker instance] <--> PG\n  API1 --- Key[Shared keyring]\n  API2 --- Key\n  Worker1 --- Key\n  Worker2 --- Key'}
+   fallback={'Browser frontend -> TLS ingress -> API instances serving the frontend and control plane\nAPI instances and workers -> shared external PostgreSQL\nAPI instances and workers -> shared keyring'}
+/>
+
+API instances serve the web control plane, its bundled browser frontend, and
+the REST API from the same origin. The ingress routes browser navigation and
+API requests to any healthy API instance; no separate frontend service is
+required for the packaged server. API instances authenticate users, store job
+definitions and datasource profiles, and run the clustered JDBC Quartz
+scheduler. Workers have no product UI, REST controllers, browser sessions, or
+Quartz scheduler. They claim pending runs, resolve their encrypted datasource
+profiles with the shared keyring, and execute ReplicaDB.
+
+## Frontend delivery
+
+The browser frontend is a static SPA bundled into the server artifact and
+served by every `api` instance. Deploy it together with the API version that
+owns its REST contract, and route the public browser origin through the same
+TLS ingress as the API. A load balancer may send consecutive requests to
+different healthy API instances because sessions are stored in shared
+PostgreSQL, not in one frontend process.
+
+Workers never serve the frontend. Keep them on the private control network;
+their management port is only for internal health and metrics. Do not route
+browser traffic, public API traffic, or static frontend assets to a worker.
+
+PostgreSQL is the durable coordination authority for job state, schedules,
+Quartz tables, sessions, audit events, retry chains, worker leases, and login
+throttling. `LISTEN/NOTIFY` wakes workers sooner, but polling remains the
+correctness path for claims, cancellation, and recovery.
+
+## Prerequisites
+
+Before starting any instance, provide these resources through the deployment
+platform and secret manager:
+
+- A reachable, backed-up PostgreSQL database for all API and worker instances.
+- The same `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` on every instance.
+- The same readable `REPLICADB_SECURITY_KEYRING_FILE` on every API and worker,
+  or the same `REPLICADB_SECURITY_KEYRING_CURRENT_VERSION`,
+  `REPLICADB_SECURITY_KEYRING_CURRENT_KEY`,
+  `REPLICADB_SECURITY_KEYRING_SECONDARY_VERSION`, and
+  `REPLICADB_SECURITY_KEYRING_SECONDARY_KEY` values. Keep key material outside
+  PostgreSQL and restrict it to the runtime user. The deprecated
+   `REPLICADB_SECURITY_MASTER_KEY_FILE` alias remains accepted during migration.
+- An optional `REPLICADB_WORKER_IDENTITY` for every worker process; an unset
+   value receives a generated `worker-<uuid>` identity at startup.
+- An HTTPS ingress or authenticated reverse proxy for externally reachable API
+  traffic. Keep PostgreSQL and worker management endpoints private.
+
+Inject secrets at runtime. Do not place resolved database passwords or keyring
+contents in Compose files, shell history, repository files, logs, or
+documentation. API bootstrap values are needed only for the controlled
+creation of the first administrator.
+
+## Configure each role
+
+All external instances need the database connection and keyring. An API node
+also needs clustered Quartz, which is enabled by the `api` profile. When a
+separate worker fleet owns execution, set
+`REPLICADB_SERVER_LOCAL_EXECUTION_ENABLED=false` on every API node.
+
+Workers need an identity and capacity settings. Start with one concurrent run
+per worker. The datasource pool size must be at least the maximum concurrent
+runs plus four connections for coordination work.
+
+The default worker management listener is `127.0.0.1:9091`. On a container
+network it may bind to a private interface, but it must not be published on the
+public network. See [runtime configuration](/ReplicaDB/operations/configuration/)
+and [environment variables](/ReplicaDB/reference/environment-variables/) for
+the complete setting inventory.
+
+## Start the cluster
+
+Apply forward-only Flyway migrations as part of a controlled API rollout; do
+not enable Quartz schema auto-initialization and never mix RAMJobStore with
+the JDBC Quartz store. Then start roles as separate processes or workloads.
+
+1. Confirm that PostgreSQL is reachable, writable, and backed up, and mount
+   the same keyring into every workload.
+2. Start one API instance with `./bin/replicadb-server start api`. It applies
+   and validates the managed schema and exposes the control plane.
+3. Start additional API instances with the same external configuration. They
+   join the same clustered Quartz scheduler.
+4. Start each worker separately with `./bin/replicadb-server start worker`.
+   Give every worker a different `REPLICADB_WORKER_IDENTITY`.
+5. Create datasource profiles and a job through the API, run a manual job,
+   and confirm that a worker claims and completes the run before enabling a
+   schedule.
+
+The repository's `docker-compose.server.yml` is a local topology reference: it
+runs PostgreSQL, two APIs, and one worker on separate public and internal
+networks. It deliberately exposes API ports only on loopback and keeps the
+worker health port internal. It is a smoke topology, not a production secret
+management solution.
+
+## Verify health and traffic boundaries
+
+Probe API instances on their product port:
+
+```text
+http://api-host:8080/actuator/health/liveness
+http://api-host:8080/actuator/health/readiness
+```
+
+Probe workers only from the private control network:
+
+```text
+http://worker-host:9091/actuator/health/liveness
+http://worker-host:9091/actuator/health/readiness
+```
+
+Liveness answers whether a process is alive. Readiness includes PostgreSQL and
+the role's runtime dependencies: Quartz for an API and polling/executor
+lifecycle for a worker. A worker can report a degraded notification listener
+while polling remains healthy; investigate listener reconnects and polling lag
+before restarting an otherwise ready worker.
+
+## Scale, update, and recover
+
+Scale APIs for control-plane availability and workers for execution capacity.
+Workers distribute work approximately rather than in strict round robin;
+compare normalized busy-slot time when evaluating an uneven fleet. Do not copy
+a worker identity when scaling it.
+
+For a planned worker shutdown, first stop it accepting new work, let active
+runs finish or cancel them according to their sink-risk warning, then stop
+polling and the listener. On unplanned worker loss, wait for the PostgreSQL
+lease to expire and let another worker create a replacement attempt. ReplicaDB
+never resumes the abandoned attempt in place.
+
+Back up PostgreSQL with point-in-time recovery and back up the matching
+keyring. Restore the metadata database before API and worker workloads. During
+key rotation, distribute the expanded keyring to every API and worker before
+re-encrypting datasource profiles; retain old key versions until no stored
+profile references them. See [backups and restore](/ReplicaDB/operations/backups-and-restore/),
+[upgrades](/ReplicaDB/operations/upgrades/), and
+[failure recovery](/ReplicaDB/operations/failure-recovery/) for their detailed
+procedures.
