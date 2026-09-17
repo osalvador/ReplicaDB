@@ -5,7 +5,6 @@ description: Read run outcomes, throughput context, and time-window metrics.
 
 import ScreenshotFrame from '../../../components/ScreenshotFrame.astro';
 import dashboard from '../../../assets/screenshots/server/dashboard.png';
-import dashboardMobile from '../../../assets/screenshots/server/dashboard-mobile.png';
 
 
 The protected `/` route is the `Dashboard` page. It summarizes jobs, active
@@ -13,13 +12,30 @@ runs, success rate, failed runs, rows processed, average duration, and queue
 latency for a selected time window.
 
 <ScreenshotFrame src={dashboard} alt="ReplicaDB dashboard with run metrics and charts" caption="The dashboard summarizes run outcomes and throughput for the selected time window." width={1440} height={900} loading="eager" />
-<ScreenshotFrame src={dashboardMobile} alt="ReplicaDB dashboard on a mobile viewport" caption="Dashboard metrics and run status remain available on narrow screens." width={390} height={844} />
 
 Use the time-window controls or `Custom time range`, then choose `Apply range`.
 `Refresh` refetches the summary. A run chart separates `Succeeded`, `Failed`,
 and `Active`; duration and queue latency are shown as separate series.
 
+## Investigate from a summary
+
+Use a time window that includes the suspected run, then compare active work,
+failure count, queue latency, and duration before changing a job. `Open jobs`
+leads to the definitions behind the aggregate; a job detail then exposes its
+bindings, schedule, and run history. Open a specific run to inspect its
+attempt, timestamps, warnings, and bounded diagnostics.
+
+The dashboard is an aggregate over jobs visible to the current user. It is not
+a source of execution ownership or a substitute for job-level permissions. A
+missing metric may mean an empty window, a restricted job, or a failed load;
+check the visible state before assuming that work did not run.
+
+## Validate and recover
+
 The dashboard is an overview, not an authorization boundary. Use `Open jobs`
 to inspect the job definition, schedule, bindings, and run history behind a
 metric. Empty windows show `No runs in this window.` and suggest choosing a
-wider range; load failures show an error with `Try again`.
+wider range; load failures show an error with `Try again`. For persistent queue
+or readiness symptoms, use [health and metrics](/ReplicaDB/operations/health-and-metrics/)
+and [troubleshooting](/ReplicaDB/operations/troubleshooting/) before retrying
+or scaling work.

@@ -47,12 +47,17 @@ SOURCE_WINDOWS_LAUNCHER="${REPO_ROOT}/replicadb-server/bin/replicadb-server.cmd"
 SOURCE_ENV="${REPO_ROOT}/replicadb-server/conf/replicadb-server.env.example"
 SOURCE_README="${REPO_ROOT}/replicadb-server/README.md"
 SOURCE_LICENSE="${REPO_ROOT}/LICENSE"
+SOURCE_DEPLOY_BUNDLE="${REPO_ROOT}/deploy/gcp"
 for source in "$SOURCE_LAUNCHER" "$SOURCE_WINDOWS_LAUNCHER" "$SOURCE_ENV" "$SOURCE_README" "$SOURCE_LICENSE"; do
     if [[ ! -f "$source" ]]; then
         printf 'Error: required package source is missing: %s\n' "$source" >&2
         exit 1
     fi
 done
+if [[ ! -x "$SOURCE_DEPLOY_BUNDLE/deploy.sh" || ! -f "$SOURCE_DEPLOY_BUNDLE/README.md" || ! -f "$SOURCE_DEPLOY_BUNDLE/config.example.env" ]]; then
+    printf 'Error: Cloud Run deployment bundle is missing or incomplete: %s\n' "$SOURCE_DEPLOY_BUNDLE" >&2
+    exit 1
+fi
 
 mkdir -p "$OUTPUT_DIR"
 OUTPUT_DIR="$(cd "$OUTPUT_DIR" && pwd)"
@@ -63,16 +68,21 @@ trap 'rm -rf "$STAGING_DIR"' EXIT
 
 PACKAGE_ROOT="${STAGING_DIR}/${PACKAGE_NAME}"
 mkdir -p "$PACKAGE_ROOT/bin" "$PACKAGE_ROOT/lib" "$PACKAGE_ROOT/conf"
+mkdir -p "$PACKAGE_ROOT/deploy/gcp"
 install -m 755 "$SOURCE_LAUNCHER" "$PACKAGE_ROOT/bin/replicadb-server"
 install -m 644 "$SOURCE_WINDOWS_LAUNCHER" "$PACKAGE_ROOT/bin/replicadb-server.cmd"
 install -m 644 "$SOURCE_ENV" "$PACKAGE_ROOT/conf/replicadb-server.env.example"
 install -m 644 "$SOURCE_README" "$PACKAGE_ROOT/README.md"
 install -m 644 "$SOURCE_LICENSE" "$PACKAGE_ROOT/LICENSE"
 install -m 644 "$SERVER_JAR" "$PACKAGE_ROOT/lib/replicadb-server-${VERSION}.jar"
+cp -R "$SOURCE_DEPLOY_BUNDLE/." "$PACKAGE_ROOT/deploy/gcp/"
+chmod 755 "$PACKAGE_ROOT/deploy/gcp/deploy.sh" "$PACKAGE_ROOT/deploy/gcp/lib/"*.sh "$PACKAGE_ROOT/deploy/gcp/tests/"*.sh
+chmod 644 "$PACKAGE_ROOT/deploy/gcp/README.md" "$PACKAGE_ROOT/deploy/gcp/config.example.env"
 printf '%s\n' "$VERSION" > "$PACKAGE_ROOT/VERSION"
 
 if rg -n -P '(?i)(password|api[_-]?key|access[_-]?token)\s*[:=]\s*[\x27\x22]?[^<\x27\x22\$\{[:space:]]' \
-        "$PACKAGE_ROOT/conf" "$PACKAGE_ROOT/README.md" >/dev/null; then
+    "$PACKAGE_ROOT/conf" "$PACKAGE_ROOT/README.md" \
+    "$PACKAGE_ROOT/deploy/gcp/config.example.env" "$PACKAGE_ROOT/deploy/gcp/README.md" >/dev/null; then
     printf 'Error: package documentation or example contains a resolved secret or DSN\n' >&2
     exit 1
 fi
