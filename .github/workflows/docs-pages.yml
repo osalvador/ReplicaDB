@@ -1,0 +1,69 @@
+name: Documentation Pages
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - 'DEPLOYMENT.md'
+      - 'RELEASE_GUIDE.md'
+      - 'replicadb-server/README.md'
+      - 'replicadb-server/frontend/README.develop.md'
+      - 'scripts/check-phase3-docs.sh'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'README.md'
+      - 'DEPLOYMENT.md'
+      - 'RELEASE_GUIDE.md'
+      - 'replicadb-server/README.md'
+      - 'replicadb-server/frontend/README.develop.md'
+      - 'scripts/check-phase3-docs.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-pages-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - name: Install docs dependencies
+        working-directory: docs
+        run: npm ci
+      - name: Check and build docs
+        working-directory: docs
+        run: npm run check && npm run build && npm run validate && npm test
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/dist
+
+  deploy:
+    if: ${{ github.event_name != 'pull_request' && vars.DOCS_PAGES_SOURCE == 'actions' }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

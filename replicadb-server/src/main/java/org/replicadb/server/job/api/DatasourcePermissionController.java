@@ -1,5 +1,11 @@
 package org.replicadb.server.job.api;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.replicadb.server.audit.AuditActorResolver;
 import org.replicadb.server.audit.AuditService;
@@ -38,6 +44,8 @@ import java.util.UUID;
 @Profile("api")
 @PreAuthorize("hasRole('ADMIN')")
 @RequestMapping("/api/v1/datasources/{datasourceId}/permissions")
+@Tag(name = "Datasource permissions", description = "ADMIN-managed VIEW, USE, and EDIT grants for datasources.")
+@SecurityRequirement(name = "sessionCookie")
 public class DatasourcePermissionController {
 
     private final ManagedDataSourceStore dataSourceStore;
@@ -59,7 +67,16 @@ public class DatasourcePermissionController {
     }
 
     @GetMapping
-    public List<DatasourcePermissionResponse> list(@PathVariable UUID datasourceId) {
+        @Operation(operationId = "listDatasourcePermissions", summary = "List datasource permissions",
+            description = "Returns grants grouped by user. ADMIN is required.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Datasource grants returned"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
+        public List<DatasourcePermissionResponse> list(
+            @Parameter(description = "Datasource identifier.", required = true) @PathVariable UUID datasourceId) {
         requireDatasource(datasourceId);
         Map<UUID, Set<DataSourcePermissionType>> grouped = new LinkedHashMap<>();
         for (DataSourcePermission permission : permissionStore.findByDatasourceId(datasourceId)) {
@@ -75,8 +92,18 @@ public class DatasourcePermissionController {
 
     @PutMapping("/{userId}")
     @Transactional
-    public DatasourcePermissionResponse replace(@PathVariable UUID datasourceId,
-                                                @PathVariable UUID userId,
+        @Operation(operationId = "replaceDatasourcePermissions", summary = "Replace datasource permissions",
+            description = "Atomically replaces one user's VIEW, USE, and EDIT grant set. ADMIN and CSRF are required.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Datasource grants replaced"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
+        public DatasourcePermissionResponse replace(
+                            @Parameter(description = "Datasource identifier.", required = true) @PathVariable UUID datasourceId,
+                            @Parameter(description = "Target user identifier.", required = true) @PathVariable UUID userId,
                                                 @Valid @RequestBody DatasourcePermissionRequest request,
                                                 Authentication authentication) {
         requireDatasource(datasourceId);
@@ -92,8 +119,17 @@ public class DatasourcePermissionController {
 
     @DeleteMapping("/{userId}")
     @Transactional
-    public ResponseEntity<Void> revoke(@PathVariable UUID datasourceId,
-                                       @PathVariable UUID userId,
+        @Operation(operationId = "revokeDatasourcePermissions", summary = "Revoke datasource permissions",
+            description = "Removes all datasource grants for one user. ADMIN and CSRF are required.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Datasource grants revoked"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
+        public ResponseEntity<Void> revoke(
+                           @Parameter(description = "Datasource identifier.", required = true) @PathVariable UUID datasourceId,
+                           @Parameter(description = "Target user identifier.", required = true) @PathVariable UUID userId,
                                        Authentication authentication) {
         requireDatasource(datasourceId);
         findUser(userId);

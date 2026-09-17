@@ -1,0 +1,44 @@
+---
+interface ProductOption {
+  title: string;
+  summary: string;
+  fit: string;
+  detail: string;
+  href: string;
+  action: string;
+}
+
+interface Props {
+  title?: string;
+  description?: string;
+  options: ProductOption[];
+}
+
+const {
+  title = 'Choose a product',
+  description = 'Start with the operating model that matches your replication work.',
+  options
+} = Astro.props;
+---
+
+<section class="product-choice" aria-labelledby="product-choice-heading">
+  <h2 class="product-choice__heading" id="product-choice-heading">{title}</h2>
+  <p>{description}</p>
+  <div class="product-choice__grid">
+    {options.map((option) => (
+      <article class="product-choice__option">
+        <div class="product-choice__meta">
+          <span class="product-choice__signal" aria-hidden="true"></span>
+          <span>{option.fit}</span>
+        </div>
+        <h3>{option.title}</h3>
+        <p>{option.summary}</p>
+        <p class="product-choice__detail">{option.detail}</p>
+        <a class="product-choice__link" href={option.href}>
+          <span>{option.action}</span>
+          <span aria-hidden="true">-&gt;</span>
+        </a>
+      </article>
+    ))}
+  </div>
+</section>

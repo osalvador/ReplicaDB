@@ -1,5 +1,12 @@
 package org.replicadb.server.job.api;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.audit.AuditActorResolver;
@@ -30,13 +37,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.context.annotation.Profile;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Locale;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -46,6 +56,8 @@ import java.util.UUID;
 @RestController
 @Profile("api")
 @RequestMapping("/api/v1")
+@Tag(name = "Runs", description = "Dispatch, inspect, cancel, retry, and diagnose durable job runs.")
+@SecurityRequirement(name = "sessionCookie")
 public class JobRunController {
 
     private final JobRunStore jobRunStore;
@@ -85,40 +97,98 @@ public class JobRunController {
     }
 
     @GetMapping("/jobs/{jobDefinitionId}/runs")
+        @Operation(operationId = "listJobRunsForJob", summary = "List runs for a job",
+            description = "Returns run history for one job after VIEW permission. Status values are case-insensitive; paging defaults to page 0 and size 50 with a size cap of 200.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Job run history returned"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
     public PageResponse<JobRunResponse> listForJob(
-            @PathVariable UUID jobDefinitionId,
+            @Parameter(description = "Job definition identifier.", required = true) @PathVariable UUID jobDefinitionId,
+            @Parameter(description = "Optional repeated run statuses: PENDING, RUNNING, SUCCEEDED, FAILED, CANCEL_REQUESTED, CANCELLED, or RETRY_SCHEDULED.")
+            @RequestParam(required = false) List<String> status,
+            @Parameter(description = "Inclusive lower timestamp bound in UTC ISO-8601 date-time format.", schema = @Schema(format = "date-time"))
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @Parameter(description = "Exclusive upper timestamp bound in UTC ISO-8601 date-time format.", schema = @Schema(format = "date-time"))
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @Parameter(description = "Zero-based page number.", schema = @Schema(defaultValue = "0", minimum = "0"))
             @RequestParam(required = false) Integer page,
+            @Parameter(description = "Requested page size, clamped to the range 1 through 200.", schema = @Schema(defaultValue = "50", minimum = "1", maximum = "200"))
             @RequestParam(required = false) Integer size,
             Authentication authentication) {
         jobAccessService.require(authentication, jobDefinitionId, JobPermissionType.VIEW);
         PageRequestParams params = PageRequestParams.of(page, size);
-        return pageResponse(jobRunStore.findPage(jobDefinitionId, null, params.page(), params.size(), null),
-            params, jobRunStore.count(jobDefinitionId, null, null));
+        Set<JobRunStatus> parsedStatuses = parseStatuses(status);
+        return pageResponse(jobRunStore.findPage(jobDefinitionId, parsedStatuses, from, to,
+                params.page(), params.size(), null),
+            params, jobRunStore.count(jobDefinitionId, parsedStatuses, from, to, null));
     }
 
     @GetMapping("/runs")
+        @Operation(operationId = "listJobRuns", summary = "List visible runs",
+            description = "Returns runs only for jobs visible to the authenticated identity, with optional status and UTC time bounds.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Visible runs returned"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem")
+        })
     public PageResponse<JobRunResponse> list(
-            @RequestParam(required = false) String status,
+            @Parameter(description = "Optional repeated run statuses: PENDING, RUNNING, SUCCEEDED, FAILED, CANCEL_REQUESTED, CANCELLED, or RETRY_SCHEDULED.")
+            @RequestParam(required = false) List<String> status,
+            @Parameter(description = "Inclusive lower timestamp bound in UTC ISO-8601 date-time format.", schema = @Schema(format = "date-time"))
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @Parameter(description = "Exclusive upper timestamp bound in UTC ISO-8601 date-time format.", schema = @Schema(format = "date-time"))
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @Parameter(description = "Zero-based page number.", schema = @Schema(defaultValue = "0", minimum = "0"))
             @RequestParam(required = false) Integer page,
+            @Parameter(description = "Requested page size, clamped to the range 1 through 200.", schema = @Schema(defaultValue = "50", minimum = "1", maximum = "200"))
             @RequestParam(required = false) Integer size,
             Authentication authentication) {
         PageRequestParams params = PageRequestParams.of(page, size);
-        JobRunStatus parsedStatus = parseStatus(status);
+        Set<JobRunStatus> parsedStatuses = parseStatuses(status);
         Optional<Set<UUID>> visibleJobIds = jobAccessService.visibleJobIds(authentication);
         Set<UUID> restriction = visibleJobIds.orElse(null);
-        return pageResponse(jobRunStore.findPage(null, parsedStatus, params.page(), params.size(), restriction),
-            params, jobRunStore.count(null, parsedStatus, restriction));
+        return pageResponse(jobRunStore.findPage(null, parsedStatuses, from, to,
+                params.page(), params.size(), restriction),
+            params, jobRunStore.count(null, parsedStatuses, from, to, restriction));
     }
 
     @GetMapping("/runs/{id}")
-    public JobRunResponse get(@PathVariable UUID id, Authentication authentication) {
+        @Operation(operationId = "getJobRun", summary = "Get a run",
+            description = "Returns durable state and attempt information after VIEW permission on the owning job.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Run returned"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
+        public JobRunResponse get(
+            @Parameter(description = "Run identifier.", required = true) @PathVariable UUID id,
+            Authentication authentication) {
         JobRun run = findRun(id);
         jobAccessService.require(authentication, run.jobDefinitionId(), JobPermissionType.VIEW);
         return JobRunResponse.from(run);
     }
 
     @GetMapping("/runs/{id}/log")
-    public RunLogResponse log(@PathVariable UUID id, Authentication authentication) {
+        @Operation(operationId = "getJobRunLog", summary = "Get bounded run diagnostics",
+            description = "Returns the credential-redacted, size-bounded log after VIEW permission. A run without captured output returns an empty log response.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Run diagnostics returned"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
+        public RunLogResponse log(
+            @Parameter(description = "Run identifier.", required = true) @PathVariable UUID id,
+            Authentication authentication) {
         JobRun run = findRun(id);
         jobAccessService.require(authentication, run.jobDefinitionId(), JobPermissionType.VIEW);
         return runLogStore.flatMap(store -> store.findByRunId(run.id()))
@@ -127,11 +197,23 @@ public class JobRunController {
     }
 
     @PostMapping("/jobs/{jobDefinitionId}/runs")
+        @Operation(operationId = "triggerJobRun", summary = "Trigger a manual run",
+            description = "Creates or replays one pending manual run after EXECUTE permission. The idempotency key is scoped to manual trigger requests and remains replay-safe within the server retention window. Protected mutations require the session cookie and CSRF header.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "202", description = "Run accepted or an existing idempotent result replayed"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem"),
+            @ApiResponse(responseCode = "409", ref = "#/components/responses/ConflictProblem")
+        })
     public ResponseEntity<JobRunResponse> trigger(
-            @PathVariable UUID jobDefinitionId,
+            @Parameter(description = "Job definition identifier.", required = true) @PathVariable UUID jobDefinitionId,
+            @Parameter(description = "Required non-blank key for replay-safe manual triggering; maximum 255 characters.", required = true,
+                schema = @Schema(maxLength = 255, example = "orders-sync-20260907-001"))
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             Authentication authentication,
-            HttpServletRequest request) {
+            @Parameter(hidden = true) HttpServletRequest request) {
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 255) {
             throw new IllegalArgumentException("Idempotency-Key must be present and at most 255 characters");
         }
@@ -172,7 +254,18 @@ public class JobRunController {
     }
 
     @PostMapping("/runs/{id}/cancel")
-    public CancellationResponse cancel(@PathVariable UUID id, Authentication authentication) {
+        @Operation(operationId = "cancelJobRun", summary = "Request run cancellation",
+            description = "Cancels pending work or persists cancellation intent for a running attempt after CANCEL permission. The response includes a mode-specific sink warning. Protected mutations require the session cookie and CSRF header.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Run cancelled or cancellation requested"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem"),
+            @ApiResponse(responseCode = "409", ref = "#/components/responses/ConflictProblem")
+        })
+        public CancellationResponse cancel(
+            @Parameter(description = "Run identifier.", required = true) @PathVariable UUID id,
+            Authentication authentication) {
         JobRun run = findRun(id);
         jobAccessService.require(authentication, run.jobDefinitionId(), JobPermissionType.CANCEL);
         JobDefinition definition = findDefinition(run.jobDefinitionId());
@@ -199,7 +292,18 @@ public class JobRunController {
     }
 
     @PostMapping("/runs/{id}/retry")
-    public ResponseEntity<JobRunResponse> retry(@PathVariable UUID id, Authentication authentication) {
+        @Operation(operationId = "retryJobRun", summary = "Retry a failed run",
+            description = "Creates a new pending attempt linked to the failed run after EXECUTE permission. Retry restarts from the beginning and is not resume behavior. Protected mutations require the session cookie and CSRF header.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "202", description = "Retry attempt accepted"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem"),
+            @ApiResponse(responseCode = "409", ref = "#/components/responses/ConflictProblem")
+        })
+        public ResponseEntity<JobRunResponse> retry(
+            @Parameter(description = "Failed run identifier.", required = true) @PathVariable UUID id,
+            Authentication authentication) {
         JobRun failedRun = findRun(id);
         jobAccessService.require(authentication, failedRun.jobDefinitionId(), JobPermissionType.EXECUTE);
         if (failedRun.status() != JobRunStatus.FAILED) {
@@ -258,17 +362,26 @@ public class JobRunController {
             };
             }
 
-    private static JobRunStatus parseStatus(String status) {
-        if (status == null) {
+    private static Set<JobRunStatus> parseStatuses(List<String> statuses) {
+        if (statuses == null || statuses.isEmpty()) {
             return null;
         }
-        try {
-            return JobRunStatus.valueOf(status.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException("Unknown run status: " + status, exception);
+
+        Set<JobRunStatus> parsed = new java.util.LinkedHashSet<>();
+        for (String status : statuses) {
+            try {
+                parsed.add(JobRunStatus.valueOf(status.toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException exception) {
+                throw new IllegalArgumentException("Unknown run status: " + status, exception);
+            }
         }
+        return parsed;
     }
 
-    public record CancellationResponse(UUID runId, JobRunStatus status, String warning) {
+    @Schema(description = "Durable result of a run cancellation request.")
+    public record CancellationResponse(
+            @Schema(description = "Run identifier.", format = "uuid") UUID runId,
+            @Schema(description = "Resulting durable cancellation state.", allowableValues = {"CANCEL_REQUESTED", "CANCELLED"}) JobRunStatus status,
+            @Schema(description = "Mode-specific warning about the possible sink state.") String warning) {
     }
 }

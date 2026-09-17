@@ -35,6 +35,7 @@ test('admin can create a user and grant permissions for a job', async ({ page })
   await expect(page.getByRole('table', { name: 'Users' })).toContainText(managedUsername);
 
   await page.goto('/');
+  await page.getByRole('link', { name: 'Open jobs' }).click();
   const seededJob = page.getByRole('link', { name: seededJobName });
   await expect(seededJob, `the seeded job ${seededJobName} must exist`).toBeVisible();
   await seededJob.click();

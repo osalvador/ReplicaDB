@@ -52,6 +52,16 @@ class WorkerManagementEndpointIT {
     }
 
     @Test
+    void readinessGroupIncludesControlPlaneAndWorkerRuntime() throws Exception {
+        HttpResponse<String> readiness = get("/actuator/health/readiness");
+
+        assertEquals(200, readiness.statusCode());
+        assertTrue(readiness.body().contains("\"components\""));
+        assertTrue(readiness.body().contains("\"controlPlane\""));
+        assertTrue(readiness.body().contains("\"workerRuntime\""));
+    }
+
+    @Test
     void doesNotExposeEnvironmentDetails() throws Exception {
         assertTrue(get("/actuator/env").statusCode() != 200);
     }

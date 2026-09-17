@@ -52,10 +52,13 @@ for (const viewport of viewports) {
       await signIn(page);
 
       await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-      await expect(page.getByRole('link', { name: 'New job' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Open jobs' })).toBeVisible();
       await expect(page.getByText(/Complete mode clears the sink/)).not.toBeVisible();
       await expectContained(page);
 
+      await page.getByRole('link', { name: 'Open jobs' }).click();
+      await expect(page).toHaveURL(/\/jobs$/);
+      await expect(page.getByRole('link', { name: 'New job' })).toBeVisible();
       await page.getByRole('link', { name: 'New job' }).click();
       await expect(page).toHaveURL(/\/jobs\/new$/);
       await expect(page.getByRole('heading', { name: 'New job' })).toBeVisible();
@@ -66,6 +69,7 @@ for (const viewport of viewports) {
       await expectContained(page);
 
       await page.goto('/');
+      await page.getByRole('link', { name: 'Open jobs' }).click();
       const seededJob = page.getByRole('link', { name: seededJobName });
       await expect(seededJob, `the seeded job ${seededJobName} must exist`).toBeVisible();
       await seededJob.click();
@@ -87,6 +91,7 @@ for (const viewport of viewports) {
       await expectContained(page);
 
       await page.goto('/');
+      await page.getByRole('link', { name: 'Open jobs' }).click();
       await page.getByRole('link', { name: seededJobName }).click();
       await expect(page).toHaveURL(/\/jobs\/[^/]+$/);
       await page.getByRole('button', { name: 'Trigger run' }).click();
@@ -100,8 +105,8 @@ for (const viewport of viewports) {
       await page.getByRole('link', { name: 'Back to job' }).click();
       await expect(page).toHaveURL(/\/jobs\/[^/]+$/);
       await page.getByRole('link', { name: 'Back to jobs' }).click();
-      await expect(page).toHaveURL(/\/$/);
-      await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+      await expect(page).toHaveURL(/\/jobs$/);
+      await expect(page.getByRole('heading', { name: 'Jobs' })).toBeVisible();
     });
   });
 }

@@ -1,5 +1,10 @@
 # ReplicaDB Frontend: desarrollo local
 
+The canonical user-facing server documentation is the
+[ReplicaDB documentation portal](https://osalvador.github.io/ReplicaDB/server/).
+This file remains the source for frontend development commands and local
+topology only.
+
 > **Estado:** este frontend está disponible únicamente para desarrollo local. Todavía no está publicado como producto, no forma parte de una release oficial y no debe utilizarse como despliegue de producción.
 
 ## Arquitectura local
@@ -65,18 +70,34 @@ export REPLICADB_BOOTSTRAP_ADMIN_USERNAME='my-local-admin'
 ./replicadb-server/frontend/scripts/start-local.sh
 ```
 
+Este script es deliberadamente efímero: elimina el contenedor PostgreSQL de
+desarrollo al terminar. Para una instalación local duradera sin Docker, usa el
+paquete server con `./bin/replicadb-server start local`; ese modo gestiona
+PostgreSQL nativo y conserva sus datos y el keyring bajo
+`REPLICADB_SERVER_HOME` (por defecto `~/.replicadb`) y no inicia workers separados. Consulta
+`README.md` y `DEPLOYMENT.md` para el contrato operativo de ese modo.
+
 Cuando el script termine de arrancar:
 
 - Frontend: `http://localhost:5173`
 - API: `http://localhost:8080`
 - El script crea perfiles datasource y jobs de prueba para Oracle, MySQL, MariaDB, PostgreSQL, DB2 LUW,
-  DB2 for i, SQLite, SQL Server, Denodo y File. Los fixtures cubren los modos
-  `complete`, `complete-atomic` e `incremental`; no ejecutan ninguna replicación.
+  DB2 for i, SQLite, SQL Server, Denodo y File. También crea el datasource `Pglocal`, las tablas
+  `pg2pg_source_orders` y `pg2pg_destination_orders`, y el job `pg2pg`. Tras crear los fixtures,
+  ejecuta una replicación real PostgreSQL a PostgreSQL y verifica que las tres filas llegan al destino.
+  Los fixtures cubren los modos `complete`, `complete-atomic` e `incremental`; solo el job `pg2pg`
+  ejecuta una replicación durante el arranque.
 
-Pulsa `Ctrl+C` para detener API y Vite y eliminar el contenedor PostgreSQL.
-El script requiere libres los puertos `5432`, `8080` y `5173`; no detiene
-procesos ajenos que estén utilizando esos puertos. Para usar Podman en lugar
-de Docker, define `CONTAINER_ENGINE=podman`.
+Pulsa `Ctrl+C` para detener API, Maven, Vite, Node y eliminar el contenedor
+PostgreSQL. El cleanup se aplica también si el script termina por error. Una
+terminación forzada con `SIGKILL` no puede ejecutar este cleanup.
+Antes de arrancar, el script detecta recursos gestionados por este checkout:
+procesos API y Vite, incluidos sus lanzadores, y el contenedor PostgreSQL.
+En una terminal interactiva muestra sus PID, puertos y hora de inicio y
+solicita una única confirmación antes de detenerlos; si se rechaza, deja los
+recursos intactos y cancela el arranque. Sin una terminal interactiva, aborta
+sin detener ningún recurso. Los procesos y contenedores ajenos no se detienen.
+Para usar Podman en lugar de Docker, define `CONTAINER_ENGINE=podman`.
 
 ## Probar PostgreSQL a PostgreSQL en el mismo contenedor
 
@@ -218,8 +239,10 @@ export DB_URL='<metadata-jdbc-url>'
 export DB_USERNAME='<metadata-user>'
 export DB_PASSWORD='<managed-secret>'
 export REPLICADB_WORKER_IDENTITY='worker-1'
-java -Dspring.profiles.active=worker \
-  -jar replicadb-server/target/replicadb-server-0.1.0-SNAPSHOT.jar
+mvn -f replicadb-server/pom.xml spring-boot:run \
+  -Dspring-boot.run.profiles=worker \
+  -Dskip.installnodenpm=true \
+  -Dskip.npm=true
 ```
 
 Si `REPLICADB_WORKER_IDENTITY` está vacío, el proceso genera una identidad
@@ -348,7 +371,7 @@ Después arranca el jar con el perfil `api` y las variables `DB_URL`, `DB_USERNA
 
 ```bash
 java -Dspring.profiles.active=api \
-  -jar replicadb-server/target/replicadb-server-0.1.0-SNAPSHOT.jar
+  -jar replicadb-server/target/replicadb-server-1.0.2.jar
 ```
 
 En este modo la interfaz se sirve desde el mismo proceso en `http://localhost:8080`.

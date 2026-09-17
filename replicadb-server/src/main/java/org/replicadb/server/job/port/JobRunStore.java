@@ -62,10 +62,32 @@ public interface JobRunStore {
     FencedUpdateResult markCancelled(UUID runId, LeaseToken leaseToken,
                                      long rowsProcessed, long durationMillis);
 
-    List<JobRun> findPage(UUID jobDefinitionId, JobRunStatus status, int page, int size,
-                          Set<UUID> restrictToJobIds);
+    List<JobRun> findPage(UUID jobDefinitionId, Set<JobRunStatus> statuses, Instant from, Instant to,
+                          int page, int size, Set<UUID> restrictToJobIds);
 
-    long count(UUID jobDefinitionId, JobRunStatus status, Set<UUID> restrictToJobIds);
+    long count(UUID jobDefinitionId, Set<JobRunStatus> statuses, Instant from, Instant to,
+               Set<UUID> restrictToJobIds);
+
+        DashboardRunSummary summarizeDashboard(Instant from, Instant to, Set<UUID> restrictToJobIds);
+
+        record DashboardRunSummary(
+            long activeRuns,
+            long totalRuns,
+            long succeededRuns,
+            long failedRuns,
+            long rowsProcessed,
+            long averageDurationMillis,
+            long averageLatencyMillis,
+            List<OutcomeBucket> outcomeBuckets,
+            List<JobPerformance> jobPerformance) {
+        }
+
+        record OutcomeBucket(Instant bucket, long succeeded, long failed, long active) {
+        }
+
+        record JobPerformance(UUID jobId, String jobName, long runCount, long rowsProcessed,
+                  long averageDurationMillis, long averageLatencyMillis) {
+        }
 
     enum LeaseRenewalResult {
         RENEWED,

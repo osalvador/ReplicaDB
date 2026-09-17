@@ -16,6 +16,7 @@ import java.sql.Statement;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import java.util.UUID;
+import java.util.Set;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class PostgresTestcontainersConfig {
@@ -43,6 +44,11 @@ public class PostgresTestcontainersConfig {
             @Override
             public java.util.Optional<KeyEncryptionKey> find(String version) {
                 return "test".equals(version) ? java.util.Optional.of(current) : java.util.Optional.empty();
+            }
+
+            @Override
+            public Set<String> knownVersions() {
+                return Set.of(current.version());
             }
         };
     }

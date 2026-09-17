@@ -1,0 +1,38 @@
+---
+import type { ImageMetadata } from 'astro';
+
+interface Props {
+  src: ImageMetadata | string;
+  alt: string;
+  caption: string;
+  width: number;
+  height: number;
+  loading?: 'eager' | 'lazy';
+}
+
+const {
+  src,
+  alt,
+  caption,
+  width,
+  height,
+  loading = 'lazy'
+} = Astro.props;
+
+const imageSource = typeof src === 'string' ? src : src.src;
+---
+
+<figure class="screenshot-frame">
+  <div class="screenshot-frame__viewport" style={`aspect-ratio: ${width} / ${height}`}>
+    <img
+      class="screenshot-frame__image"
+      src={imageSource}
+      alt={alt}
+      width={width}
+      height={height}
+      loading={loading}
+      decoding="async"
+    />
+  </div>
+  <figcaption>{caption}</figcaption>
+</figure>

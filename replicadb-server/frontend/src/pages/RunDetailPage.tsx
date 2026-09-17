@@ -145,7 +145,13 @@ export default function RunDetailPage() {
       {actionError && <Alert severity="error">{actionError}</Alert>}
       {run.errorMessage && <Alert severity="error">{run.errorMessage}</Alert>}
       <SurfaceSection title="Detailed log">
-        <RunLogViewer log={logQuery.data} loading={logQuery.isPending} error={logQuery.isError} />
+        <RunLogViewer
+          log={logQuery.data}
+          loading={logQuery.isPending}
+          error={logQuery.isError}
+          onRetry={() => void logQuery.refetch()}
+          retrying={logQuery.isFetching}
+        />
       </SurfaceSection>
     </Stack>
   );

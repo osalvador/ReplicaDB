@@ -1,5 +1,12 @@
 package org.replicadb.server.job.api;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.replicadb.server.audit.AuditActorResolver;
 import org.replicadb.server.audit.AuditService;
@@ -43,6 +50,8 @@ import java.util.UUID;
 @RestController
 @Profile("api")
 @RequestMapping("/api/v1/datasources")
+@Tag(name = "Datasources", description = "Managed, encrypted source and sink connection profiles.")
+@SecurityRequirement(name = "sessionCookie")
 public class DatasourceController {
 
     private final ManagedDataSourceStore repository;
@@ -72,6 +81,15 @@ public class DatasourceController {
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
+        @Operation(operationId = "createDatasource", summary = "Create a datasource",
+            description = "Creates an encrypted datasource profile after validating its connector scheme. Responses expose only redacted connection metadata. ADMIN and CSRF are required.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Datasource created"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "409", ref = "#/components/responses/ConflictProblem")
+        })
     public ResponseEntity<DatasourceResponse> create(@Valid @RequestBody DatasourceRequest request,
                                                      Authentication authentication) {
         UUID id = UUID.randomUUID();
@@ -89,9 +107,20 @@ public class DatasourceController {
     }
 
     @GetMapping
-    public PageResponse<DatasourceResponse> list(@RequestParam(required = false) Integer page,
-                                                 @RequestParam(required = false) Integer size,
-                                                 @RequestParam(required = false) String role,
+        @Operation(operationId = "listDatasources", summary = "List visible datasources",
+            description = "Returns only visible profiles. The optional role filter selects connector source or sink capability; it is not a user-role filter.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Visible datasources returned"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem")
+        })
+        public PageResponse<DatasourceResponse> list(
+                             @Parameter(description = "Zero-based page number.", schema = @Schema(defaultValue = "0", minimum = "0"))
+                             @RequestParam(required = false) Integer page,
+                             @Parameter(description = "Requested page size, clamped to the range 1 through 200.", schema = @Schema(defaultValue = "50", minimum = "1", maximum = "200"))
+                             @RequestParam(required = false) Integer size,
+                             @Parameter(description = "Connector capability filter.", schema = @Schema(allowableValues = {"source", "sink"}))
+                             @RequestParam(required = false) String role,
                                                  Authentication authentication) {
         PageRequestParams params = PageRequestParams.of(page, size);
         Optional<Set<UUID>> visibleIds = accessService.visibleDatasourceIds(authentication);
@@ -103,7 +132,17 @@ public class DatasourceController {
     }
 
     @GetMapping("/{id}")
-    public DatasourceResponse get(@PathVariable UUID id, Authentication authentication) {
+        @Operation(operationId = "getDatasource", summary = "Get a datasource",
+            description = "Returns redacted profile metadata and capability flags after VIEW permission. Stored security values are never rehydrated in the response.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Datasource returned"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem")
+        })
+        public DatasourceResponse get(
+            @Parameter(description = "Datasource identifier.", required = true) @PathVariable UUID id,
+            Authentication authentication) {
         accessService.requireView(authentication, id);
         ManagedDataSourceSummary summary = repository.findSummaryById(id)
                 .orElseThrow(() -> new NoSuchElementException("ManagedDataSource not found: " + id));
@@ -112,7 +151,19 @@ public class DatasourceController {
 
     @PutMapping("/{id}")
     @Transactional
-    public DatasourceResponse update(@PathVariable UUID id, @Valid @RequestBody DatasourceRequest request,
+        @Operation(operationId = "updateDatasource", summary = "Update a datasource",
+            description = "Updates a profile after EDIT permission. Omitted or blank security inputs preserve stored encrypted values; clearSecurityKeys explicitly removes named values. CSRF is required.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Datasource updated"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/BadRequestProblem"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem"),
+            @ApiResponse(responseCode = "409", ref = "#/components/responses/ConflictProblem")
+        })
+        public DatasourceResponse update(
+                         @Parameter(description = "Datasource identifier.", required = true) @PathVariable UUID id,
+                         @Valid @RequestBody DatasourceRequest request,
                                      Authentication authentication) {
         accessService.requireEdit(authentication, id);
         ManagedDataSource existing = repository.findById(id)
@@ -141,7 +192,18 @@ public class DatasourceController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    public ResponseEntity<Void> delete(@PathVariable UUID id, Authentication authentication) {
+        @Operation(operationId = "deleteDatasource", summary = "Delete a datasource",
+            description = "Deletes an unreferenced datasource. ADMIN and CSRF are required; profiles bound to jobs return a conflict.")
+        @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Datasource deleted"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/UnauthorizedProblem"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/ForbiddenProblem"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/NotFoundProblem"),
+            @ApiResponse(responseCode = "409", ref = "#/components/responses/ConflictProblem")
+        })
+        public ResponseEntity<Void> delete(
+            @Parameter(description = "Datasource identifier.", required = true) @PathVariable UUID id,
+            Authentication authentication) {
         ManagedDataSourceStore.DeleteResult result = repository.delete(id);
         if (result == ManagedDataSourceStore.DeleteResult.NOT_FOUND) {
             throw new NoSuchElementException("ManagedDataSource not found: " + id);

@@ -9,9 +9,19 @@ import java.util.UUID;
 
 public interface JobDefinitionStore {
 
+    enum DeleteStatus {
+        DELETED,
+        NOT_FOUND
+    }
+
+    record DeleteResult(DeleteStatus status, String jobName) {
+    }
+
     JobDefinition insert(JobDefinition definition);
 
     JobDefinition update(JobDefinition definition);
+
+    DeleteResult delete(UUID id);
 
     Optional<JobDefinition> findById(UUID id);
 

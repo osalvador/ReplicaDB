@@ -23,6 +23,7 @@ Java 17/Maven, JDBC and vendor SDKs, Spring Boot 3.3.5, PostgreSQL/Flyway, Quart
 * [CLI options contract](/interfaces/cli-options.md) - Command-line and options-file boundary.
 * [Jobs API](/interfaces/jobs-api.md) - Job definitions and schedules.
 * [Runs API](/interfaces/runs-api.md) - Trigger, monitor, cancel, retry, and idempotency.
+* [Dashboard API](/interfaces/dashboard-api.md) - Access-controlled operational aggregates by time window.
 * [Security and administration API](/interfaces/security-admin-api.md) - Sessions, users, ACLs, and audit reads.
 * [OpenAPI frontend contract](/interfaces/openapi-frontend.md) - Generated TypeScript contract and drift checks.
 * [Protocol inventory](/interfaces/protocol-inventory.md) - Supported sinks and absent server event protocols.
@@ -54,6 +55,12 @@ Java 17/Maven, JDBC and vendor SDKs, Spring Boot 3.3.5, PostgreSQL/Flyway, Quart
 * [Frontend administration gaps](/learnings/phase2c-custom-form-validation.md) - Validation and route-context lessons from the current admin slice.
 * [API contract gaps](/learnings/phase2a-openapi-nullability.md) - Serialize and validate the actual wire format.
 * [Technical debt](/learnings/tech-debt.md) - Known limitations and deferred capabilities.
+* [Job deletion concurrency](/learnings/job-deletion-concurrency.md) - Lock and cascade rules for destructive job removal.
+* [OpenAPI empty response contract](/learnings/openapi-empty-response-contract.md) - Explicit responses for destructive endpoints.
+* [Local PostgreSQL fixture schema](/learnings/local-pg2pg-schema-isolation.md) - Isolate example tables from Flyway metadata.
+* [Local PostgreSQL fixture user](/learnings/local-pg2pg-explicit-user.md) - Declare the container role explicitly.
+* [Local PostgreSQL fixture mode](/learnings/local-pg2pg-mode-baseline.md) - Start with a proven replication mode.
+* [Local fixture validation boundaries](/learnings/local-validation-boundaries.md) - Separate backend evidence from frontend installation.
 * [Dependency upgrade compatibility](/learnings/dependency-upgrade-compatibility.md) - Validate APIs, bytecode, and coordinated dependency families before major bumps.
 * [Dependency CI gates](/learnings/dependency-ci-gates.md) - Merge automation requires successful CI for the exact current PR head.
 * [Frontend E2E fixture isolation](/learnings/frontend-e2e-fixture-isolation.md) - Keep browser fixtures environment-aware and safe under parallel workers.

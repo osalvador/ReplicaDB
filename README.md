@@ -67,38 +67,100 @@ Before installing ReplicaDB, ensure you have:
   - **Sink database**: INSERT, UPDATE, DELETE, and CREATE TABLE permissions
 - **(Optional)** Docker or Podman for containerized deployment
 
-## Managed server artifact
+## Choose a release
 
-The repository currently builds two separate Maven artifacts. The root project remains the standalone CLI and does not include Spring Boot. Install it locally before building or running the server artifact:
+ReplicaDB has two separate releases:
+
+| | CLI | Server |
+| --- | --- | --- |
+| Use it for | Direct transfers from scripts or a terminal | Shared jobs, schedules, users, audit, and run history |
+| Download | `ReplicaDB-1.0.2.tar.gz` or `.zip` | `ReplicaDB-server-1.0.2.tar.gz` or `.zip` |
+| PostgreSQL | Only the source and sink databases | Embedded in `local`; external in `api` and `worker` |
+| State | `REPLICADB_HOME` | `REPLICADB_SERVER_HOME` |
+| Interface | CLI | Authenticated API/frontend and private worker health endpoint |
+
+Use the **CLI** for one replication at a time. It is Spring-free and keeps
+its existing options-file and exit-code behavior.
+
+Use the **server** for managed, shared, or distributed replication. Its
+`local` mode is a durable single-node install; `api` and `worker` use external
+PostgreSQL. It does not migrate CLI files or state.
+
+The server package requires Java 17, but not Maven, npm, Docker, or a system
+PostgreSQL installation. Extract it and start the local server:
 
 ```bash
-mvn install -DskipTests
-mvn -f replicadb-server/pom.xml spring-boot:run -Dspring-boot.run.profiles=api
+tar -xzf ReplicaDB-server-1.0.2.tar.gz
+cd ReplicaDB-server-1.0.2
+./bin/replicadb-server start local
+./bin/replicadb-server status
 ```
 
-The managed server listens on the API port, persists control-plane state in PostgreSQL, and serves the authenticated API/frontend under the `api` profile. The `worker` profile executes durable runs without exposing the product API; its internal Actuator management port is configurable and should remain on a private network. Use the deployment guide for the supported API/worker topology and migration handoff.
+The first local start downloads and verifies the platform PostgreSQL bundle.
+Set `REPLICADB_BOOTSTRAP_ADMIN_USERNAME` and
+`REPLICADB_BOOTSTRAP_ADMIN_PASSWORD` for automation, or answer the hidden
+prompt from an interactive terminal. The server home defaults to
+`~/.replicadb`; set `REPLICADB_SERVER_HOME` to change it. Keep the keyring and
+`data/postgresql` together when backing up. Warm-cache restarts do not need
+network access.
+
+For source builds and development profiles, see
+[`CONTRIBUTING.md`](CONTRIBUTING.md) and
+[`docs/server.md`](docs/server.md).
+
+### Local single-node server without Docker
+
+For a durable local installation, `replicadb-server` can manage a native
+embedded PostgreSQL process. This mode uses the same PostgreSQL repositories,
+Flyway migrations, Quartz scheduler, encrypted datasource catalog, and local
+job execution as the `api` profile; it does not start a separate worker.
+
+The extracted package is the recommended durable local installation:
+
+```bash
+export REPLICADB_BOOTSTRAP_ADMIN_USERNAME='local-admin'
+export REPLICADB_BOOTSTRAP_ADMIN_PASSWORD='<local-password>'
+./bin/replicadb-server start local
+./bin/replicadb-server status
+./bin/replicadb-server stop
+```
+
+The first start downloads and verifies the platform PostgreSQL bundle from
+Maven Central. It does not require Docker or a system PostgreSQL installation,
+but it does require network access unless the bundle is already cached. The
+current release manifest covers macOS ARM64 and x64, Linux x64, and Windows
+x64; unsupported operating systems or architectures fail with an actionable
+startup error. By default, durable state lives under `~/.replicadb`:
+
+```text
+~/.replicadb/
+  data/postgresql/       metadata database and job history
+  cache/postgresql/      verified native PostgreSQL bundle and extraction
+  security/master-key.json
+  locks/
+  run/
+  logs/
+```
+
+Set `REPLICADB_SERVER_HOME` to move this complete local installation. Keep the
+`security/master-key.json` keyring with the database backup; losing it makes
+encrypted datasource credentials unrecoverable. An explicit
+`REPLICADB_SECURITY_KEYRING_FILE` can point to a separately managed keyring;
+the old `REPLICADB_SECURITY_MASTER_KEY_FILE` name remains a deprecated alias.
+
+Stop the server before backing up or restoring `data/postgresql` and the
+keyring. The cached native bundle can be recreated if it is absent. Major
+PostgreSQL upgrades are not performed automatically; back up the local home
+before upgrading ReplicaDB and follow the release notes for any data-directory
+migration.
+
+The embedded mode binds PostgreSQL to loopback and uses local HTTP session
+cookies. Put TLS or an authenticated reverse proxy in front of it before
+exposing the API beyond the local machine. It is a single-node convenience
+mode, not a replacement for the external PostgreSQL plus `api`/`worker`
+topology in [DEPLOYMENT.md](DEPLOYMENT.md).
 
 The distributed worker runtime uses the Phase 3.4 hybrid admission policy for approximate load distribution. The standalone CLI artifact remains Spring-free, accepts its existing options-file contract, and does not require the managed metadata database.
-
-### Managed datasource profiles
-
-The managed server keeps reusable source and sink profiles in its encrypted
-datasource catalog. Jobs reference datasource UUIDs and retain only
-replication settings such as tables, modes, watermarks, retry policy, and
-tuning. Connection credentials, full credential-bearing MongoDB URIs, S3 keys,
-Kafka security values, and Azure authentication material are submitted through
-the authenticated API, encrypted before PostgreSQL persistence, and never
-returned to the frontend.
-
-Non-secret connector settings belong to `technicalParams`; sensitive values
-belong to the datasource security bundle. Blank security fields preserve an
-existing value during an update, while `clearSecurityKeys` explicitly removes
-one. The mounted keyring is configured with
-`REPLICADB_SECURITY_MASTER_KEY_FILE` and is required by both API and worker
-profiles. See [DEPLOYMENT.md](DEPLOYMENT.md) for TLS, key rotation, backup, and
-API/worker operations.
-
-If Maven reports that `org.replicadb:ReplicaDB` cannot be resolved, run `mvn install -DskipTests` from the repository root first. The sibling server project resolves the CLI artifact from the local Maven repository rather than from a reactor build.
 
 ## Stand Alone
 
@@ -114,8 +176,8 @@ ReplicaDB is written in Java and requires a Java Runtime Environment (JRE) Stand
 Download the latest release from GitHub and extract the archive:
 
 ```bash
-$ curl -o ReplicaDB-0.18.4.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v0.18.4/ReplicaDB-0.18.4.tar.gz"
-$ tar -xvzf ReplicaDB-0.18.4.tar.gz
+$ curl -o ReplicaDB-1.0.2.tar.gz -L "https://github.com/osalvador/ReplicaDB/releases/download/v1.0.2/ReplicaDB-1.0.2.tar.gz"
+$ tar -xvzf ReplicaDB-1.0.2.tar.gz
 $ ./bin/replicadb --help
 ```
 
@@ -125,7 +187,7 @@ ReplicaDB already comes with all the JDBC drivers for the [Compatible Databases]
 
 First, download the appropriate JDBC driver for the type of database you want to use, and install the `.jar` file in the `$REPLICADB_HOME/lib` directory. Each driver `.jar` file also has a specific driver class that defines the entry-point to the driver.
 
-If your database is JDBC-compliant and not appear in the [Compatible Databases](#compatible-databases) list, you must set the driver class name in the configuration properties as [extra JDBC parameter](https://osalvador.github.io/ReplicaDB/docs/docs.html#32-connecting-to-a-database-server).
+If your database is JDBC-compliant and not appear in the [Compatible Databases](#compatible-databases) list, you must set the driver class name in the configuration properties as [extra JDBC parameter](https://osalvador.github.io/ReplicaDB/connectors/generic-jdbc/).
 
 For example, to replicate a DB2 database table as both source and sink
 
@@ -173,7 +235,9 @@ $ podman run \
 
 # Full Documentation
 
-You can find the full ReplicaDB documentation here: [Docs](https://osalvador.github.io/ReplicaDB/docs/docs.html)
+The canonical user documentation portal is [ReplicaDB Documentation](https://osalvador.github.io/ReplicaDB/).
+The portal covers the standalone CLI, managed server workflows, connector
+capabilities, architecture, operations, and the generated API reference.
 
 # Configuration Wizard
 
@@ -189,7 +253,7 @@ You can create a configuration file for a ReplicaDB process by filling out a sim
 - Source table must exist and be accessible with SELECT permissions
 - Sink table must exist with a compatible schema
 - For `incremental` mode, sink table must have primary keys defined
-- For `incremental` mode, `--incremental-watermark-column` (with an optional `--incremental-watermark-value`) automates the `--source-where` filtering described in the [full documentation](https://osalvador.github.io/ReplicaDB/docs/docs.html)
+- For `incremental` mode, `--incremental-watermark-column` (with an optional `--incremental-watermark-value`) automates the `--source-where` filtering described in the [CLI watermark guide](https://osalvador.github.io/ReplicaDB/cli/incremental-watermarks/)
 
 ```bash
 $ replicadb --mode=complete -j=1 \
@@ -303,7 +367,7 @@ $ replicadb --mode=complete -j=1 \
 | Amazon S3               | :heavy_multiplication_x: | :heavy_check_mark: |            N/A            |           N/A            |     :heavy_check_mark:    |
 | JDBC-Compliant database |    :heavy_check_mark:    | :heavy_check_mark: | :heavy_multiplication_x:  | :heavy_multiplication_x: |     :heavy_check_mark:    |
 
-See [DB2 Documentation](https://osalvador.github.io/ReplicaDB/docs/docs.html) for driver installation and platform-specific details.
+See [DB2 Documentation](https://osalvador.github.io/ReplicaDB/connectors/db2/) for driver installation and platform-specific details.
 
 # Roadmap
 

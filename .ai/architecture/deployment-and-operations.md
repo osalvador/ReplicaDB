@@ -26,7 +26,13 @@ sources:
     resource: docker-compose.server.yml
   - id: docs-check
     resource: scripts/check-phase3-docs.sh
-generated: { by: itx-code, at: "2026-08-25T13:42:47Z" }
+  - id: local-start
+    resource: replicadb-server/frontend/scripts/start-local.sh
+  - id: local-processes
+    resource: replicadb-server/frontend/scripts/local-api-processes.sh
+  - id: local-guide
+    resource: replicadb-server/frontend/README.develop.md
+generated: { by: itx-init/2.1, at: "2026-09-04T05:47:18Z" }
 status: stable
 ---
 
@@ -34,8 +40,8 @@ The root build targets Java 17 and packages the standalone CLI with vendor drive
 
 Managed runtime configuration is environment-driven for datasource and bootstrap concerns. The API profile enables Flyway, JDBC sessions, and a PostgreSQL-backed clustered Quartz store; product schedules remain reconciled from PostgreSQL. The worker profile disables its product listener with `server.port=-1` and exposes only an internal Actuator management port. PostgreSQL `now()` owns claim eligibility, lease timestamps, and expiry backoff. The managed server image runs as a non-root user, and Compose provides two APIs plus one or more workers on separated public/control networks. Testcontainers cover multiple database families, with architecture, resource, reuse, and vendor-image health treated as separate infrastructure concerns.
 
-CI runs separate database integration, non-integration, server, frontend E2E, multi-node resilience/load, and packaging jobs with Docker/Testcontainers configuration; frontend E2E also regenerates and diffs the OpenAPI TypeScript schema. Server gates cover 16 Flyway migrations, image smoke, documentation checks, and the worker profile. Dependabot covers Maven, Bundler, and GitHub Actions, with hardened workflow-run checks before auto-merge and a manual rebase workflow.
+CI runs separate database integration, non-integration, server, frontend E2E, multi-node resilience/load, and packaging jobs with Docker/Testcontainers configuration; frontend E2E also regenerates and diffs the OpenAPI TypeScript schema. Server gates cover the current 21 Flyway migrations, image smoke, documentation checks, and the worker profile. Dependabot covers Maven, Bundler, and GitHub Actions, with hardened workflow-run checks before auto-merge and a manual rebase workflow.
 
-Phase 3.3 distributed workers, notification dispatch, shared login throttling, health/metrics, persistent Quartz clustering, server packaging, and process-level resilience/load validation are implemented and validated. Phase 3.4 hybrid worker load distribution remains an approved follow-up.
+The local frontend launcher checks Java 17 and required tools, detects checkout-owned API/Vite processes and the dedicated PostgreSQL container, asks for confirmation before replacing stale resources, chooses free ports, waits for health, seeds an isolated PostgreSQL fixture, and recursively cleans up its child processes, container, temporary logs, and key file. Non-interactive stale-resource detection aborts without stopping anything. Phase 3.3 distributed workers, notification dispatch, shared login throttling, health/metrics, persistent Quartz clustering, server packaging, and process-level resilience/load validation are implemented and validated. Phase 3.4 hybrid worker load distribution remains an approved follow-up.
 
 Reference implementations: `pom.xml`, `replicadb-server/pom.xml`, `replicadb-server/Dockerfile`, `docker-compose.server.yml`, `DEPLOYMENT.md`, and `replicadb-server/src/main/resources/application-api.yml`.

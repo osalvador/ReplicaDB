@@ -72,5 +72,22 @@ describe('theme visual token contract', () => {
     expect(theme.components?.MuiTable?.styleOverrides?.root).toHaveProperty(
       '& .MuiTableHead-root'
     );
+    expect(theme.components?.MuiMenu?.styleOverrides?.paper).toMatchObject({
+      borderRadius: 8,
+      backgroundColor: visualTokens.surface.paper,
+      boxShadow: theme.shadows[2]
+    });
+    expect(theme.components?.MuiMenuItem?.styleOverrides?.root).toHaveProperty('&&.Mui-selected');
+    expect(theme.components?.MuiMenuItem?.styleOverrides?.root).toHaveProperty(
+      '& .MuiListItemText-root'
+    );
+    expect(theme.components?.MuiAutocomplete?.styleOverrides?.paper).toMatchObject({
+      borderRadius: 8,
+      backgroundColor: visualTokens.surface.paper,
+      boxShadow: theme.shadows[2]
+    });
+    expect(theme.components?.MuiAutocomplete?.styleOverrides?.listbox).toHaveProperty(
+      '& .MuiAutocomplete-option'
+    );
   });
 });

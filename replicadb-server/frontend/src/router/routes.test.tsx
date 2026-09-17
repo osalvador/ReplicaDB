@@ -7,16 +7,21 @@ import * as jobsApi from '../api/jobsApi';
 import * as jobPermissionsApi from '../api/jobPermissionsApi';
 import * as datasourcesApi from '../api/datasourcesApi';
 import * as usersApi from '../api/usersApi';
+import * as auditApi from '../api/auditApi';
 import { AuthContext } from '../auth/AuthContext';
 import { theme } from '../theme/theme';
 import { routeObjects } from './routes';
 
-vi.mock('../api/jobsApi', () => ({
-  listJobs: vi.fn(),
-  getJob: vi.fn(),
-  createJob: vi.fn(),
-  updateJob: vi.fn()
-}));
+vi.mock('../api/jobsApi', async () => {
+  const actual = await vi.importActual<typeof import('../api/jobsApi')>('../api/jobsApi');
+  return {
+    ...actual,
+    listJobs: vi.fn(),
+    getJob: vi.fn(),
+    createJob: vi.fn(),
+    updateJob: vi.fn()
+  };
+});
 
 vi.mock('../api/jobPermissionsApi', () => ({
   listJobPermissions: vi.fn()
@@ -40,11 +45,16 @@ vi.mock('../api/datasourcesApi', async () => {
 vi.mock('../api/usersApi', () => ({
   listUsers: vi.fn()
 }));
+vi.mock('../api/auditApi', async () => ({
+  ...(await vi.importActual<typeof import('../api/auditApi')>('../api/auditApi')),
+  listAuditEvents: vi.fn()
+}));
 
 const mockedJobsApi = vi.mocked(jobsApi);
 const mockedJobPermissionsApi = vi.mocked(jobPermissionsApi);
 const mockedDatasourcesApi = vi.mocked(datasourcesApi);
 const mockedUsersApi = vi.mocked(usersApi);
+const mockedAuditApi = vi.mocked(auditApi);
 
 function renderAt(path: string, role: 'ADMIN' | 'OPERATOR' | 'VIEWER' = 'OPERATOR') {
   const memoryRouter = createMemoryRouter(routeObjects, {
@@ -119,6 +129,23 @@ describe('route shell', () => {
     expect(await screen.findByRole('heading', { name: 'Users' })).toBeInTheDocument();
   });
 
+  it('renders the audit route for admins', async () => {
+    mockedAuditApi.listAuditEvents.mockResolvedValue({ content: [], page: 0, size: 25, totalElements: 0 });
+    mockedUsersApi.listUsers.mockResolvedValue({ content: [], page: 0, size: 100, totalElements: 0 });
+    renderAt('/audit', 'ADMIN');
+
+    expect(await screen.findByRole('heading', { name: 'Audit' })).toBeInTheDocument();
+  });
+
+  it('renders the profile route for every authenticated role', () => {
+    renderAt('/profile', 'OPERATOR');
+
+    expect(screen.getByRole('heading', { name: 'My profile' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Username')).toHaveValue('operator');
+    expect(screen.getByLabelText('Role')).toHaveValue('OPERATOR');
+    expect(screen.getByText('Contact an administrator to change your password for now.')).toBeInTheDocument();
+  });
+
   it('renders the job permissions route for admins', async () => {
     mockedJobsApi.getJob.mockResolvedValue({ id: 'job-1', name: 'Orders replication' });
     mockedJobPermissionsApi.listJobPermissions.mockResolvedValue([]);
@@ -127,7 +154,7 @@ describe('route shell', () => {
     expect(await screen.findByRole('heading', { name: 'Orders replication permissions' })).toBeInTheDocument();
   });
 
-  it.each(['/users', '/jobs/job-1/permissions', '/datasources/new', '/datasources/datasource-1/permissions'])('blocks %s for non-admin users', path => {
+  it.each(['/audit', '/users', '/jobs/job-1/permissions', '/datasources/new', '/datasources/datasource-1/permissions'])('blocks %s for non-admin users', path => {
     renderAt(path, 'OPERATOR');
 
     expect(screen.getByRole('heading', { name: 'Not authorized' })).toBeInTheDocument();

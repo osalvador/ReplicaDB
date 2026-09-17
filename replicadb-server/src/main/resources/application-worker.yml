@@ -33,6 +33,10 @@ management:
       probes:
         enabled: true
       show-details: never
+      group:
+        readiness:
+          include: readinessState,controlPlane,workerRuntime
+          show-components: always
 replicadb:
   worker:
     identity: ${REPLICADB_WORKER_IDENTITY:}

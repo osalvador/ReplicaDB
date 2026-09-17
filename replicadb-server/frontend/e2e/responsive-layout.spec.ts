@@ -92,9 +92,13 @@ for (const viewport of viewports) {
       await assertHeaderDoesNotOverlap(page);
       await assertInsideViewport(page, page.getByRole('banner'));
       await assertInsideViewport(page, page.getByRole('heading', { name: 'Dashboard' }));
-      await assertInsideViewport(page, page.getByRole('link', { name: 'New job' }));
+      const openJobs = page.getByRole('link', { name: 'Open jobs' });
+      await assertInsideViewport(page, openJobs);
+      await openJobs.click();
+      await expect(page).toHaveURL(/\/jobs$/);
 
       const jobsTable = page.getByRole('table', { name: 'Jobs' });
+      await expect(jobsTable).toBeVisible();
       const jobsTableContainer = jobsTable.locator('..');
       const tableLayout = await jobsTableContainer.evaluate(element => ({
         clientWidth: element.clientWidth,
@@ -112,6 +116,7 @@ for (const viewport of viewports) {
       await assertInsideViewport(page, page.getByRole('button', { name: 'Create job' }));
 
       await page.goto('/');
+      await page.getByRole('link', { name: 'Open jobs' }).click();
       const seededJob = page.getByRole('link', { name: seededJobName });
       await expect(seededJob, `the seeded job ${seededJobName} must exist`).toBeVisible();
       await seededJob.click();
@@ -130,6 +135,7 @@ for (const viewport of viewports) {
       await assertInsideViewport(page, page.getByRole('button', { name: 'Save changes' }));
 
       await page.goto('/');
+      await page.getByRole('link', { name: 'Open jobs' }).click();
       await page.getByRole('link', { name: seededJobName }).click();
       await expect(page).toHaveURL(/\/jobs\/[^/]+$/);
       await page.getByRole('button', { name: 'Trigger run' }).click();

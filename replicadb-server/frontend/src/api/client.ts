@@ -14,6 +14,10 @@ export class ApiError extends Error {
   }
 }
 
+export function isNetworkError(error: unknown): boolean {
+  return axios.isAxiosError(error) && !error.response;
+}
+
 export const apiClient = axios.create({
   baseURL: '/api/v1',
   withCredentials: true,
