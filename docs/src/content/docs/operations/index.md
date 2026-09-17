@@ -9,6 +9,8 @@ topologies, health, metrics, security, backup, upgrade, and recovery.
 
 - [Run a local server](/ReplicaDB/operations/local-server/).
 - [Deploy API and workers](/ReplicaDB/operations/distributed-deployment/).
+- [Run on Google Cloud Run, including the optional public frontend](/ReplicaDB/operations/gcp-cloud-run/).
+- [Use the Cloud Run deployment bundle](/ReplicaDB/operations/gcp-deploy-bundle/).
 - [Configure runtime settings](/ReplicaDB/operations/configuration/).
 - [Plan capacity](/ReplicaDB/operations/capacity-planning/).
 - [Read health and metrics](/ReplicaDB/operations/health-and-metrics/).

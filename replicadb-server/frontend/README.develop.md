@@ -371,7 +371,7 @@ Después arranca el jar con el perfil `api` y las variables `DB_URL`, `DB_USERNA
 
 ```bash
 java -Dspring.profiles.active=api \
-  -jar replicadb-server/target/replicadb-server-1.0.0.jar
+  -jar replicadb-server/target/replicadb-server-1.0.2.jar
 ```
 
 En este modo la interfaz se sirve desde el mismo proceso en `http://localhost:8080`.

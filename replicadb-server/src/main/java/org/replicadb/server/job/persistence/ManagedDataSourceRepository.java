@@ -18,6 +18,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -116,6 +117,32 @@ public class ManagedDataSourceRepository implements ManagedDataSourceStore {
         return queryOne("SELECT " + FULL_COLUMNS
                 + " FROM managed_datasource WHERE name = :name", Map.of("name", name), FULL_ROW_MAPPER);
     }
+
+        @Override
+        public Map<String, Long> countByKeyVersion() {
+        Map<String, Long> counts = new LinkedHashMap<>();
+            List<Map.Entry<String, Long>> rows = jdbcTemplate.query(
+                "SELECT key_version, COUNT(*) FROM managed_datasource GROUP BY key_version",
+                Map.of(), (resultSet, rowNum) -> Map.entry(resultSet.getString("key_version"),
+                    resultSet.getLong(2)));
+            rows.forEach(row -> counts.put(row.getKey(), row.getValue()));
+        return Map.copyOf(counts);
+        }
+
+        @Override
+        public Optional<UUID> findIdPendingReencryption(String currentVersion, Set<String> knownVersions) {
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
+            .addValue("currentVersion", currentVersion)
+            .addValue("knownVersions", knownVersions.toArray(String[]::new), Types.ARRAY);
+        return jdbcTemplate.query("""
+            SELECT id FROM managed_datasource
+            WHERE key_version <> :currentVersion AND key_version = ANY(:knownVersions)
+            ORDER BY id
+            LIMIT 1
+            FOR UPDATE SKIP LOCKED
+            """, parameters, (resultSet, rowNum) -> resultSet.getObject("id", UUID.class))
+            .stream().findFirst();
+        }
 
     @Override
     public List<ManagedDataSourceSummary> findPage(int page, int size,
