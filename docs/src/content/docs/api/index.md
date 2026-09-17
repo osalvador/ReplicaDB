@@ -8,7 +8,7 @@ slug: api-introduction
 ReplicaDB Server exposes its control plane below the `/api/v1` base path. The
 endpoint pages are generated from the tested Springdoc contract and grouped by
 the same domains used in the application: authentication, dashboard,
-datasources, permissions, jobs, schedules, runs, users, and audit.
+datasources, permissions, jobs, schedules, runs, users, audit, and keyring.
 
 The public documentation does not proxy live requests. The API uses
 same-origin session cookies and CSRF protection, so interactive calls should be
@@ -137,3 +137,4 @@ credential-redacted, but clients should still treat it as operational data.
 - [Runs](/ReplicaDB/api/operations/tags/runs/)
 - [Users](/ReplicaDB/api/operations/tags/users/)
 - [Audit](/ReplicaDB/api/operations/tags/audit/)
+- [Keyring](/ReplicaDB/api/operations/tags/keyring/)

@@ -1,0 +1,157 @@
+---
+title: Cloud Run deployment bundle
+description: Guided self-managed Cloud Run deployment for ReplicaDB simple and distributed topologies.
+---
+
+The extracted server package and source checkout include `deploy/gcp/deploy.sh`.
+It is a self-managed deployment adapter around `gcloud`, Cloud Run, Cloud SQL,
+Secret Manager, and an existing VPC. It does not install Google Cloud tooling or
+mutate shared networking resources.
+
+## Choose a mode
+
+| Mode | API service | Worker Pool | Use case |
+| --- | --- | --- | --- |
+| `simple` | `api` profile with local execution enabled | None | Lowest-friction single-service deployment |
+| `distributed` | `api` profile with local execution disabled | Required, fixed count of at least one | Separate execution capacity and worker identity |
+
+Both modes require external PostgreSQL and a shared ReplicaDB keyring. The worker
+has no public product HTTP endpoint.
+
+## Prerequisites
+
+Install Bash, `gcloud`, `curl`, `jq`, and Docker when resolving a mutable image tag
+or mirroring to Artifact Registry. Authenticate `gcloud`, select a project with
+Cloud Run, Cloud SQL, Secret Manager, Compute, Service Usage, Service Networking,
+Artifact Registry, and IAM Credentials API visibility, and provide an existing VPC
+network/subnet. The runtime identities need Cloud Run deployment, Service Account
+User, Cloud SQL, and Secret Manager Secret Accessor permissions.
+
+Run the read-only gate first:
+
+```bash
+./deploy/gcp/deploy.sh preflight \
+  --project PROJECT_ID \
+  --region europe-west4 \
+  --mode simple \
+  --image-digest sha256:IMAGE_DIGEST
+```
+
+The image reference is immutable in a deployment. The default is the versioned
+`osalvador/replicadb-server:1.0.1` release image; `latest` requires an explicit
+`--allow-latest` override. Use `--artifact-registry-image` when Docker Hub is
+blocked by organization policy.
+
+## Deploy an existing environment
+
+Copy `deploy/gcp/config.example.env` to an ignored `config.env`, or provide the
+same values as environment variables. Existing Secret Manager names and explicit
+versions are reused; their payloads are never printed.
+
+```bash
+./deploy/gcp/deploy.sh deploy \
+  --project PROJECT_ID \
+  --region europe-west4 \
+  --mode simple \
+  --image-digest sha256:IMAGE_DIGEST \
+  --cloud-sql-instance INSTANCE \
+  --network NETWORK \
+  --subnet SUBNET \
+  --service-account api-runtime@PROJECT_ID.iam.gserviceaccount.com
+```
+
+For distributed mode, add a worker identity and count:
+
+```bash
+./deploy/gcp/deploy.sh deploy \
+  --project PROJECT_ID \
+  --mode distributed \
+  --image-digest sha256:IMAGE_DIGEST \
+  --cloud-sql-instance INSTANCE \
+  --network NETWORK --subnet SUBNET \
+  --service-account api-runtime@PROJECT_ID.iam.gserviceaccount.com \
+  --worker-service-account worker-runtime@PROJECT_ID.iam.gserviceaccount.com \
+  --worker-instances 2
+```
+
+The API uses instance-based billing, authenticated ingress, Direct VPC egress,
+minimum one instance, bounded maximum instances, and YAML startup/liveness/readiness
+probes. The generated state file records names, versions, ownership, and image
+digest only.
+
+## Create Cloud SQL explicitly
+
+Cloud SQL creation is billable and never inferred from missing resources. Add
+`--create-cloud-sql`, an instance name, network, and the exact confirmation token:
+
+```bash
+./deploy/gcp/deploy.sh deploy \
+  --project PROJECT_ID --mode simple \
+  --cloud-sql-instance INSTANCE --network NETWORK \
+  --create-cloud-sql --non-interactive \
+  --confirmation 'CREATE CLOUD SQL'
+```
+
+The deployer displays a redacted tier, storage, HA, backup, region, and deletion
+protection summary before creating the instance, database, user, and Secret Manager
+versions. A declined or misspelled confirmation performs no durable creation.
+
+## Verify and recover
+
+Verification obtains a short-lived identity token in memory for authenticated
+ingress and checks API liveness, API readiness, PostgreSQL, Quartz, the Worker Pool
+state, and recent worker logs. It never prints tokens or credentials.
+
+```bash
+./deploy/gcp/deploy.sh verify \
+  --project PROJECT_ID --region europe-west4 \
+  --deployment-id DEPLOYMENT_ID --mode distributed
+```
+
+Expected output is redacted and concise:
+
+```text
+Verification passed: API=https://SERVICE_URL mode=distributed
+```
+
+For an optional authenticated bootstrap smoke, set `REPLICADB_VERIFY_SMOKE=true`.
+If deployment stops after a partial creation, rerun with the same state file; the
+bundle rolls back or cleans only resources it created. Inspect the state file and
+Cloud Logging before retrying a failed Worker Pool update.
+
+## Cleanup
+
+Destroy requires a second exact confirmation and never deletes a shared VPC,
+subnet, pre-existing Cloud SQL instance, or unowned secret:
+
+```bash
+./deploy/gcp/deploy.sh destroy \
+  --project PROJECT_ID --deployment-id DEPLOYMENT_ID \
+  --confirmation 'DESTROY REPLICADB'
+```
+
+Use `--keep-cloud-sql` or `--keep-secrets` to preserve billable or reusable
+resources. If the state file is lost, use `--orphan-report` to list resources
+identified by the `replicadb-deployment=DEPLOYMENT_ID` label without deleting them.
+
+## Release package
+
+After extracting `ReplicaDB-server-VERSION.tar.gz` or its ZIP, run the same
+`deploy/gcp/deploy.sh` path from that directory. The bundle resolves paths relative
+to itself and does not require the ReplicaDB checkout.
+
+## Marketplace boundary
+
+This bundle is not a Marketplace listing or automatic Marketplace installer:
+
+- A **Marketplace Container Image Product** distributes a container image. It does
+  not automatically create this API, Worker Pool, Cloud SQL, VPC, or Secret Manager
+  topology.
+- A **GKE Marketplace App** packages a Kubernetes deployment for GKE. It is not a
+  Cloud Run Worker Pool deployment.
+- **Marketplace SaaS** integrates a hosted service, commercial onboarding, and
+  vendor support. This bundle is self-managed and provides none of those services.
+
+Immutable image references, redacted state, explicit ownership, and documented
+permissions keep this bundle compatible with a future Marketplace strategy without
+claiming that Marketplace packaging exists today.

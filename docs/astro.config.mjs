@@ -131,6 +131,8 @@ export default defineConfig({
                 'operations',
                 'operations/local-server',
                 'operations/distributed-deployment',
+                'operations/gcp-cloud-run',
+                'operations/gcp-deploy-bundle',
                 'operations/configuration',
                 'operations/capacity-planning',
                 'operations/health-and-metrics',

@@ -1,4 +1,4 @@
-# ReplicaDB Server 1.0.0
+# ReplicaDB Server 1.0.2
 
 For user-facing installation, workflow, operations, and API guidance, use the
 [ReplicaDB documentation portal](https://osalvador.github.io/ReplicaDB/).
@@ -8,7 +8,7 @@ a system PostgreSQL installation. Java 17 is required.
 
 ## Install
 
-Extract `ReplicaDB-server-1.0.0.tar.gz` or the matching ZIP, then run the
+Extract `ReplicaDB-server-1.0.2.tar.gz` or the matching ZIP, then run the
 launcher from the extracted directory:
 
 ```bash
@@ -57,3 +57,13 @@ upgrade is not performed automatically.
 
 The initial server JAR is approximately 213 MB. Native PostgreSQL bundles are
 downloaded on demand and are not included in this package or the JAR.
+
+## Cloud Run deployment bundle
+
+The extracted server package includes `deploy/gcp/deploy.sh` for the
+self-managed Cloud Run topology. Run `preflight`, then `deploy --mode simple`
+or `deploy --mode distributed` with an existing Cloud SQL instance and pinned
+Secret Manager versions. The bundle also supports explicitly confirmed Cloud
+SQL creation and ownership-aware `destroy`; read `deploy/gcp/README.md` before
+using billable resources. This package is not a Google Cloud Marketplace
+Container Image Product, GKE Marketplace App, or Marketplace SaaS offering.

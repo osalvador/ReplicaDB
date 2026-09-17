@@ -59,16 +59,25 @@ public final class LocalMasterKeyBootstrap {
     }
 
     private Path configuredKeyring(Properties systemProperties, Map<String, String> environment) {
-        String configured = systemProperties.getProperty(SecretProtectionProperties.MASTER_KEY_FILE_PROPERTY);
+        String property = SecretProtectionProperties.KEYRING_FILE_PROPERTY;
+        String configured = systemProperties.getProperty(property);
         if (configured == null) {
-            configured = environment.get("REPLICADB_SECURITY_MASTER_KEY_FILE");
+            property = "REPLICADB_SECURITY_KEYRING_FILE";
+            configured = environment.get(property);
+        }
+        if (configured == null) {
+            property = SecretProtectionProperties.MASTER_KEY_FILE_PROPERTY;
+            configured = systemProperties.getProperty(property);
+        }
+        if (configured == null) {
+            property = "REPLICADB_SECURITY_MASTER_KEY_FILE";
+            configured = environment.get(property);
         }
         if (configured == null) {
             return null;
         }
         if (configured.isBlank()) {
-            throw new IllegalArgumentException(
-                    SecretProtectionProperties.MASTER_KEY_FILE_PROPERTY + " must not be blank");
+            throw new IllegalArgumentException(property + " must not be blank");
         }
         return Path.of(configured).toAbsolutePath().normalize();
     }

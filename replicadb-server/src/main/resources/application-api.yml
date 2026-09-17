@@ -37,11 +37,16 @@ management:
   endpoint:
     health:
       show-details: when_authorized
+      group:
+        readiness:
+          include: readinessState,controlPlane,quartz,runQueue
+          show-components: always
 replicadb:
   server:
     execution:
       pool-size: 4
     scheduler:
       clustered-required: true
+      checkin-stale-factor: 3
     local-execution:
       enabled: true
