@@ -1,0 +1,28 @@
+.ai/architecture/deployment-and-operations.md
+  h_feb0db10da3b67 45
+.ai/architecture/managed-execution.md
+  h_feb0db10da3b67 9-12,35
+.ai/decisions/monolithic-control-plane.md
+  h_feb0db10da3b67 23
+.ai/learnings/tech-debt.md
+  h_feb0db10da3b67 21,26,30-31
+.ai/patterns/security-redaction.md
+  h_feb0db10da3b67 10,21,25
+ARCHITECTURE_DECISIONS.md
+  h_feb0db10da3b67 14-15,575-592,1105,1461,1571
+DEPLOYMENT.md
+  h_feb0db10da3b67 99-103,221-222
+README.md
+  h_feb0db10da3b67 108-110,375-403
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "125d84131fbe366035c6871a161b6f797af5a428",
+  "prompts": {},
+  "humans": {
+    "h_feb0db10da3b67": {
+      "author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
