@@ -48,7 +48,7 @@ jobs:
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_DEPLOYMENT_SERVICE_ACCOUNT }}
-      - uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/setup-gcloud@v3
       - name: Run explicit project preflight only
         env:
           REPLICADB_GCP_PROJECT: ${{ vars.REPLICADB_GCP_PROJECT }}
