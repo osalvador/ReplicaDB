@@ -187,7 +187,7 @@
         <dependency>
             <groupId>de.siegmar</groupId>
             <artifactId>fastcsv</artifactId>
-            <version>1.0.3</version>
+            <version>4.4.0</version>
         </dependency>
 
         <!-- Oracle -->
