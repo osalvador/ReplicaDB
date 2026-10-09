@@ -19,7 +19,7 @@ test('covers deployment, health, security, recovery, and metric interpretations'
     'local', 'api', 'worker', '8080', '9091', '/actuator/health/liveness', '/actuator/health/readiness',
     '/actuator/metrics', '/actuator/prometheus', 'liveness', 'readiness', 'DEGRADED',
     'replicadb.managed.claims', 'replicadb.managed.lease.renewals', 'replicadb.worker.admission.events',
-    '5 failed attempts', '15-minute', 'AES', 'keyring', 'point-in-time', 'V1 through V21', '256 KiB',
+    '5 failed attempts', '15-minute', 'AES', 'keyring', 'point-in-time', 'V1 through V22', '256 KiB',
     'never resumes', 'truncated', 'previous_run_id', 'watermark advances only', 'shutdown-timeout',
     '30 seconds', 'UUID order', '1,024', '250 ms', 'first 75%', 'last 25%',
     '[TRUNCATED: middle omitted]', 'replicadb.worker.listener.connected', 'replicadb.managed.polling.lag',

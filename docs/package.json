@@ -27,7 +27,7 @@
     "@astrojs/starlight": "0.42.0",
     "astro": "7.3.1",
     "mermaid": "11.17.2",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
     "starlight-openapi": "0.24.0"
   },
   "devDependencies": {
@@ -38,5 +38,8 @@
     "parse5": "^7.3.0",
     "typescript": "5.7.3",
     "vitest": "5.0.0"
+  },
+  "overrides": {
+    "katex": "0.18.9"
   }
 }
