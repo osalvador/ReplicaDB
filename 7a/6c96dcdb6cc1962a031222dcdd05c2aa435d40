@@ -1,0 +1,16 @@
+replicadb-server/frontend/package-lock.json
+  h_feb0db10da3b67 19,2569-2581,3826-3828,3831-3832,3835,3838-3844,3848-3850,3853,3856,3859-3860,4011-4016
+replicadb-server/frontend/package.json
+  h_feb0db10da3b67 29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7a6c96dcdb6cc1962a031222dcdd05c2aa435d40",
+  "prompts": {},
+  "humans": {
+    "h_feb0db10da3b67": {
+      "author": "Oscar Salvador Magallanes <oscarsm@inditex.com>"
+    }
+  }
+}
