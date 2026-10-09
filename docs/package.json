@@ -40,6 +40,7 @@
     "vitest": "5.0.0"
   },
   "overrides": {
-    "katex": "0.18.9"
+    "katex": "0.18.9",
+    "postcss-nested": "^8.0.1"
   }
 }
