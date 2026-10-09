@@ -372,6 +372,10 @@ See [DB2 Documentation](https://osalvador.github.io/ReplicaDB/connectors/db2/) f
 
 # Roadmap
 
+The detailed product strategy, prioritization, success criteria, and open
+decisions are maintained in [`ROADMAP.md`](ROADMAP.md). The summary below
+tracks the nearest planned product capabilities.
+
 The current managed-platform foundation is implemented: authenticated jobs,
 Quartz scheduling, durable PostgreSQL state, distributed workers, encrypted
 managed datasources, run diagnostics, and the standalone CLI compatibility

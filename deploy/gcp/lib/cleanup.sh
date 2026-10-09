@@ -18,6 +18,7 @@ cleanup_fail() {
 
 cleanup_collect() {
     local owned_secrets secret
+    local -a secret_names=()
     CLEANUP_SERVICES=()
     CLEANUP_WORKER_POOLS=()
     CLEANUP_SECRETS=()
@@ -33,10 +34,12 @@ cleanup_collect() {
         [[ -n "$(state_get apiServiceName)" ]] && CLEANUP_SERVICES+=("$(state_get apiServiceName)")
         [[ -n "$(state_get workerPoolName)" ]] && CLEANUP_WORKER_POOLS+=("$(state_get workerPoolName)")
         owned_secrets=$(state_get secretsOwned)
-        IFS=',' read -r -a secret_names <<<"$owned_secrets"
-        for secret in "${secret_names[@]}"; do
-            [[ -n "$secret" ]] && CLEANUP_SECRETS+=("$secret")
-        done
+        if [[ -n "$owned_secrets" ]]; then
+            IFS=',' read -r -a secret_names <<<"$owned_secrets"
+            for secret in "${secret_names[@]}"; do
+                [[ -n "$secret" ]] && CLEANUP_SECRETS+=("$secret")
+            done
+        fi
     else
         [[ "$CLEANUP_ORPHAN_REPORT" == true ]] || cleanup_fail "state file is missing: $STATE_FILE; use --orphan-report to discover labeled resources"
         local service_names worker_names

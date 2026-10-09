@@ -37,6 +37,10 @@ grep -Eq 'SERVER_PORT=-1' "$LOG_FILE"
 grep -Eq 'DB_URL=jdbc:postgresql://10.128.0.2:5432/replicadb' "$LOG_FILE"
 grep -Eq 'REPLICADB_WORKER_MANAGEMENT_ADDRESS=0.0.0.0' "$LOG_FILE"
 grep -Eq 'DB_USERNAME=db-user:3' "$LOG_FILE"
+grep -Eq 'remove-env-vars=REPLICADB_SECURITY_MASTER_KEY_FILE' "$LOG_FILE"
+grep -Eq 'remove-secrets=REPLICADB_SECURITY_MASTER_KEY_JSON' "$LOG_FILE"
+if grep -oE -- '--set-env-vars=[^ ]*' "$LOG_FILE" | grep -q 'REPLICADB_SECURITY_MASTER_KEY_FILE'; then exit 1; fi
+if grep -oE -- '--set-secrets=[^ ]*' "$LOG_FILE" | grep -q 'REPLICADB_SECURITY_MASTER_KEY_JSON'; then exit 1; fi
 if grep -Eq 'allow-unauthenticated|run.invoker' "$LOG_FILE"; then exit 1; fi
 
 WORKER_INSTANCES=0

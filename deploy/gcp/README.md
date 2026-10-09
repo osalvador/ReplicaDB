@@ -14,6 +14,8 @@ Marketplace installer.
   --cloud-sql-instance INSTANCE --network NETWORK --subnet SUBNET
 ./deploy.sh verify --project PROJECT_ID --deployment-id DEPLOYMENT_ID
 ./deploy.sh destroy --project PROJECT_ID --deployment-id DEPLOYMENT_ID
+./stop.sh --state-file ~/.config/replicadb-gcp/DEPLOYMENT_ID.state \
+  --confirmation 'STOP REPLICADB' --non-interactive
 scripts/phase5-gcp-frontend-smoke.sh --project PROJECT_ID \
   --region REGION --service SERVICE_NAME
 ```

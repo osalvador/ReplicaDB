@@ -95,6 +95,9 @@ initialize_config() {
     CREATE_CLOUD_SQL=false
     CONFIRMATION="${REPLICADB_CONFIRMATION:-}"
     NON_INTERACTIVE=false
+    PROJECT_ID_EXPLICIT=$([[ -n "${REPLICADB_GCP_PROJECT:-}" ]] && printf true || printf false)
+    REGION_EXPLICIT=$([[ -n "${REPLICADB_GCP_REGION:-}" ]] && printf true || printf false)
+    DEPLOYMENT_ID_EXPLICIT=$([[ -n "${REPLICADB_DEPLOYMENT_ID:-}" ]] && printf true || printf false)
 }
 
 initialize_config
@@ -205,15 +208,15 @@ parse_args() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --project) [[ $# -ge 2 ]] || die '--project requires a value'; PROJECT_ID=$2; shift 2 ;;
-            --region) [[ $# -ge 2 ]] || die '--region requires a value'; REGION=$2; shift 2 ;;
+            --project) [[ $# -ge 2 ]] || die '--project requires a value'; PROJECT_ID=$2; PROJECT_ID_EXPLICIT=true; shift 2 ;;
+            --region) [[ $# -ge 2 ]] || die '--region requires a value'; REGION=$2; REGION_EXPLICIT=true; shift 2 ;;
             --mode) [[ $# -ge 2 ]] || die '--mode requires a value'; MODE=$2; shift 2 ;;
             --image) [[ $# -ge 2 ]] || die '--image requires a value'; IMAGE=$2; shift 2 ;;
             --image-tag) [[ $# -ge 2 ]] || die '--image-tag requires a value'; IMAGE_TAG=$2; IMAGE=''; shift 2 ;;
             --image-digest) [[ $# -ge 2 ]] || die '--image-digest requires a value'; IMAGE_DIGEST=$2; shift 2 ;;
             --artifact-registry-image) [[ $# -ge 2 ]] || die '--artifact-registry-image requires a value'; IMAGE_MIRROR=$2; shift 2 ;;
             --allow-latest) ALLOW_MUTABLE_IMAGE=true; shift ;;
-            --deployment-id) [[ $# -ge 2 ]] || die '--deployment-id requires a value'; DEPLOYMENT_ID=$2; shift 2 ;;
+            --deployment-id) [[ $# -ge 2 ]] || die '--deployment-id requires a value'; DEPLOYMENT_ID=$2; DEPLOYMENT_ID_EXPLICIT=true; shift 2 ;;
             --state-file) [[ $# -ge 2 ]] || die '--state-file requires a value'; STATE_FILE=$2; shift 2 ;;
             --network) [[ $# -ge 2 ]] || die '--network requires a value'; NETWORK=$2; shift 2 ;;
             --subnet) [[ $# -ge 2 ]] || die '--subnet requires a value'; SUBNET=$2; shift 2 ;;
@@ -240,11 +243,34 @@ parse_args() {
     done
 }
 
+load_destroy_state_defaults() {
+    local state_project state_region state_deployment state_mode state_image
+    [[ "$COMMAND" == destroy && -f "$STATE_FILE" ]] || return 0
+    state_load "$STATE_FILE"
+    state_project=$(state_get projectId)
+    state_region=$(state_get region)
+    state_deployment=$(state_get deploymentId)
+    state_mode=$(state_get mode)
+    state_image=$(state_get image)
+    [[ "${PROJECT_ID_EXPLICIT:-false}" != true || "$PROJECT_ID" == "$state_project" ]] || \
+        die 'project does not match the deployment state'
+    [[ "${REGION_EXPLICIT:-false}" != true || "$REGION" == "$state_region" ]] || \
+        die 'region does not match the deployment state'
+    [[ "${DEPLOYMENT_ID_EXPLICIT:-false}" != true || "$DEPLOYMENT_ID" == "$state_deployment" ]] || \
+        die 'deployment ID does not match the deployment state'
+    PROJECT_ID=$state_project
+    REGION=$state_region
+    DEPLOYMENT_ID=$state_deployment
+    MODE=$state_mode
+    [[ -n "$state_image" ]] && IMAGE=$state_image
+}
+
 main() {
     load_config
     initialize_config
     source_modules
     parse_args "$@"
+    load_destroy_state_defaults
     validate_common
 
     case "$COMMAND" in

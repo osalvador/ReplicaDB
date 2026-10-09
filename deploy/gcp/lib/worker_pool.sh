@@ -48,12 +48,14 @@ worker_pool_deploy() {
     else
         worker_pool_fail 'a private database IP or credential-free DB_URL is required for the worker'; return 1
     fi
-    secret_refs="DB_USERNAME=${DB_USERNAME_SECRET_NAME}:${DB_USERNAME_SECRET_VERSION},DB_PASSWORD=${DB_PASSWORD_SECRET_NAME}:${DB_PASSWORD_SECRET_VERSION},REPLICADB_SECURITY_KEYRING_CURRENT_VERSION=${KEYRING_VERSION_SECRET_NAME}:${KEYRING_VERSION_SECRET_VERSION},REPLICADB_SECURITY_KEYRING_CURRENT_KEY=${KEYRING_KEY_SECRET_NAME}:${KEYRING_KEY_SECRET_VERSION},REPLICADB_SECURITY_MASTER_KEY_JSON=${KEYRING_FILE_SECRET_NAME}:${KEYRING_FILE_SECRET_VERSION}"
-    env_vars="SPRING_PROFILES_ACTIVE=worker,SERVER_PORT=-1,DB_URL=${database_url},REPLICADB_SECURITY_MASTER_KEY_FILE=/tmp/replicadb-master-key,REPLICADB_WORKER_MANAGEMENT_PORT=${WORKER_MANAGEMENT_PORT},REPLICADB_WORKER_MANAGEMENT_ADDRESS=${WORKER_MANAGEMENT_ADDRESS},REPLICADB_WORKER_IDENTITY=${WORKER_IDENTITY}"
-    worker_args='-c,umask 077; printf "%s" "$REPLICADB_SECURITY_MASTER_KEY_JSON" > "$REPLICADB_SECURITY_MASTER_KEY_FILE"; exec java ${JAVA_OPTS:-} -Dreplicadb.embedded-postgres.enabled=false -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE:-worker} -jar /opt/replicadb/replicadb-server.jar'
+    secret_refs="DB_USERNAME=${DB_USERNAME_SECRET_NAME}:${DB_USERNAME_SECRET_VERSION},DB_PASSWORD=${DB_PASSWORD_SECRET_NAME}:${DB_PASSWORD_SECRET_VERSION},REPLICADB_SECURITY_KEYRING_CURRENT_VERSION=${KEYRING_VERSION_SECRET_NAME}:${KEYRING_VERSION_SECRET_VERSION},REPLICADB_SECURITY_KEYRING_CURRENT_KEY=${KEYRING_KEY_SECRET_NAME}:${KEYRING_KEY_SECRET_VERSION}"
+    env_vars="SPRING_PROFILES_ACTIVE=worker,SERVER_PORT=-1,DB_URL=${database_url},REPLICADB_WORKER_MANAGEMENT_PORT=${WORKER_MANAGEMENT_PORT},REPLICADB_WORKER_MANAGEMENT_ADDRESS=${WORKER_MANAGEMENT_ADDRESS},REPLICADB_WORKER_IDENTITY=${WORKER_IDENTITY}"
+    worker_args='-c,exec java ${JAVA_OPTS:-} -Dreplicadb.embedded-postgres.enabled=false -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE:-worker} -jar /opt/replicadb/replicadb-server.jar'
     gcloud beta run worker-pools deploy "$WORKER_POOL_NAME" --project="$PROJECT_ID" --region="$REGION" \
         --image="$FINAL_IMAGE" --service-account="$WORKER_SERVICE_ACCOUNT" --instances="$WORKER_INSTANCES" \
         --command=sh --args="$worker_args" --set-env-vars="$env_vars" --set-secrets="$secret_refs" \
+        --remove-env-vars=REPLICADB_SECURITY_MASTER_KEY_FILE \
+        --remove-secrets=REPLICADB_SECURITY_MASTER_KEY_JSON \
         --network="$NETWORK" --subnet="$SUBNET" \
         >/dev/null || { worker_pool_fail "could not deploy Worker Pool: $WORKER_POOL_NAME"; return 1; }
     printf 'Cloud Run Worker Pool deployed: %s instances=%s\n' "$WORKER_POOL_NAME" "$WORKER_INSTANCES"
