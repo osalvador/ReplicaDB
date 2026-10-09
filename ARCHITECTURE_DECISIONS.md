@@ -1364,7 +1364,7 @@ Manual triggers and Quartz triggers reject a job whose source or sink use flag i
 - [x] **Phase 4.2.** Add AES-256-GCM envelope encryption with an external mounted key, the pre-production PostgreSQL reset migration, datasource repositories, restrictive foreign keys, datasource ACLs (`VIEW`/`USE`/`EDIT`), job-level binding-use flags, and race-safe claim/trigger enforcement.
 - [x] **Phase 4.3.** Replace the managed REST contract and frontend connection fields with datasource CRUD, safe datasource summaries, datasource permission administration, and source/sink datasource selectors. Reuse `/api/v1` under the explicit pre-production reset rule and keep generated OpenAPI types authoritative.
 - [x] **Phase 4.4.** Resolve live datasource references at claim time, retain only temporal datasource correlation in run/audit state, construct `ToolOptions` through the additive root-artifact builder without a managed options file, and preserve worker UUID-only dispatch and secret redaction.
-- [x] **Phase 4.5.** Validate datasource update visibility on the next run, binding disablement across manual/scheduled/retry/recovery/worker paths, restrictive deletion, capability enforcement, distributed execution, frontend behavior, and standalone CLI compatibility. **Completed and validated on September 1, 2026.**
+- [x] **Phase 4.5.** Validate datasource update visibility on the next run, binding disablement across manual/scheduled/retry/recovery/worker paths, restrictive deletion, capability enforcement, distributed execution, frontend behavior, and standalone CLI compatibility validation. **Completed and validated on September 1, 2026.**
 
 ---
 
@@ -1458,7 +1458,7 @@ Manual triggers and Quartz triggers reject a job whose source or sink use flag i
 
 ### Deployment
 
-- PostgreSQL is mandatory for the `api` and `worker` profiles; the CLI does not use it. **Implemented through Phase 4**: `application-api.yml` and `application-worker.yml` wire `spring.datasource`/`spring.flyway`, and the current managed state, run diagnostics, datasource catalog, ACL, Quartz, login-throttle, and job-deletion schema is versioned by Flyway migrations V1 through V21. The worker dispatch, hybrid admission, Quartz JDBC clustering, shared throttle runtime, encrypted datasource catalog, and keyring lifecycle remain isolated from the CLI artifact.
+- PostgreSQL is mandatory for the `api` and `worker` profiles; the CLI does not use it. **Implemented through Phase 4**: `application-api.yml` and `application-worker.yml` wire `spring.datasource`/`spring.flyway`, and the current managed state, run diagnostics, datasource catalog, ACL, Quartz, login-throttle, and job-deletion schema is versioned by Flyway migrations V1 through V22. The worker dispatch, hybrid admission, Quartz JDBC clustering, shared throttle runtime, encrypted datasource catalog, and keyring lifecycle remain isolated from the CLI artifact.
 - SQLite is limited to isolated CLI fixtures or unit tests.
 - The CLI remains available in every implementation phase and deployment model.
 - The `api` profile may run as multiple stateless instances; Quartz uses PostgreSQL JDBC clustering in Phase 3.

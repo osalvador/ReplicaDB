@@ -4,7 +4,7 @@ description: Apply forward-only migrations and move scheduler ownership safely.
 ---
 
 
-Migrations V1 through V21 are forward-only. Apply Flyway migrations before
+Migrations V1 through V22 are forward-only. Apply Flyway migrations before
 starting a new API/worker cluster and keep Quartz schema creation under the
 managed migration path; automatic Quartz schema creation is disabled.
 
