@@ -1,6 +1,7 @@
 package org.replicadb.server.audit.api;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.replicadb.server.audit.domain.AuditAction;
 import org.replicadb.server.audit.domain.AuditActor;
@@ -34,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("api")
 @Import(PostgresTestcontainersConfig.class)
+@Tag("docker")
 class AuditEventControllerTest {
 
     @Autowired

@@ -2,6 +2,7 @@ package org.replicadb.server.job.execution;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
@@ -48,6 +49,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest
 @ActiveProfiles("api")
 @Import(PostgresTestcontainersConfig.class)
+@Tag("docker")
 class RunExecutionCoordinatorTest {
 
     @Autowired

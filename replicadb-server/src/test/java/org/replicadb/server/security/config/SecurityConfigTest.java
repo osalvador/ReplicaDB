@@ -1,5 +1,6 @@
 package org.replicadb.server.security.config;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("api")
 @Import(PostgresTestcontainersConfig.class)
+@Tag("docker")
 class SecurityConfigTest {
 
     @Autowired

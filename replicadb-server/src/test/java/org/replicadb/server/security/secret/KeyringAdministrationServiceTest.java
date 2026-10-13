@@ -1,6 +1,7 @@
 package org.replicadb.server.security.secret;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.ConnectorType;
@@ -29,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest
 @ActiveProfiles("api")
 @Import({PostgresTestcontainersConfig.class, KeyringAdministrationServiceTest.RotationConfiguration.class})
+@Tag("docker")
 class KeyringAdministrationServiceTest {
 
     @Autowired

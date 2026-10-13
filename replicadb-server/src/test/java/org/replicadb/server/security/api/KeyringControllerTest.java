@@ -1,6 +1,7 @@
 package org.replicadb.server.security.api;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.domain.ConnectorType;
@@ -43,6 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("api")
 @Import({PostgresTestcontainersConfig.class, KeyringControllerTest.RotationConfiguration.class})
 @WithMockUser(roles = "ADMIN")
+@Tag("docker")
 class KeyringControllerTest {
 
     @Autowired

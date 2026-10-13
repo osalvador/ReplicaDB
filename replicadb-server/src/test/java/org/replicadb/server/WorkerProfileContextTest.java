@@ -1,5 +1,6 @@
 package org.replicadb.server;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.quartz.Scheduler;
 import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
@@ -39,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SpringBootTest
 @ActiveProfiles("worker")
 @Import(PostgresTestcontainersConfig.class)
+@Tag("docker")
 class WorkerProfileContextTest {
 
     @Autowired

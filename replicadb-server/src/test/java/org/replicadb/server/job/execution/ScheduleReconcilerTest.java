@@ -1,6 +1,7 @@
 package org.replicadb.server.job.execution;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.quartz.Scheduler;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest
 @ActiveProfiles("api")
 @Import(PostgresTestcontainersConfig.class)
+@Tag("docker")
 class ScheduleReconcilerTest {
 
     @Autowired

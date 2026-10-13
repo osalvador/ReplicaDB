@@ -1,6 +1,7 @@
 package org.replicadb.server.job.api;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.server.audit.domain.AuditAction;
@@ -43,6 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("api")
 @Import(PostgresTestcontainersConfig.class)
 @WithMockUser(roles = "ADMIN")
+@Tag("docker")
 class JobRunCancellationRaceTest {
 
     @Autowired

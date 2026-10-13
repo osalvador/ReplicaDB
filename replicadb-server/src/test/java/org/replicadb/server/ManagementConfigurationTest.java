@@ -1,5 +1,6 @@
 package org.replicadb.server;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
@@ -27,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         })
 @ActiveProfiles("worker")
 @Import(PostgresTestcontainersConfig.class)
+@Tag("docker")
 class ManagementConfigurationTest {
 
     @LocalManagementPort

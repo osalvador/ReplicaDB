@@ -1,6 +1,7 @@
 package org.replicadb.server.job.api;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.replicadb.cli.ReplicationMode;
@@ -66,6 +67,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 @ActiveProfiles("api")
 @Import(PostgresTestcontainersConfig.class)
 @WithMockUser(roles = "ADMIN")
+@Tag("docker")
 class JobRunControllerTest {
 
     @Autowired
