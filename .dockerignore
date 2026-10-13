@@ -1,0 +1,14 @@
+.git
+.ai
+.github
+.idea
+.impeccable
+.factorypath
+.worktrees
+.playwright-mcp
+docs
+deploy
+test-results
+playwright-report
+**/target
+**/node_modules
