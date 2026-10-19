@@ -1,0 +1,35 @@
+DEPLOYMENT.md
+  s_9a476d5d560a37::t_69ecb30cf2ade2 57-58
+README.md
+  s_9a476d5d560a37::t_f03a46f95b0486 77,93-94,180-181
+RELEASE_GUIDE.md
+  s_9a476d5d560a37::t_9d62296ab81b71 3,42,48,57,63-64,73-77,130
+docker-compose.server.yml
+  s_9a476d5d560a37::t_70f521dc58c77f 23,55,87,130
+pom.xml
+  s_9a476d5d560a37::t_e9fb151d9134bd 9
+replicadb-server/Dockerfile
+  s_9a476d5d560a37::t_d0c8608232cebc 3
+replicadb-server/README.md
+  s_9a476d5d560a37::t_10e9beaf490d9d 1,11
+replicadb-server/frontend/README.develop.md
+  s_9a476d5d560a37::t_4a91eaebe7a3a4 374
+replicadb-server/pom.xml
+  s_9a476d5d560a37::t_977c92fc82a446 16,42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b56d7696fc3cec4e633ef8e1ac980d12d741df50",
+  "prompts": {},
+  "sessions": {
+    "s_9a476d5d560a37": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "1cdab01e-9686-486d-8b57-ec0a995dbda1",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
