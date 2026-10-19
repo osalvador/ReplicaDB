@@ -8,37 +8,82 @@ import s3 from '../../../assets/media/connector-examples/amazon-s3.png';
 import s3Csv from '../../../assets/media/connector-examples/amazon-s3-csv.png';
 
 
-Use the `s3:` scheme. S3 is sink-only and supports complete replication. It
-does not provide table merge or complete-atomic behavior; choose the object
-layout and replacement convention in the job that consumes the output.
+Use the `s3:` scheme in `sink.connect`. The S3 connector is sink-only. It writes
+either one object per row (object-per-row) or one object for the whole
+transfer (file mode). Only `mode=complete` is supported. Each object is uploaded
+on its own, so there is no transaction across objects.
 
 <ScreenshotFrame src={s3} alt="Amazon S3 connector object output configuration" caption="S3 output can be organized as object-per-row or a file for the replication." width={1070} height={420} loading="eager" />
 <ScreenshotFrame src={s3Csv} alt="Amazon S3 connector CSV output example" caption="CSV output is useful when downstream consumers expect one structured object." width={1128} height={436} />
 
-## Object layout
+## Connection
 
-In object-per-row mode, `row.keyColumn` supplies each object key and
-`row.contentColumn` supplies its content. In file mode, the selected file
-manager streams all rows to one key identified by `keyFileName`; choose CSV or
-ORC according to the [local file constraints](/ReplicaDB/connectors/csv/).
-Existing objects at the selected keys can be replaced. There is no transaction
-covering a group of objects, no incremental table merge, and no rollback of
-objects already uploaded when a later write fails.
+The `sink.connect` URI gives the endpoint host, an optional port, and the
+bucket as its path: `s3://<host>[:port]/<bucket>`. Use `s3.<region>.amazonaws.com`
+for AWS. Path-style access is used.
 
-The `s3:` connection identifies the service endpoint and bucket path. Keep
-layout-only settings under `sink.connect.parameter.*`:
+All S3 properties are set under `sink.connect.parameter.*`.
+
+## Properties
+
+| Parameter | Description | Default |
+| --------- | ----------- | ------- |
+| `accessKey` | Access key ID. Required; an empty value fails. | none |
+| `secretKey` | Secret access key. Required; an empty value fails. It is masked in `toString()` output. | none |
+| `secure-connection` | `true` uses HTTPS. `false` uses HTTP for the endpoint. | `true` |
+| `row.isObject` | `true` selects object-per-row mode. `false` selects file mode. | `false` |
+| `row.keyColumn` | Column whose value is the object key. Required when `row.isObject=true`. | none |
+| `row.contentColumn` | Column whose value is the object body. Required when `row.isObject=true`. | none |
+| `keyFileName` | Object key in file mode. Read only in file mode. | Last segment of the bucket path |
+
+Credentials must come from an environment-managed secret. Do not put resolved
+keys in a committed properties file, command history, or logs.
+
+## Object-per-row mode
+
+With `row.isObject=true`, each row becomes one object. The value of
+`row.keyColumn` is the object key and the value of `row.contentColumn` is the
+object body. Binary, BLOB, and CLOB values are written as byte streams. The
+sink file format (`sink.file.format`) is not used in this mode.
 
 ```properties
 mode=complete
+source.connect=${SOURCE_CONNECTION}
 sink.connect=${S3_ENDPOINT_AND_BUCKET}
-sink.file.format=csv
-sink.connect.parameter.row.isObject=false
-sink.connect.parameter.keyFileName=${S3_OBJECT_KEY}
+sink.connect.parameter.accessKey=${S3_ACCESS_KEY}
+sink.connect.parameter.secretKey=${S3_SECRET_KEY}
+sink.connect.parameter.secure-connection=true
+sink.connect.parameter.row.isObject=true
+sink.connect.parameter.row.keyColumn=${KEY_COLUMN}
+sink.connect.parameter.row.contentColumn=${CONTENT_COLUMN}
 ```
 
-The current manager requires explicit S3 credentials. Supply them through the
-deployment's environment-managed secret injection and never place resolved
-keys in a connection string, committed options file, command history, image
-caption, or support log. Confirm endpoint, bucket, prefix, encryption policy,
-and object-write permissions with the same runtime identity before a large
-transfer.
+## File mode
+
+With `row.isObject=false`, all rows are streamed into one object in the format
+set by `sink.file.format` (`csv` or `orc`; see the
+[CSV and local file connector](/ReplicaDB/connectors/csv/) for format options).
+The object key is `keyFileName`, or the last segment of the bucket path when it
+is not set. When the job runs with more than one parallel task, each task
+writes its own object: `_<taskId>` is inserted before the file extension of
+`keyFileName`.
+
+```properties
+mode=complete
+source.connect=${SOURCE_CONNECTION}
+sink.connect=${S3_ENDPOINT_AND_BUCKET}
+sink.connect.parameter.accessKey=${S3_ACCESS_KEY}
+sink.connect.parameter.secretKey=${S3_SECRET_KEY}
+sink.connect.parameter.secure-connection=true
+sink.connect.parameter.row.isObject=false
+sink.connect.parameter.keyFileName=${S3_OBJECT_KEY}
+sink.file.format=csv
+```
+
+## Replication modes and limits
+
+- Only `complete` is supported. The S3 manager does not implement `incremental`
+  or `complete-atomic`.
+- The connector is sink-only. It cannot be used as a source.
+- There is no transaction across objects. Each object is uploaded on its own,
+  so a failure part-way through leaves the objects already written in place.

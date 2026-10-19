@@ -4,16 +4,61 @@ description: SQLite file-based JDBC behavior and mode limitations.
 ---
 
 
-Use the `jdbc:sqlite` scheme for a file or in-memory database. SQLite can be a
-source or sink for complete and incremental replication. Its sink does not
-support complete-atomic mode, and file locking can make concurrency the
-bottleneck before the `jobs` setting is reached.
+SQLite uses the `jdbc:sqlite:` scheme with the `org.sqlite.JDBC` driver. It can be a
+source or sink. As a source, all modes are available. As a sink, it supports
+complete and incremental modes. The sink does not support complete-atomic mode.
 
-Use a stable path owned by the process and avoid placing a live database file
-inside an archive or shared workspace. Incremental merges depend on the sink
-primary key and do not propagate deletes.
+## Connection
 
-SQLite accepts table and free-form query reads, but its single-file locking
-model usually limits useful write concurrency. Keep the database on a local,
-durable filesystem, back it up with SQLite-aware tooling, and inspect the sink
-after an interrupted complete or incremental run.
+| Item | Value |
+| ---- | ----- |
+| Source or sink URL | `jdbc:sqlite:${SQLITE_PATH}` |
+| Driver class | `org.sqlite.JDBC` |
+| Connection parameters | `busy_timeout` is set to 30000 ms by ReplicaDB |
+
+## Source options
+
+| Property | Description |
+| -------- | ----------- |
+| `source.table` | Table to read. |
+| `source.columns` | Comma-separated column list to read. |
+| `source.where` | SQL filter applied to the source read. |
+| `source.query` | Free-form SQL query used as the source. |
+
+## Sink options
+
+| Property | Description |
+| -------- | ----------- |
+| `sink.table` | Target table. A schema prefix such as `main.t_sink` is allowed. |
+| `sink.columns` | Comma-separated column list to write. |
+| `sink.staging.schema` | Schema used for staging tables during incremental merges, for example `main`. |
+| `mode` | `complete` or `incremental`. `complete-atomic` is not supported for this sink. |
+
+## Locking and concurrency
+
+SQLite is a single-file database, so writes use file locking. ReplicaDB sets
+`busy_timeout` to 30000 ms so that a connection waits for a lock instead of
+failing immediately. When the connection is closed, ReplicaDB runs a WAL
+checkpoint to release locks. 
+
+## Incremental mode
+
+Incremental merges match rows on the sink primary key, so the sink table must
+define one.
+
+## Example
+
+Replicate a table from a source database into a SQLite file:
+
+```properties
+source.connect=jdbc:postgresql://${PGHOST}:5432/catalog
+source.user=${PGUSER}
+source.password=${PGPASSWORD}
+source.table=t_source
+
+sink.connect=jdbc:sqlite:${SQLITE_PATH}
+sink.table=main.t_sink
+sink.staging.schema=main
+
+mode=complete
+```

@@ -4,37 +4,74 @@ description: Oracle source and sink behavior, partitioning, staging, and securit
 ---
 
 
-Use the `jdbc:oracle:` scheme. Oracle is supported as both source and sink for
-`complete`, `complete-atomic`, and `incremental` replication.
+Oracle is supported as source and sink for `complete`, `complete-atomic`,
+and `incremental` replication. Use the `jdbc:oracle:` scheme with the Oracle
+thin driver (`oracle.jdbc.OracleDriver`).
 
-## Connection and execution
+## Connection string formats
 
-Use an environment-substituted connection string and select a table or query.
-Oracle-specific partitioning and Flashback behavior depend on database
-permissions and the chosen read path. LOB and temporal types should be tested
-with representative values before a large transfer.
+Keep host, port, SID, service, and credentials in the runtime environment.
 
-A service-name connection commonly follows
-`jdbc:oracle:thin:@//database-host:1521/service-name`; keep the actual host,
-service, wallet, and account outside committed examples. Table-backed reads
-can partition work with Oracle row identifiers. A free-form `source.query`
-owns its own selection and may not provide the same partitioning behavior.
+| Addressing | Format |
+| ---------- | ------ |
+| SID | `jdbc:oracle:thin:@${ORAHOST}:${ORAPORT}:${ORASID}` |
+| Service name | `jdbc:oracle:thin:@//${ORAHOST}:${ORAPORT}/${ORASERVICE}` |
+| TNS alias | `jdbc:oracle:thin:@${ORATNSALIAS}` |
 
-ReplicaDB captures an Oracle system change number when Flashback is available
-so parallel reads can share a consistent source point. The source account
-needs the corresponding Flashback privileges, and undo retention must cover
-the read. If the SCN is outside the retention window, correct retention or
-reduce the run window rather than treating the result as a complete snapshot.
+A TNS alias requires `tnsnames.ora` to be reachable through the Oracle client
+configuration. Advice: service names are the usual choice for pluggable databases.
 
-## Staging and security
+## Example properties
 
-Complete-atomic and incremental sink runs use staging before replacement or
-merge. Set `sink.staging.schema` when generated staging tables should live in a
-dedicated schema. Keep wallet, TLS, and user values in the runtime environment;
-do not put resolved connection security in an options file committed to source
-control.
+```properties
+source.connect=jdbc:oracle:thin:@//${ORAHOST}:${ORAPORT}/${ORASERVICE}
+source.user=${ORAUSER}
+source.password=${ORAPASSWORD}
+source.table=SOURCE_SCHEMA.ORDERS
+source.connect.parameter.oracle.net.tns_admin=${TNS_ADMIN}
+source.connect.parameter.oracle.net.networkCompression=on
 
-BLOB and CLOB values are streamed to avoid materializing an entire value in
-memory, but cross-version LOB, temporal, XML, and vendor-specific values still
-need a representative compatibility run. Grant create/drop rights for generated
-staging objects or manage a fixed staging table explicitly.
+sink.connect=jdbc:oracle:thin:@//${ORAHOST}:${ORAPORT}/${ORASERVICE}
+sink.user=${ORAUSER}
+sink.password=${ORAPASSWORD}
+sink.table=SINK_SCHEMA.ORDERS
+
+mode=complete-atomic
+jobs=4
+```
+
+`oracle.net.tns_admin` and `oracle.net.networkCompression` are Oracle JDBC
+driver properties. ReplicaDB does not interpret them; it passes them to the
+driver as `source.connect.parameter.*` or `sink.connect.parameter.*` entries.
+Check the Oracle JDBC documentation for the values your driver version supports.
+
+## Parallel reads and Flashback
+
+Table-backed reads with `jobs` greater than 1 partition rows with
+`ora_hash(rowid, jobs - 1) = ?`. A free-form `source.query` owns its own
+selection and does not receive this partitioning.
+
+Flashback: ReplicaDB reads the current system change number with
+`SELECT CURRENT_SCN FROM V$DATABASE` and applies `AS OF SCN` to the source
+read. If the SCN cannot be read, ReplicaDB logs a warning and continues without
+Flashback.
+
+If a read fails with ORA-01555 (snapshot too old) or another SCN-related error,
+ReplicaDB logs the error and rethrows the exception. Advice: increase undo
+retention or shorten the run window, then rerun.
+
+## Limits and notes
+
+- LOB handling: BLOB and CLOB columns are streamed to the sink. Advice: test LOB
+  and vendor-specific types with representative values before a large transfer.
+- The sink applies `bandwidth.throttling` on the insert path.
+- Complete-atomic and incremental sink runs write to a staging table before
+  replacement or merge. Set `sink.staging.schema` to place generated staging
+  tables in a dedicated schema. A fixed staging table can be named with
+  `sink.staging.table`, but it cannot be used with `replication.table.*` entries.
+- General guidance: run ReplicaDB close to the database server to reduce
+  network latency. This is not a ReplicaDB requirement.
+
+See also: [PostgreSQL](/ReplicaDB/connectors/postgresql/),
+[SQL Server](/ReplicaDB/connectors/sql-server/), and
+[DB2](/ReplicaDB/connectors/db2/).
