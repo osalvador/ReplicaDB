@@ -1,0 +1,45 @@
+docs/src/content/docs/connectors/amazon-s3.mdx
+  s_8520c2c078a61c::t_df9c7e86049727 11-14,19,21-23,25-47,51,53-77,80,83-89
+docs/src/content/docs/connectors/csv.md
+  s_8520c2c078a61c::t_d30df4faee1709 7-95,98,101,106,110-119,122-147
+docs/src/content/docs/connectors/kafka.md
+  s_8520c2c078a61c::t_edb849d885b855 7-66
+docs/src/content/docs/connectors/oracle.md
+  s_8520c2c078a61c::t_a45eeef70df5d8 7-77
+docs/src/content/docs/connectors/sqlite.md
+  s_8520c2c078a61c::t_06c0d7f6eee570 7-64
+docs/src/content/docs/connectors/db2.md
+  s_8520c2c078a61c::t_8fd17d1251bce6 11-60
+docs/src/content/docs/connectors/denodo.md
+  s_8520c2c078a61c::t_72b5e4d68174eb 7-68
+docs/src/content/docs/connectors/generic-jdbc.md
+  s_8520c2c078a61c::t_3846db0754cdbe 7-79
+docs/src/content/docs/connectors/index.mdx
+  s_8520c2c078a61c::t_b2a8405705365f 16-19
+docs/src/content/docs/connectors/mongodb.md
+  s_8520c2c078a61c::t_b59cb3b2da0db5 7-172
+docs/src/content/docs/connectors/mysql-mariadb.md
+  s_8520c2c078a61c::t_9c696390476521 9-63
+docs/src/content/docs/connectors/postgresql.md
+  s_8520c2c078a61c::t_1ae0bf99f03d68 7,10,12-15,17-18,20-66
+docs/src/content/docs/connectors/sql-server.md
+  s_8520c2c078a61c::t_4a18a5d57277b3 7-50,55-75
+docs/src/content/docs/operations/upgrades.md
+  s_8520c2c078a61c::t_a54fa6de3e5859 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f1162de5979a79eba8e18acd625dd538d6d88078",
+  "prompts": {},
+  "sessions": {
+    "s_8520c2c078a61c": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "2804d08c-37a2-4c9f-980c-d7574ce87eb3",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
