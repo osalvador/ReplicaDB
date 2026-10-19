@@ -248,6 +248,9 @@ public class MongoDBManager extends SqlManager {
 		// unordered bulk write
 		final BulkWriteOptions bulkWriteOptions = new BulkWriteOptions().ordered(false);
 		final Map<String, String> primaryKeyNormalizationMap = buildPrimaryKeyNormalizationMap();
+		// The merge key is chosen from the sink, not from the staging collection that receives these rows.
+		final boolean idIsMergeKey = ReplicationMode.INCREMENTAL.getModeText().equals(this.options.getMode())
+				&& this.getUniqueIndexFields(this.sinkDatabase.getCollection(this.getSinkTableName())).contains("_id");
 
 		if (resultSet != null && resultSet.next()) {
 			// Create Bandwidth Throttling
@@ -258,7 +261,9 @@ public class MongoDBManager extends SqlManager {
 				bt.acquiere();
 				if (this.isSourceAndSinkMongoDB()) {
 					// Add document to bulk
-					writeOperations.add(new InsertOneModel<>((Document) resultSet.getObject(1)));
+					final Document sourceDocument = (Document) resultSet.getObject(1);
+					requireSourceIdForMergeKey(sourceDocument, idIsMergeKey);
+					writeOperations.add(new InsertOneModel<>(sourceDocument));
 				} else {
 					// iterate columns
 					final Document document = new Document();
@@ -323,6 +328,7 @@ public class MongoDBManager extends SqlManager {
 					}
 
 					// Add document to bulk
+					requireSourceIdForMergeKey(document, idIsMergeKey);
 					writeOperations.add(new InsertOneModel<>(document));
 				}
 
@@ -341,6 +347,13 @@ public class MongoDBManager extends SqlManager {
 		}
 
 		return totalRows;
+	}
+
+	private void requireSourceIdForMergeKey(Document document, boolean idIsMergeKey) {
+		if (idIsMergeKey && document.get("_id") == null) {
+			throw new IllegalStateException("Incremental merge uses _id as merge key, but a source document has no _id. "
+					+ "Include _id in the source columns or query projection.");
+		}
 	}
 
 	private void ensurePrimaryKeysInitialized(MongoCollection<Document> sinkCollection) {
@@ -689,6 +702,17 @@ public class MongoDBManager extends SqlManager {
 				stagingCollection.countDocuments(), mergeKeyFields);
 	}
 
+	/**
+	 * Builds the $merge pipeline. The $project stage is omitted only when _id is a merge key.
+	 */
+	static String buildMergeAggregation(String sinkCollection, List<String> mergeKeys) {
+		// Keep _id when it is a merge key, otherwise $merge cannot match staged documents.
+		final String projection = mergeKeys.contains("_id") ? "" : "{$project: {_id:0}},";
+		final String keys = mergeKeys.stream().map(s -> "\"" + s + "\"").collect(Collectors.joining(","));
+		return "[ " + projection + "{$merge:{ into:\"" + sinkCollection + "\", on:[" + keys
+				+ "], whenMatched: \"replace\", whenNotMatched: \"insert\" }} ]";
+	}
+
 	@Override
 	protected void mergeStagingTable() throws Exception {
 		checkCancellation();
@@ -711,11 +735,7 @@ public class MongoDBManager extends SqlManager {
 			LOG.info("Validating staging collection data for merge operation");
 			this.validateStagingDataForMerge(sinkStagingCollection, this.primaryKeys);
 
-			String aggregationQuery = "[ {$project: {_id:0}},{$merge:{ into:\"${SINK_COLLECTION}\", on:[${PRIMARY_KEYS}], whenMatched: \"replace\", whenNotMatched: \"insert\" }} ]";
-			aggregationQuery = aggregationQuery.replace("${SINK_COLLECTION}", this.getSinkTableName());
-			// replace primary keys separated by commas and surrounded by quotes
-			aggregationQuery = aggregationQuery.replace("${PRIMARY_KEYS}",
-					this.primaryKeys.stream().map(s -> "\"" + s + "\"").collect(Collectors.joining(",")));
+			final String aggregationQuery = buildMergeAggregation(this.getSinkTableName(), this.primaryKeys);
 
 			// merge collections
 			LOG.info("Merging staging collection with sink collection using aggregation query: {}", aggregationQuery);

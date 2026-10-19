@@ -30,6 +30,12 @@ fields for identity and rejects staged documents with missing or null merge
 keys. It does not propagate source deletes. `sink.auto.create` is a SQL DDL
 feature and is not supported for MongoDB collections.
 
+When `_id` is the merge key, which happens when the sink has no other unique
+index, every source document must carry its `_id`. Keep `_id` in
+`source.columns` or in the query projection. Relational sources must expose an
+`_id` column. Runs without it fail before any sink write, because the driver
+would otherwise generate new identifiers and duplicate rows on every run.
+
 SRV discovery, TLS, and authentication are properties of the deployment and
 connection string. Resolve security through the runtime credential chain and
 keep it out of committed examples.
