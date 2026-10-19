@@ -1,0 +1,25 @@
+docs/src/content/docs/connectors/mongodb.md
+  s_9a476d5d560a37::t_3918b27060a012 33-38
+src/main/java/org/replicadb/manager/MongoDBManager.java
+  s_9a476d5d560a37::t_c3fe05be0d5afb 251-253,264-266,331,352-358,705-715,738
+src/test/java/org/replicadb/manager/MongoMergePipelineTest.java
+  s_9a476d5d560a37::t_6eb9979eec8351 1-35
+src/test/java/org/replicadb/mongo/Mongo2MongoTest.java
+  s_9a476d5d560a37::t_ba63a54e848139 6-10,23-24,34-39,65-66,183-184,189,196-255
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b0ec4dbd6f60cdbcaddcf0c7115d55d01a3fe6a7",
+  "prompts": {},
+  "sessions": {
+    "s_9a476d5d560a37": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "1cdab01e-9686-486d-8b57-ec0a995dbda1",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
