@@ -394,7 +394,7 @@
         <dependency>
             <groupId>io.sentry</groupId>
             <artifactId>sentry</artifactId>
-            <version>8.60.0</version>
+            <version>8.61.0</version>
         </dependency>
 
         <dependency>
