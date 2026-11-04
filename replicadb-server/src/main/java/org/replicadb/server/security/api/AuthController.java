@@ -18,6 +18,7 @@ import org.replicadb.server.audit.domain.AuditAction;
 import org.replicadb.server.audit.domain.AuditActor;
 import org.replicadb.server.audit.domain.AuditOutcome;
 import org.replicadb.server.audit.domain.AuditResourceType;
+import org.replicadb.server.security.config.SecurityConfig;
 import org.replicadb.server.security.auth.LoginAttemptService;
 import org.replicadb.server.security.auth.LoginAttemptReservation;
 import org.replicadb.server.security.auth.TooManyAttemptsException;
@@ -129,7 +130,8 @@ public class AuthController {
             throw new IllegalStateException("CSRF token was not initialized");
         }
         csrfTokenRepository.saveToken(csrfToken, request, response);
-        return new CsrfTokenResponse(csrfToken.getHeaderName(), csrfToken.getParameterName(), csrfToken.getToken());
+        return new CsrfTokenResponse(SecurityConfig.CSRF_HEADER_NAME,
+                csrfToken.getParameterName(), csrfToken.getToken());
     }
 
     @PostMapping("/logout")
