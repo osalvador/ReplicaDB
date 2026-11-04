@@ -17,7 +17,7 @@ import java.util.List;
 
 public class ReplicadbMongodbContainer extends MongoDBContainer {
 	private static final Logger LOG = LogManager.getLogger(ReplicadbMongodbContainer.class);
-	private static final String IMAGE_VERSION = "mongo:8";
+	private static final String IMAGE_VERSION = "mongo:7.0";
 	private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
 	private static final String SOURCE_FILE = "/mongo/t_source_data.json";
 	private static final String T_SOURCE_COLLECTION = "t_source";
