@@ -23,12 +23,13 @@ import org.springframework.security.web.context.SecurityContextRepository;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    public static final String CSRF_HEADER_NAME = "X-XSRF-TOKEN";
+
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                             ProblemDetailAuthenticationEntryPoint entryPoint) throws Exception {
+                                             ProblemDetailAuthenticationEntryPoint entryPoint,
+                                             CookieCsrfTokenRepository csrfTokenRepository) throws Exception {
         CsrfTokenRequestAttributeHandler csrfRequestHandler = new CsrfTokenRequestAttributeHandler();
-        CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
-        csrfTokenRepository.setHeaderName("X-XSRF-TOKEN");
         http
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfTokenRepository)
@@ -47,6 +48,13 @@ public class SecurityConfig {
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint(entryPoint));
         return http.build();
+    }
+
+    @Bean
+    CookieCsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        csrfTokenRepository.setHeaderName(CSRF_HEADER_NAME);
+        return csrfTokenRepository;
     }
 
     @Bean
