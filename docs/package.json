@@ -37,7 +37,7 @@
     "jsdom": "25.0.1",
     "parse5": "^7.3.0",
     "typescript": "5.7.3",
-    "vitest": "5.0.0"
+    "vitest": "5.1.0"
   },
   "overrides": {
     "katex": "0.18.9",
