@@ -31,6 +31,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -50,17 +51,20 @@ public class AuthController {
     private final SecurityContextRepository securityContextRepository;
     private final AuditService auditService;
     private final AuditActorResolver auditActorResolver;
+    private final CookieCsrfTokenRepository csrfTokenRepository;
 
     public AuthController(AuthenticationManager authenticationManager,
                           LoginAttemptService loginAttemptService,
                           SecurityContextRepository securityContextRepository,
                           AuditService auditService,
-                          AuditActorResolver auditActorResolver) {
+                          AuditActorResolver auditActorResolver,
+                          CookieCsrfTokenRepository csrfTokenRepository) {
         this.authenticationManager = authenticationManager;
         this.loginAttemptService = loginAttemptService;
         this.securityContextRepository = securityContextRepository;
         this.auditService = auditService;
         this.auditActorResolver = auditActorResolver;
+        this.csrfTokenRepository = csrfTokenRepository;
     }
 
     @PostMapping("/login")
@@ -118,11 +122,13 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "CSRF contract initialized"),
             @ApiResponse(responseCode = "500", ref = "#/components/responses/InternalServerErrorProblem")
         })
-        public CsrfTokenResponse csrf(@Parameter(hidden = true) HttpServletRequest request) {
+        public CsrfTokenResponse csrf(@Parameter(hidden = true) HttpServletRequest request,
+                                      HttpServletResponse response) {
         CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
         if (csrfToken == null) {
             throw new IllegalStateException("CSRF token was not initialized");
         }
+        csrfTokenRepository.saveToken(csrfToken, request, response);
         return new CsrfTokenResponse(csrfToken.getHeaderName(), csrfToken.getParameterName(), csrfToken.getToken());
     }
 
