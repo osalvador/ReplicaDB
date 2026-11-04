@@ -10,7 +10,7 @@ const astroConfiguration = readFileSync(join(repoRoot, 'docs/astro.config.mjs'),
 const cutover = readFileSync(join(repoRoot, 'docs/PAGES_CUTOVER.md'), 'utf8');
 
 test('Pages workflow is preview-safe and gated for production deployment', () => {
-  assert.match(workflow, /node-version: ['"]22['"]/);
+  assert.match(workflow, /node-version: ['"]22\.23\.4['"]/);
   assert.match(workflow, /npm run check && npm run build && npm run validate && npm test/);
   assert.match(workflow, /actions\/configure-pages@v6/);
   assert.match(workflow, /actions\/upload-pages-artifact@v5/);
