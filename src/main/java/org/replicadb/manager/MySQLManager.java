@@ -198,7 +198,7 @@ public class MySQLManager extends SqlManager {
       StringBuilder loadDataSql = new StringBuilder();
       loadDataSql.append("LOAD DATA LOCAL INFILE 'dummy' INTO TABLE ");
       loadDataSql.append(tableName);
-      loadDataSql.append(" CHARACTER SET UTF8 FIELDS TERMINATED BY X'1F' ");
+      loadDataSql.append(" CHARACTER SET utf8mb4 FIELDS TERMINATED BY X'1F' ");
 
       // loop through the columns, if it is a BLOB type, convert it into a variable
       if (allColumns != null) {
