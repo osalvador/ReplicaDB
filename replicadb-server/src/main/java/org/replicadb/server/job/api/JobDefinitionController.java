@@ -43,6 +43,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Map;
 import java.util.Optional;
@@ -114,6 +115,7 @@ public class JobDefinitionController {
                 DataSourceType.SINK, authentication, null, true, request.sinkDatasourceUseEnabled(), true);
             JobDefinition definition = mapper.toDefinition(request, null, request.name(), null, null);
             validateMode(definition, sourceDatasource, sinkDatasource);
+            lockDatasourcesInIdOrder(sourceDatasource.id(), sinkDatasource.id());
             JobDefinition persisted = repository.insert(definition);
         if (!jobAccessService.isAdmin(authentication)) {
             jobPermissionRepository.grantAll(persisted.id(), jobAccessService.currentUserId(authentication));
@@ -194,6 +196,7 @@ public class JobDefinitionController {
             existing.createdAt(), existing.updatedAt(), existing.retryPolicy(), existing.mode(),
             existing.sourceDatasourceUseEnabled(), existing.sinkDatasourceUseEnabled());
         validateMode(replacement, sourceDatasource, sinkDatasource);
+        lockDatasourcesInIdOrder(sourceDatasource.id(), sinkDatasource.id());
         JobDefinition persisted = repository.update(replacement);
         auditService.record(auditActorResolver.resolve(authentication), AuditAction.JOB_UPDATED,
             AuditResourceType.JOB_DEFINITION, persisted.id().toString(), AuditOutcome.SUCCESS,
@@ -257,6 +260,13 @@ public class JobDefinitionController {
             return null;
         }
         return dataSourceStore.findSummaryById(datasourceId).orElse(null);
+    }
+
+    // Lock order must match JobRunRepository's claim path (sorted datasource IDs, FOR UPDATE);
+    // FK checks alone take FOR KEY SHARE in column order and can deadlock against it.
+    private void lockDatasourcesInIdOrder(UUID sourceId, UUID sinkId) {
+        List.of(sourceId, sinkId).stream().distinct().sorted()
+                .forEach(id -> dataSourceStore.findByIdForUpdate(id));
     }
 
     private ManagedDataSourceSummary validateBinding(UUID datasourceId, DataSourceType role,
