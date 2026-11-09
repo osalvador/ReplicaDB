@@ -1,0 +1,19 @@
+replicadb-server/src/main/java/org/replicadb/server/job/api/JobDefinitionController.java
+  s_5018f28d76c8a5::t_dfea2ea612fefa 46,118,199,265-271
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "36e6131d80983b17558a15c718ae3232c3c11cf7",
+  "prompts": {},
+  "sessions": {
+    "s_5018f28d76c8a5": {
+      "agent_id": {
+        "tool": "github-copilot-cli",
+        "id": "c247b6c6-2b7a-4947-9d3e-378da80864ec",
+        "model": "unknown"
+      },
+      "human_author": "osalvador <osalvador@gmail.com>"
+    }
+  }
+}
