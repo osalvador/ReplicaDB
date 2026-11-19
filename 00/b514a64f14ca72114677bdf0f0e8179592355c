@@ -1,0 +1,51 @@
+docs/astro.config.mjs
+  s_f2b66808b78636::t_66e315962ead5e 54
+docs/src/content/docs/getting-started/choose-cli-or-server.mdx
+  s_f2b66808b78636::t_66eaced760d853 3,6-33
+docs/src/content/docs/getting-started/cli-quickstart.md
+  s_f2b66808b78636::t_28e9f7bed22b0d 3,6-7,9,11-14,16-18,21-25,28-29,31,33-34,37,40-47,49-62,65-67,69-71,73,75-78
+docs/src/content/docs/getting-started/concepts.md
+  s_f2b66808b78636::t_7b96a209c67e90 3,6-8,12-16,20-23,25,27-30,34-38,40,42-45,47-52,54,56-60
+docs/src/content/docs/getting-started/sample-data.md
+  s_f2b66808b78636::t_0735e4c6066290 1-85
+docs/src/content/docs/getting-started/server-quickstart.md
+  s_f2b66808b78636::t_b875de49648380 3,6-9,11,13-16,18-21,24-27,31-58,60-68,70-74,76,79-80,83-91,93-96,98-99,101
+plan.md
+  s_f2b66808b78636::t_4910fe611d1a3e 1-150
+docs/scripts/serve-dist.mjs
+  s_f2b66808b78636::t_4605a26b124568 12,31
+docs/src/content/docs/cli/incremental-watermarks.md
+  s_f2b66808b78636::t_cb64175fcce622 22-26,30-34
+docs/src/content/docs/cli/index.md
+  s_f2b66808b78636::t_3773e774341ad8 13
+docs/src/content/docs/cli/installation.md
+  s_f2b66808b78636::t_5cd0953f13c174 14-17
+docs/src/content/docs/cli/replication-modes.mdx
+  s_f2b66808b78636::t_60a89810017ce7 3,11,13-57,61-63,65-66,68-70,72-73,75-80,84-88,90-93,95-98,100-102,104-105,107-110,112,114,116-161
+docs/src/content/docs/index.mdx
+  s_f2b66808b78636::t_4c417163d0fdca 3,7,12,14-17,21-30,32-35,37,40-41,45-47,53-55,57,62-66
+docs/src/content/docs/server/index.md
+  s_f2b66808b78636::t_880b06c007701c 22-25
+docs/tests/content-contract.test.mjs
+  s_f2b66808b78636::t_70a19bdabb1ef5 45,66
+docs/tests/design-contract.test.mjs
+  s_f2b66808b78636::t_fc77cf23014fa2 47-48,69
+docs/tests/e2e/docs-site.spec.ts
+  s_f2b66808b78636::t_203974b3403b14 3-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "00b514a64f14ca72114677bdf0f0e8179592355c",
+  "prompts": {},
+  "sessions": {
+    "s_f2b66808b78636": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f4c4-1cbd-7450-9270-a175eccb01eb",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
