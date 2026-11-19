@@ -19,15 +19,19 @@ The options-file keys are `incremental.watermark.column` and
 ```
 
 When the value is omitted, the first run reads all rows returned by the source
-selection and reports the highest observed value. Store that value in your
-orchestration system and pass it to the next invocation only after a
-successful run.
+selection. The engine captures the highest observed value and makes it
+available after a successful merge. Server persists it for subsequent runs of
+the job. With the standalone CLI, supply the lower bound from your own
+orchestration. The CLI reports an exit code and does not print the computed
+candidate as output.
 
 For subsequent runs, ReplicaDB adds a strict greater-than condition for the
 committed value. Choose a stable, monotonically increasing column exposed by
-the source table. Capture the reported value together with the run's exit code
-and destination verification; never advance the external checkpoint after
-code 1 or code 2.
+the source table. Advance an external checkpoint only after verifying a
+successful run and the boundary it processed. Preserve the previous value
+after code 1 or code 2. See the
+[orders example](/ReplicaDB/cli/replication-modes/#incremental) for a known
+lower bound and expected result.
 
 ## Limits
 

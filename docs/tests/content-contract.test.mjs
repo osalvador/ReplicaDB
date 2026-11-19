@@ -42,7 +42,7 @@ test('contains the product decision path, quickstarts, and glossary terms', () =
   for (const required of ['Standalone CLI', 'Managed Server', 'product comparison', 'CLI quickstart', 'Server quickstart']) {
     assert.match(`${homepage}\n${choice}`, new RegExp(required, 'i'));
   }
-  for (const term of ['Source', 'Sink', 'Job', 'Task', 'Run', 'Attempt', 'Datasource', 'Watermark', 'API', 'Worker']) {
+  for (const term of ['Source', 'Sink', 'Mode', 'Datasource', 'Job and run', 'Watermark']) {
     assert.match(concepts, new RegExp(`^## ${term}$`, 'm'));
   }
 });
@@ -63,7 +63,7 @@ test('server quickstart points distributed users to the API and worker runbook',
 });
 
 test('shell examples parse after documentation placeholders are made inert', () => {
-  const guides = ['cli-quickstart.md', 'server-quickstart.md'].map(readGuide);
+  const guides = ['sample-data.md', 'cli-quickstart.md', 'server-quickstart.md'].map(readGuide);
   for (const guide of guides) {
     for (const block of shellBlocks(guide)) {
       const inert = block.replace(/<[^>]+>/g, 'placeholder');

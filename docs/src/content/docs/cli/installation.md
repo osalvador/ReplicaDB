@@ -11,9 +11,10 @@ or a metadata PostgreSQL database.
 ## Release archive
 
 ```bash
-curl -fL -o ReplicaDB-1.0.0.tar.gz "https://github.com/osalvador/ReplicaDB/releases/download/v1.0.0/ReplicaDB-1.0.0.tar.gz"
-tar -xzf ReplicaDB-1.0.0.tar.gz
-cd ReplicaDB-1.0.0
+curl -fLO https://github.com/osalvador/ReplicaDB/releases/download/v1.0.3/ReplicaDB-1.0.3.tar.gz
+mkdir -p ReplicaDB-1.0.3
+tar -xzf ReplicaDB-1.0.3.tar.gz -C ReplicaDB-1.0.3
+cd ReplicaDB-1.0.3
 ./bin/replicadb --version
 ./bin/replicadb --help
 ```

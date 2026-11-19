@@ -19,6 +19,10 @@ managed state boundary.
 
 ## Follow an operator workflow
 
+Start with the [Server quickstart](/ReplicaDB/getting-started/server-quickstart/)
+to run a job end to end. Use the [replication modes guide](/ReplicaDB/cli/replication-modes/)
+to decide what each run should do to the destination.
+
 1. [Install and choose a server profile](/ReplicaDB/server/installation/).
 2. [Sign in and manage your profile](/ReplicaDB/server/sign-in-and-profile/).
 3. [Create and verify datasources](/ReplicaDB/server/datasources/).
