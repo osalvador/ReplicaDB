@@ -21,6 +21,7 @@ import org.replicadb.server.job.domain.ManagedDataSourceTestSupport;
 import org.replicadb.server.job.persistence.JobDefinitionRepository;
 import org.replicadb.server.job.persistence.JobRunRepository;
 import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
+import org.replicadb.server.job.port.RunLogStore;
 import org.replicadb.server.security.secret.SecretProtectionService;
 import org.replicadb.server.security.WithMockReplicaDbUser;
 import org.replicadb.server.security.domain.AppUser;
@@ -78,6 +79,9 @@ class JobRunControllerTest {
 
     @Autowired
     private JobRunRepository jobRunRepository;
+
+    @Autowired
+    private RunLogStore runLogStore;
 
     @Autowired
     private ManagedDataSourceRepository managedDataSourceRepository;
@@ -442,7 +446,7 @@ class JobRunControllerTest {
             void executePermissionDoesNotGrantCancel() throws Exception {
             UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000015");
             appUserRepository.insert(new AppUser(userId, "execute-run-user", "hash", GlobalRole.OPERATOR, true, null, null));
-            JobDefinition definition = jobDefinitionRepository.insert(definition("execute-only-job"));
+            JobDefinition definition = runtimeDefinition("execute-only-job", ReplicationMode.COMPLETE, 1);
             jobPermissionRepository.grant(definition.id(), userId, JobPermissionType.EXECUTE);
 
             MvcResult triggered = trigger(definition.id(), "execute-only-trigger");
@@ -453,6 +457,7 @@ class JobRunControllerTest {
                     .post("/api/v1/runs/" + runId + "/cancel")
                     .with(csrf()))
                 .andExpect(status().isForbidden());
+            awaitTerminal(runId);
             }
 
             @Test
@@ -537,12 +542,13 @@ class JobRunControllerTest {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
         while (System.nanoTime() < deadline) {
             JobRun run = jobRunRepository.findById(runId).orElseThrow();
-            if (run.status().isTerminal()) {
+            // Execution still writes the audit event and log after marking the run terminal.
+            if (run.status().isTerminal() && runLogStore.findByRunId(runId).isPresent()) {
                 return run;
             }
             Thread.sleep(10);
         }
-        throw new AssertionError("Run did not reach a terminal state: " + runId);
+        throw new AssertionError("Run did not finish and persist its log: " + runId);
     }
 
     private Path createDatabase(String filename, int rowCount) throws SQLException {
