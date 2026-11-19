@@ -10,6 +10,7 @@ Java 17 or newer, and does not require a ReplicaDB metadata database.
 
 ## Follow a workflow
 
+- [Run the CLI quickstart](/ReplicaDB/getting-started/cli-quickstart/).
 - [Install the CLI](/ReplicaDB/cli/installation/).
 - [Configure an options file](/ReplicaDB/cli/configuration/).
 - [Choose a replication mode](/ReplicaDB/cli/replication-modes/).

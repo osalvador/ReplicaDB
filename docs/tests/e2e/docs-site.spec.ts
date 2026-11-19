@@ -1,5 +1,25 @@
 import { expect, test } from '@playwright/test';
 
+test('both quickstarts lead from the homepage to the shared orders example', async ({ page }) => {
+  await page.goto('./');
+  const main = page.getByRole('main');
+  const diagram = main.getByRole('img', { name: /ReplicaDB bulk-loading/ });
+  await expect(diagram).toBeVisible();
+  await expect.poll(() => diagram.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+
+  for (const title of ['CLI quickstart', 'Server quickstart']) {
+    await page.goto('./');
+    await main.getByRole('link', { name: title, exact: true }).click();
+    await expect(main.getByRole('heading', { name: title })).toBeVisible();
+    await expect(main.getByRole('row', { name: '1 pending 10' })).toBeVisible();
+    await main.getByRole('link', { name: 'Sample data', exact: true }).click();
+    await expect(main.getByRole('heading', { name: 'Create the tables' })).toBeVisible();
+    await page.goBack();
+    await main.getByRole('link', { name: 'replication modes', exact: true }).click();
+    await expect(main.getByRole('row', { name: '9 archived 8' })).toBeVisible();
+  }
+});
+
 test('search, theme, keyboard navigation, generated API, tools, and 404 work', async ({ page }) => {
   await page.goto('./');
   await expect(page.locator('main')).toBeVisible();

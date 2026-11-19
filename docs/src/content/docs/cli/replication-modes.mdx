@@ -1,6 +1,6 @@
 ---
 title: Replication modes
-description: Understand complete, complete-atomic, and incremental CLI behavior.
+description: Choose how ReplicaDB writes to the destination and see each mode on the same PostgreSQL tables.
 ---
 
 import ScreenshotFrame from '../../../components/ScreenshotFrame.astro';
@@ -8,66 +8,154 @@ import complete from '../../../assets/media/replication-modes/complete.png';
 import completeAtomic from '../../../assets/media/replication-modes/complete-atomic.png';
 import incremental from '../../../assets/media/replication-modes/incremental.png';
 
+## Choose a mode
 
-Set `mode` in an options file or use `--mode`. The supported values are
-`complete`, `complete-atomic`, and `incremental`.
+The mode controls how ReplicaDB writes the selected rows. Use `mode` in
+a CLI options file, `--mode` on the command line, or **Mode** in a Server job.
+Check the [connector matrix](/ReplicaDB/connectors/) for support at both ends.
+The flows and example below use [PostgreSQL](/ReplicaDB/connectors/postgresql/)
+as both source and sink.
+
+| Choose | When | What readers may see |
+| --- | --- | --- |
+| `complete` (default) | You can clear and reload the destination. | The destination can be empty or partially repopulated during a run or after an interruption. |
+| `complete-atomic` | You need to publish a full replacement in one transaction. | A new ordinary PostgreSQL read sees the previous committed rows until the replacement commits. |
+| `incremental` | You can select new and changed rows and have a destination primary key. | The merge updates matching keys and inserts new keys. Rows absent from the selection stay in the destination. |
+
+## Prepare the comparison
+
+Use [Sample data](/ReplicaDB/getting-started/sample-data/) to create the lab.
+The [CLI quickstart](/ReplicaDB/getting-started/cli-quickstart/) supplies the
+`orders.conf` used below. The [Server quickstart](/ReplicaDB/getting-started/server-quickstart/)
+supplies the datasource profiles and the job settings. Run the commands only
+against the disposable tables from this walkthrough.
+
+Update the source once to simulate the next batch of orders:
+
+```bash
+docker exec -i replicadb-docs-demo psql -v ON_ERROR_STOP=1 -U demo -d replicadb_demo <<'SQL'
+UPDATE shop.orders SET status = 'paid', change_seq = 11 WHERE id = 1;
+INSERT INTO shop.orders VALUES (2, 'pending', 12);
+SQL
+```
+
+Before each mode, reset the destination to the earlier copy of order `1`
+plus order `9`, which exists only in reporting:
+
+```bash
+docker exec -i replicadb-docs-demo psql -v ON_ERROR_STOP=1 -U demo -d replicadb_demo <<'SQL'
+TRUNCATE reporting.orders;
+INSERT INTO reporting.orders VALUES (1, 'pending', 10), (9, 'archived', 8);
+SQL
+```
+
+Verify the results after each run:
+
+```bash
+docker exec replicadb-docs-demo psql -U demo -d replicadb_demo \
+  -c 'SELECT id, status, change_seq FROM reporting.orders ORDER BY id;'
+```
 
 ## Complete
 
-`complete` prepares the sink and inserts all rows read from the source. The
-sink can be empty while the transfer is running. This is the default mode.
-Use it for a disposable or replaceable sink where the straightforward bulk
-path is the right tradeoff.
+1. ReplicaDB prepares the destination, clearing the sink by default in this lab.
+2. The task reads both source rows and copies them directly to the destination.
+3. Orders `1` and `2` are now in reporting. The older order `9` was cleared.
 
-The observable flow is:
+An interruption after preparation can leave the destination empty or partially
+repopulated. A retry starts the complete flow again.
 
-1. Validate the source selection and sink target.
-2. Run connector preparation, including clearing the sink unless truncation is
-	explicitly disabled.
-3. Partition and read the selected source rows across the configured workers.
-4. Insert those rows into the sink and run connector post-processing.
+```bash
+./bin/replicadb --options-file ./orders.conf --mode complete
+```
 
-If the process stops after sink preparation, readers can observe an empty or
-partially repopulated target. A retry starts the complete flow again.
+In Server, set **Mode** to **Complete mode** and leave **Truncate sink table**
+enabled. Run the job manually and wait for `SUCCEEDED`.
 
-<ScreenshotFrame src={complete} alt="Complete replication mode flow from source to sink" caption="Complete mode prepares the sink before inserting the full source selection." width={1023} height={680} loading="eager" />
+| id | status | change_seq |
+| --- | --- | --- |
+| 1 | paid | 11 |
+| 2 | pending | 12 |
+
+<ScreenshotFrame src={complete} alt="Complete replication from the source to a cleared destination" caption="Complete mode clears the destination before writing the selected rows." width={1023} height={680} />
 
 ## Complete-atomic
 
-`complete-atomic` stages the new data and replaces the sink contents within a
-transactional flow so readers do not observe the ordinary complete-mode
-truncation window. It requires staging support and enough sink capacity for
-the staging table. With a fixed staging table, the sink must provide the
-required permissions; a staging schema can be used for generated tables.
+1. ReplicaDB creates a staging table and copies both source rows into it.
+2. The PostgreSQL path can start deleting the old destination rows while
+   staging loads. That deletion is part of an uncommitted transaction.
+3. ReplicaDB inserts the staged rows into the destination and commits the
+   insertion and deletion together in the atomic replacement transaction.
 
-The connector creates or selects a staging table, loads the complete source
-selection into it, validates the staged operation, then clears and repopulates
-the final sink within its atomic replacement transaction. Automatically
-created staging state is cleaned up afterward; a user-provided staging table
-is retained. Connector support and transactional guarantees remain
-sink-specific.
+An ordinary read in a separate PostgreSQL session using the default isolation
+level sees the old committed rows before the commit and the new rows after it.
+A failure before the commit leaves the old rows visible. An interruption
+around commit warrants checking the destination before retrying.
 
-<ScreenshotFrame src={completeAtomic} alt="Complete atomic replication mode using a staging table" caption="Complete-atomic mode stages rows before the sink replacement step." width={1023} height={830} />
+ReplicaDB attempts to drop an automatically created staging table during
+cleanup. A sudden process exit can interrupt cleanup. A staging table supplied
+by the user is retained. Check sink permissions and storage for staging
+before choosing this mode.
+
+```bash
+./bin/replicadb --options-file ./orders.conf --mode complete-atomic
+```
+
+In Server, set **Mode** to **Complete atomic mode**, leave staging fields empty
+to use the connector's generated table, and run the job manually.
+
+| id | status | change_seq |
+| --- | --- | --- |
+| 1 | paid | 11 |
+| 2 | pending | 12 |
+
+<ScreenshotFrame src={completeAtomic} alt="Full replacement through a staging table and an atomic destination commit" caption="The old and new destination contents meet at the replacement commit." width={1023} height={830} />
 
 ## Incremental
 
-`incremental` reads a bounded source selection and merges rows into the sink.
-Use a source filter or the explicit watermark options described in the
-[watermark guide](/ReplicaDB/cli/incremental-watermarks/). Incremental mode
-does not propagate deletes and requires a sink primary key for merge behavior.
+1. Use the earlier value `10` as the [watermark](/ReplicaDB/cli/incremental-watermarks/).
+   ReplicaDB adds a source predicate equivalent to `change_seq > 10`, which
+   selects orders `1` and `2`.
+2. ReplicaDB copies the selected rows into staging. PostgreSQL uses the
+   destination primary key `id` to merge matched keys and insert new keys.
+3. The merge changes order `1` to `paid` and inserts order `2`. It does not
+   infer deleted source rows, so order `9` remains.
+4. The engine computes `12` as the candidate for the next run. Server
+   persists it after successful finalization. The standalone CLI caller
+   supplies the lower bound again for each invocation.
 
-The source filter or watermark selects candidate rows. Connectors that require
-staging load those rows into a staging table, then merge matched keys and
-insert new keys into the final sink. A successful process reports the highest
-observed watermark; the caller persists it only after the whole run succeeds.
-ReplicaDB does not infer deleted source rows or provide change ordering beyond
-the selected watermark value.
+```bash
+./bin/replicadb --options-file ./orders.conf --mode incremental \
+  --sink-staging-schema public \
+  --incremental-watermark-column change_seq --incremental-watermark-value 10
+```
 
-<ScreenshotFrame src={incremental} alt="Incremental replication mode flow using a source watermark" caption="Incremental mode transfers a bounded selection and merges it into the sink." width={1023} height={718} />
+In Server, create a new job using the same two tables and select
+**Incremental mode**. In **Sink**, set **Staging schema** to `public`. Set
+**Incremental watermark column** to `change_seq` and **Initial watermark
+value** to `10`. Run it manually.
 
-## Cancellation and recovery
+This lab uses `public` for staging because the PostgreSQL incremental merge
+in ReplicaDB 1.0.3 resolves the staging table through the connection's search
+path. The final table is still `reporting.orders`.
 
-The CLI does not resume a partially completed process. A cancellation exits
-with code 2; a validation or replication error exits with code 1. Inspect the
-sink after interruption and choose a new complete or incremental run based on
-the connector's transaction and staging behavior.
+| id | status | change_seq |
+| --- | --- | --- |
+| 1 | paid | 11 |
+| 2 | pending | 12 |
+| 9 | archived | 8 |
+
+Try another run with the same source data. In CLI, pass `12` explicitly for
+this exercise. In Server, run the same incremental job again. Neither run
+should change the destination. A managed failure or cancellation keeps the
+previous committed watermark even if some destination writes took effect.
+
+<ScreenshotFrame src={incremental} alt="A bounded source selection is staged and merged by key into the destination" caption="Incremental mode writes only the selected new and changed rows." width={1023} height={718} />
+
+## Verify and retry
+
+Inspect the destination before retrying a failed or cancelled run. A retry
+starts the transfer from the beginning of its selected input. The CLI reports
+error as exit code `1` and cancellation as `2`. For a managed run, use the
+[run details](/ReplicaDB/server/runs-and-diagnostics/) and
+[recovery guide](/ReplicaDB/operations/failure-recovery/).

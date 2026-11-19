@@ -51,6 +51,7 @@ export default defineConfig({
                 'getting-started/choose-cli-or-server',
                 'getting-started/cli-quickstart',
                 'getting-started/server-quickstart',
+                'cli/replication-modes',
                 'getting-started/concepts'
               ]
             },
@@ -60,7 +61,6 @@ export default defineConfig({
                 'cli',
                 'cli/installation',
                 'cli/configuration',
-                'cli/replication-modes',
                 'cli/parallelism',
                 'cli/filtering-and-queries',
                 'cli/multi-table',

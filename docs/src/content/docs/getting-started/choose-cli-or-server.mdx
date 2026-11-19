@@ -1,46 +1,33 @@
 ---
 title: Choose CLI or Server
-description: Decide whether a standalone CLI or managed server fits your replication workflow.
+description: Compare how the standalone CLI and managed Server run, schedule, and track replications.
 ---
 
+CLI and Server use the same replication engine. Choose based on who will own
+the execution, its configuration, and its history.
 
-ReplicaDB keeps the direct transfer tool and the managed control plane as
-separate products. Choose based on who owns state, scheduling, and access.
+| What you need | Standalone CLI | Managed Server |
+| --- | --- | --- |
+| Start a run | Invoke the launcher with arguments or an options file. | Trigger a saved job from the web interface or API. |
+| Run on a schedule | Use an external scheduler or pipeline. | Set a schedule on a managed job. |
+| Store configuration | Keep options and connection settings in your automation. | Save reusable datasource profiles and job definitions in Server. |
+| Control access | Manage process, file, and database access in your environment. | Use the Server sign-in, roles, and resource permissions alongside database access. |
+| Inspect results | Collect process logs and exit codes. | Inspect persisted run status, diagnostics, and retry history. |
 
-## Standalone CLI
+## Choose your quickstart
 
-Choose the CLI when a script, pipeline, or operator owns each replication
-invocation. It runs on Java 17 or newer, accepts command-line options or an
-options file, and does not require ReplicaDB metadata storage.
+Use the [CLI quickstart](/ReplicaDB/getting-started/cli-quickstart/) for a
+one-off migration, a shell script, or a pipeline that already manages
+scheduling and logging. The CLI runs as a standalone Java process.
 
-The CLI is a good fit when you need:
+Use the [Server quickstart](/ReplicaDB/getting-started/server-quickstart/)
+for a team that needs reusable jobs, shared visibility, or schedules.
+Local mode runs the Server and its embedded metadata PostgreSQL on one host.
+An [API and worker deployment](/ReplicaDB/operations/distributed-deployment/)
+uses an external metadata PostgreSQL database.
 
-- a direct source-to-sink transfer from a terminal or scheduler;
-- an existing secrets and logging workflow around the process; or
-- the smallest operational footprint for one host.
-
-[Start the CLI quickstart](/ReplicaDB/getting-started/cli-quickstart/).
-
-## Managed Server
-
-Choose the managed server when replication needs durable jobs, schedules,
-authenticated access, run history, diagnostics, or multiple operators. The
-server uses PostgreSQL metadata and exposes a web control plane; local mode
-manages embedded PostgreSQL, while `api` and `worker` deployments use external
-PostgreSQL.
-
-The server is a good fit when you need:
-
-- reusable datasource profiles and jobs;
-- permissions, audit history, and shared visibility; or
-- local or distributed execution with durable recovery state.
-
-[Start the server quickstart](/ReplicaDB/getting-started/server-quickstart/).
-
-## They are related, not interchangeable
-
-Both products use the ReplicaDB replication core and support the same broad
-connector family, subject to connector-specific limits. A server installation
-does not move CLI state, and a CLI invocation does not create managed jobs.
-Keep `REPLICADB_HOME` for CLI installations and
-`REPLICADB_SERVER_HOME` for server installations.
+Both quickstarts copy the same order from `shop.orders` to
+`reporting.orders`. In both paths, the
+[connector pair](/ReplicaDB/connectors/) and
+[replication mode](/ReplicaDB/cli/replication-modes/) determine how the
+destination is written.

@@ -44,9 +44,8 @@ test('keeps component color and radius literals inside token scopes', () => {
 
 test('requires accessible component content and stable image dimensions', () => {
   assert.match(homepage, /<ProductChoice/);
-  assert.match(homepage, /home-capabilities/);
-  assert.match(homepage, /<ArchitectureDiagram/);
-  assert.match(homepage, /home-capability-link/);
+  assert.match(homepage, /ReplicaDB-Conceptual\.jpg/);
+  assert.match(homepage, /<ScreenshotFrame[^\n]+alt="[^"]+"[^\n]+width=\{1350\} height=\{993\}/);
   assert.match(readFileSync(join(root, 'src/components/ArchitectureDiagram.astro'), 'utf8'), /data-mermaid-source/);
   assert.match(readFileSync(join(root, 'src/components/ArchitectureDiagram.astro'), 'utf8'), /data-diagram-fallback/);
   assert.match(readFileSync(join(root, 'src/components/ArchitectureDiagram.astro'), 'utf8'), /mermaid\.render/);
@@ -64,12 +63,10 @@ test('built light and dark surfaces retain responsive, readable component contra
   const builtHomepage = readFileSync(builtHomepagePath, 'utf8');
 
   assert.match(builtHomepage, /data-theme="dark"/);
-  assert.match(builtHomepage, /data-mermaid-source/);
-  assert.match(builtHomepage, /data-diagram-fallback/);
   assert.match(builtHomepage, /<header\b/);
   assert.match(builtHomepage, /<main\b/);
   assert.match(builtHomepage, /<a href="\/ReplicaDB\//);
-  assert.match(builtHomepage, /home-capability-link/);
+  assert.match(builtHomepage, /<img[^>]+ReplicaDB-Conceptual[^>]+width="1350"[^>]+height="993"/);
   assert.match(css, /@media \(max-width: 40rem\)[\s\S]*?grid-template-columns: 1fr/);
   assert.match(css, /\.screenshot-frame__viewport/);
   assert.match(css, /\[data-theme='light'\][\s\S]*--sl-color-accent-high: #064A47/);
