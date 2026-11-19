@@ -1,0 +1,19 @@
+.github/workflows/CT_Push.yml
+  s_3c0571664458c4::t_f6b41c2629d64b 70-72,123-124,263
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "258cdeebec4e2172f416182a32cd055541a5b2bc",
+  "prompts": {},
+  "sessions": {
+    "s_3c0571664458c4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f4ab-2371-7b51-98cc-b13e75ad5c11",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
