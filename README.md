@@ -1,13 +1,39 @@
 # ReplicaDB
 
+<p align="center">
+  <a href="https://osalvador.github.io/ReplicaDB/">
+    <img src="docs/src/assets/brand/replicadb-logo.png" alt="ReplicaDB" width="260">
+  </a>
+</p>
+
 [![Latest release](https://img.shields.io/github/v/release/osalvador/ReplicaDB)](https://github.com/osalvador/ReplicaDB/releases/latest)
 [![Apache 2.0 license](https://img.shields.io/github/license/osalvador/ReplicaDB)](LICENSE)
+[![Docker pulls](https://img.shields.io/docker/pulls/osalvador/replicadb?logo=docker)](https://hub.docker.com/r/osalvador/replicadb)
+[![GitHub downloads](https://img.shields.io/github/downloads/osalvador/ReplicaDB/total?logo=github)](https://github.com/osalvador/ReplicaDB/releases)
+[![GitHub stars](https://img.shields.io/github/stars/osalvador/ReplicaDB?logo=github)](https://github.com/osalvador/ReplicaDB/stargazers)
+[![OpenSSF Best Practices](https://bestpractices.coreinfrastructure.org/projects/4190/badge)](https://bestpractices.coreinfrastructure.org/projects/4190)
 
 **Copy data in batches between databases and other data stores.** Use
 ReplicaDB to migrate an Oracle table to PostgreSQL, refresh a reporting table,
 or export selected rows to CSV. ReplicaDB can split large transfers into
 parallel tasks where the connectors support it. It runs without installing
 agents or triggers on the source database.
+
+[Documentation](https://osalvador.github.io/ReplicaDB/) ·
+[CLI quickstart](https://osalvador.github.io/ReplicaDB/getting-started/cli-quickstart/) ·
+[Server quickstart](https://osalvador.github.io/ReplicaDB/getting-started/server-quickstart/) ·
+[Server screenshots](#replicadb-server-in-action) ·
+[Connector matrix](https://osalvador.github.io/ReplicaDB/connectors/) ·
+[Configuration wizard](https://osalvador.github.io/ReplicaDB/wizard/index.html)
+
+<p align="center">
+  <a href="docs/src/assets/media/ReplicaDB-Conceptual.jpg">
+    <img src="docs/src/assets/media/ReplicaDB-Conceptual.jpg" alt="ReplicaDB bulk-loads data from source databases and files into destinations such as databases, object storage, files, and streams." width="760">
+  </a>
+</p>
+
+The illustration shows the source-to-destination flow. The
+[connector matrix](https://osalvador.github.io/ReplicaDB/connectors/) lists current support.
 
 ## Choose CLI or Server
 
@@ -64,7 +90,41 @@ options, see [Releases](https://github.com/osalvador/ReplicaDB/releases/latest),
 [CLI installation](https://osalvador.github.io/ReplicaDB/cli/installation/),
 or [Server installation](https://osalvador.github.io/ReplicaDB/server/installation/).
 The [CLI container image](https://hub.docker.com/r/osalvador/replicadb) is also
-available for Docker and Podman.
+available for Docker and Podman. For SELinux volume mounts, see
+[Podman volume options](https://docs.podman.io/en/latest/markdown/podman-run.1.html#volume-v-source-volume-host-dir-options).
+
+<details>
+<summary>Watch an Oracle-to-PostgreSQL CLI transfer</summary>
+
+![Terminal recording of an Oracle-to-PostgreSQL transfer with the ReplicaDB CLI](https://raw.githubusercontent.com/osalvador/ReplicaDB/gh-pages/docs/media/ReplicaDB-Ora2PG.gif)
+
+</details>
+
+## ReplicaDB Server in action
+
+Create a job from reusable connections, choose a replication mode, and run it
+on demand or on a schedule. The job's run history gives you the result,
+row counts and [diagnostics](https://osalvador.github.io/ReplicaDB/server/runs-and-diagnostics/).
+
+[![ReplicaDB Server job catalog showing source tables, destination tables, and replication modes](docs/src/assets/screenshots/server/jobs.png)](docs/src/assets/screenshots/server/jobs.png)
+
+<table>
+  <thead>
+    <tr>
+      <th><a href="https://osalvador.github.io/ReplicaDB/server/datasources/">Reuse connection profiles</a></th>
+      <th><a href="https://osalvador.github.io/ReplicaDB/server/schedules/">Schedule recurring transfers</a></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="docs/src/assets/screenshots/server/datasources.png"><img src="docs/src/assets/screenshots/server/datasources.png" alt="Datasource catalog showing connectors, redacted connection details, and source and destination capabilities" width="420"></a></td>
+      <td><a href="docs/src/assets/screenshots/server/schedule.png"><img src="docs/src/assets/screenshots/server/schedule.png" alt="Schedule editor showing the frequency, cron expression, and time zone for a job" width="420"></a></td>
+    </tr>
+  </tbody>
+</table>
+
+Start the [Server quickstart](https://osalvador.github.io/ReplicaDB/getting-started/server-quickstart/)
+to configure the connections and run your first managed job.
 
 ## Choose how to write to the destination
 
@@ -76,7 +136,8 @@ available for Docker and Podman.
 
 See [replication modes](https://osalvador.github.io/ReplicaDB/cli/replication-modes/)
 for what readers see during a run, how watermarks advance, and how to recover
-from an interruption.
+from an interruption. See [incremental watermarks](https://osalvador.github.io/ReplicaDB/cli/incremental-watermarks/)
+to configure a bounded read.
 
 ## Compatible databases
 
@@ -84,12 +145,16 @@ Connectors cover Oracle, PostgreSQL, MySQL, MariaDB, SQL Server, Db2, SQLite,
 MongoDB, Denodo, CSV, Amazon S3, Kafka, and generic JDBC. Source and destination
 roles, modes, and staging support vary by connector. Check the
 [connector matrix](https://osalvador.github.io/ReplicaDB/connectors/) before
-choosing a pair.
+choosing a pair. See the [Db2 connector guide](https://osalvador.github.io/ReplicaDB/connectors/db2/)
+for platform and driver details and the
+[generic JDBC guide](https://osalvador.github.io/ReplicaDB/connectors/generic-jdbc/)
+to configure an external driver.
 
 ## Documentation
 
 - [Configuration wizard](https://osalvador.github.io/ReplicaDB/wizard/index.html) to build a CLI options file.
 - [Filtering and queries](https://osalvador.github.io/ReplicaDB/cli/filtering-and-queries/) and [multi-table replication](https://osalvador.github.io/ReplicaDB/cli/multi-table/) to select what a transfer copies.
+- [Server development](replicadb-server/README.md) and [distributed deployment](DEPLOYMENT.md) for repository setup and deployment details.
 - [Server operations](https://osalvador.github.io/ReplicaDB/operations/) and the [Server API](https://osalvador.github.io/ReplicaDB/api-introduction/) to deploy, operate, and automate managed jobs.
 
 See the [documentation portal](https://osalvador.github.io/ReplicaDB/) for the
