@@ -45,6 +45,24 @@ The illustration shows the source-to-destination flow. The
 Both use the same replication engine. The two quickstarts use the same
 PostgreSQL sample data so you can try either workflow.
 
+## Key features
+
+- **Replicate across different systems.** Move data between relational
+  databases and MongoDB, or export rows to CSV, ORC, S3, or Kafka. Supported
+  directions and modes vary by connector. [Connector matrix](https://osalvador.github.io/ReplicaDB/connectors/)
+- **Parallel bulk transfers.** Split source reads across workers where
+  supported and use native loaders such as PostgreSQL COPY and SQL Server
+  bulk copy. [Parallelism and tuning](https://osalvador.github.io/ReplicaDB/cli/parallelism/)
+- **Control how the destination changes.** Refresh it in place, stage a full
+  replacement for an atomic publish, or load an incremental batch. A filter
+  or a source watermark can bound what the run reads. [Replication modes](https://osalvador.github.io/ReplicaDB/cli/replication-modes/)
+- **Define the transfer in an options file.** Select columns, filter rows,
+  use a custom source query where supported, or list several table pairs for
+  one sequential CLI run. [Configuration wizard](https://osalvador.github.io/ReplicaDB/wizard/index.html)
+- **Operate recurring jobs in Server.** Reuse connection profiles with
+  encrypted credentials, manage access to jobs and datasources, and inspect
+  run history and diagnostics from the web UI or API. [Server guide](https://osalvador.github.io/ReplicaDB/server/)
+
 ## Try a local transfer
 
 Copy a single order from SQLite to CSV. You need Java 17 or newer and
