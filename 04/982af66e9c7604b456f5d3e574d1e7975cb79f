@@ -1,0 +1,55 @@
+docs/tests/cli-contract.test.mjs
+  s_f2b66808b78636::t_9f6c7fb54efb5d 123-127
+docs/tests/e2e/wizard.spec.ts
+  s_f2b66808b78636::t_44043bfaa969ba 1-83
+docs/scripts/stage-static-tools.mjs
+  s_f2b66808b78636::t_e7838ca19dca7e 7,71,74,82,92
+docs/src/content/docs/cli/configuration.md
+  s_f2b66808b78636::t_d557d90742d0a2 11-28,36-40,42-45,49,70-74
+docs/src/content/docs/cli/incremental-watermarks.md
+  s_f2b66808b78636::t_dcd30528b28b12 13-18,46-48
+docs/src/content/docs/connectors/amazon-s3.mdx
+  s_f2b66808b78636::t_cbc76d3c44028e 41-43
+docs/src/content/docs/connectors/csv.md
+  s_f2b66808b78636::t_8bf6c1b812c16e 65-78,98-108,117-121,124,128,131,141,145,155,157-158,172,176
+docs/src/content/docs/connectors/kafka.md
+  s_f2b66808b78636::t_0585998875f09d 21,56
+docs/src/content/docs/connectors/sql-server.md
+  s_f2b66808b78636::t_2db4b290b2501b 54-80
+docs/src/content/docs/reference/cli-options.md
+  s_f2b66808b78636::t_e002631c081bb0 3,6-9,11,13-17,19,21-134
+docs/src/content/docs/reference/example-options-files.md
+  s_f2b66808b78636::t_472a64ee564c4c 27,37-43,49,51-70,74-77,94-123,126-135,138,141-147,153
+docs/src/data/connector-capabilities.json
+  s_f2b66808b78636::t_88e8749a6dbe78 196
+docs/tests/static-tools.test.mjs
+  s_f2b66808b78636::t_b9d73e62bf7352 5,18-21,50
+docs/tests/wizard-options.test.mjs
+  s_f2b66808b78636::t_832d2b26691287 1-171
+docs/wizard/css/wizard.css
+  s_f2b66808b78636::t_db76e236f95f82 1-98
+docs/wizard/index.html
+  s_f2b66808b78636::t_8481efd754a92c 1,4-8,10-17,19-52,54-78,81-99
+docs/wizard/js/help.js
+  s_f2b66808b78636::t_2b7015a5eb4a1d 1-113
+docs/wizard/js/options.js
+  s_f2b66808b78636::t_9a49f7045500b3 1-380
+docs/wizard/js/wizard.js
+  s_f2b66808b78636::t_d0600c5d811818 1-253
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "04982af66e9c7604b456f5d3e574d1e7975cb79f",
+  "prompts": {},
+  "sessions": {
+    "s_f2b66808b78636": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f4c4-1cbd-7450-9270-a175eccb01eb",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
