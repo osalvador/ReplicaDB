@@ -1,0 +1,19 @@
+README.md
+  s_f2b66808b78636::t_db0eb964e279db 48-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "8da8f4ae0074cc14e9b8a5a659e8523f5a2c5194",
+  "prompts": {},
+  "sessions": {
+    "s_f2b66808b78636": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f4c4-1cbd-7450-9270-a175eccb01eb",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
