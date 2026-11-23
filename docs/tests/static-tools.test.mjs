@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
-import { assertRelativeAssetReference, markdownFiles, wizardDirectories, wizardFiles } from '../scripts/stage-static-tools.mjs';
+import { assertRelativeAssetReference, markdownFiles, wizardFiles } from '../scripts/stage-static-tools.mjs';
 
 const docsRoot = new URL('..', import.meta.url).pathname;
 const distRoot = join(docsRoot, 'dist');
@@ -15,7 +15,10 @@ test('accepts relative runtime references and rejects root or URL references', (
 
 test('stages only the allowlisted runtime files and preserves relative tool contracts', { skip: !existsSync(distRoot) }, () => {
   for (const path of wizardFiles) assert.ok(existsSync(join(distRoot, 'wizard', path)), path);
-  for (const path of wizardDirectories) assert.ok(existsSync(join(distRoot, 'wizard', path)), path);
+  assert.deepEqual(
+    readFileSync(join(distRoot, 'wizard/connector-capabilities.json')),
+    readFileSync(join(docsRoot, 'src/data/connector-capabilities.json'))
+  );
   for (const path of markdownFiles) assert.ok(existsSync(join(distRoot, 'markdown', path)), path);
   assert.ok(existsSync(join(distRoot, 'markdown', 'assets/app.js')));
 

@@ -10,6 +10,12 @@ optionally set `--incremental-watermark-value` for the last successful value.
 The options-file keys are `incremental.watermark.column` and
 `incremental.watermark.value`.
 
+Use automatic watermarks with a table-backed source on Oracle, PostgreSQL,
+MySQL, MariaDB, SQL Server, Db2 (including IBM i), SQLite, or Denodo. The
+destination must independently support `incremental`. For example, a file
+destination appends the selected rows, while PostgreSQL merges by key. See
+the [connector matrix](/ReplicaDB/connectors/) for the allowed combinations.
+
 ```bash
 ./bin/replicadb --mode incremental \
   --source-table "$SOURCE_TABLE" \
@@ -37,7 +43,9 @@ lower bound and expected result.
 
 - Watermarks apply only to `incremental` mode and a concrete `source.table`.
 - They cannot be combined with `source.query` or `replication.table.*`.
-- Deletes are not propagated; merging requires a sink primary key.
+- The watermark selects candidate rows. Relational sinks that merge use a
+  destination primary key. File sinks append the batch. Neither path
+  propagates source deletes.
 - A failed or cancelled run does not advance the value.
 - A transaction that commits after the read with an older value can be missed;
   there is no read-lag setting yet.

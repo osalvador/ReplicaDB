@@ -4,9 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const docsRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
-export const wizardFiles = ['index.html'];
-
-export const wizardDirectories = ['css', 'js', 'vendor'];
+export const wizardFiles = ['index.html', 'css/wizard.css', 'js/help.js', 'js/options.js', 'js/wizard.js'];
 
 export const markdownFiles = [
   'converter.html',
@@ -70,9 +68,10 @@ export async function stageStaticTools({ sourceRoot = docsRoot, outputRoot = joi
   const wizardOutput = join(outputRoot, 'wizard');
   const markdownOutput = join(outputRoot, 'markdown');
 
+  await mkdir(wizardOutput, { recursive: true });
   await Promise.all([
     ...wizardFiles.map((path) => copyFile(wizardRoot, wizardOutput, path)),
-    ...wizardDirectories.map((path) => copyDirectory(wizardRoot, wizardOutput, path)),
+    cp(join(sourceRoot, 'src/data/connector-capabilities.json'), join(wizardOutput, 'connector-capabilities.json')),
     ...markdownFiles.map((path) => copyFile(markdownRoot, markdownOutput, path)),
     copyDirectory(markdownRoot, markdownOutput, 'assets')
   ]);
@@ -80,7 +79,7 @@ export async function stageStaticTools({ sourceRoot = docsRoot, outputRoot = joi
   await Promise.all(flattenedLegacyPages.map((path) => flattenLegacyPage(outputRoot, path)));
 
   return {
-    wizard: wizardFiles.concat(wizardDirectories),
+    wizard: wizardFiles.concat('connector-capabilities.json'),
     markdown: markdownFiles.concat('assets'),
     legacyPages: flattenedLegacyPages
   };

@@ -51,16 +51,33 @@ where a partial write matters.
 
 ## Microsoft Entra authentication
 
-Use the `source.auth.*` or `sink.auth.*` options rather than embedding secrets
-in a JDBC URL. The supported `source.auth.mode` and `sink.auth.mode` values are
-`ActiveDirectoryInteractive`, `Default`, `ManagedIdentity`, `ServicePrincipal`,
-`ServicePrincipalCertificate`, and `Integrated`. `ActiveDirectoryPassword` is
-deprecated.
+Set `source.auth.mode` for a SQL Server source or `sink.auth.mode` for a SQL
+Server sink. The fields in this table use the same endpoint prefix.
 
-`ActiveDirectoryInteractive` forces `jobs=1`; use it only where an interactive
-sign-in is possible. `Integrated` does not accept a user
-name. Default credentials, managed identity, service principal, and certificate
-flows must be supplied by the runtime environment.
+| Mode value | Settings to provide | Requirements and limits |
+| --- | --- | --- |
+| `ActiveDirectoryInteractive` | Optional `auth.login.hint` for the account to sign in with. | Requires interactive sign-in and `jobs=1`. Leave the password empty. |
+| `ActiveDirectoryDefault` | Optional `auth.principal.id` for a managed identity client ID. | Uses the driver's default credential chain. Configure the host identity or credentials and leave the password empty. |
+| `ActiveDirectoryManagedIdentity` | Optional `auth.principal.id` for a user-assigned identity. | Requires a managed identity available to the runtime and access granted in Azure SQL. Leave the password empty. |
+| `ActiveDirectoryServicePrincipal` | `auth.principal.id` and the endpoint's `password` property for its client secret. | Supply the secret through an environment reference. The principal ID supplies the driver username. |
+| `ActiveDirectoryServicePrincipalCertificate` | `auth.principal.id` and `auth.client.certificate`. Add `auth.client.key` when the private key is separate. | Make the certificate and key available to the launching user on the host running the CLI. |
+| `ActiveDirectoryIntegrated` | The runtime identity and Kerberos setup. | Leave the username and password empty. |
+
+`ActiveDirectoryMSI` is accepted as an alias for
+`ActiveDirectoryManagedIdentity`. The CLI rejects `ActiveDirectoryPassword`.
+Set the mode in the options file and keep any authentication properties in the
+JDBC URL or extra parameters consistent with it. Conflicting values fail.
+
+The following settings give a SQL Server destination a service principal
+and a secret.
+
+```properties
+sink.auth.mode=ActiveDirectoryServicePrincipal
+sink.auth.principal.id=${AZURE_CLIENT_ID}
+sink.password=${AZURE_CLIENT_SECRET}
+```
+
+Export both variables and verify that the principal can write to the destination.
 
 ## Staging and limits
 

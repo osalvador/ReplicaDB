@@ -62,7 +62,20 @@ option overrides the value from the predefined format.
 | `format.trim` | `true` or `false`. Trims values. | Format value |
 
 Boolean options are parsed with `Boolean.parseBoolean`, so any value other than
-`true` (ignoring case) is read as `false`.
+`true` (ignoring case) is read as `false`. Use `format.recordSeparator` to
+control output line endings. In the options file, enter `\n` for LF or
+`\r\n` for CRLF. The following options write a tab-separated file with a header.
+
+```properties
+sink.file.format=csv
+sink.connect.parameter.format=TDF
+sink.connect.parameter.format.firstRecordAsHeader=true
+sink.connect.parameter.format.recordSeparator=\n
+```
+
+CSV settings apply to CSV paths, including S3 CSV file output. Use the ORC
+compression option for ORC output. Check the expected delimiter, header,
+null marker, and quoting with the system that consumes the file.
 
 ## Quote modes
 
@@ -82,6 +95,17 @@ A CSV source requires `source.connect.parameter.columns.types`. If it is not
 set, the run fails with `Parameter 'source.connect.parameter.columns.types'
 cannot be null`. Provide one type entry for each source column.
 
+For input such as `1,paid`, use `INTEGER,VARCHAR` for the two types.
+If the file starts with `id,status`, set
+`source.connect.parameter.format.firstRecordAsHeader=true` to skip that
+record as data. Set `source.columns=id,status` whenever the transfer needs
+column names, even if the input has a header. ReplicaDB does not use that
+header to populate the source's column metadata. For custom output header
+names, set `sink.columns` in file order and enable
+`sink.connect.parameter.format.firstRecordAsHeader`. The
+[CSV-to-CSV example](/ReplicaDB/reference/example-options-files/#file-endpoints-and-diagnostic-level)
+shows the complete file and its expected output.
+
 ## Replication modes
 
 | Mode | Behavior |
@@ -90,14 +114,21 @@ cannot be null`. Provide one type entry for each source column.
 | `incremental` | All temporary files are appended to the sink file. The sink file is created if it does not exist. |
 | `complete-atomic` | Rejected for file sinks with an `UnsupportedOperationException`. |
 
+When appending to an existing CSV that already has a header, set
+`sink.connect.parameter.format.firstRecordAsHeader=false` to avoid writing
+another header inside the file. Repeating the same incremental input
+appends those rows again.
+
 ## Example properties
 
-Complete replacement from a CSV file to a CSV file:
+This example replaces a CSV file with data read from another CSV file.
 
 ```properties
 mode=complete
+jobs=1
 source.connect=${SOURCE_FILE_PATH}
 source.file.format=csv
+source.columns=id,status
 source.connect.parameter.columns.types=${SOURCE_COLUMN_TYPES}
 source.connect.parameter.format=RFC4180
 source.connect.parameter.format.firstRecordAsHeader=true
@@ -107,10 +138,11 @@ sink.connect.parameter.format=RFC4180
 sink.connect.parameter.format.quoteMode=MINIMAL
 ```
 
-Incremental append to an existing CSV file:
+The following example appends a batch to an existing CSV file.
 
 ```properties
 mode=incremental
+jobs=1
 source.connect=${SOURCE_CONNECTION}
 sink.connect=${SINK_FILE_PATH}
 sink.file.format=csv
@@ -120,9 +152,10 @@ sink.connect.parameter.format=DEFAULT
 ## ORC limits
 
 ORC is supported for local files and is read and written through the same
-`file:` scheme. The following limits apply:
+`file:` scheme.
 
-- `orc.compression` sets the compression codec. Values are case-insensitive
+- `sink.connect.parameter.orc.compression` sets the compression codec for
+  ORC output. Values are case-insensitive
   names of the ORC `CompressionKind` enum, such as `NONE`, `ZLIB`, or
   `SNAPPY`. An invalid value logs a warning and falls back to `ZLIB`. The
   default is `ZLIB`.
@@ -136,10 +169,11 @@ ORC is supported for local files and is read and written through the same
 - Validate column types and null handling with representative data before a
   production run.
 
-Example:
+This example writes ORC output with ZLIB compression.
 
 ```properties
 mode=complete
+jobs=1
 source.connect=${SOURCE_CONNECTION}
 sink.connect=${SINK_FILE_PATH}
 sink.file.format=orc

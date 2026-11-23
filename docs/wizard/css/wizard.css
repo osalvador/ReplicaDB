@@ -1,0 +1,98 @@
+:root {
+  color-scheme: light;
+  --surface: #fff;
+  --page: #f3f6f4;
+  --ink: #1b2926;
+  --quiet: #50625d;
+  --accent: #0b6e69;
+  --border: #c6d1cc;
+  --info: #e5efeb;
+  --error: #8e3421;
+  font: 16px/1.5 system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+}
+
+.site-header { border-bottom: 1px solid var(--border); background: var(--surface); }
+.header-inner, main { max-width: 92rem; margin: auto; padding-inline: clamp(1rem, 3vw, 2.5rem); }
+.header-inner { min-height: 4rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.wordmark { font-weight: 750; font-size: 1.25rem; text-decoration: none; }
+nav { display: flex; flex-wrap: wrap; justify-content: end; gap: .25rem 1rem; }
+a { color: var(--accent); text-underline-offset: .15em; }
+main { padding-block: clamp(1.5rem, 4vw, 3.5rem) 3rem; }
+
+h1, h2 { margin: 0; line-height: 1.15; }
+h1 { font-family: Georgia, serif; font-size: clamp(2.2rem, 5vw, 3.65rem); }
+h2 { font-size: 1.15rem; }
+p { margin-block: .65rem; }
+.intro { color: var(--quiet); margin-bottom: 1.5rem; }
+.workspace { display: grid; grid-template-columns: minmax(0, 2fr) minmax(19rem, 1fr); gap: 1rem; align-items: start; }
+.configuration, .endpoint-grid, .fields { display: grid; gap: 1rem; }
+.endpoint-grid, .fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.fields { align-items: start; }
+.card { min-width: 0; padding: 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: .65rem; }
+.card h2, summary { margin-bottom: .85rem; }
+summary { font-weight: 650; cursor: pointer; margin-bottom: 0; }
+details[open] > summary { margin-bottom: .85rem; }
+.endpoint-options { margin-top: 1rem; }
+.endpoint-options > div { display: grid; gap: .85rem; }
+.output { position: sticky; top: 1rem; align-self: start; }
+.endpoint-guide { color: var(--quiet); font-size: .9rem; overflow-wrap: anywhere; }
+
+label, .control { display: grid; gap: .25rem; min-width: 0; font-size: .88rem; font-weight: 650; }
+.control small { color: var(--quiet); font-weight: 400; overflow-wrap: anywhere; }
+.field-heading { display: flex; align-items: center; gap: .45rem; min-height: 1.5rem; }
+.field-heading .help-toggle {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border-radius: 50%;
+  color: var(--accent);
+  font-weight: 700;
+}
+.help-toggle[aria-expanded="true"] { background: var(--info); }
+.field-help { padding: .5rem .65rem; border-radius: .4rem; background: var(--info); font-weight: 400; }
+input, select, textarea, button { font: inherit; }
+input, select, textarea {
+  width: 100%;
+  min-width: 0;
+  padding: .55rem .6rem;
+  border: 1px solid var(--border);
+  border-radius: .4rem;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: .9rem;
+  font-weight: 400;
+}
+input::placeholder, textarea::placeholder { color: var(--quiet); opacity: 1; }
+textarea { resize: vertical; }
+pre, code, textarea { font-family: ui-monospace, Menlo, Consolas, monospace; }
+pre { padding: .6rem; background: var(--page); white-space: pre-wrap; overflow-wrap: anywhere; }
+.output textarea { background: var(--page); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.compatibility { padding: .55rem .7rem; margin-block: .85rem 0; background: var(--info); border-radius: .4rem; font-size: .9rem; }
+#errors { color: var(--error); font-size: .85rem; padding-left: 1.2rem; }
+#errors:empty, #feedback:empty { display: none; }
+.actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+button { border: 1px solid var(--border); padding: .45rem .7rem; border-radius: .4rem; background: var(--surface); color: var(--ink); cursor: pointer; }
+button.primary { background: var(--accent); color: white; border-color: var(--accent); font-weight: 650; }
+button:disabled { opacity: .55; cursor: default; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: .55rem; align-items: end; margin-bottom: .8rem; }
+
+@media (max-width: 61rem) {
+  .workspace { grid-template-columns: 1fr; }
+  .output { position: static; }
+}
+
+@media (max-width: 40rem) {
+  .endpoint-grid, .fields, .pair { grid-template-columns: 1fr; }
+  .pair button { justify-self: start; }
+}

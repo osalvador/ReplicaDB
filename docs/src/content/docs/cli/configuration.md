@@ -8,6 +8,24 @@ ReplicaDB accepts long command-line options and Java-properties options files.
 Use an options file for repeatable settings and keep values that change per
 invocation on the command line.
 
+## Review a file from the wizard
+
+1. Choose the source and destination in the
+   [configuration wizard](/ReplicaDB/wizard/index.html). Check their roles and
+   common modes in the [connector matrix](/ReplicaDB/connectors/).
+2. Replace the example connection URLs, tables, paths, or topics with values
+   for your environment. The wizard checks fields and connector combinations
+   locally. Connection access, schemas, permissions, and types are checked
+   when you run ReplicaDB.
+3. Check what the mode will do to the destination. For an initial test, use a
+   disposable destination and compare the actual rows with the expected result.
+   The [mode walkthrough](/ReplicaDB/cli/replication-modes/) shows what to
+   inspect during a complete load, an atomic replacement, and an incremental run.
+4. Download the file and run `./bin/replicadb --options-file replicadb.conf`.
+   Use the [CLI option reference](/ReplicaDB/reference/cli-options/) to check
+   the resulting keys or the [examples](/ReplicaDB/reference/example-options-files/)
+   to compare complete configurations.
+
 ## Options-file rules
 
 Pass a file with `--options-file <file-path>`. It may appear anywhere in the
@@ -15,18 +33,20 @@ command line. The file supports comments on their own lines, backslash
 continuations, and `${VARIABLE}` environment substitution. Command-line
 arguments override values loaded from the options file.
 
-The loader reads the file once before applying explicit flags. An absent
-environment variable therefore becomes an invalid or empty value rather than
-a prompt. Validate environment-managed values in the launching shell, keep
-resolved files owner-readable, and do not print them when collecting logs.
+The loader reads the file once before applying explicit flags. An unset
+environment variable leaves its `${VARIABLE}` token in the value. For
+example, an unset token in a JDBC URL reaches the connector as literal text.
+Export required variables before launching ReplicaDB. Keep resolved files
+owner-readable and omit them from diagnostic output.
 
-The complete property inventory is in the
-[options-file reference](/ReplicaDB/reference/example-options-files/). The
-exact flag inventory is in the [CLI option reference](/ReplicaDB/reference/cli-options/).
+Use one `key=value` per line. Java properties interpret backslashes, so
+`\t` represents a tab and `\\` represents a literal backslash. A continuation
+at the end of a line joins the next line to the same value. The complete
+flag-to-key mapping is in the [CLI option reference](/ReplicaDB/reference/cli-options/).
 
 ## Connection settings
 
-The usual source and sink properties are:
+This example copies one table with complete mode and one parallel task.
 
 ```properties
 mode=complete
@@ -47,6 +67,11 @@ Keep the file outside the repository when it contains resolved values. JDBC
 driver-specific parameters use `source.connect.parameter.*` and
 `sink.connect.parameter.*`; authentication settings for supported SQL Server
 flows use the corresponding `source.auth.*` and `sink.auth.*` keys.
+In the wizard's **Additional connection parameters** field, enter the bare
+name and value, for example `sslmode=verify-full` on PostgreSQL. The source
+field writes `source.connect.parameter.sslmode=verify-full`. See the
+[PostgreSQL connector](/ReplicaDB/connectors/postgresql/) for the TLS settings
+that go with it.
 
 Common properties control the transfer as a whole: `mode`, `jobs`,
 `fetch.size`, `bandwidth.throttling`, `quoted.identifiers`, and `verbose`.

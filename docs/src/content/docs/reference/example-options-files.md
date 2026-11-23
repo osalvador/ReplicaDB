@@ -24,7 +24,7 @@ sink.password=${SINK_PASSWORD}
 sink.table=${SINK_TABLE}
 ```
 
-Invoke it with:
+Run the following command to use two jobs for this invocation.
 
 ```bash
 ./bin/replicadb --options-file ./replicadb.conf --jobs 2
@@ -34,22 +34,47 @@ The explicit `--jobs 2` wins over `jobs=1` in the file.
 
 ## File endpoints and diagnostic level
 
-File connectors use an explicit format from `csv`, `json`, `avro`, `parquet`,
-or `orc` where that connector supports the requested role:
+Use this complete CSV-to-CSV example with a local file that contains a header
+and two columns. Set the source types in the same order as the input. The
+destination also gets a header and uses LF line endings.
+
+```bash
+printf 'id,status\n1,paid\n2,pending\n' > /tmp/replicadb-orders-input.csv
+```
 
 ```properties
 mode=complete
 jobs=1
 verbose=INFO
-source.connect=${SOURCE_FILE_PATH}
+source.connect=file:///tmp/replicadb-orders-input.csv
 source.file.format=csv
-sink.connect=${SINK_FILE_PATH}
-sink.file.format=parquet
+source.columns=id,status
+source.connect.parameter.columns.types=INTEGER,VARCHAR
+source.connect.parameter.format.firstRecordAsHeader=true
+sink.connect=file:///tmp/replicadb-orders-output.csv
+sink.file.format=csv
+sink.connect.parameter.format.firstRecordAsHeader=true
+sink.connect.parameter.format.recordSeparator=\n
+```
+
+Save the options as `orders.conf`. Run the transfer and print the generated file.
+
+```bash
+./bin/replicadb --options-file orders.conf
+cat /tmp/replicadb-orders-output.csv
+```
+
+```csv
+id,status
+1,paid
+2,pending
 ```
 
 Use `verbose=DEBUG` temporarily for diagnosis. The command-line `--verbose`
-flag also selects diagnostic output, but an explicit command-line value is not
-accepted because it is a boolean flag.
+flag selects DEBUG and takes no argument. Local files require one job and
+implement CSV and ORC. In `complete` mode this example replaces the output
+file. See the [file connector](/ReplicaDB/connectors/csv/) for CSV presets,
+escaping, types, and ORC compression.
 
 ## Multi-table catalog
 
@@ -66,27 +91,66 @@ replication.table.2.sink=${SINK_TABLE_TWO}
 Indexes must start at 1 and be contiguous. Do not add `source.table`,
 `sink.table`, or `source.query` to this form.
 
-## Driver parameters and authentication
+## PostgreSQL staging and watermarks
 
-Connector-specific properties use the prefixes below. The concrete names and
-allowed values belong to the connector guide:
+With the [sample PostgreSQL data](/ReplicaDB/getting-started/sample-data/),
+start from the [CLI quickstart options file](/ReplicaDB/getting-started/cli-quickstart/#configure-and-run).
+Replace its `mode` value and add the staging schema. A complete replacement
+uses one transaction to publish the staged rows.
 
 ```properties
-source.connect.parameter.driver=${SOURCE_DRIVER}
-sink.connect.parameter.driver=${SINK_DRIVER}
-source.auth.mode=${SOURCE_AUTH_MODE}
-source.auth.client.certificate=${SOURCE_CLIENT_CERTIFICATE}
-source.auth.client.key=${SOURCE_CLIENT_KEY}
-sink.auth.mode=${SINK_AUTH_MODE}
+mode=complete-atomic
+sink.staging.schema=reporting
 ```
 
-Optional telemetry is configured only in the options file:
+Use the following settings to merge a selected batch.
+
+```properties
+mode=incremental
+incremental.watermark.column=change_seq
+incremental.watermark.value=10
+sink.staging.schema=public
+```
+
+The incremental file selects rows where `change_seq > 10` and merges them
+by the destination key. With the
+[mode comparison data](/ReplicaDB/cli/replication-modes/#prepare-the-comparison),
+this updates order `1`, adds order `2`, and keeps the older order `9`.
+In v1.0.3 the merge resolves the staging table through the connection's
+search path. The sample uses `public` for that reason. Review the
+[watermark limits](/ReplicaDB/cli/incremental-watermarks/#limits) before
+adapting the example.
+
+## Driver parameters and authentication
+
+These are source-side additions to a working options file. For PostgreSQL,
+pass JDBC TLS settings using the source prefix as shown below. Use the sink
+prefix to configure TLS on the destination.
+
+```properties
+source.connect.parameter.sslmode=verify-full
+source.connect.parameter.sslrootcert=${PG_SSL_ROOT_CERT}
+```
+
+For SQL Server, this setting uses the driver's default credential chain.
+
+```properties
+source.auth.mode=ActiveDirectoryDefault
+```
+
+See the [PostgreSQL connector](/ReplicaDB/connectors/postgresql/) for TLS
+properties, the [SQL Server connector](/ReplicaDB/connectors/sql-server/#microsoft-entra-authentication)
+for the required Entra fields, and the
+[generic JDBC guide](/ReplicaDB/connectors/generic-jdbc/#connection-parameters)
+for custom drivers and credentials.
+
+To configure optional telemetry in the options file, set the Sentry DSN.
 
 ```properties
 sentry.dsn=${SENTRY_DSN}
 ```
 
-Leave the variable unset to keep telemetry disabled. Do not commit a resolved
+Omit the property to keep telemetry disabled. Do not commit a resolved
 DSN, certificate, private key, password, token, or connection value.
 
 Keep the resolved file in an owner-controlled location and remove it according
