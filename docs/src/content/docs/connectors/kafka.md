@@ -18,6 +18,7 @@ Kafka-specific settings are passed as `sink.connect.parameter.*` properties.
 | `sink.connect.parameter.topic` | Yes | Topic that receives every message. |
 | `sink.connect.parameter.partition` | No | Integer partition number. When set, every record is sent to that partition. When omitted, the Kafka producer chooses the partition. |
 | `sink.connect.parameter.key` | No | Fixed producer key sent with every record. When omitted, records have no key. |
+| `sink.connect.parameter.acks` | No | Producer acknowledgement policy. `0` waits for no acknowledgement, `1` waits for the leader, and `all` waits for all in-sync replicas. |
 
 Any other `sink.connect.parameter.*` name is passed to the Kafka producer
 configuration, so producer settings such as `security.protocol` can be set the
@@ -52,6 +53,7 @@ sink.connect=kafka://${KAFKA_BOOTSTRAP_SERVERS}
 sink.connect.parameter.topic=orders
 sink.connect.parameter.partition=0
 sink.connect.parameter.key=orders-export
+sink.connect.parameter.acks=all
 ```
 
 ## Limits and notes

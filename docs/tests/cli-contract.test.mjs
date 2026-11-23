@@ -120,10 +120,11 @@ test('documents mode-specific flow and interruption consequences', () => {
 test('documents file formats, defaults, precedence, and safe optional telemetry', () => {
   const options = readFileSync(join(referenceRoot, 'cli-options.md'), 'utf8');
   const examples = readFileSync(join(referenceRoot, 'example-options-files.md'), 'utf8');
-  for (const format of ['csv', 'json', 'avro', 'parquet', 'orc']) {
-    assert.match(options, new RegExp(`source file format:[^\\n]*${format}`, 'i'));
-    assert.match(options, new RegExp(`sink file format:[^\\n]*${format}`, 'i'));
-  }
+  assert.match(options, /source\.file\.format[^\n]*`csv` or `orc`/);
+  assert.match(options, /sink\.file\.format[^\n]*`csv` or `orc`/);
+  assert.match(options, /only implements CSV and ORC/);
+  assert.match(examples, /source\.connect\.parameter\.columns\.types=INTEGER,VARCHAR/);
+  assert.doesNotMatch(examples, /(?:source|sink)\.file\.format=(?:json|avro|parquet)/);
   assert.match(options, /mode=complete[\s\S]*jobs=4[\s\S]*fetch\.size=100/i);
   assert.match(examples, /--jobs 2[\s\S]*wins over `jobs=1`/i);
   assert.match(examples, /sentry\.dsn=\$\{SENTRY_DSN\}/);

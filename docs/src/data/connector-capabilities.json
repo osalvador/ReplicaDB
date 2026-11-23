@@ -193,7 +193,7 @@
     "bandwidthThrottling": true,
     "staging": false,
     "page": "/connectors/amazon-s3/",
-    "caveats": ["S3 is sink-only and uses the runtime credential chain; it does not provide table merge semantics."]
+    "caveats": ["S3 is sink-only. Supply access and secret keys through connection parameters, preferably from environment variables. Table merge is unavailable."]
   },
   {
     "id": "file",

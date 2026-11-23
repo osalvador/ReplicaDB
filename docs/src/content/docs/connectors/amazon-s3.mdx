@@ -38,6 +38,9 @@ All S3 properties are set under `sink.connect.parameter.*`.
 
 Credentials must come from an environment-managed secret. Do not put resolved
 keys in a committed properties file, command history, or logs.
+The connector uses the configured access and secret keys directly. Export
+them before running a file that refers to them. The current connector does
+not verify the endpoint's certificate when it connects over HTTPS.
 
 ## Object-per-row mode
 
