@@ -1,0 +1,20 @@
+README.md
+  s_f2b66808b78636::t_eeafe2b916d90f 3-8,11-14,22-37,111-145,157-158,166-169,175
+  s_f2b66808b78636::t_db0eb964e279db 48-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "0555a4781e0114420edb4e84320a9179507d4ab9",
+  "prompts": {},
+  "sessions": {
+    "s_f2b66808b78636": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f4c4-1cbd-7450-9270-a175eccb01eb",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
