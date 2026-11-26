@@ -1,0 +1,25 @@
+docs/src/content/docs/connectors/mysql-mariadb.md
+  s_c61d193c2bce83::t_1306e279515593 21-27
+replicadb-server/src/test/java/org/replicadb/server/job/execution/WorkerExecutionIT.java
+  s_c61d193c2bce83::t_0179017e2ead0f 30-31,147-156
+src/test/java/org/replicadb/config/ReplicadbMariaDBContainer.java
+  s_c61d193c2bce83::t_de14a0403d47a4 33-35
+src/test/java/org/replicadb/mariadb/MariaDBTlsTest.java
+  s_c61d193c2bce83::t_b79679a04c0e46 1-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "da1252b8c4de7a053badd4467cd6d4dcaad5ed00",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
