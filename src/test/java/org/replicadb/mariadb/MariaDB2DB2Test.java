@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
 import org.replicadb.cli.ToolOptions;
@@ -48,17 +49,40 @@ class MariaDB2DB2Test {
     static void setUp() {
     }
 
+    private String probeCase;
+
+    private long startProbe(String phase) {
+        System.out.printf("DB2_PROBE %s %s begin%n", probeCase, phase);
+        return System.nanoTime();
+    }
+
+    private void endProbe(String phase, long start) {
+        System.out.printf("DB2_PROBE %s %s ms=%d%n", probeCase, phase,
+                (System.nanoTime() - start) / 1_000_000);
+    }
+
     @BeforeEach
-    void before() throws SQLException {
+    void before(TestInfo test) throws SQLException {
+        probeCase = test.getTestMethod().orElseThrow().getName();
+        long start = startProbe("mariadb-connect");
         this.mariadbConn = DriverManager.getConnection(mariadb.getJdbcUrl(), mariadb.getUsername(), mariadb.getPassword());
+        endProbe("mariadb-connect", start);
+        start = startProbe("db2-connect");
         this.db2Conn = DriverManager.getConnection(db2.getJdbcUrl(), db2.getUsername(), db2.getPassword());
+        endProbe("db2-connect", start);
     }
 
     @AfterEach
     void tearDown() throws SQLException {
+        long start = startProbe("db2-delete");
         db2Conn.createStatement().execute("DELETE t_sink");
+        endProbe("db2-delete", start);
+        start = startProbe("mariadb-close");
         this.mariadbConn.close();
+        endProbe("mariadb-close", start);
+        start = startProbe("db2-close");
         this.db2Conn.close();
+        endProbe("db2-close", start);
     }
 
     public int countSinkRows() throws SQLException {
@@ -84,11 +108,13 @@ class MariaDB2DB2Test {
 
     @Test
     void testMariaDbConnection() throws SQLException {
+        long start = startProbe("version-query");
         Statement stmt = mariadbConn.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT VERSION()");
         rs.next();
         String version = rs.getString(1);
         assertTrue(version.contains("10.2"));
+        endProbe("version-query", start);
     }
 
     @Test

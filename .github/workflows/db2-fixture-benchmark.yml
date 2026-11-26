@@ -1,0 +1,76 @@
+name: DB2 fixture benchmark
+on:
+  push:
+    branches: [codex/db2-fixture-benchmark]
+permissions:
+  contents: read
+env:
+  TESTCONTAINERS_REUSE_ENABLE: 'false'
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TESTCONTAINERS_CONFIG_FILE: src/test/resources/testcontainers-ci.properties
+      DOCKER_HOST: unix:///var/run/docker.sock
+      TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE: /var/run/docker.sock
+      REPLICADB_TEST_DB2_IMAGE: icr.io/db2_community/db2:11.5.9.0
+    strategy:
+      fail-fast: false
+      matrix:
+        repetition: [1, 2]
+    name: DB2 diagnostic (${{ matrix.repetition }})
+    steps:
+    - uses: actions/checkout@v7
+    - name: Set up JDK 17
+      uses: actions/setup-java@v6
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+        cache-dependency-path: |
+          pom.xml
+          replicadb-server/pom.xml
+        server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
+        settings-path: ${{ github.workspace }} # location for the settings.xml file
+
+    - name: Check Docker info
+      run: docker info
+
+    - name: Download DB2 image
+      run: |
+        set -euo pipefail
+        if timeout 120s docker pull "$REPLICADB_TEST_DB2_IMAGE" 2>&1 | tee "$RUNNER_TEMP/db2-pull.log"; then
+          exit 0
+        else
+          status=$?
+        fi
+        if [[ "$status" == 124 ]] || grep -Eiq 'timeout|deadline exceeded|connection reset|unexpected EOF|429 Too Many Requests|50[234]' "$RUNNER_TEMP/db2-pull.log"; then
+          timeout 120s docker pull "$REPLICADB_TEST_DB2_IMAGE"
+        else
+          exit 1
+        fi
+
+    - name: Integration tests
+      env:
+        SOURCE: db2
+      run: |
+        set -euo pipefail
+        tests="org/replicadb/$SOURCE/*Test,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest"
+        if [[ "$SOURCE" == db2 ]]; then
+          tests+=",**/*2DB2Test,**/*2Db2Test"
+        else
+          tests+=",!**/*2DB2Test,!**/*2Db2Test"
+        fi
+        mvn -B test --file pom.xml -Dtest="$tests" -Dsurefire.timeout=1200 | tee db2-probe.log
+
+    - name: Publish integration reports
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: db2-diagnostic-${{ matrix.repetition }}
+        path: |
+          target/surefire-reports/TEST-*.xml
+          db2-probe.log
+        retention-days: 7
+
