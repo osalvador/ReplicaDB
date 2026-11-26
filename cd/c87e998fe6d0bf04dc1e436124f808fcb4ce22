@@ -1,0 +1,21 @@
+.github/workflows/CT_Push.yml
+  s_c61d193c2bce83::t_e9d36c038a0062 24-27,121-136,138-147
+src/test/java/org/replicadb/config/ReplicadbDB2Container.java
+  s_c61d193c2bce83::t_0b46d8f97b6194 110-117,119-124,126
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "cdc87e998fe6d0bf04dc1e436124f808fcb4ce22",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
