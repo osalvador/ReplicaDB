@@ -1,0 +1,27 @@
+name: DB2 test fixture probe
+on:
+  push:
+    branches: [codex/db2-fixture-probe]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-java@v6
+      with:
+        java-version: '17'
+        distribution: temurin
+        cache: maven
+        cache-dependency-path: |
+          pom.xml
+          replicadb-server/pom.xml
+    - run: mvn -B -Dtest=DB22DB2Test -Dsurefire.timeout=240 test
+    - if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: db2-single-fixture
+        path: target/surefire-reports/TEST-*.xml
+        retention-days: 3
