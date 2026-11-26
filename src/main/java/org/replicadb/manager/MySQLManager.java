@@ -36,6 +36,10 @@ public class MySQLManager extends SqlManager {
       // In MySQL and MariaDB this properties are required
       if (this.dsType.equals(DataSourceType.SINK)) {
          Properties mysqlProps = new Properties();
+         Properties configuredProps = options.getSinkConnectionParams();
+         if (configuredProps != null) {
+            mysqlProps.putAll(configuredProps);
+         }
          mysqlProps.setProperty("characterEncoding", "UTF-8");
          mysqlProps.setProperty("allowLoadLocalInfile", "true");
          mysqlProps.setProperty("rewriteBatchedStatements", "true");
