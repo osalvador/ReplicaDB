@@ -35,6 +35,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.session.SessionRepository;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
@@ -158,14 +160,20 @@ class DistributedWorkerLifecycleIT {
         JobDefinition definition = definition(source, sink, ReplicationMode.COMPLETE, null, null,
                 new RetryPolicy(3, 0, true));
         JobDefinition persisted = apiContext.getBean(JobDefinitionRepository.class).insert(definition);
-        JobRun abandoned = apiContext.getBean(JobRunRepository.class).claimNextEligible(
-                apiContext.getBean(JobRunRepository.class).insertPendingNow(persisted.id(), null, 1).id(),
-                "lost-worker", Duration.ofSeconds(5)).orElseThrow();
-        apiContext.getBean(NamedParameterJdbcTemplate.class).update(
-                "UPDATE job_run SET lease_until = now() - interval '1 second' WHERE id = :id",
-                Map.of("id", abandoned.id()));
+        JobRunRepository runs = apiContext.getBean(JobRunRepository.class);
+        TransactionTemplate transaction = new TransactionTemplate(apiContext.getBean(PlatformTransactionManager.class));
+        // Neither running worker should claim the test's pending row before it is assigned to lost-worker.
+        JobRun abandoned = transaction.execute(status -> {
+            JobRun pending = runs.insertPendingNow(persisted.id(), null, 1);
+            return runs.claimNextEligible(pending.id(), "lost-worker", Duration.ofMinutes(5)).orElseThrow();
+        });
 
-        RunDispatchResult recovery = apiContext.getBean(RunDispatchService.class).recoverExpiredRun(abandoned.id());
+        RunDispatchResult recovery = transaction.execute(status -> {
+            apiContext.getBean(NamedParameterJdbcTemplate.class).update(
+                    "UPDATE job_run SET lease_until = now() - interval '1 second' WHERE id = :id",
+                    Map.of("id", abandoned.id()));
+            return apiContext.getBean(RunDispatchService.class).recoverExpiredRun(abandoned.id());
+        });
         JobRun replacement = recovery.run().orElseThrow();
         JobRun completed = awaitStatus(replacement.id(), JobRunStatus.SUCCEEDED);
 
