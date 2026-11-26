@@ -80,6 +80,7 @@ jobs:
       TESTCONTAINERS_CONFIG_FILE: src/test/resources/testcontainers-ci.properties
       DOCKER_HOST: unix:///var/run/docker.sock
       TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE: /var/run/docker.sock
+      REPLICADB_TEST_DB2_IMAGE: icr.io/db2_community/db2:11.5.9.0
     strategy:
       fail-fast: false
       matrix:
@@ -120,15 +121,15 @@ jobs:
 
     - name: Download DB2 image
       if: matrix.source == 'db2'
-      env:
-        DB2_IMAGE: icr.io/db2_community/db2:11.5.9.0
       run: |
         set -euo pipefail
-        if timeout 120s docker pull "$DB2_IMAGE" 2>&1 | tee "$RUNNER_TEMP/db2-pull.log"; then
+        if timeout 120s docker pull "$REPLICADB_TEST_DB2_IMAGE" 2>&1 | tee "$RUNNER_TEMP/db2-pull.log"; then
           exit 0
+        else
+          status=$?
         fi
-        if grep -Eiq 'timeout|deadline exceeded|connection reset|unexpected EOF|429 Too Many Requests|50[234]' "$RUNNER_TEMP/db2-pull.log"; then
-          timeout 120s docker pull "$DB2_IMAGE"
+        if [[ "$status" == 124 ]] || grep -Eiq 'timeout|deadline exceeded|connection reset|unexpected EOF|429 Too Many Requests|50[234]' "$RUNNER_TEMP/db2-pull.log"; then
+          timeout 120s docker pull "$REPLICADB_TEST_DB2_IMAGE"
         else
           exit 1
         fi

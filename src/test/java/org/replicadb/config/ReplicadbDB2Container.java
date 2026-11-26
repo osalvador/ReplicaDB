@@ -66,7 +66,8 @@ public class ReplicadbDB2Container extends Db2Container {
          LOG.warn("╚════════════════════════════════════════════════════════════════╝");
       }
       
-      return DockerImageName.parse("icr.io/db2_community/db2:11.5.9.0");
+      return DockerImageName.parse(System.getenv().getOrDefault(
+            "REPLICADB_TEST_DB2_IMAGE", "icr.io/db2_community/db2:11.5.9.0"));
    }
 
    private ReplicadbDB2Container() {
@@ -111,7 +112,7 @@ public class ReplicadbDB2Container extends Db2Container {
          // UPDATE DB CFG is a CLP command. Apply the log settings before opening the JDBC fixture connection.
          ExecResult result = execInContainer("su", "-", getUsername(), "-c",
                ". ~/sqllib/db2profile && db2 update db cfg for testdb using LOGFILSIZ 10240 LOGPRIMARY 20 LOGSECOND 20"
-                     + " && db2 deactivate db testdb && db2 activate db testdb");
+                     + " && db2stop force && db2start");
          if (result.getExitCode() != 0) {
             throw new IllegalStateException("Could not configure DB2 transaction logs: "
                   + result.getStdout() + result.getStderr());
