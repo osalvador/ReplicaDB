@@ -18,10 +18,52 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        revision: [baseline, mongo, truncate]
         repetition: [1, 2]
-    name: DB2 diagnostic (${{ matrix.repetition }})
+    name: DB2 benchmark (${{ matrix.revision }}, ${{ matrix.repetition }})
     steps:
     - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+    - name: Select test revision and instrument cleanup
+      env:
+        REVISION: ${{ matrix.revision }}
+      run: |
+        set -euo pipefail
+        case "$REVISION" in
+          baseline) git checkout --detach 057687a70efa70f81cd090aed92dd4e8c3ae9486 ;;
+          mongo) git checkout --detach 7c6e5ed6354229a265fdf4f230edcbe6868a37ed ;;
+          truncate) git checkout --detach 1c219b24e30ba410203588e62b167a8eb24bc285 ;;
+        esac
+        python3 - <<'PYTHON'
+        from pathlib import Path
+        import re
+
+        paths = sorted(Path('src/test/java/org/replicadb').rglob('*Test.java'))
+        cleanups = 0
+        for path in paths:
+            content = path.read_text()
+            if not any(x in content for x in ('execute("DELETE t_sink")',
+                                              'TRUNCATE TABLE t_sink IMMEDIATE',
+                                              'ReplicadbDB2Container.resetSink(db2Conn);')):
+                continue
+            if not (path.stem.endswith(('2DB2Test', '2Db2Test'))):
+                continue
+            pattern = r'(?ms)(    @AfterEach\n    void tearDown\(\)[^{]*\{\n)(.*?)(^    \}\n)'
+            def instrument(match):
+                body = ''.join('    ' + line if line.strip() else line
+                               for line in match[2].splitlines(keepends=True))
+                return (match[1] + '        long cleanupStart = System.nanoTime();\n'
+                        '        try {\n' + body + '        } finally {\n'
+                        '            System.out.printf("DB2_CLEANUP %s ms=%d%n", getClass().getSimpleName(),\n'
+                        '                    (System.nanoTime() - cleanupStart) / 1_000_000);\n'
+                        '        }\n' + match[3])
+            updated, replaced = re.subn(pattern, instrument, content, count=1)
+            if replaced:
+                path.write_text(updated)
+                cleanups += replaced
+        assert cleanups == 9, cleanups
+        PYTHON
     - name: Set up JDK 17
       uses: actions/setup-java@v6
       with:
@@ -68,7 +110,7 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v7
       with:
-        name: db2-diagnostic-${{ matrix.repetition }}
+        name: db2-benchmark-${{ matrix.revision }}-${{ matrix.repetition }}
         path: |
           target/surefire-reports/TEST-*.xml
           db2-probe.log
