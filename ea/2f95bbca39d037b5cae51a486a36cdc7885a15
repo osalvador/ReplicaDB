@@ -1,0 +1,19 @@
+src/test/java/org/replicadb/config/ReplicadbDB2Container.java
+  s_c61d193c2bce83::t_6e90a532321e0c 26,86-89,91-99,111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "ea2f95bbca39d037b5cae51a486a36cdc7885a15",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
