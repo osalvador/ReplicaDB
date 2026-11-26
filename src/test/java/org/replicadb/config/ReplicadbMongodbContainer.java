@@ -63,28 +63,28 @@ public class ReplicadbMongodbContainer extends MongoDBContainer {
 				}
 
 				// Create source collection and load data
-			final long insertStarted = System.nanoTime();
-			final var source = database.getCollection(T_SOURCE_COLLECTION);
+				final long insertStarted = System.nanoTime();
+				final var source = database.getCollection(T_SOURCE_COLLECTION);
 				final List<String> allLines = Files.readAllLines(Paths.get(RESOURCE_DIR + SOURCE_FILE));
-			final List<Document> batch = new ArrayList<>(INSERT_BATCH_SIZE);
+				final List<Document> batch = new ArrayList<>(INSERT_BATCH_SIZE);
 				for (final String line : allLines) {
 					if (line.trim().isEmpty() || line.trim().startsWith("//")) {
 						continue;
 					}
-				batch.add(Document.parse(line));
-				if (batch.size() == INSERT_BATCH_SIZE) {
-					source.insertMany(batch);
-					batch.clear();
+					batch.add(Document.parse(line));
+					if (batch.size() == INSERT_BATCH_SIZE) {
+						source.insertMany(batch);
+						batch.clear();
+					}
 				}
-			}
-			if (!batch.isEmpty()) {
-				source.insertMany(batch);
+				if (!batch.isEmpty()) {
+					source.insertMany(batch);
 				}
 
-			final long count = source.countDocuments();
-			LOG.info("Inserted {} documents into the '{}' collection in {} ms", count,
-					T_SOURCE_COLLECTION, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - insertStarted));
-			LOG.info("First document: " + source.find().first().toJson());
+				final long count = source.countDocuments();
+				LOG.info("Inserted {} documents into the '{}' collection in {} ms", count,
+						T_SOURCE_COLLECTION, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - insertStarted));
+				LOG.info("First document: " + source.find().first().toJson());
 
 				// Reset sink collection to ensure consistent test state
 				try {
