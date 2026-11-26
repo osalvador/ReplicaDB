@@ -18,8 +18,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        revision: [baseline, mongo, truncate]
-        repetition: [1, 2]
+        revision: [final]
+        repetition: [1]
     name: DB2 benchmark (${{ matrix.revision }}, ${{ matrix.repetition }})
     steps:
     - uses: actions/checkout@v7
@@ -34,6 +34,7 @@ jobs:
           baseline) git checkout --detach 057687a70efa70f81cd090aed92dd4e8c3ae9486 ;;
           mongo) git checkout --detach 7c6e5ed6354229a265fdf4f230edcbe6868a37ed ;;
           truncate) git checkout --detach 1c219b24e30ba410203588e62b167a8eb24bc285 ;;
+          final) git checkout --detach 8bee99b0c5071fe7195be6b909be7502a54c2eb0 ;;
         esac
         python3 - <<'PYTHON'
         from pathlib import Path
@@ -44,7 +45,7 @@ jobs:
         for path in paths:
             content = path.read_text()
             if not any(x in content for x in ('execute("DELETE t_sink")',
-                                              'TRUNCATE TABLE t_sink IMMEDIATE',
+                                              'TRUNCATE TABLE t_sink IMMEDIATE', 'executeUpdate("DELETE FROM t_sink")',
                                               'ReplicadbDB2Container.resetSink(db2Conn);')):
                 continue
             if not (path.stem.endswith(('2DB2Test', '2Db2Test'))):
