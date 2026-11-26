@@ -1,0 +1,19 @@
+replicadb-server/src/test/java/org/replicadb/server/job/dispatch/DistributedWorkerLifecycleIT.java
+  s_c61d193c2bce83::t_9a43bee867d5ca 38-39,163-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "fdc54538985fc636a620a6270ada43c6370fd7b8",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
