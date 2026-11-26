@@ -27,6 +27,8 @@ import org.replicadb.server.security.secret.SecretProtectionService;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Container;
@@ -142,10 +144,16 @@ class WorkerExecutionIT {
         JobDefinition persisted = workerContext.getBean(JobDefinitionRepository.class).insert(definition);
         JobRunRepository runs = workerContext.getBean(JobRunRepository.class);
         RunLeaseService leases = workerContext.getBean(RunLeaseService.class);
-        JobRun failed = leases.claimRequested(
-                runs.insertPendingNow(persisted.id(), null, 1).id(), "failed-before-retry", Duration.ofSeconds(5))
-                .orElseThrow();
-        runs.markFailed(failed.id(), failed.leaseToken(), 0, 0, "controlled failure");
+        // Prepare the failed attempt atomically so the running worker cannot claim the seed.
+        TransactionTemplate transaction = new TransactionTemplate(
+                workerContext.getBean(PlatformTransactionManager.class));
+        JobRun failed = transaction.execute(status -> {
+            JobRun pending = runs.insertPendingNow(persisted.id(), null, 1);
+            JobRun claimed = leases.claimRequested(pending.id(), "failed-before-retry", Duration.ofSeconds(5))
+                    .orElseThrow();
+            runs.markFailed(claimed.id(), claimed.leaseToken(), 0, 0, "controlled failure");
+            return claimed;
+        });
 
         RunDispatchResult retry = workerContext.getBean(RunDispatchService.class).dispatchRetry(failed.id());
         JobRun replacement = awaitStatus(retry.run().orElseThrow().id(), JobRunStatus.SUCCEEDED);

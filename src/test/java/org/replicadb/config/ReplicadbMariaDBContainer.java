@@ -30,7 +30,9 @@ public class ReplicadbMariaDBContainer extends MariaDBContainer<ReplicadbMariaDB
     if (container == null) {
       // Create container instance first to avoid resource leak warning
       ReplicadbMariaDBContainer newContainer = new ReplicadbMariaDBContainer();
-      container = newContainer.withCommand("--local-infile=1");
+      // MariaDB 10.2 has no TLS configured in this fixture.
+      container = newContainer.withCommand("--local-infile=1")
+          .withUrlParam("sslMode", "disable");
       container.start();
     }
     return container;

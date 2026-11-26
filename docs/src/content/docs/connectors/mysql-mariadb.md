@@ -18,6 +18,13 @@ Both schemes use the MariaDB JDBC driver (`org.mariadb.jdbc.Driver`).
 Credentials are set with `source.user` / `source.password` (or the `sink.*`
 equivalents), not in the URL.
 
+MariaDB Connector/J 4 uses `sslMode=verify-full` by default for connections
+using that driver. Configure TLS on the server and trust its certificate.
+MariaDB Server 11.4 and later can negotiate verified TLS automatically with a
+password. For an intentionally unencrypted legacy connection, set
+`source.connect.parameter.sslMode=disable` or
+`sink.connect.parameter.sslMode=disable` on the affected endpoint.
+
 ## Example properties
 
 ```properties
