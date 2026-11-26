@@ -1,0 +1,37 @@
+src/test/java/org/replicadb/db2/DB22DB2Test.java
+  s_c61d193c2bce83::t_f100e480147a68 55-56
+src/test/java/org/replicadb/file/Csv2DB2Test.java
+  s_c61d193c2bce83::t_4a34332a5ee4f8 55
+src/test/java/org/replicadb/mariadb/MariaDB2DB2Test.java
+  s_c61d193c2bce83::t_2e82dee7c45dca 59-61
+src/test/java/org/replicadb/mongo/Mongo2DB2Test.java
+  s_c61d193c2bce83::t_df589b126bb3b4 71-76
+src/test/java/org/replicadb/mysql/MySQL2DB2Test.java
+  s_c61d193c2bce83::t_64fa43a4f1274f 62-64
+src/test/java/org/replicadb/oracle/Oracle2DB2Test.java
+  s_c61d193c2bce83::t_d967958563d9a5 65-67
+src/test/java/org/replicadb/postgres/Postgres2DB2Test.java
+  s_c61d193c2bce83::t_aa6c86070dbafe 53-55
+src/test/java/org/replicadb/sqlite/Sqlite2DB2Test.java
+  s_c61d193c2bce83::t_e881ae815c7c84 82-84
+src/test/java/org/replicadb/sqlserver/Sqlserver2Db2Test.java
+  s_c61d193c2bce83::t_b350ae067e88e6 58-60
+src/test/java/org/replicadb/config/ReplicadbDB2Container.java
+  s_c61d193c2bce83::t_5674e7e7b99a85 94-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "1c219b24e30ba410203588e62b167a8eb24bc285",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
