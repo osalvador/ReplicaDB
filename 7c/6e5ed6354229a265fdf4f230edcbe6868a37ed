@@ -1,0 +1,19 @@
+src/test/java/org/replicadb/config/ReplicadbMongodbContainer.java
+  s_c61d193c2bce83::t_cc9b71ebeaa378 16,18,26,66-67,69,74-81,84-87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "7c6e5ed6354229a265fdf4f230edcbe6868a37ed",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
