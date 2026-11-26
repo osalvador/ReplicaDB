@@ -56,9 +56,9 @@ class MariaDB2DB2Test {
 
     @AfterEach
     void tearDown() throws SQLException {
-        db2Conn.createStatement().execute("DELETE t_sink");
-        this.mariadbConn.close();
-        this.db2Conn.close();
+        try (Connection source = mariadbConn) {
+            ReplicadbDB2Container.resetSink(db2Conn);
+        }
     }
 
     public int countSinkRows() throws SQLException {

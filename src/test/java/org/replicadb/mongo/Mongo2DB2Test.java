@@ -68,10 +68,12 @@ class Mongo2DB2Test {
 
     @AfterEach
     void tearDown() throws SQLException {
-        mongoClient.getDatabase(mongoDatabaseName).getCollection(SINK_COLLECTION).deleteMany(new Document());
-        db2Conn.createStatement().execute("DELETE t_sink");
-        this.mongoClient.close();
-        this.db2Conn.close();
+        try (MongoClient client = mongoClient) {
+            ReplicadbDB2Container.resetSink(db2Conn);
+            if (client != null) {
+                client.getDatabase(mongoDatabaseName).getCollection(SINK_COLLECTION).deleteMany(new Document());
+            }
+        }
     }
 
     public int countSinkRows() throws SQLException {

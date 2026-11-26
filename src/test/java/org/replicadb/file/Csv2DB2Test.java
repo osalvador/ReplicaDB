@@ -52,8 +52,7 @@ class Csv2DB2Test {
 
     @AfterEach
     void tearDown() throws SQLException {
-        db2Conn.createStatement().execute("DELETE t_sink");
-        this.db2Conn.close();
+        ReplicadbDB2Container.resetSink(db2Conn);
     }
 
     public int countSinkRows() throws SQLException {
