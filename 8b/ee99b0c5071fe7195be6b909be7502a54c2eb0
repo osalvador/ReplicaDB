@@ -1,0 +1,21 @@
+src/test/java/org/replicadb/db2/DB22DB2Test.java
+  s_c61d193c2bce83::t_1ab0a9fa30ac6a 55-58
+src/test/java/org/replicadb/mariadb/MariaDB2DB2Test.java
+  s_c61d193c2bce83::t_ad66f7d8191599 44-45,50-54,80-87,92,102,122,143,164,185,207,229,256,283
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "8bee99b0c5071fe7195be6b909be7502a54c2eb0",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
