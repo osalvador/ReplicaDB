@@ -23,7 +23,7 @@ public class ReplicadbDB2Container extends Db2Container {
    private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
    private static final String DB2_SINK_FILE = "/sinks/db2-sink.sql";
    private static final String DB2_SOURCE_FILE = "/db2/db2-source.sql";
-   private static ReplicadbDB2Container container;
+
 
    private static DockerImageName selectDockerImage() {
       String arch = System.getProperty("os.arch").toLowerCase();
@@ -83,23 +83,20 @@ public class ReplicadbDB2Container extends Db2Container {
       this.withStartupTimeout(java.time.Duration.ofMinutes(20));
    }
 
+   private static class Holder {
+      private static final ReplicadbDB2Container INSTANCE = startFixture();
+   }
+
    public static ReplicadbDB2Container getInstance() {
-      if (container == null) {
-         try {
-            LOG.info("Initializing DB2 container with image: {}", IMAGE_NAME);
-            ReplicadbDB2Container candidate = new ReplicadbDB2Container();
-            // Enable container reuse for faster subsequent test runs (experimental feature)
-            candidate.withReuse(TestcontainersConfiguration.getInstance().environmentSupportsReuse());
-            LOG.info("Starting DB2 container (this may take 3-4 minutes on first run, 8-12 min on ARM64)...");
-            candidate.start();
-            container = candidate;
-            LOG.info("DB2 container started successfully");
-         } catch (Exception e) {
-            LOG.error("Failed to initialize DB2 container", e);
-            throw new RuntimeException("Failed to initialize DB2 container", e);
-         }
-      }
-      return container;
+      return Holder.INSTANCE;
+   }
+
+   private static ReplicadbDB2Container startFixture() {
+      LOG.info("Starting DB2 container with image {}", IMAGE_NAME);
+      ReplicadbDB2Container candidate = new ReplicadbDB2Container();
+      candidate.withReuse(TestcontainersConfiguration.getInstance().environmentSupportsReuse());
+      candidate.start();
+      return candidate;
    }
 
    @Override
@@ -111,7 +108,7 @@ public class ReplicadbDB2Container extends Db2Container {
          // UPDATE DB CFG is a CLP command. Apply the log settings before opening the JDBC fixture connection.
          ExecResult result = execInContainer("su", "-", getUsername(), "-c",
                ". ~/sqllib/db2profile && db2 update db cfg for " + getDatabaseName()
-                     + " using LOGFILSIZ 10240 LOGPRIMARY 20 LOGSECOND 20 && db2stop force && db2start");
+                     + " using LOGFILSIZ 10240 LOGPRIMARY 20 LOGSECOND 20 DEFERRED && db2stop force && db2start");
          if (result.getExitCode() != 0) {
             throw new IllegalStateException("Could not configure DB2 transaction logs: "
                   + result.getStdout() + result.getStderr());
