@@ -4,24 +4,24 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 const repoRoot = new URL('../..', import.meta.url).pathname;
-const workflow = readFileSync(join(repoRoot, '.github/workflows/docs-pages.yml'), 'utf8');
-const checksWorkflow = readFileSync(join(repoRoot, '.github/workflows/docs.yml'), 'utf8');
+const workflow = readFileSync(join(repoRoot, '.github/workflows/docs.yml'), 'utf8');
 const astroConfiguration = readFileSync(join(repoRoot, 'docs/astro.config.mjs'), 'utf8');
 const cutover = readFileSync(join(repoRoot, 'docs/PAGES_CUTOVER.md'), 'utf8');
 
 test('Pages workflow is preview-safe and gated for production deployment', () => {
   assert.match(workflow, /node-version: ['"]22\.23\.4['"]/);
-  assert.match(workflow, /npm run check && npm run build && npm run validate && npm test/);
+  assert.equal([...workflow.matchAll(/npm run check && npm run build && npm run validate && npm test/g)].length, 1);
   assert.match(workflow, /actions\/configure-pages@v6/);
   assert.match(workflow, /actions\/upload-pages-artifact@v5/);
   assert.match(workflow, /path:\s*docs\/dist/);
   assert.match(workflow, /actions\/deploy-pages@v5/);
-  assert.match(workflow, /needs:\s*build/);
+  assert.match(workflow, /needs:\s*docs/);
   assert.match(workflow, /DOCS_PAGES_SOURCE == ['"]actions['"]/);
   assert.match(workflow, /event_name != ['"]pull_request['"]/);
+  assert.match(workflow, /github.ref == ['"]refs\/heads\/master['"]/);
   assert.match(workflow, /github-pages/);
   assert.match(workflow, /cancel-in-progress: false/);
-  assert.match(checksWorkflow, /java-version:\s*['"]17['"]/);
+  assert.match(workflow, /java-version:\s*['"]17['"]/);
   assert.match(astroConfiguration, /base:\s*['"]\/ReplicaDB['"]/);
   assert.match(astroConfiguration, /format:\s*['"]directory['"]/);
 });
