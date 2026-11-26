@@ -1,0 +1,37 @@
+.github/workflows/CT_Push.yml
+  s_c61d193c2bce83::t_35be4c336fd912 226,232-233,279-313,595
+replicadb-server/src/main/java/org/replicadb/server/job/persistence/JobRunRepository.java
+  s_c61d193c2bce83::t_af14dac5caee0f 436-437,442
+replicadb-server/src/test/java/org/replicadb/server/audit/persistence/AuditEventRepositoryIT.java
+  s_c61d193c2bce83::t_d0c397a26f4354 136-137,140
+replicadb-server/src/test/java/org/replicadb/server/job/application/RunDispatchServiceIT.java
+  s_c61d193c2bce83::t_b5e4734c65a44f 44,166
+replicadb-server/src/test/java/org/replicadb/server/job/dispatch/PostgreSQLNotificationListenerIT.java
+  s_c61d193c2bce83::t_2f45b9fbaacbbc 7,61,107,127,157,222,224,226,229,254,281-282,342
+replicadb-server/src/test/java/org/replicadb/server/job/execution/QuartzClusterIT.java
+  s_c61d193c2bce83::t_3bdc5f127ef2c6 3,18-23,132-146
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/JobDefinitionRepositoryIT.java
+  s_c61d193c2bce83::t_5bfe076cf94c5b 25-26,41,81,168,239,284,297-303
+replicadb-server/src/test/java/org/replicadb/server/job/persistence/RunTriggerIdempotencyRepositoryIT.java
+  s_c61d193c2bce83::t_0054749c898f16 3,7-8,41-48,50,52-65,71,93-94,132,146
+replicadb-server/src/test/java/org/replicadb/server/security/persistence/AppUserRepositoryIT.java
+  s_c61d193c2bce83::t_411cc0ba6a5379 16-17,21,48-53,87
+src/test/java/org/replicadb/config/ReplicadbDB2Container.java
+  s_c61d193c2bce83::t_052dc0b5f19be5 90,92,94-95,113-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "22a15dc57dd8d0d50a5b50f7c913ba03076de43c",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
