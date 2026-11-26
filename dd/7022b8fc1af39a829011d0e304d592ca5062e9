@@ -1,0 +1,21 @@
+.github/workflows/db2-fixture-benchmark.yml
+  s_c61d193c2bce83::t_602daa987e38e1 1-76
+src/test/java/org/replicadb/mariadb/MariaDB2DB2Test.java
+  s_c61d193c2bce83::t_a92a01ee7f8687 9,52-63,65-67,69-70,72,77,79-80,82-83,85,111,117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "dd7022b8fc1af39a829011d0e304d592ca5062e9",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
