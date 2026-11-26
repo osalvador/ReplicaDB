@@ -1,5 +1,6 @@
 package org.replicadb.server.job.execution;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -14,13 +15,18 @@ import org.quartz.SimpleScheduleBuilder;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
+import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
+import org.replicadb.server.job.persistence.JobDefinitionRepository;
+import org.replicadb.server.job.persistence.ManagedDataSourceRepository;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.sql.Statement;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -123,24 +129,21 @@ class QuartzClusterIT {
     }
 
     private static void insertDefinition(UUID jobDefinitionId) throws Exception {
-        try (Connection connection = DriverManager.getConnection(jdbcUrl(),
-                POSTGRES.getUsername(), POSTGRES.getPassword());
-             Statement createTable = connection.createStatement();
-             PreparedStatement statement = connection.prepareStatement("""
-                     INSERT INTO job_definition
-                         (id, name, source_connect, source_table, sink_connect, sink_table, mode, jobs)
-                     VALUES (?, ?, 'jdbc:source', 'source_table', 'jdbc:sink', 'sink_table', 'complete', 1)
-                     """)) {
-            createTable.execute("""
-                    CREATE TABLE quartz_cluster_fire (
-                        id UUID PRIMARY KEY,
-                        job_definition_id UUID NOT NULL
-                    )
-                    """);
-            statement.setObject(1, jobDefinitionId);
-            statement.setString(2, "quartz-cluster-" + jobDefinitionId);
-            statement.executeUpdate();
-        }
+        var dataSource = new DriverManagerDataSource(jdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+        var jdbc = new NamedParameterJdbcTemplate(dataSource);
+        jdbc.getJdbcTemplate().execute("""
+                CREATE TABLE quartz_cluster_fire (
+                    id UUID PRIMARY KEY,
+                    job_definition_id UUID NOT NULL
+                )
+                """);
+        var dataSources = new ManagedDataSourceRepository(jdbc, new ObjectMapper());
+        dataSources.insert(ManagedDataSourceTestFixtures.source());
+        dataSources.insert(ManagedDataSourceTestFixtures.sink());
+        new JobDefinitionRepository(jdbc).insert(JobDefinitionTestFixtures.aJobDefinition()
+                .withId(jobDefinitionId)
+                .withDefaultDatasourceReferences()
+                .build());
     }
 
     private static void awaitReady(Path readyFile, Process process, String instanceId) throws Exception {

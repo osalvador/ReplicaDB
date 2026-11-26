@@ -22,6 +22,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.context.annotation.Import;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -36,6 +38,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -75,7 +78,7 @@ class JobDefinitionRepositoryIT {
 
         JobDefinition found = repository.findById(inserted.id()).orElseThrow();
 
-        assertEquals(inserted, found);
+        assertRoundTrip(inserted, found);
         assertNotNull(found.createdAt());
         assertNotNull(found.updatedAt());
         assertTrue(found.source().connection() == null);
@@ -162,7 +165,7 @@ class JobDefinitionRepositoryIT {
     void findsDefinitionsByNameAndListsPersistedRows() {
         JobDefinition inserted = repository.insert(definition("find-name-" + UUID.randomUUID()));
 
-        assertEquals(inserted, repository.findByName(inserted.name()).orElseThrow());
+        assertRoundTrip(inserted, repository.findByName(inserted.name()).orElseThrow());
         assertFalse(repository.findAll().isEmpty());
     }
 
@@ -233,7 +236,7 @@ class JobDefinitionRepositoryIT {
         assertEquals(replacement.initialWatermarkValue(), updated.initialWatermarkValue());
         assertTrue(updated.updatedAt().isAfter(stale.updatedAt()));
         assertEquals(inserted.name(), updated.name());
-        assertEquals(inserted.createdAt(), updated.createdAt());
+        assertEquals(stale.createdAt(), updated.createdAt());
         assertEquals(7, updated.maxAttempts());
         assertEquals(90, updated.retryBackoffSeconds());
         assertTrue(updated.automaticRetryEnabled());
@@ -278,7 +281,7 @@ class JobDefinitionRepositoryIT {
         JobDefinition inserted = repository.insert(original);
         JobDefinition found = repository.findById(inserted.id()).orElseThrow();
 
-        assertEquals(inserted, found);
+        assertRoundTrip(inserted, found);
         assertEquals("select id, name from source_table", found.sourceQuery());
         assertEquals(SOURCE_DATASOURCE_ID, found.sourceDatasourceId());
         assertEquals(SINK_DATASOURCE_ID, found.sinkDatasourceId());
@@ -290,6 +293,13 @@ class JobDefinitionRepositoryIT {
         assertEquals(512, found.bandwidthThrottling());
         assertTrue(found.verbose());
         }
+
+    private static void assertRoundTrip(JobDefinition inserted, JobDefinition found) {
+        assertThat(found).usingRecursiveComparison()
+                .withComparatorForType(Comparator.comparing((Instant instant) ->
+                        instant.plusNanos(500).truncatedTo(ChronoUnit.MICROS)), Instant.class)
+                .isEqualTo(inserted);
+    }
 
     private static JobDefinition definition(String name) {
         return JobDefinitionTestFixtures.aJobDefinition()

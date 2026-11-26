@@ -4,7 +4,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.postgresql.PGNotification;
+import org.postgresql.PGConnection;
 import org.replicadb.cli.ToolOptions;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
 import org.replicadb.server.job.application.RunDispatchService;
@@ -42,8 +42,6 @@ import org.springframework.test.context.ActiveProfiles;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.Statement;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -60,7 +58,7 @@ import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -106,7 +104,7 @@ class PostgreSQLNotificationListenerIT {
     private final List<PollingFallback> pollers = new CopyOnWriteArrayList<>();
     private final List<WorkerDispatchCoordinator> coordinators = new CopyOnWriteArrayList<>();
     private final List<HeartbeatService> heartbeats = new CopyOnWriteArrayList<>();
-    private final List<Connection> listenerConnections = new CopyOnWriteArrayList<>();
+    private final List<Integer> listenerBackendPids = new CopyOnWriteArrayList<>();
 
     @BeforeEach
     void clearState() {
@@ -126,7 +124,7 @@ class PostgreSQLNotificationListenerIT {
         pollers.clear();
         coordinators.clear();
         heartbeats.clear();
-        listenerConnections.clear();
+        listenerBackendPids.clear();
     }
 
     @Test
@@ -156,7 +154,7 @@ class PostgreSQLNotificationListenerIT {
         assertTrue(routed.await(5, TimeUnit.SECONDS));
         verify(coordinator).signalRun(eq(runId), anyLong());
         verify(coordinator).signalCancellation(cancellationId);
-        assertTrue(listenerConnections.size() >= 1);
+        assertTrue(listenerBackendPids.size() >= 1);
     }
 
     @Test
@@ -221,14 +219,14 @@ class PostgreSQLNotificationListenerIT {
 
         listener.start();
         await(() -> reconnects.get() >= 1);
-        Connection firstListenerConnection = listenerConnections.get(0);
+        int firstListenerPid = listenerBackendPids.get(0);
         try (Connection repositoryConnection = dataSource.getConnection()) {
-            assertNotSame(firstListenerConnection, repositoryConnection);
+            assertNotEquals(firstListenerPid, repositoryConnection.unwrap(PGConnection.class).getBackendPID());
         }
-        terminateBackend(firstListenerConnection);
+        terminateBackend(firstListenerPid);
 
         await(() -> reconnects.get() >= 2);
-        assertTrue(listenerConnections.size() >= 2);
+        assertTrue(listenerBackendPids.size() >= 2);
         verify(polling, times(2)).onListenerReconnected();
     }
 
@@ -253,7 +251,7 @@ class PostgreSQLNotificationListenerIT {
 
         listener.start();
         await(() -> reconnects.get() >= 1);
-        terminateBackend(listenerConnections.get(0));
+        terminateBackend(listenerBackendPids.get(0));
         await(() -> reconnects.get() >= 2);
         await(() -> jobRunRepository.findById(claimed.id()).orElseThrow()
                 .heartbeatAt().isAfter(beforeDisconnect.heartbeatAt()));
@@ -280,7 +278,8 @@ class PostgreSQLNotificationListenerIT {
         PostgreSQLNotificationListener listener = new PostgreSQLNotificationListener(
                 () -> {
                     Connection connection = dataSource.getConnection();
-                    listenerConnections.add(connection);
+                    // Capture the PID before the listener begins blocking on notifications.
+                    listenerBackendPids.add(connection.unwrap(PGConnection.class).getBackendPID());
                     return connection;
                 }, coordinator, polling, initialDelay, maxDelay, Duration.ofMillis(100),
                 Duration.ofSeconds(2), duration -> Thread.sleep(duration.toMillis()), executor);
@@ -340,13 +339,7 @@ class PostgreSQLNotificationListenerIT {
         return result[0];
     }
 
-    private void terminateBackend(Connection connection) throws Exception {
-        int backendPid;
-        try (Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery("SELECT pg_backend_pid()")) {
-            resultSet.next();
-            backendPid = resultSet.getInt(1);
-        }
+    private void terminateBackend(int backendPid) throws Exception {
         try (Connection killer = dataSource.getConnection();
              PreparedStatement statement = killer.prepareStatement("SELECT pg_terminate_backend(?)")) {
             statement.setInt(1, backendPid);

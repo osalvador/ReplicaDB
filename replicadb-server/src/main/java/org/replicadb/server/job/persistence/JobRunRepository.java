@@ -433,11 +433,13 @@ public class JobRunRepository implements JobRunStore {
         if (jobDefinitionId == null) {
             throw new IllegalArgumentException("jobDefinitionId must not be null");
         }
+        // A manual dispatch already holds a key-share lock from the idempotency foreign key.
+        // Serialize binding updates without requiring a lock upgrade incompatible with another reservation.
         List<Boolean> enabled = jdbcTemplate.query("""
                 SELECT source_datasource_use_enabled AND sink_datasource_use_enabled
                 FROM job_definition
                 WHERE id = :jobDefinitionId
-                FOR UPDATE
+                FOR NO KEY UPDATE
                 """, Map.of("jobDefinitionId", jobDefinitionId),
                 (resultSet, rowNum) -> resultSet.getBoolean(1));
         if (enabled.isEmpty()) {

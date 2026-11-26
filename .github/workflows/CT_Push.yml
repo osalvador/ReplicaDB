@@ -223,16 +223,14 @@ jobs:
       run: mvn -B install -DskipTests --file pom.xml
 
     - name: Test and package server module
-      run: mvn -B verify --file replicadb-server/pom.xml
+      run: mvn -B package --file replicadb-server/pom.xml
 
     - name: Publish server test reports
       if: always()
       uses: actions/upload-artifact@v7
       with:
-        name: server-test-reports
-        path: |
-          replicadb-server/target/surefire-reports/TEST-*.xml
-          replicadb-server/target/failsafe-reports/TEST-*.xml
+        name: server-unit-reports
+        path: replicadb-server/target/surefire-reports/TEST-*.xml
         retention-days: 7
 
     - name: Verify Phase 3.1 repository bridge is removed
@@ -277,6 +275,41 @@ jobs:
 
     - name: Verify packaged frontend assets
       run: test -f replicadb-server/target/classes/static/index.html
+
+  server_integration:
+    runs-on: ubuntu-latest
+    name: Server integration tests
+    timeout-minutes: 20
+    env:
+      DOCKER_HOST: unix:///var/run/docker.sock
+      TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE: /var/run/docker.sock
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-java@v6
+      with:
+        java-version: '17'
+        distribution: temurin
+    - name: Restore server Maven dependencies
+      uses: actions/cache/restore@v5
+      with:
+        path: ~/.m2/repository
+        key: server-maven-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pom.xml', 'replicadb-server/pom.xml') }}
+        restore-keys: server-maven-${{ runner.os }}-${{ runner.arch }}-
+    - name: Install CLI dependency
+      run: mvn -B -Dmaven.test.skip=true install --file pom.xml
+    - name: Run Failsafe suite
+      run: >-
+        mvn -B -Dskip.installnodenpm=true -Dskip.npm=true -Dsurefire.timeout=600
+        test-compile failsafe:integration-test failsafe:verify --file replicadb-server/pom.xml
+    - name: Publish integration reports
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: server-integration-reports
+        path: |
+          replicadb-server/target/failsafe-reports/TEST-*.xml
+          replicadb-server/target/failsafe-reports/*.dump*
+        retention-days: 7
 
   multi_node:
     runs-on: ubuntu-latest
@@ -559,6 +592,7 @@ jobs:
       - integration
       - non_integration
       - server
+      - server_integration
       - multi_node
       - phase3_4
       - cli_compatibility

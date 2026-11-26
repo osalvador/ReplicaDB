@@ -74,8 +74,6 @@ public class ReplicadbDB2Container extends Db2Container {
       super(IMAGE_NAME);
       // Accept IBM DB2 license
       this.addEnv("LICENSE", "accept");
-      // Explicitly set database name (Testcontainers default is "testdb")
-      this.addEnv("DBNAME", "testdb");
       // Startup optimization environment variables to reduce initialization time
       this.addEnv("AUTOCONFIG", "false");        // Skip automatic configuration (saves 1-2 min)
       this.addEnv("ARCHIVE_LOGS", "false");      // Disable archive logging (saves 30-60 sec)
@@ -89,11 +87,12 @@ public class ReplicadbDB2Container extends Db2Container {
       if (container == null) {
          try {
             LOG.info("Initializing DB2 container with image: {}", IMAGE_NAME);
-            container = new ReplicadbDB2Container();
+            ReplicadbDB2Container candidate = new ReplicadbDB2Container();
             // Enable container reuse for faster subsequent test runs (experimental feature)
-            container.withReuse(TestcontainersConfiguration.getInstance().environmentSupportsReuse());
+            candidate.withReuse(TestcontainersConfiguration.getInstance().environmentSupportsReuse());
             LOG.info("Starting DB2 container (this may take 3-4 minutes on first run, 8-12 min on ARM64)...");
-            container.start();
+            candidate.start();
+            container = candidate;
             LOG.info("DB2 container started successfully");
          } catch (Exception e) {
             LOG.error("Failed to initialize DB2 container", e);
@@ -111,8 +110,8 @@ public class ReplicadbDB2Container extends Db2Container {
       try {
          // UPDATE DB CFG is a CLP command. Apply the log settings before opening the JDBC fixture connection.
          ExecResult result = execInContainer("su", "-", getUsername(), "-c",
-               ". ~/sqllib/db2profile && db2 update db cfg for testdb using LOGFILSIZ 10240 LOGPRIMARY 20 LOGSECOND 20"
-                     + " && db2stop force && db2start");
+               ". ~/sqllib/db2profile && db2 update db cfg for " + getDatabaseName()
+                     + " using LOGFILSIZ 10240 LOGPRIMARY 20 LOGSECOND 20 && db2stop force && db2start");
          if (result.getExitCode() != 0) {
             throw new IllegalStateException("Could not configure DB2 transaction logs: "
                   + result.getStdout() + result.getStderr());

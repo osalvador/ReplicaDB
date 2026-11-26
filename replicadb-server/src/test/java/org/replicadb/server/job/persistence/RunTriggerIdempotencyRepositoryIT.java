@@ -1,8 +1,11 @@
 package org.replicadb.server.job.persistence;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.replicadb.server.config.PostgresTestcontainersConfig;
+import org.replicadb.server.job.domain.JobDefinitionTestFixtures;
+import org.replicadb.server.job.domain.ManagedDataSourceTestFixtures;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -35,15 +38,37 @@ class RunTriggerIdempotencyRepositoryIT {
     @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private JobDefinitionRepository definitions;
+
+    @Autowired
+    private ManagedDataSourceRepository dataSources;
+
+    private UUID jobDefinitionId;
+
     @BeforeEach
-    void clearState() {
+    void setUp() {
         jdbcTemplate.update("TRUNCATE TABLE run_trigger_idempotency", Map.of());
+        var source = ManagedDataSourceTestFixtures.source();
+        var sink = ManagedDataSourceTestFixtures.sink();
+        dataSources.findById(source.id()).orElseGet(() -> dataSources.insert(source));
+        dataSources.findById(sink.id()).orElseGet(() -> dataSources.insert(sink));
+        jobDefinitionId = definitions.insert(JobDefinitionTestFixtures.aJobDefinition()
+                .withDefaultDatasourceReferences()
+                .build()).id();
+    }
+
+    @AfterEach
+    void deleteJob() {
+        if (jobDefinitionId != null) {
+            definitions.delete(jobDefinitionId);
+        }
     }
 
     @Test
     void roundTripsARecentIdempotencyKey() {
         UUID runId = UUID.randomUUID();
-        repository.upsert("recent-key", UUID.randomUUID(), runId);
+        repository.upsert("recent-key", jobDefinitionId, runId);
 
         assertEquals(runId, repository.findValidRunId("recent-key").orElseThrow());
         assertTrue(repository.findValidRunId("missing-key").isEmpty());
@@ -65,8 +90,8 @@ class RunTriggerIdempotencyRepositoryIT {
     void upsertReplacesTheRunForAnExistingKey() {
         UUID firstRun = UUID.randomUUID();
         UUID secondRun = UUID.randomUUID();
-        repository.upsert("replace-key", UUID.randomUUID(), firstRun);
-        repository.upsert("replace-key", UUID.randomUUID(), secondRun);
+        repository.upsert("replace-key", jobDefinitionId, firstRun);
+        repository.upsert("replace-key", jobDefinitionId, secondRun);
 
         assertEquals(secondRun, repository.findValidRunId("replace-key").orElseThrow());
         assertEquals(1, countRows("replace-key"));
@@ -104,7 +129,7 @@ class RunTriggerIdempotencyRepositoryIT {
     private void upsertAfter(CountDownLatch start, UUID runId) {
         try {
             start.await(2, TimeUnit.SECONDS);
-            repository.upsert("concurrent-key", UUID.randomUUID(), runId);
+            repository.upsert("concurrent-key", jobDefinitionId, runId);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(exception);
@@ -118,7 +143,7 @@ class RunTriggerIdempotencyRepositoryIT {
                 VALUES (:key, :jobDefinitionId, :runId, :createdAt)
                 """, new MapSqlParameterSource()
                 .addValue("key", key)
-                .addValue("jobDefinitionId", UUID.randomUUID())
+                .addValue("jobDefinitionId", jobDefinitionId)
                 .addValue("runId", runId)
                 .addValue("createdAt", Timestamp.from(createdAt)));
     }
