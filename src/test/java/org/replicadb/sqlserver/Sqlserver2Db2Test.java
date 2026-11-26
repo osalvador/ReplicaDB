@@ -55,9 +55,9 @@ class Sqlserver2Db2Test {
 
     @AfterEach
     void tearDown() throws SQLException {
-        try (Connection source = sqlserverConn) {
-            ReplicadbDB2Container.resetSink(db2Conn);
-        }
+        db2Conn.createStatement().execute("DELETE t_sink");
+        this.db2Conn.close();
+        this.sqlserverConn.close();
     }
 
     public int countSinkRows() throws SQLException {

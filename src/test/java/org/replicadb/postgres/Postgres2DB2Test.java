@@ -50,9 +50,10 @@ class Postgres2DB2Test {
 
     @AfterEach
     void tearDown() throws SQLException {
-        try (Connection source = postgresConn) {
-            ReplicadbDB2Container.resetSink(db2Conn);
-        }
+        // Truncate sink table and close connections
+        db2Conn.createStatement().execute("DELETE t_sink");
+        this.db2Conn.close();
+        this.postgresConn.close();
     }
 
 

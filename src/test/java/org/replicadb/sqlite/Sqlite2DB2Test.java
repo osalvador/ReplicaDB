@@ -79,9 +79,9 @@ class Sqlite2DB2Test {
 
     @AfterEach
     void tearDown() throws SQLException {
-        try (Connection source = sqliteConn) {
-            ReplicadbDB2Container.resetSink(db2Conn);
-        }
+        db2Conn.createStatement().execute("DELETE t_sink");
+        this.sqliteConn.close();
+        this.db2Conn.close();
     }
 
     public int countSinkRows() throws SQLException {

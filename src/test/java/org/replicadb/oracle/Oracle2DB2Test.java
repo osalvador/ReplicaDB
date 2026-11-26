@@ -62,9 +62,9 @@ class Oracle2DB2Test {
 
     @AfterEach
     void tearDown() throws SQLException {
-        try (Connection source = oracleConn) {
-            ReplicadbDB2Container.resetSink(db2Conn);
-        }
+        db2Conn.createStatement().execute("DELETE t_sink");
+        this.oracleConn.close();
+        this.db2Conn.close();
     }
 
     public int countSinkRows() throws SQLException {

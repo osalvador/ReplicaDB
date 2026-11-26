@@ -49,11 +49,36 @@ class DB22DB2Test {
     @BeforeEach
     void before() throws SQLException {
         this.db2Conn = DriverManager.getConnection(db2.getJdbcUrl(), db2.getUsername(), db2.getPassword());
+        this.db2Conn.setAutoCommit(true); // Ensure auto-commit is enabled for cleanup
     }
 
     @AfterEach
-    void tearDown() throws SQLException {
-        ReplicadbDB2Container.resetSink(db2Conn);
+    void tearDown() {
+        try {
+            if (db2Conn != null && !db2Conn.isClosed()) {
+                try {
+                    // Use TRUNCATE instead of DELETE - faster and uses less transaction log space
+                    db2Conn.createStatement().execute("TRUNCATE TABLE t_sink IMMEDIATE");
+                    db2Conn.commit(); // Explicit commit
+                } catch (SQLException e) {
+                    LOG.warn("Failed to truncate t_sink: {} (SQLCODE: {}, SQLSTATE: {})", 
+                            e.getMessage(), e.getErrorCode(), e.getSQLState());
+                    try {
+                        db2Conn.rollback(); // Rollback on error
+                    } catch (SQLException rollbackEx) {
+                        LOG.error("Failed to rollback: {}", rollbackEx.getMessage());
+                    }
+                } finally {
+                    try {
+                        db2Conn.close();
+                    } catch (SQLException closeEx) {
+                        LOG.error("Failed to close connection: {}", closeEx.getMessage());
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOG.error("Error in tearDown: {}", e.getMessage());
+        }
     }
 
     public int countSinkRows() throws SQLException {

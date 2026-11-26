@@ -59,9 +59,9 @@ class MySQL2DB2Test {
 
     @AfterEach
     void tearDown() throws SQLException {
-        try (Connection source = mysqlConn) {
-            ReplicadbDB2Container.resetSink(db2Conn);
-        }
+        db2Conn.createStatement().execute("DELETE t_sink");
+        this.mysqlConn.close();
+        this.db2Conn.close();
     }
 
     public int countSinkRows() throws SQLException {

@@ -91,20 +91,6 @@ public class ReplicadbDB2Container extends Db2Container {
       return Holder.INSTANCE;
    }
 
-   public static void resetSink(Connection testConnection) throws SQLException {
-      if (testConnection == null) {
-         return;
-      }
-      // Close any remaining cursors before making TRUNCATE the first statement on a fresh connection.
-      testConnection.close();
-      ReplicadbDB2Container fixture = getInstance();
-      try (Connection cleanup = DriverManager.getConnection(
-              fixture.getJdbcUrl(), fixture.getUsername(), fixture.getPassword());
-           var statement = cleanup.createStatement()) {
-         statement.execute("TRUNCATE TABLE t_sink REUSE STORAGE IMMEDIATE");
-      }
-   }
-
    private static ReplicadbDB2Container startFixture() {
       LOG.info("Starting DB2 container with image {}", IMAGE_NAME);
       ReplicadbDB2Container candidate = new ReplicadbDB2Container();
