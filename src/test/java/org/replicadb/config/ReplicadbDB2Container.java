@@ -107,22 +107,23 @@ public class ReplicadbDB2Container extends Db2Container {
       LOG.info("Starting DB2 container initialization...");
       super.start();
 
-      // Creating Database and configuring transaction logs
-      try (Connection con = DriverManager.getConnection(container.getJdbcUrl(), container.getUsername(), container.getPassword())) {
-         LOG.info("DB2 container ready, configuring transaction logs...");
-         try (java.sql.Statement stmt = con.createStatement()) {
-            // Increase transaction log sizes to avoid "out of space" errors during tests
-            // LOGFILSIZ: Size of each log file (in 4KB pages)
-            // LOGPRIMARY: Number of primary log files
-            // LOGSECOND: Number of secondary log files that can be allocated
-            stmt.execute("UPDATE DB CFG FOR testdb USING LOGFILSIZ 10240");
-            stmt.execute("UPDATE DB CFG FOR testdb USING LOGPRIMARY 20");
-            stmt.execute("UPDATE DB CFG FOR testdb USING LOGSECOND 20");
-            LOG.info("DB2 log configuration updated successfully");
-         } catch (SQLException e) {
-            LOG.warn("Failed to update DB2 log configuration (may not be critical): {}", e.getMessage());
+      try {
+         // UPDATE DB CFG is a CLP command. Apply the log settings before opening the JDBC fixture connection.
+         ExecResult result = execInContainer("su", "-", getUsername(), "-c",
+               ". ~/sqllib/db2profile && db2 update db cfg for testdb using LOGFILSIZ 10240 LOGPRIMARY 20 LOGSECOND 20"
+                     + " && db2 deactivate db testdb && db2 activate db testdb");
+         if (result.getExitCode() != 0) {
+            throw new IllegalStateException("Could not configure DB2 transaction logs: "
+                  + result.getStdout() + result.getStderr());
          }
+      } catch (InterruptedException e) {
+         Thread.currentThread().interrupt();
+         throw new IllegalStateException("Interrupted while configuring DB2 transaction logs", e);
+      } catch (IOException e) {
+         throw new IllegalStateException("Could not configure DB2 transaction logs", e);
+      }
 
+      try (Connection con = DriverManager.getConnection(getJdbcUrl(), getUsername(), getPassword())) {
          LOG.info("Creating DB2 test tables from SQL scripts...");
          ScriptRunner runner = new ScriptRunner(con, false, true);
          runner.runScript(new BufferedReader(new FileReader(RESOURCE_DIR + DB2_SINK_FILE)));

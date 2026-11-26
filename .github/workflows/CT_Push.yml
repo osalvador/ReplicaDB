@@ -21,6 +21,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   TESTCONTAINERS_REUSE_ENABLE: 'false'
 
@@ -114,10 +118,33 @@ jobs:
         sudo docker system prune --all --force --volumes
         df -h /
 
-    - name: Integration tests (exclude Oracle cross-version)
+    - name: Download DB2 image
+      if: matrix.source == 'db2'
       env:
-        CSV_TO_DB2_TEST: ${{ matrix.source == 'db2' && ',org/replicadb/file/Csv2DB2Test' || '' }}
-      run: mvn -B test --file pom.xml -Dtest="org/replicadb/${{ matrix.source }}/*Test${CSV_TO_DB2_TEST},!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest" -Dsurefire.timeout=1200
+        DB2_IMAGE: icr.io/db2_community/db2:11.5.9.0
+      run: |
+        set -euo pipefail
+        if timeout 120s docker pull "$DB2_IMAGE" 2>&1 | tee "$RUNNER_TEMP/db2-pull.log"; then
+          exit 0
+        fi
+        if grep -Eiq 'timeout|deadline exceeded|connection reset|unexpected EOF|429 Too Many Requests|50[234]' "$RUNNER_TEMP/db2-pull.log"; then
+          timeout 120s docker pull "$DB2_IMAGE"
+        else
+          exit 1
+        fi
+
+    - name: Integration tests
+      env:
+        SOURCE: ${{ matrix.source }}
+      run: |
+        set -euo pipefail
+        tests="org/replicadb/$SOURCE/*Test,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest"
+        if [[ "$SOURCE" == db2 ]]; then
+          tests+=",**/*2DB2Test,**/*2Db2Test"
+        else
+          tests+=",!**/*2DB2Test,!**/*2Db2Test"
+        fi
+        mvn -B test --file pom.xml -Dtest="$tests" -Dsurefire.timeout=1200
 
     - name: Publish integration reports
       if: always()
