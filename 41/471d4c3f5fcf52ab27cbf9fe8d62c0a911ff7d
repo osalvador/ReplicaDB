@@ -1,0 +1,23 @@
+docs/src/content/docs/connectors/mysql-mariadb.md
+  s_c61d193c2bce83::t_ab12d4ac27a810 26-28
+replicadb-server/pom.xml
+  s_c61d193c2bce83::t_fb4f16d0f1efbc 21,176-180
+replicadb-server/src/test/java/org/replicadb/server/job/execution/MariaDbReplicationIT.java
+  s_c61d193c2bce83::t_c77f0825b5aef3 1-114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "41471d4c3f5fcf52ab27cbf9fe8d62c0a911ff7d",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
