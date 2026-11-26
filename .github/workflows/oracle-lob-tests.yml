@@ -1,58 +1,42 @@
-# Workflow to test Oracle cross-version LOB replication fix (Issue #213)
-# This tests the fix for ORA-64219: invalid LOB locator encountered
-
 name: Oracle Cross-Version LOB Tests
 
 on:
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   oracle-lob-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     steps:
     - uses: actions/checkout@v7
-
-    - name: Set up JDK 17
-      uses: actions/setup-java@v6
+    - uses: actions/setup-java@v6
       with:
         java-version: '17'
-        distribution: 'temurin'
+        distribution: temurin
         cache: maven
-
-    - name: Run Oracle Cross-Version LOB Tests
+        cache-dependency-path: pom.xml
+    - name: Free disk space for Oracle images
+      run: sudo rm -rf /usr/local/lib/android/sdk /usr/share/dotnet /opt/ghc
+    - name: Run cross-version LOB suite
+      run: mvn -B test -Dtest=Oracle2OracleCrossVersionLobTest
+    - name: Verify the test cases ran
       run: |
-        mvn test \
-          -Dtest=Oracle2OracleCrossVersionLobTest \
-          -DfailIfNoTests=false \
-          -B \
-          --file pom.xml
+        python3 - <<'PY'
+        import xml.etree.ElementTree as ET
 
-    - name: Upload Test Results
+        report = ET.parse('target/surefire-reports/TEST-org.replicadb.oracle.Oracle2OracleCrossVersionLobTest.xml')
+        cases = report.findall('testcase')
+        if not cases or any(case.find('skipped') is not None for case in cases):
+            raise SystemExit('Oracle cross-version LOB tests did not all run')
+        PY
+    - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v7
       with:
         name: oracle-lob-test-results
-        path: target/surefire-reports/
+        path: target/surefire-reports/TEST-*.xml
         retention-days: 7
-
-    - name: Test Summary
-      if: always()
-      run: |
-        echo "## Oracle Cross-Version LOB Test Results" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        if [ -f target/surefire-reports/TEST-org.replicadb.oracle.Oracle2OracleCrossVersionLobTest.xml ]; then
-          echo "✅ Test report generated" >> $GITHUB_STEP_SUMMARY
-          # Extract test counts from XML
-          tests=$(grep -oP 'tests="\K[^"]+' target/surefire-reports/TEST-org.replicadb.oracle.Oracle2OracleCrossVersionLobTest.xml | head -1)
-          failures=$(grep -oP 'failures="\K[^"]+' target/surefire-reports/TEST-org.replicadb.oracle.Oracle2OracleCrossVersionLobTest.xml | head -1)
-          errors=$(grep -oP 'errors="\K[^"]+' target/surefire-reports/TEST-org.replicadb.oracle.Oracle2OracleCrossVersionLobTest.xml | head -1)
-          skipped=$(grep -oP 'skipped="\K[^"]+' target/surefire-reports/TEST-org.replicadb.oracle.Oracle2OracleCrossVersionLobTest.xml | head -1)
-          echo "- Tests: $tests" >> $GITHUB_STEP_SUMMARY
-          echo "- Failures: $failures" >> $GITHUB_STEP_SUMMARY
-          echo "- Errors: $errors" >> $GITHUB_STEP_SUMMARY
-          echo "- Skipped: $skipped" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "⚠️ No test report found" >> $GITHUB_STEP_SUMMARY
-        fi

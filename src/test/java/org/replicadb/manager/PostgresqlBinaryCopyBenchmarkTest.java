@@ -15,16 +15,13 @@ import java.sql.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Performance benchmark tests for PostgreSQL binary COPY implementation.
- * Validates that binary COPY throughput is ≥95% of text-only baseline.
- */
+/** Exercises COPY correctness with a small fixture and performance with a scheduled larger run. */
 @Testcontainers
 class PostgresqlBinaryCopyBenchmarkTest {
     private static final Logger LOG = LogManager.getLogger(PostgresqlBinaryCopyBenchmarkTest.class);
-    private static final int BENCHMARK_ROWS = 100_000;
-    private static final double MIN_THROUGHPUT_RATIO = 0.95; // 95% of text baseline
-    
+    private static final boolean BENCHMARK = Boolean.getBoolean("replicadb.test.copy-benchmark");
+    private static final int ROW_COUNT = BENCHMARK ? 100_000 : 128;
+
     private Connection postgresConn;
     private static PostgreSQLContainer<ReplicadbPostgresqlContainer> postgres;
 
@@ -58,13 +55,13 @@ class PostgresqlBinaryCopyBenchmarkTest {
     }
 
     @Test
-    void testBinaryCopy_PerformanceBenchmark() throws SQLException, ParseException, IOException {
+    void preservesBytesInBinaryAndTextCopy() throws SQLException, ParseException, IOException {
         LOG.info("=".repeat(80));
         LOG.info("Performance Benchmark: SAME DATA - Binary COPY vs Text COPY");
         LOG.info("=".repeat(80));
         
         // ===== DATASET 1: Text COPY with BYTEA encoded as VARCHAR (hex) =====
-        LOG.info("Creating text COPY dataset (BYTEA as VARCHAR hex) with {} rows...", BENCHMARK_ROWS);
+        LOG.info("Creating text COPY dataset (BYTEA as VARCHAR hex) with {} rows...", ROW_COUNT);
         Statement stmt = postgresConn.createStatement();
         
         // Create source table with VARCHAR instead of BYTEA to force text COPY
@@ -82,8 +79,8 @@ class PostgresqlBinaryCopyBenchmarkTest {
                     "ts TIMESTAMP, " +
                     "f FLOAT8)");
         
-        // Insert 100K rows with hex-encoded binary data
-        LOG.info("Inserting {} rows (text mode - BYTEA as hex VARCHAR)...", BENCHMARK_ROWS);
+        // Insert test rows with hex-encoded binary data
+        LOG.info("Inserting {} rows (text mode - BYTEA as hex VARCHAR)...", ROW_COUNT);
         long insertStart = System.nanoTime();
         stmt.execute(
             "INSERT INTO bench_text_bytea_source " +
@@ -92,7 +89,7 @@ class PostgresqlBinaryCopyBenchmarkTest {
             "       (generate_series * random())::numeric(20,5), " +
             "       now() + (generate_series || ' seconds')::interval, " +
             "       random()::float8 " +
-            "FROM generate_series(1, " + BENCHMARK_ROWS + ")"
+            "FROM generate_series(1, " + ROW_COUNT + ")"
         );
         long insertDuration = (System.nanoTime() - insertStart) / 1_000_000;
         LOG.info("Text dataset created in {} ms", insertDuration);
@@ -112,19 +109,19 @@ class PostgresqlBinaryCopyBenchmarkTest {
         ToolOptions textOptions = new ToolOptions(textArgs);
         assertEquals(0, ReplicaDB.processReplica(textOptions));
         long textDuration = System.nanoTime() - textStart;
-        double textThroughput = BENCHMARK_ROWS / (textDuration / 1_000_000_000.0);
+        double textThroughput = ROW_COUNT / (textDuration / 1_000_000_000.0);
         
         LOG.info("Text COPY (BYTEA as hex VARCHAR): {} rows in {} ms ({} rows/sec)", 
-                BENCHMARK_ROWS, textDuration / 1_000_000, String.format("%.2f", textThroughput));
+                ROW_COUNT, textDuration / 1_000_000, String.format("%.2f", textThroughput));
         
         // Verify row count
         ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM bench_text_bytea_sink");
         rs.next();
-        assertEquals(BENCHMARK_ROWS, rs.getInt(1), "Text COPY should replicate all rows");
+        assertEquals(ROW_COUNT, rs.getInt(1), "Text COPY should replicate all rows");
         rs.close();
         
         // ===== DATASET 2: Binary COPY with actual BYTEA column =====
-        LOG.info("Creating binary COPY dataset (actual BYTEA) with {} rows...", BENCHMARK_ROWS);
+        LOG.info("Creating binary COPY dataset (actual BYTEA) with {} rows...", ROW_COUNT);
         
         // Create source table with actual BYTEA to trigger binary COPY
         stmt.execute("CREATE TABLE bench_binary_bytea_source (" +
@@ -141,8 +138,8 @@ class PostgresqlBinaryCopyBenchmarkTest {
                     "ts TIMESTAMP, " +
                     "f FLOAT8)");
         
-        // Insert 100K rows with SAME DATA as text test
-        LOG.info("Inserting {} rows (binary mode - actual BYTEA)...", BENCHMARK_ROWS);
+        // Insert test rows with SAME DATA as text test
+        LOG.info("Inserting {} rows (binary mode - actual BYTEA)...", ROW_COUNT);
         insertStart = System.nanoTime();
         stmt.execute(
             "INSERT INTO bench_binary_bytea_source " +
@@ -151,7 +148,7 @@ class PostgresqlBinaryCopyBenchmarkTest {
             "       (generate_series * random())::numeric(20,5), " +
             "       now() + (generate_series || ' seconds')::interval, " +
             "       random()::float8 " +
-            "FROM generate_series(1, " + BENCHMARK_ROWS + ")"
+            "FROM generate_series(1, " + ROW_COUNT + ")"
         );
         insertDuration = (System.nanoTime() - insertStart) / 1_000_000;
         LOG.info("Binary dataset created in {} ms", insertDuration);
@@ -171,80 +168,40 @@ class PostgresqlBinaryCopyBenchmarkTest {
         ToolOptions binaryOptions = new ToolOptions(binaryArgs);
         assertEquals(0, ReplicaDB.processReplica(binaryOptions));
         long binaryDuration = System.nanoTime() - binaryStart;
-        double binaryThroughput = BENCHMARK_ROWS / (binaryDuration / 1_000_000_000.0);
+        double binaryThroughput = ROW_COUNT / (binaryDuration / 1_000_000_000.0);
         
         LOG.info("Binary COPY (actual BYTEA): {} rows in {} ms ({} rows/sec)", 
-                BENCHMARK_ROWS, binaryDuration / 1_000_000, String.format("%.2f", binaryThroughput));
+                ROW_COUNT, binaryDuration / 1_000_000, String.format("%.2f", binaryThroughput));
         
         // Verify row count
         rs = stmt.executeQuery("SELECT COUNT(*) FROM bench_binary_bytea_sink");
         rs.next();
-        assertEquals(BENCHMARK_ROWS, rs.getInt(1), "Binary COPY should replicate all rows");
+        assertEquals(ROW_COUNT, rs.getInt(1), "Binary COPY should replicate all rows");
         
-        // Verify data integrity - sample a few rows
-        rs = stmt.executeQuery(
-            "SELECT encode(data, 'hex') as hex_data FROM bench_binary_bytea_sink WHERE id = 1000"
-        );
-        rs.next();
-        String binaryHex = rs.getString("hex_data");
-        rs.close();
-        
-        rs = stmt.executeQuery(
-            "SELECT data as hex_data FROM bench_text_bytea_sink WHERE id = 1000"
-        );
-        rs.next();
-        String textHex = rs.getString("hex_data");
-        rs.close();
-        
-        assertEquals(textHex, binaryHex, "Binary and text COPY should produce identical data");
-        LOG.info("✓ Data integrity verified: binary and text formats produce identical results");
-        
+        try (ResultSet differences = stmt.executeQuery("""
+                SELECT COUNT(*) FROM bench_binary_bytea_sink b
+                FULL JOIN bench_text_bytea_sink t USING (id)
+                WHERE b.id IS NULL OR t.id IS NULL OR encode(b.data, 'hex') IS DISTINCT FROM t.data
+                """)) {
+            assertTrue(differences.next());
+            assertEquals(0, differences.getInt(1), "Binary and text COPY should produce identical bytes");
+        }
+
         stmt.execute("DROP TABLE IF EXISTS bench_text_bytea_source CASCADE");
         stmt.execute("DROP TABLE IF EXISTS bench_text_bytea_sink CASCADE");
         stmt.execute("DROP TABLE IF EXISTS bench_binary_bytea_source CASCADE");
         stmt.execute("DROP TABLE IF EXISTS bench_binary_bytea_sink CASCADE");
         stmt.close();
         
-        // ===== PERFORMANCE COMPARISON =====
-        double throughputRatio = binaryThroughput / textThroughput;
-        
-        LOG.info("=".repeat(80));
-        LOG.info("BENCHMARK RESULTS (IDENTICAL DATA - Text vs Binary COPY Format):");
-        LOG.info("  Text COPY format:    {} rows/sec ({} ms) - BYTEA as VARCHAR(hex) + NUMERIC + TIMESTAMP + FLOAT8", 
-                String.format("%.2f", textThroughput), textDuration / 1_000_000);
-        LOG.info("  Binary COPY format:  {} rows/sec ({} ms) - BYTEA(native) + NUMERIC + TIMESTAMP + FLOAT8", 
-                String.format("%.2f", binaryThroughput), binaryDuration / 1_000_000);
-        LOG.info("  Throughput Ratio:    {}% (Binary vs Text)", String.format("%.1f", throughputRatio * 100));
-        LOG.info("  Performance Impact:  {}x slower", String.format("%.2f", 1.0 / throughputRatio));
-        LOG.info("  ");
-        LOG.info("  Why Binary is Slower:");
-        LOG.info("    • NUMERIC: Base-10000 encoding vs toString()");
-        LOG.info("    • BYTEA: Native binary encoding vs hex string");
-        LOG.info("    • TIMESTAMP: Microsecond calculations vs string format");
-        LOG.info("  ");
-        LOG.info("  Why Binary is Worth It:");
-        LOG.info("    • NUMERIC: Exact precision (no floating-point rounding)");
-        LOG.info("    • TIMESTAMP: Microsecond precision (not just milliseconds)");
-        LOG.info("    • BYTEA: Correct binary data handling (required for BLOBs)");
-        LOG.info("=".repeat(80));
-        
-        // Adjusted assertion: Binary COPY with complex types may be slower than pure text
-        // The key metric is that it completes successfully without errors
-        // Performance optimization is a separate concern from correctness
-        assertTrue(binaryThroughput > 0, "Binary COPY should have positive throughput");
-        assertTrue(textThroughput > 0, "Text COPY should have positive throughput");
-        assertTrue(throughputRatio > 0.2, // At least 20% of text baseline (very conservative)
-                String.format("Binary COPY throughput (%.2f rows/sec) appears unreasonably slow. " +
-                             "Expected >20%% of text baseline (%.2f rows/sec). Actual ratio: %.1f%%", 
-                             binaryThroughput, textThroughput, throughputRatio * 100));
-        
-        LOG.info("✅ PASSED: Binary COPY performance is acceptable");
-        LOG.info("   Binary throughput: {} rows/sec", String.format("%.2f", binaryThroughput));
-        LOG.info("   Text throughput: {} rows/sec", String.format("%.2f", textThroughput));
+        if (BENCHMARK) {
+            double throughputRatio = binaryThroughput / textThroughput;
+            LOG.info("Binary COPY throughput relative to text: {}", throughputRatio);
+            assertTrue(throughputRatio > 0.2, "Binary COPY throughput should exceed 20% of text COPY");
+        }
     }
 
     @Test
-    void testBinaryCopy_PerformanceWithParallelJobs() throws SQLException, ParseException, IOException {
+    void copiesBinaryDataWithParallelJobs() throws SQLException, ParseException, IOException {
         LOG.info("=".repeat(80));
         LOG.info("Benchmark: Binary COPY with Parallel Jobs (4 workers)");
         LOG.info("=".repeat(80));
@@ -264,15 +221,15 @@ class PostgresqlBinaryCopyBenchmarkTest {
                     "val NUMERIC(20,5), " +
                     "ts TIMESTAMP)");
         
-        // Insert 100K rows
-        LOG.info("Inserting {} rows...", BENCHMARK_ROWS);
+        // Insert test rows
+        LOG.info("Inserting {} rows...", ROW_COUNT);
         stmt.execute(
             "INSERT INTO bench_parallel_source " +
             "SELECT generate_series, " +
             "       decode(md5(generate_series::text), 'hex'), " +
             "       (generate_series * random())::numeric(20,5), " +
             "       now() + (generate_series || ' seconds')::interval " +
-            "FROM generate_series(1, " + BENCHMARK_ROWS + ")"
+            "FROM generate_series(1, " + ROW_COUNT + ")"
         );
         
         // Benchmark with parallel jobs
@@ -291,15 +248,15 @@ class PostgresqlBinaryCopyBenchmarkTest {
         ToolOptions parallelOptions = new ToolOptions(parallelArgs);
         assertEquals(0, ReplicaDB.processReplica(parallelOptions));
         long parallelDuration = System.nanoTime() - parallelStart;
-        double parallelThroughput = BENCHMARK_ROWS / (parallelDuration / 1_000_000_000.0);
+        double parallelThroughput = ROW_COUNT / (parallelDuration / 1_000_000_000.0);
         
         LOG.info("Parallel Binary COPY (4 jobs): {} rows in {} ms ({} rows/sec)", 
-                BENCHMARK_ROWS, parallelDuration / 1_000_000, String.format("%.2f", parallelThroughput));
+                ROW_COUNT, parallelDuration / 1_000_000, String.format("%.2f", parallelThroughput));
         
         // Verify row count
         ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM bench_parallel_sink");
         rs.next();
-        assertEquals(BENCHMARK_ROWS, rs.getInt(1), "Parallel COPY should replicate all rows");
+        assertEquals(ROW_COUNT, rs.getInt(1), "Parallel COPY should replicate all rows");
         rs.close();
         
         stmt.execute("DROP TABLE IF EXISTS bench_parallel_source CASCADE");

@@ -196,8 +196,10 @@ step() {
 }
 
 step 'package CLI and server artifacts'
-mvn -B install -DskipTests -f "$repository_root/pom.xml" >/dev/null
-mvn -B package -DskipTests -f "$repository_root/replicadb-server/pom.xml" >/dev/null
+if [[ "${PHASE3_USE_PREBUILT_SERVER:-false}" != true ]]; then
+    mvn -B install -DskipTests -f "$repository_root/pom.xml" >/dev/null
+    mvn -B package -DskipTests -f "$repository_root/replicadb-server/pom.xml" >/dev/null
+fi
 
 step 'start two APIs and two workers'
 compose up -d --build --wait >/dev/null

@@ -14,11 +14,58 @@ on:
     paths-ignore:
       - 'README.md'
       - 'docs/**'
+  schedule:
+    - cron: '31 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 env:
   TESTCONTAINERS_REUSE_ENABLE: 'false'
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      oracle-lob: ${{ steps.scope.outputs.oracle-lob }}
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+    - id: scope
+      env:
+        BASE: ${{ github.event.pull_request.base.sha }}
+      run: |
+        set -euo pipefail
+        if [[ -z "$BASE" ]]; then
+          echo "oracle-lob=true" >> "$GITHUB_OUTPUT"
+        else
+          paths=$(git diff --name-only "$BASE" HEAD)
+          if [[ "$paths" =~ (^|$'\n')(pom\.xml$|src/main/java/|src/test/java/org/replicadb/(oracle/|config/ReplicadbOracleContainer\.java$)|src/test/resources/(oracle/|sinks/oracle)|\.github/workflows/(CT_Push|oracle-lob-tests)\.yml$) ]]; then
+            echo "oracle-lob=true" >> "$GITHUB_OUTPUT"
+          fi
+        fi
+
+  oracle_lob:
+    needs: changes
+    if: needs.changes.outputs.oracle-lob == 'true'
+    uses: ./.github/workflows/oracle-lob-tests.yml
+
+  copy_benchmark:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-java@v6
+      with:
+        java-version: '17'
+        distribution: temurin
+        cache: maven
+        cache-dependency-path: pom.xml
+    - run: mvn -B test -Dtest=PostgresqlBinaryCopyBenchmarkTest -Dreplicadb.test.copy-benchmark=true
+
   integration:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -47,6 +94,10 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        cache: maven
+        cache-dependency-path: |
+          pom.xml
+          replicadb-server/pom.xml
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
@@ -60,38 +111,18 @@ jobs:
         sudo docker system prune --all --force --volumes
         df -h /
 
-    - name: Get version
-      run: |
-        project_version="\${project.version}"
-        version="$(mvn -q -Dexec.executable=echo -Dexec.args="$project_version" --non-recursive exec:exec)"
-        echo "version=$version" >> "$GITHUB_ENV"
-
     - name: Integration tests (exclude Oracle cross-version)
       env:
         CSV_TO_DB2_TEST: ${{ matrix.source == 'db2' && ',org/replicadb/file/Csv2DB2Test' || '' }}
-      run: mvn -B test --file pom.xml -Dtest="org/replicadb/${{ matrix.source }}/*Test${CSV_TO_DB2_TEST},!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest,!org/replicadb/mongo/Mongo2DB2Test" -Dsurefire.timeout=1200
+      run: mvn -B test --file pom.xml -Dtest="org/replicadb/${{ matrix.source }}/*Test${CSV_TO_DB2_TEST},!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest" -Dsurefire.timeout=1200
 
-    - name: Report skipped tests
+    - name: Publish integration reports
       if: always()
-      run: |
-        python3 - <<'PY'
-        from pathlib import Path
-        import xml.etree.ElementTree as ET
-
-        skipped = [
-            f"{testcase.get('classname')}.{testcase.get('name')}: {skipped_node.get('message') or 'no reason provided'}"
-            for report in sorted(Path("target/surefire-reports").glob("TEST-*.xml"))
-            for testcase in ET.parse(report).getroot().findall(".//testcase")
-            for skipped_node in [testcase.find("skipped")]
-            if skipped_node is not None
-        ]
-
-        if skipped:
-            print("Skipped tests:")
-            print("\n".join(f"- {test}" for test in skipped))
-        else:
-            print("No skipped tests in the generated Surefire reports.")
-        PY
+      uses: actions/upload-artifact@v7
+      with:
+        name: cli-tests-${{ matrix.source }}
+        path: target/surefire-reports/TEST-*.xml
+        retention-days: 7
 
   non_integration:
     runs-on: ubuntu-latest
@@ -108,46 +139,31 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        cache: maven
+        cache-dependency-path: |
+          pom.xml
+          replicadb-server/pom.xml
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
     - name: Check Docker info
       run: docker info
 
-    - name: Get version
-      run: |
-        project_version="\${project.version}"
-        version="$(mvn -q -Dexec.executable=echo -Dexec.args="$project_version" --non-recursive exec:exec)"
-        echo "version=$version" >> "$GITHUB_ENV"
-
     - name: Non-integration tests
-      run: mvn -B test --file pom.xml -Dtest="org/replicadb/*Test,org/replicadb/cli/*Test,org/replicadb/manager/*Test,org/replicadb/config/*Test,org/replicadb/rowset/*Test,org/replicadb/file/*Test,!org/replicadb/file/Csv2DB2Test"
+      run: mvn -B test --file pom.xml -Dtest="**/*Test,!org/replicadb/db2/**,!org/replicadb/mariadb/**,!org/replicadb/mysql/**,!org/replicadb/oracle/**,!org/replicadb/postgres/**,!org/replicadb/sqlite/**,!org/replicadb/sqlserver/**,!org/replicadb/mongo/**,!org/replicadb/file/Csv2DB2Test"
 
-    - name: Report skipped tests
+    - name: Publish CLI reports
       if: always()
-      run: |
-        python3 - <<'PY'
-        from pathlib import Path
-        import xml.etree.ElementTree as ET
-
-        skipped = [
-            f"{testcase.get('classname')}.{testcase.get('name')}: {skipped_node.get('message') or 'no reason provided'}"
-            for report in sorted(Path("target/surefire-reports").glob("TEST-*.xml"))
-            for testcase in ET.parse(report).getroot().findall(".//testcase")
-            for skipped_node in [testcase.find("skipped")]
-            if skipped_node is not None
-        ]
-
-        if skipped:
-            print("Skipped tests:")
-            print("\n".join(f"- {test}" for test in skipped))
-        else:
-            print("No skipped tests in the generated Surefire reports.")
-        PY
+      uses: actions/upload-artifact@v7
+      with:
+        name: cli-tests-other
+        path: target/surefire-reports/TEST-*.xml
+        retention-days: 7
 
   server:
     runs-on: ubuntu-latest
     name: Server module
+    timeout-minutes: 30
     env:
       TESTCONTAINERS_CONFIG_FILE: src/test/resources/testcontainers-ci.properties
       DOCKER_HOST: unix:///var/run/docker.sock
@@ -162,14 +178,28 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        cache: maven
+        cache-dependency-path: |
+          pom.xml
+          replicadb-server/pom.xml
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
     - name: Install CLI artifact
       run: mvn -B install -DskipTests --file pom.xml
 
-    - name: Test server module
-      run: mvn -B test --file replicadb-server/pom.xml
+    - name: Test and package server module
+      run: mvn -B verify --file replicadb-server/pom.xml
+
+    - name: Publish server test reports
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: server-test-reports
+        path: |
+          replicadb-server/target/surefire-reports/TEST-*.xml
+          replicadb-server/target/failsafe-reports/TEST-*.xml
+        retention-days: 7
 
     - name: Verify Phase 3.1 repository bridge is removed
       run: |
@@ -178,17 +208,16 @@ jobs:
           exit 1
         fi
 
-    - name: Verify worker profile context
-      run: mvn -B -Dtest=WorkerRuntimeConfigurationTest,WorkerProfileContextTest test --file replicadb-server/pom.xml
-
-    - name: Verify migration and observability contracts
-      run: mvn -B -Dtest=FlywayMigrationTest,HealthEndpointTest,ManagementConfigurationTest,MetricsEndpointIT,WorkerManagementEndpointIT test --file replicadb-server/pom.xml
-
     - name: Verify deployment documentation
       run: scripts/check-phase3-docs.sh
 
-    - name: Package server artifact
-      run: mvn -B package -DskipTests --file replicadb-server/pom.xml
+    - name: Upload tested server package
+      uses: actions/upload-artifact@v7
+      with:
+        name: tested-server-jar
+        path: replicadb-server/target/replicadb-server-*.jar
+        if-no-files-found: error
+        retention-days: 3
 
     - name: Smoke-test server image
       run: scripts/phase3-image-smoke.sh
@@ -229,17 +258,13 @@ jobs:
     - uses: actions/checkout@v7
     - name: Check Docker info
       run: docker info
-    - name: Set up JDK 17
-      uses: actions/setup-java@v6
+    - name: Download tested server package
+      uses: actions/download-artifact@v8
       with:
-        java-version: '17'
-        distribution: 'temurin'
-        server-id: github
-        settings-path: ${{ github.workspace }}
-    - name: Install CLI artifact
-      run: mvn -B install -DskipTests --file pom.xml
-    - name: Run named multinode profile
-      run: mvn -B -DskipTests -Pphase3-multinode verify --file replicadb-server/pom.xml
+        name: tested-server-jar
+        path: replicadb-server/target
+    - name: Run multinode smoke
+      run: scripts/phase3-multinode-test.sh
     - name: Run short concurrent load validation
       env:
         PHASE3_LOAD_RUNS: '4'
@@ -273,6 +298,9 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: maven
+        cache-dependency-path: |
+          pom.xml
+          replicadb-server/pom.xml
     - name: Check POSIX launcher prerequisites
       if: runner.os != 'Windows'
       shell: bash
@@ -322,20 +350,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v7
-    - name: Check Docker info
-      run: docker info
-    - name: Set up JDK 17
-      uses: actions/setup-java@v6
+    - name: Download tested server package
+      uses: actions/download-artifact@v8
       with:
-        java-version: '17'
-        distribution: 'temurin'
-        server-id: github
-        settings-path: ${{ github.workspace }}
-    - name: Install CLI artifact
-      run: mvn -B install -DskipTests --file pom.xml
-    - name: Run focused Phase 3.4 policy and metrics tests
-      run: mvn -B -Dtest=WorkerAdmissionPolicyTest,ContentionBackoffTest,WorkerAdmissionQueueTest,WorkerBusySlotTrackerTest,ManagedRuntimeMetricsTest,WorkerDispatchCoordinatorTest test --file replicadb-server/pom.xml
+        name: tested-server-jar
+        path: replicadb-server/target
     - name: Run reproducible fairness harness
+      env:
+        PHASE3_USE_PREBUILT_SERVER: 'true'
       run: scripts/phase3-fairness-test.sh
     - name: Upload fairness diagnostics
       if: failure()
@@ -359,6 +381,10 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        cache: maven
+        cache-dependency-path: |
+          pom.xml
+          replicadb-server/pom.xml
         server-id: github
         settings-path: ${{ github.workspace }}
     - name: Run standalone CLI compatibility gate
@@ -402,15 +428,11 @@ jobs:
       run: |
         echo "REPLICADB_BOOTSTRAP_ADMIN_USERNAME=frontend-admin" >> "$GITHUB_ENV"
         echo "REPLICADB_BOOTSTRAP_ADMIN_PASSWORD=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-    - name: Install CLI artifact
-      run: mvn -B install -DskipTests --file pom.xml
-    - name: Package server module
-      env:
-        DB_URL: jdbc:postgresql://localhost:5432/replicadb
-        DB_USERNAME: postgres
-        DB_PASSWORD: ''
-        SPRING_PROFILES_ACTIVE: api
-      run: mvn -B package -DskipTests --file replicadb-server/pom.xml
+    - name: Download tested server package
+      uses: actions/download-artifact@v8
+      with:
+        name: tested-server-jar
+        path: replicadb-server/target
     - name: Install frontend dependencies
       working-directory: replicadb-server/frontend
       run: npm ci
@@ -496,8 +518,10 @@ jobs:
         rm -f /tmp/replicadb-master-key.json
 
   package:
+    if: ${{ !failure() && !cancelled() }}
     runs-on: ubuntu-latest
     needs:
+      - oracle_lob
       - integration
       - non_integration
       - server
@@ -514,6 +538,10 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        cache: maven
+        cache-dependency-path: |
+          pom.xml
+          replicadb-server/pom.xml
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 

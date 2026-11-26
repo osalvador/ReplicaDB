@@ -266,8 +266,7 @@ class Postgres2PostgresAutoCreateTest {
         assertTrue(tableExists(sinkTable), "Sink table should be created automatically");
         
         int rowCount = countRows(sinkTable);
-        assertTrue(rowCount > 0, "Sink table should have data");
-        assertTrue(rowCount < countRows("t_source"), "Custom query should have filtered rows");
+        assertEquals(999, rowCount, "Custom query should replicate exactly the filtered rows");
         LOG.info("Successfully replicated {} rows from custom query to auto-created table", rowCount);
 
         // Validate only selected columns are present
