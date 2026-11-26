@@ -41,8 +41,11 @@ jobs:
         if [[ -z "$BASE" ]]; then
           echo "oracle-lob=true" >> "$GITHUB_OUTPUT"
         else
-          paths=$(git diff --name-only "$BASE" HEAD)
-          if [[ "$paths" =~ (^|$'\n')(pom\.xml$|src/main/java/|src/test/java/org/replicadb/(oracle/|config/ReplicadbOracleContainer\.java$)|src/test/resources/(oracle/|sinks/oracle)|\.github/workflows/(CT_Push|oracle-lob-tests)\.yml$) ]]; then
+          paths=$(git diff --name-only "$BASE" HEAD -- pom.xml src/main/java/ \
+            src/test/java/org/replicadb/oracle/ src/test/java/org/replicadb/config/ReplicadbOracleContainer.java \
+            src/test/resources/oracle/ ':(glob)src/test/resources/sinks/oracle*' \
+            .github/workflows/CT_Push.yml .github/workflows/oracle-lob-tests.yml)
+          if [[ -n "$paths" ]]; then
             echo "oracle-lob=true" >> "$GITHUB_OUTPUT"
           fi
         fi
@@ -178,12 +181,15 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: maven
-        cache-dependency-path: |
-          pom.xml
-          replicadb-server/pom.xml
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
+
+    - name: Cache server Maven dependencies
+      uses: actions/cache@v5
+      with:
+        path: ~/.m2/repository
+        key: server-maven-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pom.xml', 'replicadb-server/pom.xml') }}
+        restore-keys: server-maven-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Install CLI artifact
       run: mvn -B install -DskipTests --file pom.xml
