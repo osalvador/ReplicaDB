@@ -1,0 +1,35 @@
+.github/workflows/CI_Release.yml
+  s_c61d193c2bce83::t_56eca4022c87d5 21-23,34-37,41-53
+.github/workflows/CT_Push.yml
+  s_c61d193c2bce83::t_c12276e8b31cc6 17-22,28-68,97-100,117,119,121-125,142-145,153,155,157-161,166,181-184,191-202,214-220,261-262,264-267,301-303,353-354,356-357,359-360,384-387,431-435,521,524,541-544
+.github/workflows/dependabot-auto-merge.yml
+  s_c61d193c2bce83::t_aa73a7086446af 16,73-75,77-107,109-110,146,165-173
+.github/workflows/docs.yml
+  s_c61d193c2bce83::t_f127166368c588 91-99,152-168
+.github/workflows/oracle-lob-tests.yml
+  s_c61d193c2bce83::t_8462e054a2c3d1 4-8,16,19,21-26,28-36,41
+replicadb-server/pom.xml
+  s_c61d193c2bce83::t_c7bf1d9968bfad 234-247
+scripts/phase3-fairness-test.sh
+  s_c61d193c2bce83::t_1d100cb6d05e2b 199-202
+src/test/java/org/replicadb/manager/PostgresqlBinaryCopyBenchmarkTest.java
+  s_c61d193c2bce83::t_ce3fec90c55914 18,22-24,58,64,82-83,92,112,115,120,124,141-142,151,171,174,179,181-189,196-200,204,224-225,232,251,254,259
+src/test/java/org/replicadb/postgres/Postgres2PostgresAutoCreateTest.java
+  s_c61d193c2bce83::t_bff04cc4e3185c 269
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "bc9e5ff53c9e097b5f9ac73a75cec2fc741e24c6",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
