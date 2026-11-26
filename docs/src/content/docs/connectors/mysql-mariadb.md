@@ -23,7 +23,9 @@ using that driver. Configure TLS on the server and trust its certificate.
 MariaDB Server 11.4 and later can negotiate verified TLS automatically with a
 password. For an intentionally unencrypted legacy connection, set
 `source.connect.parameter.sslMode=disable` or
-`sink.connect.parameter.sslMode=disable` on the affected endpoint.
+`sink.connect.parameter.sslMode=disable` in the CLI configuration. In ReplicaDB
+Server, set `sslMode` to `disable` in the affected datasource's technical
+parameters.
 
 ## Example properties
 
