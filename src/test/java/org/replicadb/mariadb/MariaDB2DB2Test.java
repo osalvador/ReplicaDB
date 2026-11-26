@@ -3,8 +3,6 @@ package org.replicadb.mariadb;
 import org.apache.commons.cli.ParseException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.replicadb.ReplicaDB;
 import org.replicadb.cli.ReplicationMode;
@@ -37,28 +35,23 @@ class MariaDB2DB2Test {
             + "C_CHARACTER_VAR,C_CHARACTER_LOB,C_NATIONAL_CHARACTER,C_NATIONAL_CHARACTER_VAR,C_DATE,"
             + "C_TIMESTAMP_WITHOUT_TIMEZONE,C_TIMESTAMP_WITH_TIMEZONE";
 
-    private Connection mariadbConn;
     private Connection db2Conn;
 
     public static MariaDBContainer<ReplicadbMariaDBContainer> mariadb = ReplicadbMariaDBContainer.getInstance();
 
     public static Db2Container db2 = ReplicadbDB2Container.getInstance();
 
-    @BeforeAll
-    static void setUp() {
-    }
-
-    @BeforeEach
-    void before() throws SQLException {
-        this.mariadbConn = DriverManager.getConnection(mariadb.getJdbcUrl(), mariadb.getUsername(), mariadb.getPassword());
-        this.db2Conn = DriverManager.getConnection(db2.getJdbcUrl(), db2.getUsername(), db2.getPassword());
+    private void connectDb2() throws SQLException {
+        db2Conn = DriverManager.getConnection(db2.getJdbcUrl(), db2.getUsername(), db2.getPassword());
     }
 
     @AfterEach
     void tearDown() throws SQLException {
-        db2Conn.createStatement().execute("DELETE t_sink");
-        this.mariadbConn.close();
-        this.db2Conn.close();
+        if (db2Conn != null) {
+            try (Connection connection = db2Conn; Statement statement = connection.createStatement()) {
+                statement.executeUpdate("DELETE FROM t_sink");
+            }
+        }
     }
 
     public int countSinkRows() throws SQLException {
@@ -84,15 +77,19 @@ class MariaDB2DB2Test {
 
     @Test
     void testMariaDbConnection() throws SQLException {
-        Statement stmt = mariadbConn.createStatement();
-        ResultSet rs = stmt.executeQuery("SELECT VERSION()");
-        rs.next();
-        String version = rs.getString(1);
-        assertTrue(version.contains("10.2"));
+        try (Connection connection = DriverManager.getConnection(
+                mariadb.getJdbcUrl(), mariadb.getUsername(), mariadb.getPassword());
+             Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT VERSION()")) {
+            rs.next();
+            String version = rs.getString(1);
+            assertTrue(version.contains("10.2"));
+        }
     }
 
     @Test
     void testDb2Connection() throws SQLException {
+        connectDb2();
         Statement stmt = db2Conn.createStatement();
         ResultSet rs = stmt.executeQuery("SELECT 1 FROM SYSIBM.SYSDUMMY1");
         rs.next();
@@ -102,6 +99,7 @@ class MariaDB2DB2Test {
 
     @Test
     void testMariaDb2Db2Complete() throws ParseException, IOException, SQLException {
+        connectDb2();
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mariadb.getJdbcUrl(),
@@ -121,6 +119,7 @@ class MariaDB2DB2Test {
 
     @Test
     void testMariaDb2Db2CompleteAtomic() throws ParseException, IOException, SQLException {
+        connectDb2();
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mariadb.getJdbcUrl(),
@@ -141,6 +140,7 @@ class MariaDB2DB2Test {
 
     @Test
     void testMariaDb2Db2Incremental() throws ParseException, IOException, SQLException {
+        connectDb2();
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mariadb.getJdbcUrl(),
@@ -161,6 +161,7 @@ class MariaDB2DB2Test {
 
     @Test
     void testMariaDb2Db2CompleteParallel() throws ParseException, IOException, SQLException {
+        connectDb2();
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mariadb.getJdbcUrl(),
@@ -181,6 +182,7 @@ class MariaDB2DB2Test {
 
     @Test
     void testMariaDb2Db2CompleteAtomicParallel() throws ParseException, IOException, SQLException {
+        connectDb2();
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mariadb.getJdbcUrl(),
@@ -202,6 +204,7 @@ class MariaDB2DB2Test {
 
     @Test
     void testMariaDb2Db2IncrementalParallel() throws ParseException, IOException, SQLException {
+        connectDb2();
         String[] args = {
                 "--options-file", RESOURCE_DIR + REPLICADB_CONF_FILE,
                 "--source-connect", mariadb.getJdbcUrl(),
@@ -223,6 +226,7 @@ class MariaDB2DB2Test {
 
     @Test
     void testMariaDb2Db2AutoCreateCompleteMode() throws ParseException, IOException, SQLException {
+        connectDb2();
         String sinkTable = "T_SINK_AUTOCREATE_MARIADB2DB2";
         Assertions.assertFalse(tableExists(db2Conn, sinkTable), "Sink table should not exist before test");
 
@@ -249,6 +253,7 @@ class MariaDB2DB2Test {
 
     @Test
     void testMariaDb2Db2AutoCreateCompleteAtomicMode() throws ParseException, IOException, SQLException {
+        connectDb2();
         String sinkTable = "T_SINK_AUTOCREATE_MARIADB2DB2_ATOMIC";
         Assertions.assertFalse(tableExists(db2Conn, sinkTable), "Sink table should not exist before test");
 
@@ -275,6 +280,7 @@ class MariaDB2DB2Test {
 
     @Test
     void testMariaDb2Db2AutoCreateSkippedWhenTableExists() throws ParseException, IOException, SQLException {
+        connectDb2();
         String sinkTable = "T_SINK"; // Use existing table
 
         String[] args = {
