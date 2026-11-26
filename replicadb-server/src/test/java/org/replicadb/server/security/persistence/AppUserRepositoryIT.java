@@ -13,9 +13,12 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.context.annotation.Import;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -42,8 +45,12 @@ class AppUserRepositoryIT {
     void insertsAndReadsByIdAndUsername() {
         AppUser inserted = repository.insert(user("admin-user", GlobalRole.ADMIN));
 
-        assertEquals(inserted, repository.findById(inserted.id()).orElseThrow());
-        assertEquals(inserted, repository.findByUsername(inserted.username()).orElseThrow());
+        AppUser found = repository.findById(inserted.id()).orElseThrow();
+        assertThat(found).usingRecursiveComparison()
+                .withComparatorForType(Comparator.comparing((Instant instant) ->
+                        instant.plusNanos(500).truncatedTo(ChronoUnit.MICROS)), Instant.class)
+                .isEqualTo(inserted);
+        assertEquals(found, repository.findByUsername(inserted.username()).orElseThrow());
         assertNotNull(inserted.id());
         assertNotNull(inserted.createdAt());
         assertNotNull(inserted.updatedAt());
@@ -77,7 +84,7 @@ class AppUserRepositoryIT {
         assertEquals(GlobalRole.ADMIN, updated.role());
         assertFalse(updated.enabled());
         assertEquals(inserted.username(), updated.username());
-        assertEquals(inserted.createdAt(), updated.createdAt());
+        assertEquals(stale.createdAt(), updated.createdAt());
         assertTrue(updated.updatedAt().isAfter(stale.updatedAt()));
     }
 

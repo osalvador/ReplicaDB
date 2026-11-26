@@ -28,11 +28,11 @@ class HealthEndpointTest {
     private TestRestTemplate restTemplate;
 
     @Test
-    void healthEndpointReturnsUp() {
+    void publicHealthEndpointReturnsUp() {
         ResponseEntity<String> response = restTemplate.getForEntity(
                 "http://localhost:" + port + "/actuator/health", String.class);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(HttpStatus.OK, response.getStatusCode(), response::getBody);
         assertTrue(response.getBody().contains("\"status\":\"UP\""));
     }
 

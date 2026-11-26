@@ -133,10 +133,11 @@ class AuditEventRepositoryIT {
 
     @Test
     void deletesOnlyEventsOlderThanRetentionWindow() {
-        repository.insert(event(null, "system:api", Instant.now().minus(400, ChronoUnit.DAYS),
+        Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
+        repository.insert(event(null, "system:api", now.minus(400, ChronoUnit.DAYS),
                 AuditAction.RUN_FAILED, AuditResourceType.JOB_RUN, "old-run",
                 AuditOutcome.FAILURE, Map.of()));
-        AuditEvent recent = repository.insert(event(null, "system:api", Instant.now().minus(10,
+        AuditEvent recent = repository.insert(event(null, "system:api", now.minus(10,
                 ChronoUnit.DAYS), AuditAction.RUN_SUCCEEDED, AuditResourceType.JOB_RUN, "recent-run",
                 AuditOutcome.SUCCESS, Map.of()));
 

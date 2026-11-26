@@ -88,6 +88,15 @@ jobs:
         working-directory: docs
         run: npm run check && npm run build && npm run validate && npm test
 
+      - name: Configure Pages
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master' && vars.DOCS_PAGES_SOURCE == 'actions'
+        uses: actions/configure-pages@v6
+      - name: Upload validated portal
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master' && vars.DOCS_PAGES_SOURCE == 'actions'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/dist
+
   api_drift:
     if: ${{ github.event_name == 'workflow_dispatch' || needs.classify.outputs.api == 'true' }}
     runs-on: ubuntu-latest
@@ -140,3 +149,20 @@ jobs:
       - name: Typecheck and fixture contracts
         working-directory: replicadb-server/frontend
         run: npm run typecheck && npm run test:api-types && npm run test:playwright-config && npm run test:seed && node --test scripts/seed-docs-screenshots.test.mjs
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master' && vars.DOCS_PAGES_SOURCE == 'actions'
+    needs: docs
+    runs-on: ubuntu-latest
+    concurrency:
+      group: docs-pages-production
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/deploy-pages@v5
+        id: deployment

@@ -13,6 +13,7 @@ jobs:
   auto-merge:
     if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    timeout-minutes: 6
 
     steps:
       - name: Get PR details
@@ -69,45 +70,44 @@ jobs:
               pull_number: pr_number
             });
 
-            // Get check runs for the PR
-            const { data: checkRuns } = await github.rest.checks.listForRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: head_sha
+            const target = { owner: context.repo.owner, repo: context.repo.repo };
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...target, pull_number: pr_number
             });
+            const expected = ['Analyze (java)', 'GitGuardian Security Checks'];
+            if (files.some(file => file.filename === 'replicadb-server/pom.xml')) {
+              expected.push('docs', 'api_drift', 'frontend_drift');
+            }
+            const acceptable = new Set(['success', 'skipped', 'neutral']);
+            let ready = false;
 
-            const hasFailedChecks = checkRuns.check_runs.some(check =>
-              check.status === 'completed' &&
-              (check.conclusion === 'failure' || check.conclusion === 'cancelled')
-            );
-            const headMatches = pullRequest.state === 'open' && pullRequest.head.sha === head_sha;
-            const workflowPassed = context.payload.workflow_run.conclusion === 'success';
-            const ready_to_merge = headMatches && workflowPassed && !hasFailedChecks;
+            for (let attempt = 0; attempt < 24; attempt++) {
+              const [checks, combined] = await Promise.all([
+                github.paginate(github.rest.checks.listForRef, { ...target, ref: head_sha }),
+                github.rest.repos.getCombinedStatusForRef({ ...target, ref: head_sha })
+              ]);
+              const all = [
+                ...checks.map(check => ({ name: check.name, outcome: check.conclusion })),
+                ...combined.data.statuses.map(status => ({
+                  name: status.context, outcome: status.state === 'pending' ? null : status.state
+                }))
+              ];
+              const failed = all.filter(check => check.outcome && !acceptable.has(check.outcome));
+              if (failed.length) {
+                console.log('Failed checks:', failed.map(check => check.name));
+                break;
+              }
+              if (expected.every(name => all.some(check => check.name === name && check.outcome))
+                  && all.every(check => acceptable.has(check.outcome))) {
+                ready = pullRequest.state === 'open' && pullRequest.head.sha === head_sha
+                  && context.payload.workflow_run.conclusion === 'success';
+                break;
+              }
+              if (attempt < 23) await new Promise(resolve => setTimeout(resolve, 10000));
+            }
 
-            console.log('Workflow passed:', workflowPassed);
-            console.log('PR head matches workflow:', headMatches);
-            console.log('Has failed checks:', hasFailedChecks);
-
-            core.setOutput('ready_to_merge', ready_to_merge);
-            core.setOutput('status_state', context.payload.workflow_run.conclusion);
-            core.setOutput('checks_count', checkRuns.check_runs.length);
-            core.setOutput('has_failed_checks', hasFailedChecks);
-
-            return ready_to_merge;
-
-      - name: Wait for checks (if needed)
-        if: steps.pr.outputs.is_dependabot == 'true' && steps.check_status.outputs.ready_to_merge != 'true' && steps.check_status.outputs.has_failed_checks != 'true'
-        run: |
-          echo "CI checks are not ready yet. Status: ${{ steps.check_status.outputs.status_state }}"
-          echo "Number of check runs: ${{ steps.check_status.outputs.checks_count }}"
-          echo "Workflow will retry when checks complete."
-
-      - name: Report failed checks
-        if: steps.pr.outputs.is_dependabot == 'true' && steps.check_status.outputs.has_failed_checks == 'true'
-        run: |
-          echo "⚠️ Some CI checks have failed. Not merging PR."
-          echo "Status: ${{ steps.check_status.outputs.status_state }}"
-          echo "Number of check runs: ${{ steps.check_status.outputs.checks_count }}"
+            console.log('All applicable checks are ready:', ready);
+            core.setOutput('ready_to_merge', ready);
 
       - name: Approve PR
         if: steps.pr.outputs.is_dependabot == 'true' && steps.check_status.outputs.ready_to_merge == 'true'
@@ -143,7 +143,7 @@ jobs:
 
             console.log(`Approved PR #${pr_number}`);
 
-      - name: Enable auto-merge
+      - name: Merge the validated commit
         if: steps.pr.outputs.is_dependabot == 'true' && steps.check_status.outputs.ready_to_merge == 'true'
         uses: actions/github-script@v9
         with:
@@ -162,56 +162,12 @@ jobs:
               return;
             }
 
-            // Try to merge directly
-            try {
-              await github.rest.pulls.merge({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: pr_number,
-                merge_method: 'squash',
-                commit_title: pullRequest.title,
-                commit_message: `${pullRequest.title}\n\nAuto-merged by Dependabot workflow after successful CI tests.`
-              });
-              console.log(`✅ Successfully merged PR #${pr_number}`);
-            } catch (mergeError) {
-              console.log('Could not merge directly:', mergeError.message);
-
-              // Try to enable auto-merge using GraphQL as fallback
-              const mutation = `
-                mutation($pullRequestId: ID!) {
-                  enablePullRequestAutoMerge(input: {
-                    pullRequestId: $pullRequestId,
-                    mergeMethod: SQUASH
-                  }) {
-                    pullRequest {
-                      autoMergeRequest {
-                        enabledAt
-                      }
-                    }
-                  }
-                }
-              `;
-
-              try {
-                await github.graphql(mutation, {
-                  pullRequestId: pullRequest.node_id
-                });
-                console.log(`✅ Enabled auto-merge for PR #${pr_number}`);
-              } catch (error) {
-                console.log('Could not enable auto-merge:', error.message);
-                throw error;
-              }
-            }
-
-      - name: Summary
-        if: always() && steps.pr.outputs.is_dependabot == 'true'
-        run: |
-          {
-            echo "### Dependabot Auto-Merge Summary"
-            echo ""
-            echo "- PR Number: #${{ steps.pr.outputs.pr_number }}"
-            echo "- Ready to Merge: ${{ steps.check_status.outputs.ready_to_merge }}"
-            echo "- Has Failed Checks: ${{ steps.check_status.outputs.has_failed_checks }}"
-            echo "- Status State: ${{ steps.check_status.outputs.status_state }}"
-            echo "- Check Runs: ${{ steps.check_status.outputs.checks_count }}"
-          } >> "$GITHUB_STEP_SUMMARY"
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr_number,
+              sha: '${{ steps.pr.outputs.head_sha }}',
+              merge_method: 'squash',
+              commit_title: pullRequest.title,
+              commit_message: `${pullRequest.title}\n\nAuto-merged after the applicable checks passed.`
+            });

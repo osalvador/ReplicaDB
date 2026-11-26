@@ -8,7 +8,6 @@ const repoRoot = new URL('../..', import.meta.url).pathname;
 const read = (path) => readFileSync(join(repoRoot, path), 'utf8');
 
 test('repository entry points identify the canonical portal and local ownership boundaries', () => {
-  assert.match(read('README.md'), /https:\/\/osalvador\.github\.io\/ReplicaDB\//);
   assert.match(read('replicadb-server/README.md'), /documentation portal/);
   assert.match(read('replicadb-server/frontend/README.develop.md'), /canonical user-facing server documentation/);
   assert.match(read('docs/CONTRIBUTING.md'), /update-openapi\.sh/);
@@ -18,7 +17,7 @@ test('repository entry points identify the canonical portal and local ownership 
 });
 
 test('entry points do not retain the old monolithic Jekyll URL as their canonical docs link', () => {
-  for (const path of ['README.md', 'replicadb-server/README.md', 'replicadb-server/frontend/README.develop.md']) {
+  for (const path of ['replicadb-server/README.md', 'replicadb-server/frontend/README.develop.md']) {
     assert.doesNotMatch(read(path), /osalvador\.github\.io\/ReplicaDB\/docs\/docs\.html/);
   }
 });

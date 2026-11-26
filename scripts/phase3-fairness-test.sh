@@ -11,7 +11,7 @@ diagnostics_directory="$repository_root/.phase3-logs/$project_name"
 cookie_file="$state_directory/cookies.txt"
 run_file="$state_directory/runs.txt"
 jobs_to_run=${PHASE3_FAIRNESS_RUNS:-24}
-source_sleep=${PHASE3_FAIRNESS_SOURCE_SLEEP:-0.05}
+source_sleep=${PHASE3_FAIRNESS_SOURCE_SLEEP:-0.25}
 first_capacity=${PHASE3_FAIRNESS_WORKER_ONE_CAPACITY:-1}
 second_capacity=${PHASE3_FAIRNESS_WORKER_TWO_CAPACITY:-2}
 tolerance=${PHASE3_FAIRNESS_TOLERANCE:-0.50}
@@ -196,8 +196,10 @@ step() {
 }
 
 step 'package CLI and server artifacts'
-mvn -B install -DskipTests -f "$repository_root/pom.xml" >/dev/null
-mvn -B package -DskipTests -f "$repository_root/replicadb-server/pom.xml" >/dev/null
+if [[ "${PHASE3_USE_PREBUILT_SERVER:-false}" != true ]]; then
+    mvn -B install -DskipTests -f "$repository_root/pom.xml" >/dev/null
+    mvn -B package -DskipTests -f "$repository_root/replicadb-server/pom.xml" >/dev/null
+fi
 
 step 'start two APIs and two workers'
 compose up -d --build --wait >/dev/null
@@ -218,10 +220,16 @@ baseline_two=$(worker_metrics worker-two)
 assert_capacity "$baseline_one" "$first_capacity"
 assert_capacity "$baseline_two" "$second_capacity"
 
-step "create and dispatch $jobs_to_run durable runs"
+step "prepare $jobs_to_run job definitions before measuring dispatch"
+job_ids=()
+for index in $(seq 1 "$jobs_to_run"); do
+    job_ids+=("$(create_job "$api_one" "$index")")
+done
+
+step "dispatch $jobs_to_run durable runs in a burst"
 : > "$run_file"
 for index in $(seq 1 "$jobs_to_run"); do
-    job_id=$(create_job "$api_one" "$index")
+    job_id=${job_ids[index-1]}
     run_id=$(trigger_job "$api_one" "$job_id" "$index")
     printf '%s|%s\n' "$run_id" "$job_id" >> "$run_file"
 done
