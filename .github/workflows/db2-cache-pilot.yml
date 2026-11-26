@@ -1,0 +1,86 @@
+name: DB2 image cache pilot
+on:
+  push:
+    branches: [codex/db2-cache-pilot]
+permissions:
+  contents: read
+env:
+  DB2_IMAGE: icr.io/db2_community/db2:11.5.9.0
+  TESTCONTAINERS_REUSE_ENABLE: 'false'
+  DOCKER_HOST: unix:///var/run/docker.sock
+  TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE: /var/run/docker.sock
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      key: ${{ steps.image.outputs.key }}
+      image-id: ${{ steps.image.outputs.image-id }}
+    steps:
+      - name: Download and archive DB2
+        id: image
+        run: |
+          set -euo pipefail
+          time docker pull "$DB2_IMAGE"
+          digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$DB2_IMAGE")
+          image_id=$(docker image inspect --format '{{.Id}}' "$DB2_IMAGE")
+          echo "key=db2-pilot-linux-amd64-${digest##*@}" >> "$GITHUB_OUTPUT"
+          echo "image-id=$image_id" >> "$GITHUB_OUTPUT"
+          time docker save "$DB2_IMAGE" | zstd -T0 -o "$RUNNER_TEMP/db2.tar.zst"
+          du -h "$RUNNER_TEMP/db2.tar.zst"
+      - uses: actions/cache/save@v5
+        with:
+          key: ${{ steps.image.outputs.key }}
+          path: ${{ runner.temp }}/db2.tar.zst
+  measure:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        pair: [1, 2, 3, 4, 5]
+        mode: [direct, cache]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          java-version: '17'
+          distribution: temurin
+      - name: Start image timer
+        run: date +%s%3N > "$RUNNER_TEMP/image-start"
+      - uses: actions/cache/restore@v5
+        id: restore
+        if: matrix.mode == 'cache'
+        with:
+          key: ${{ needs.prepare.outputs.key }}
+          path: ${{ runner.temp }}/db2.tar.zst
+      - name: Make image available
+        env:
+          CACHE_HIT: ${{ steps.restore.outputs.cache-hit }}
+          EXPECTED_IMAGE_ID: ${{ needs.prepare.outputs.image-id }}
+          MODE: ${{ matrix.mode }}
+        run: |
+          set -euo pipefail
+          source=registry
+          if [[ "$MODE" == cache && "$CACHE_HIT" == true ]] && docker load -i "$RUNNER_TEMP/db2.tar.zst"; then
+            source=cache
+          else
+            docker pull "$DB2_IMAGE"
+          fi
+          test "$(docker image inspect --format '{{.Id}}' "$DB2_IMAGE")" = "$EXPECTED_IMAGE_ID"
+          echo "image_source=$source image_ms=$(($(date +%s%3N) - $(cat "$RUNNER_TEMP/image-start")))" | tee image-timing.txt
+      - name: Run matching DB2 integration cases
+        run: |
+          set -o pipefail
+          mvn -B test -Dtest=DB22DB2Test,MySQL2DB2Test,Sqlite2DB2Test -Dsurefire.timeout=600 | tee db2-maven.log
+      - name: Upload timing and test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: db2-${{ matrix.mode }}-${{ matrix.pair }}
+          path: |
+            image-timing.txt
+            db2-maven.log
+            target/surefire-reports/TEST-*.xml
+          retention-days: 3
