@@ -48,9 +48,17 @@ blocks `prepare`, `tag`, and `push-tag`.
    ./release.sh prepare 1.0.3
    ```
 
-4. Wait for the exact pushed commit to pass the `Only CI/CT` workflow,
-   `CodeQL`, and `pages-build-deployment`. A pending, failed, cancelled, or
-   unexpected skipped job blocks the tag.
+4. Start **Full CI for release** manually on `master` while it points to the
+   preparation commit.
+
+   ```bash
+   gh workflow run CI_Full.yml --ref master
+   ```
+
+   Verify that **Full CI for release**, `CodeQL`, and `pages-build-deployment`
+   pass on that exact commit. The automatic PR and push CI runs use the fast
+   profile. A pending, failed, cancelled, or unexpected skipped required job
+   blocks the tag.
 5. After the remote gates are green, create the local tag:
 
    ```bash

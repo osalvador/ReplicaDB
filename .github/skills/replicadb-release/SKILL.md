@@ -68,11 +68,13 @@ knowledge-plan files.
 
 ## Remote Green Gate
 
-After `prepare` pushes `master`, query workflows for the recorded preparation
-SHA. Require success for all of the following:
+After `prepare` pushes `master`, start `gh workflow run CI_Full.yml --ref master`
+while `master` points to the recorded preparation SHA. Require success for all
+of the following on that exact SHA:
 
-- `.github/workflows/CT_Push.yml`, including Windows launcher, frontend E2E,
-  embedded matrix, server module, fairness, and multinode coverage
+- `.github/workflows/CI_Full.yml`, including the full DB2 matrix, Windows
+  launcher, frontend E2E, embedded matrix, server module, fairness, and
+  multinode coverage
 - CodeQL
 - `pages-build-deployment`
 

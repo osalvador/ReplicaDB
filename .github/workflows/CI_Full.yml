@@ -1,0 +1,13 @@
+name: Full CI for release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full:
+    uses: ./.github/workflows/CT_Push.yml
+    with:
+      full: true
