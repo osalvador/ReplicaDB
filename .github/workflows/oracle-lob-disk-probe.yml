@@ -1,0 +1,80 @@
+name: Oracle LOB fast disk benchmark
+
+on:
+  push:
+    branches: [codex/oracle-lob-disk-probe]
+
+permissions:
+  contents: read
+
+jobs:
+  oracle-lob-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        cleanup: [baseline, untouched]
+        repetition: [1, 2]
+    name: Oracle LOB ${{ matrix.cleanup }} (${{ matrix.repetition }})
+    env:
+      FULL: 'false'
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-java@v6
+      with:
+        java-version: '17'
+        distribution: temurin
+        cache: maven
+        cache-dependency-path: pom.xml
+    - name: Free disk space for Oracle images
+      env:
+        CLEANUP: ${{ matrix.cleanup }}
+      run: |
+        set -euo pipefail
+        docker_root=$(docker info --format '{{.DockerRootDir}}')
+        disk_available() {
+          sudo df -B1 --output=avail "$docker_root" | tail -1 | tr -d ' '
+        }
+        printf 'before\t%s\n' "$(disk_available)" | tee disk-preparation.tsv
+        if [[ "$CLEANUP" == baseline ]]; then
+          for path in /usr/local/lib/android/sdk /usr/share/dotnet /opt/ghc; do
+            start=$(date +%s%3N)
+            sudo rm -rf "$path"
+            printf '%s\t%s\t%s\n' "$path" "$(( $(date +%s%3N) - start ))" "$(disk_available)" | tee -a disk-preparation.tsv
+          done
+        fi
+        printf 'after\t%s\n' "$(disk_available)" | tee -a disk-preparation.tsv
+    - name: Run cross-version LOB suite
+      run: |
+        set -euo pipefail
+        tests=(-Dtest=Oracle2OracleCrossVersionLobTest)
+        if [[ "$FULL" != true ]]; then
+          tests+=(-DexcludedGroups=oracle-large-lob)
+        fi
+        mvn -B test "${tests[@]}"
+    - name: Verify the test cases ran
+      run: |
+        python3 - <<'PY'
+        import os
+        import xml.etree.ElementTree as ET
+
+        report = ET.parse('target/surefire-reports/TEST-org.replicadb.oracle.Oracle2OracleCrossVersionLobTest.xml')
+        cases = report.findall('testcase')
+        large_case = 'testCrossVersionLargeLobReplication'
+        has_small_cases = any(case.get('name') != large_case for case in cases)
+        has_large_case = any(case.get('name') == large_case for case in cases)
+        full = os.environ['FULL'] == 'true'
+        if not has_small_cases or has_large_case != full or any(case.find('skipped') is not None for case in cases):
+            raise SystemExit('Oracle cross-version LOB tests did not match the selected profile')
+        PY
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: oracle-disk-${{ matrix.cleanup }}-${{ matrix.repetition }}
+        path: |
+          target/surefire-reports/TEST-*.xml
+          disk-preparation.tsv
+          disk-samples.tsv
+        retention-days: 7
