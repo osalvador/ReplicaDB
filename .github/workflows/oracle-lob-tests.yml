@@ -26,7 +26,33 @@ jobs:
         cache: maven
         cache-dependency-path: pom.xml
     - name: Free disk space for Oracle images
-      run: sudo rm -rf /usr/local/lib/android/sdk /usr/share/dotnet /opt/ghc
+      run: |
+        set -euo pipefail
+        if [[ "$FULL" == true ]]; then
+          sudo rm -rf /usr/local/lib/android/sdk /usr/share/dotnet /opt/ghc
+          exit 0
+        fi
+
+        docker_root=$(docker info --format '{{.DockerRootDir}}')
+        # Fast LOB CI used about 17.3 GiB at peak in the disk benchmark.
+        minimum_free=$((24 * 1024 * 1024 * 1024))
+        disk_available() {
+          sudo df -B1 --output=avail "$docker_root" | awk 'NR == 2 {print $1}'
+        }
+
+        available=$(disk_available)
+        printf 'Docker storage before cleanup: %s bytes free (target: %s bytes)\n' "$available" "$minimum_free"
+        if (( available < minimum_free )); then
+          echo 'Freeing space by removing the preinstalled .NET SDK'
+          sudo rm -rf /usr/share/dotnet
+          available=$(disk_available)
+        fi
+        if (( available < minimum_free )); then
+          echo 'Freeing more space by removing the preinstalled Android SDK'
+          sudo rm -rf /usr/local/lib/android/sdk
+          available=$(disk_available)
+        fi
+        printf 'Docker storage ready for Oracle: %s bytes free\n' "$available"
     - name: Run cross-version LOB suite
       run: |
         set -euo pipefail
