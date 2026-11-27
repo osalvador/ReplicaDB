@@ -12,13 +12,7 @@
 name: "CodeQL"
 
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [ master ]
-  schedule:
-    - cron: '38 0 * * 5'
+  workflow_call:
 
 jobs:
   analyze:
@@ -48,6 +42,8 @@ jobs:
         distribution: 'temurin'
     - name: Restore server Maven dependencies
       uses: ./.github/actions/restore-server-maven-cache
+    - name: Verify Maven clean works offline
+      run: mvn -B -o clean --file pom.xml
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL

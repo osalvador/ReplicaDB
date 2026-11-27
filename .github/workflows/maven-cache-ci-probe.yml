@@ -1,0 +1,50 @@
+name: CodeQL shared Maven cache verification
+on:
+  push:
+    branches: [codex/codeql-maven-cache-probe]
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+jobs:
+  seed:
+    name: Seed shared cache with the server build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+    - name: Check Docker info
+      run: docker info
+    - name: Set up JDK 17
+      uses: actions/setup-java@v6
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
+        settings-path: ${{ github.workspace }} # location for the settings.xml file
+
+    - name: Cache server Maven dependencies
+      uses: actions/cache@v5
+      with:
+        path: ~/.m2/repository
+        key: server-maven-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pom.xml', 'replicadb-server/pom.xml') }}
+        restore-keys: |
+          server-maven-v2-${{ runner.os }}-${{ runner.arch }}-
+          server-maven-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pom.xml', 'replicadb-server/pom.xml') }}
+
+    - name: Check migrated cache before running clean
+      run: |
+        plugin=~/.m2/repository/org/apache/maven/plugins/maven-clean-plugin/3.5.0/maven-clean-plugin-3.5.0
+        for extension in pom jar; do
+          if [[ -s "$plugin.$extension" ]]; then
+            echo "Legacy cache contains $extension"
+          else
+            echo "Legacy cache is missing $extension"
+          fi
+        done
+    - name: Install CLI artifact
+      # CodeQL also runs the clean lifecycle, so include its plugins in this cache.
+      run: mvn -B clean install -DskipTests --file pom.xml
+
+  codeql:
+    needs: seed
+    uses: ./.github/workflows/codeql-analysis.yml
