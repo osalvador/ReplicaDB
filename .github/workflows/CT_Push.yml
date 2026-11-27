@@ -223,11 +223,14 @@ jobs:
       uses: actions/cache@v5
       with:
         path: ~/.m2/repository
-        key: server-maven-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pom.xml', 'replicadb-server/pom.xml') }}
-        restore-keys: server-maven-${{ runner.os }}-${{ runner.arch }}-
+        key: server-maven-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pom.xml', 'replicadb-server/pom.xml') }}
+        restore-keys: |
+          server-maven-v2-${{ runner.os }}-${{ runner.arch }}-
+          server-maven-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pom.xml', 'replicadb-server/pom.xml') }}
 
     - name: Install CLI artifact
-      run: mvn -B install -DskipTests --file pom.xml
+      # CodeQL also runs the clean lifecycle, so include its plugins in this cache.
+      run: mvn -B clean install -DskipTests --file pom.xml
 
     - name: Test and package server module
       run: mvn -B package --file replicadb-server/pom.xml
