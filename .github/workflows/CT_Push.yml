@@ -55,8 +55,10 @@ jobs:
 
   oracle_lob:
     needs: changes
-    if: needs.changes.outputs.oracle-lob == 'true'
+    if: inputs.full || needs.changes.outputs.oracle-lob == 'true'
     uses: ./.github/workflows/oracle-lob-tests.yml
+    with:
+      full: ${{ inputs.full || false }}
 
   copy_benchmark:
     if: inputs.full
