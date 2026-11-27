@@ -1,0 +1,19 @@
+.github/workflows/oracle-lob-tests.yml
+  s_c61d193c2bce83::t_f99860d492ab48 29-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "66b87ad772182f17e1c3bc6719c3387bda887cdb",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
