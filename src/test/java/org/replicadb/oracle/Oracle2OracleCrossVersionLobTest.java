@@ -272,6 +272,7 @@ class Oracle2OracleCrossVersionLobTest {
     }
 
     @Test
+    @Tag("oracle-large-lob")
     @DisplayName("Cross-version LOB replication with large LOBs (200MB+)")
     void testCrossVersionLargeLobReplication() throws ParseException, IOException, SQLException {
         Assumptions.assumeTrue(containersAvailable, "Containers not available");
