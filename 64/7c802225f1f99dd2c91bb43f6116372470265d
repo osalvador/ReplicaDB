@@ -1,0 +1,19 @@
+.github/workflows/oracle-lob-disk-probe.yml
+  s_c61d193c2bce83::t_a6626f8470f426 55-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "647c802225f1f99dd2c91bb43f6116372470265d",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
