@@ -1,0 +1,25 @@
+.github/actions/restore-server-maven-cache/action.yml
+  s_c61d193c2bce83::t_01699118370727 10-11
+.github/workflows/CT_Push.yml
+  s_c61d193c2bce83::t_b2514546cbf3c8 73,75-77,109,114,185,190,226,234-235,307,381,387,391-392,474,479,511,635,640
+.github/workflows/maven-cache-ci-probe.yml
+  s_c61d193c2bce83::t_8444283744f18f 1-11
+.github/workflows/oracle-lob-tests.yml
+  s_c61d193c2bce83::t_e806c80e4d58d5 26,28-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "0fc4b829234192d3ba6158cb0ac13bf8f5331e9c",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
