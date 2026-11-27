@@ -1,0 +1,23 @@
+.github/workflows/CT_Push.yml
+  s_c61d193c2bce83::t_eb2ec64886204a 58,60-61
+.github/workflows/oracle-lob-tests.yml
+  s_c61d193c2bce83::t_db7218bdb49f94 6-9,18-19,31-37,41,46-51
+src/test/java/org/replicadb/oracle/Oracle2OracleCrossVersionLobTest.java
+  s_c61d193c2bce83::t_aafa3e01f6e554 275
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "b6b7dc9464b68d3e7c50469cd7353256a8e166d5",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
