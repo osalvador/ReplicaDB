@@ -1,4 +1,4 @@
-name: Fast CI Maven cache cold and warm verification
+name: Fast CI Maven cache final cold and warm verification
 on:
   push:
     branches: [codex/maven-cache-ci-probe]

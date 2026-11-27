@@ -231,8 +231,8 @@ jobs:
       uses: actions/cache@v5
       with:
         path: ~/.m2/repository
-        key: server-maven-probe-20261127-b-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pom.xml', 'replicadb-server/pom.xml') }}
-        restore-keys: server-maven-probe-20261127-b-${{ runner.os }}-${{ runner.arch }}-
+        key: server-maven-probe-20261127-final-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pom.xml', 'replicadb-server/pom.xml') }}
+        restore-keys: server-maven-probe-20261127-final-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Install CLI artifact
       run: mvn -B install -DskipTests --file pom.xml
