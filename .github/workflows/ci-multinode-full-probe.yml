@@ -1,0 +1,14 @@
+name: Full multinode profile verification
+
+on:
+  push:
+    branches: [codex/multinode-profiles-probe]
+
+permissions:
+  contents: read
+
+jobs:
+  full:
+    uses: ./.github/workflows/CT_Push.yml
+    with:
+      full: true
