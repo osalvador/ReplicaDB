@@ -31,10 +31,7 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: maven
-        cache-dependency-path: |
-          pom.xml
-          replicadb-server/pom.xml
+        cache-jdk: true
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
@@ -52,6 +49,9 @@ jobs:
           echo "Run Full CI for release on master and wait for success at $sha before publishing."
           exit 1
         fi
+
+    - name: Restore server Maven dependencies
+      uses: ./.github/actions/restore-server-maven-cache
 
     - name: Verify standalone CLI compatibility
       run: scripts/phase3-cli-compatibility.sh
@@ -208,7 +208,14 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: maven
+        cache: ${{ runner.os != 'Linux' && 'maven' || '' }}
+        cache-jdk: true
+        cache-dependency-path: |
+          pom.xml
+          replicadb-server/pom.xml
+    - name: Restore server Maven dependencies
+      if: runner.os == 'Linux'
+      uses: ./.github/actions/restore-server-maven-cache
     - name: Download release staging
       uses: actions/download-artifact@v8
       with:

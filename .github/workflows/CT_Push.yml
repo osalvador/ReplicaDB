@@ -297,11 +297,7 @@ jobs:
         java-version: '17'
         distribution: temurin
     - name: Restore server Maven dependencies
-      uses: actions/cache/restore@v5
-      with:
-        path: ~/.m2/repository
-        key: server-maven-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pom.xml', 'replicadb-server/pom.xml') }}
-        restore-keys: server-maven-${{ runner.os }}-${{ runner.arch }}-
+      uses: ./.github/actions/restore-server-maven-cache
     - name: Install CLI dependency
       run: mvn -B -Dmaven.test.skip=true install --file pom.xml
     - name: Run Failsafe suite
@@ -373,10 +369,14 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: maven
+        cache: ${{ runner.os != 'Linux' && 'maven' || '' }}
+        cache-jdk: true
         cache-dependency-path: |
           pom.xml
           replicadb-server/pom.xml
+    - name: Restore server Maven dependencies
+      if: runner.os == 'Linux'
+      uses: ./.github/actions/restore-server-maven-cache
     - name: Check POSIX launcher prerequisites
       if: runner.os != 'Windows'
       shell: bash
