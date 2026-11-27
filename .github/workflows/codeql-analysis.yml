@@ -46,6 +46,8 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+    - name: Restore server Maven dependencies
+      uses: ./.github/actions/restore-server-maven-cache
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
