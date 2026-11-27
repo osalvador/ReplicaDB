@@ -13,7 +13,9 @@ import org.testcontainers.containers.MongoDBContainer;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class ReplicadbMongodbContainer extends MongoDBContainer {
 	private static final Logger LOG = LogManager.getLogger(ReplicadbMongodbContainer.class);
@@ -21,6 +23,7 @@ public class ReplicadbMongodbContainer extends MongoDBContainer {
 	private static final String RESOURCE_DIR = Paths.get("src", "test", "resources").toFile().getAbsolutePath();
 	private static final String SOURCE_FILE = "/mongo/t_source_data.json";
 	private static final String T_SOURCE_COLLECTION = "t_source";
+	private static final int INSERT_BATCH_SIZE = 256;
 	private static ReplicadbMongodbContainer container;
 	private ConnectionString connectionString;
 
@@ -60,18 +63,28 @@ public class ReplicadbMongodbContainer extends MongoDBContainer {
 				}
 
 				// Create source collection and load data
+				final long insertStarted = System.nanoTime();
+				final var source = database.getCollection(T_SOURCE_COLLECTION);
 				final List<String> allLines = Files.readAllLines(Paths.get(RESOURCE_DIR + SOURCE_FILE));
+				final List<Document> batch = new ArrayList<>(INSERT_BATCH_SIZE);
 				for (final String line : allLines) {
 					if (line.trim().isEmpty() || line.trim().startsWith("//")) {
 						continue;
 					}
-					final Document doc = Document.parse(line);
-					database.getCollection(T_SOURCE_COLLECTION).insertOne(doc);
+					batch.add(Document.parse(line));
+					if (batch.size() == INSERT_BATCH_SIZE) {
+						source.insertMany(batch);
+						batch.clear();
+					}
+				}
+				if (!batch.isEmpty()) {
+					source.insertMany(batch);
 				}
 
-				final long count = database.getCollection(T_SOURCE_COLLECTION).countDocuments();
-				LOG.info("Inserted " + count + " documents into the '" + T_SOURCE_COLLECTION + "' collection");
-				LOG.info("First document: " + database.getCollection(T_SOURCE_COLLECTION).find().first().toJson());
+				final long count = source.countDocuments();
+				LOG.info("Inserted {} documents into the '{}' collection in {} ms", count,
+						T_SOURCE_COLLECTION, TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - insertStarted));
+				LOG.info("First document: " + source.find().first().toJson());
 
 				// Reset sink collection to ensure consistent test state
 				try {
