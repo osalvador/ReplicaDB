@@ -52,6 +52,16 @@ jobs:
         if [[ "$FULL" != true ]]; then
           tests+=(-DexcludedGroups=oracle-large-lob)
         fi
+        docker_root=$(docker info --format '{{.DockerRootDir}}')
+        (
+          while true; do
+            available=$(sudo df -B1 --output=avail "$docker_root" | tail -1 | tr -d ' ')
+            printf '%s\t%s\n' "$(date +%s)" "$available"
+            sleep 2
+          done
+        ) > disk-samples.tsv &
+        sampler=$!
+        trap 'kill "$sampler" 2>/dev/null || true; wait "$sampler" 2>/dev/null || true' EXIT
         mvn -B test "${tests[@]}"
     - name: Verify the test cases ran
       run: |
