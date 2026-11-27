@@ -10,13 +10,12 @@ on:
       - 'README.md'
       - 'docs/**'
   pull_request:
-    branches: [ master ]
-    paths-ignore:
-      - 'README.md'
-      - 'docs/**'
-  schedule:
-    - cron: '31 2 * * *'
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      full:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -60,7 +59,7 @@ jobs:
     uses: ./.github/workflows/oracle-lob-tests.yml
 
   copy_benchmark:
-    if: github.event_name == 'schedule'
+    if: inputs.full
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -137,10 +136,16 @@ jobs:
     - name: Integration tests
       env:
         SOURCE: ${{ matrix.source }}
+        FULL: ${{ inputs.full || false }}
       run: |
         set -euo pipefail
         tests="org/replicadb/$SOURCE/*Test,!org/replicadb/oracle/Oracle2OracleCrossVersionLobTest"
-        if [[ "$SOURCE" == db2 ]]; then
+        if [[ "$SOURCE" == db2 && "$FULL" != true ]]; then
+          # Exercise DB2 itself and both directions against PostgreSQL with one DB2 container.
+          tests='DB22DB2Test,Db2ManagerWatermarkTest'
+          tests+=',DB22PostgresTest#testDb22PostgresCompleteParallelSourceQueryWithoutColumnOptions+testDb2ParallelProjectionAvoidsPartitionAliasCollision+testDb2ParallelProjectionRejectsDuplicateLabels'
+          tests+=',Postgres2DB2Test#testPostgres2Db2DBCompleteAtomic+testPostgres2Db2DBIncrementalParallel'
+        elif [[ "$SOURCE" == db2 ]]; then
           tests+=",**/*2DB2Test,**/*2Db2Test"
         else
           tests+=",!**/*2DB2Test,!**/*2Db2Test"
@@ -618,8 +623,9 @@ jobs:
 
     - name: Get version
       run: |
-        project_version="\${project.version}"
-        version="$(mvn -q -Dexec.executable=echo -Dexec.args="$project_version" --non-recursive exec:exec)"
+        set -euo pipefail
+        version=$(python3 -c 'import xml.etree.ElementTree as ET; print(ET.parse("pom.xml").getroot().findtext("{*}version", ""))')
+        test -n "$version"
         echo "version=$version" >> "$GITHUB_ENV"
 
     - name: Clean Install

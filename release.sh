@@ -36,6 +36,7 @@ RELEASE_FILES=(
     "deploy/gcp"
     ".github/workflows/CI_Release.yml"
     ".github/workflows/CT_Push.yml"
+    ".github/workflows/CI_Full.yml"
     ".github/workflows/gcp-deploy-bundle.yml"
     ".github/workflows/docs.yml"
     ".github/skills/replicadb-release/SKILL.md"

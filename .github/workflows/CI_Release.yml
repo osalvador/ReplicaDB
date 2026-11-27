@@ -38,16 +38,18 @@ jobs:
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
-    - name: Require full CI for the tagged commit
-      if: github.event_name == 'push'
+    - name: Require full CI for the release commit
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
         sha=$(git rev-parse HEAD)
-        runs=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/CT_Push.yml/runs" -f head_sha="$sha" -f status=success)
-        if ! jq -e 'any(.workflow_runs[]; .head_branch == "master" and (.event == "push" or .event == "schedule" or .event == "workflow_dispatch"))' <<< "$runs" >/dev/null; then
-          echo "Run Only CI/CT successfully on master at $sha before publishing this tag."
+        runs=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/workflows/CI_Full.yml/runs" \
+          -f head_sha="$sha" -f branch=master -f event=workflow_dispatch -f status=success)
+        if ! jq -e --arg sha "$sha" 'any(.workflow_runs[];
+          .head_sha == $sha and .head_branch == "master" and
+          .event == "workflow_dispatch" and .conclusion == "success")' <<< "$runs" >/dev/null; then
+          echo "Run Full CI for release on master and wait for success at $sha before publishing."
           exit 1
         fi
 
