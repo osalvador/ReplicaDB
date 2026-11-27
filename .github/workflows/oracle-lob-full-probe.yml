@@ -1,0 +1,11 @@
+name: Oracle LOB profile measurement (full)
+on:
+  push:
+    branches: [codex/oracle-lob-profiles-probe]
+permissions:
+  contents: read
+jobs:
+  oracle:
+    uses: ./.github/workflows/oracle-lob-tests.yml
+    with:
+      full: true
