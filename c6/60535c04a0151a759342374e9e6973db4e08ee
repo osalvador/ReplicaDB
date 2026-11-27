@@ -1,0 +1,21 @@
+.github/workflows/oracle-lob-fast-probe.yml
+  s_c61d193c2bce83::t_77fe542bfb6ed6 1-11
+.github/workflows/oracle-lob-full-probe.yml
+  s_c61d193c2bce83::t_e11b48a74a4add 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "c660535c04a0151a759342374e9e6973db4e08ee",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
