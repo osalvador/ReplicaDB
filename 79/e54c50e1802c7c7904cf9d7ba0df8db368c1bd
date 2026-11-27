@@ -1,0 +1,29 @@
+.github/skills/replicadb-release/SKILL.md
+  s_c61d193c2bce83::t_d9a616e5caa399 71-73,75-77
+.github/workflows/CI_Full.yml
+  s_c61d193c2bce83::t_a7a49a3a949509 1-13
+.github/workflows/CI_Release.yml
+  s_c61d193c2bce83::t_fd3ad11df706dc 41,47-52
+.github/workflows/CT_Push.yml
+  s_c61d193c2bce83::t_29a05c20a25301 15-19,63,140,144-149,627-629
+RELEASE_GUIDE.md
+  s_c61d193c2bce83::t_9da2f22c219970 51-61
+release.sh
+  s_c61d193c2bce83::t_730e20a4f4bb10 39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "79e54c50e1802c7c7904cf9d7ba0df8db368c1bd",
+  "prompts": {},
+  "sessions": {
+    "s_c61d193c2bce83": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a2175c-dcd7-76b2-a0e7-8d4278e820f8",
+        "model": "unknown"
+      },
+      "human_author": "Oscar Salvador Magallanes <osalvador@gmail.com>"
+    }
+  }
+}
