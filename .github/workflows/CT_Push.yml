@@ -322,7 +322,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: server
     timeout-minutes: 60
-    name: Multi-node resilience and load
+    name: ${{ inputs.full && 'Multi-node resilience and load' || 'Multi-node smoke' }}
     env:
       TESTCONTAINERS_CONFIG_FILE: src/test/resources/testcontainers-ci.properties
       DOCKER_HOST: unix:///var/run/docker.sock
@@ -340,10 +340,12 @@ jobs:
     - name: Run multinode smoke
       run: scripts/phase3-multinode-test.sh
     - name: Run short concurrent load validation
+      if: inputs.full
       env:
         PHASE3_LOAD_RUNS: '4'
       run: scripts/phase3-load-test.sh
     - name: Run bounded chaos validation
+      if: inputs.full
       run: scripts/phase3-chaos-test.sh
     - name: Upload multi-node diagnostics
       if: failure()
@@ -411,6 +413,7 @@ jobs:
       run: ./replicadb-server/scripts/server-launcher-windows.test.ps1
 
   phase3_4:
+    if: inputs.full
     runs-on: ubuntu-latest
     needs: server
     timeout-minutes: 45
