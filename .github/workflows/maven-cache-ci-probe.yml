@@ -1,0 +1,11 @@
+name: Fast CI Maven cache verification
+on:
+  push:
+    branches: [codex/maven-cache-ci-probe]
+permissions:
+  contents: read
+jobs:
+  fast:
+    uses: ./.github/workflows/CT_Push.yml
+    with:
+      full: false

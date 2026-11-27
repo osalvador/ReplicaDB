@@ -70,8 +70,11 @@ jobs:
       with:
         java-version: '17'
         distribution: temurin
+        show-download-progress: true
         cache: maven
-        cache-dependency-path: pom.xml
+        cache-dependency-path: |
+          pom.xml
+          .github/workflows/maven-cache-ci-probe.yml
     - run: mvn -B test -Dtest=PostgresqlBinaryCopyBenchmarkTest -Dreplicadb.test.copy-benchmark=true
 
   integration:
@@ -103,10 +106,12 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        show-download-progress: true
         cache: maven
         cache-dependency-path: |
           pom.xml
           replicadb-server/pom.xml
+          .github/workflows/maven-cache-ci-probe.yml
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
@@ -177,10 +182,12 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        show-download-progress: true
         cache: maven
         cache-dependency-path: |
           pom.xml
           replicadb-server/pom.xml
+          .github/workflows/maven-cache-ci-probe.yml
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
@@ -216,6 +223,7 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        show-download-progress: true
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
@@ -223,8 +231,8 @@ jobs:
       uses: actions/cache@v5
       with:
         path: ~/.m2/repository
-        key: server-maven-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pom.xml', 'replicadb-server/pom.xml') }}
-        restore-keys: server-maven-${{ runner.os }}-${{ runner.arch }}-
+        key: server-maven-probe-20261127-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pom.xml', 'replicadb-server/pom.xml') }}
+        restore-keys: server-maven-probe-20261127-${{ runner.os }}-${{ runner.arch }}-
 
     - name: Install CLI artifact
       run: mvn -B install -DskipTests --file pom.xml
@@ -296,6 +304,7 @@ jobs:
       with:
         java-version: '17'
         distribution: temurin
+        show-download-progress: true
     - name: Restore server Maven dependencies
       uses: ./.github/actions/restore-server-maven-cache
     - name: Install CLI dependency
@@ -369,14 +378,18 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        show-download-progress: true
         cache: ${{ runner.os != 'Linux' && 'maven' || '' }}
         cache-jdk: true
         cache-dependency-path: |
           pom.xml
           replicadb-server/pom.xml
+          .github/workflows/maven-cache-ci-probe.yml
     - name: Restore server Maven dependencies
       if: runner.os == 'Linux'
       uses: ./.github/actions/restore-server-maven-cache
+    - name: Record Maven version
+      run: mvn --version
     - name: Check POSIX launcher prerequisites
       if: runner.os != 'Windows'
       shell: bash
@@ -458,10 +471,12 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        show-download-progress: true
         cache: maven
         cache-dependency-path: |
           pom.xml
           replicadb-server/pom.xml
+          .github/workflows/maven-cache-ci-probe.yml
         server-id: github
         settings-path: ${{ github.workspace }}
     - name: Run standalone CLI compatibility gate
@@ -493,6 +508,7 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        show-download-progress: true
         server-id: github
         settings-path: ${{ github.workspace }}
     - name: Set up Node 22
@@ -616,10 +632,12 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        show-download-progress: true
         cache: maven
         cache-dependency-path: |
           pom.xml
           replicadb-server/pom.xml
+          .github/workflows/maven-cache-ci-probe.yml
         server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
         settings-path: ${{ github.workspace }} # location for the settings.xml file
 
