@@ -1,0 +1,11 @@
+name: Restore server Maven cache
+description: Reuse the Maven repository saved by the Server module job.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache/restore@v5
+      with:
+        path: ~/.m2/repository
+        key: server-maven-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('pom.xml', 'replicadb-server/pom.xml') }}
+        restore-keys: server-maven-${{ runner.os }}-${{ runner.arch }}-

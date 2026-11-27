@@ -108,7 +108,9 @@ jobs:
         with:
           java-version: '17'
           distribution: temurin
-          cache: maven
+          cache-jdk: true
+      - name: Restore server Maven dependencies
+        uses: ./.github/actions/restore-server-maven-cache
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
